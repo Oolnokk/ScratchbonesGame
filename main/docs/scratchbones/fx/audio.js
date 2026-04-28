@@ -1,6 +1,9 @@
-export function createScratchbonesAudio(SCRATCHBONES_GAME) {
+export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
   return (() => {
       const cfg = SCRATCHBONES_GAME.assets?.audio || {};
+      const logAudio = (level, event, payload = {}) => {
+        if (typeof debugLog === 'function') debugLog(level, `audio.${event}`, payload);
+      };
       const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0));
       const isUrl = (value) => typeof value === 'string' && value.trim().length > 0;
       let bgmAudio = null;
@@ -40,9 +43,13 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME) {
           const audio = new Audio(url);
           audio.preload = 'auto';
           audio.volume = clamp(volume, 0, 1);
+          audio.addEventListener('error', () => {
+            logAudio('warn', 'asset-error', { url, volume });
+          }, { once: true });
           return audio;
         } catch (error) {
           console.warn('[scratchbones audio] Failed to construct audio element.', error);
+          logAudio('error', 'construct-failed', { url, error: String(error?.message || error) });
           return null;
         }
       }
@@ -52,6 +59,7 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME) {
         if (p && typeof p.catch === 'function') {
           return p.catch((error) => {
             const blocked = error?.name === 'NotAllowedError';
+            logAudio(blocked ? 'warn' : 'error', 'play-failed', { blocked, error: String(error?.message || error) });
             if (blocked) onBlocked?.();
           });
         }
@@ -59,6 +67,7 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME) {
       }
       function playSfx(entry) {
         if (!cfg.enabled || !entry || !isUrl(entry.url)) return;
+        logAudio('debug', 'sfx-play-request', { url: entry.url });
         const playbackRate = clamp((Number(entry.pitch) || 1) * (Number(entry.tempo) || 1), 0.5, 2);
         const baseVolume = clamp(cfg.sfxVolume ?? 1, 0, 1);
         const volume = clamp(baseVolume * (Number(entry.volume) || 1), 0, 1);
@@ -105,9 +114,11 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME) {
         const next = buildAudio(url, 0);
         if (!next) return;
         console.debug('[scratchbones audio] setTrack', { url, loop, fadeMs, targetVolume });
+        logAudio('debug', 'set-track', { url, loop, fadeMs, targetVolume });
         next.loop = !!loop;
         next.addEventListener('error', () => {
           console.debug('[scratchbones audio] track error', { url, loop, challengeBgmActive });
+          logAudio('warn', 'track-error', { url, loop, challengeBgmActive });
           if (!challengeBgmActive && !loop) {
             failedPlaylistTracks.add(url);
             playNextPlaylistTrack();
@@ -150,6 +161,7 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME) {
             playlistSize: playlist.length,
             failedCount: failedPlaylistTracks.size,
           });
+          logAudio('debug', 'playlist-next-track', { url, idx, playlistSize: playlist.length, failedCount: failedPlaylistTracks.size });
           setTrack(url, { loop: false });
           if (bgmAudio) {
             bgmAudio.onended = () => {
@@ -161,6 +173,7 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME) {
       }
       function startPlaylist() {
         if (!cfg.enabled || challengeBgmActive) return;
+        logAudio('debug', 'playlist-start', { challengeBgmActive, hasCurrentTrack: Boolean(bgmAudio) });
         attachUnlockListeners();
         if (bgmAudio && !bgmAudio.paused) return;
         playNextPlaylistTrack();
@@ -199,4 +212,3 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME) {
       };
   })();
 }
-
