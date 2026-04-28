@@ -4330,5 +4330,7 @@ import { initCandleLight } from './fx/candlelight.js';
     try {
       initCandleLight({ gameConfig: SCRATCHBONES_GAME, debugLog: traceCandlelight });
     } catch (error) {
-      traceEvent('error', 'candlelight.init-failed', { error: String(error?.message || error) });
+      const initFailure = { error: String(error?.message || error) };
+      traceEvent('error', 'candlelight.init-failed', initFailure);
+      console.error('[scratchbones:candlelight.init-failed]', initFailure, error);
     }
