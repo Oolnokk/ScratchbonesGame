@@ -542,6 +542,34 @@ window.SCRATCHBONES_CONFIG = {
             "layer": "above-lighting",
             "selectors": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar", ".actorAvatarFloat", ".reactorAvatarFloat"],
             "preserveSpace": true
+          },
+          {
+            "id": "ui-shell-over-lighting",
+            "layer": "above-lighting",
+            "selectors": [
+              ".topbar",
+              ".tableViewHeader",
+              ".seatInfo",
+              ".seatSeed",
+              ".seatTags",
+              ".humanSeatChipBadge",
+              ".claimRankBox",
+              ".claimTimesBoxLeft",
+              ".claimCountBoxLeft",
+              ".claimTimesBoxRight",
+              ".claimCountBoxRight",
+              ".claimClusterTextAnchor",
+              ".controls",
+              ".challengePromptPane",
+              ".eventLog",
+              ".stakeVisualPanel",
+              ".challengeBar",
+              ".bettingStatusAnchor",
+              ".leftContributionAnchor",
+              ".rightContributionAnchor",
+              ".bettingChoiceAnchor"
+            ],
+            "preserveSpace": true
           }
         ]
       },
