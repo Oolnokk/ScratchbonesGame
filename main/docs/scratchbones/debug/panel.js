@@ -34,7 +34,8 @@ function initDebugPanelUi() {
     debugBtn.addEventListener('click', () => {
       const panel = document.getElementById('_dbgPanel');
       if (!panel) return;
-      const isVisible = panel.style.display !== 'none';
+      const computedDisplay = window.getComputedStyle(panel).display;
+      const isVisible = computedDisplay !== 'none';
       panel.style.display = isVisible ? 'none' : 'block';
       panel.dataset.visible = isVisible ? '0' : '1';
       panel.classList.toggle('open', isVisible);
