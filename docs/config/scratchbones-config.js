@@ -549,7 +549,6 @@ window.SCRATCHBONES_CONFIG = {
             "selectors": [
               ".topbar",
               ".tableViewHeader",
-              ".seatInfo",
               ".seatSeed",
               ".seatTags",
               ".humanSeatChipBadge",
