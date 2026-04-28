@@ -1,4 +1,8 @@
-  export function initCandleLight() {
+  export function initCandleLight({ gameConfig = null, debugLog = null } = {}) {
+    const SCRATCHBONES_GAME = gameConfig || window.SCRATCHBONES_CONFIG?.game || {};
+    const logCandle = (level, event, payload = {}) => {
+      if (typeof debugLog === 'function') debugLog(level, `candlelight.${event}`, payload);
+    };
     const APP_REF_W = 1920, APP_REF_H = 1080;
 
     // Light position normalised from tablelight2.json (x:61, y:360) @ 1920×1080
@@ -148,6 +152,7 @@
       if (candlelightFallbackNotices.has(key)) return;
       candlelightFallbackNotices.add(key);
       console.warn(`[CandleLight] Missing config "${key}" in docs/config/scratchbones-config.js. Using fallback.`, fallbackValue);
+      logCandle('warn', 'config-fallback', { key, fallbackValue });
     }
     if (!Number.isFinite(Number(candlelightConfig.backlitAlphaDefault))) {
       warnCandlelightFallbackOnce('layout.lighting.candlelight.backlitAlphaDefault', CANDLELIGHT_FALLBACKS.backlitAlphaDefault);
@@ -743,8 +748,16 @@
 
     function start() {
       const app = document.getElementById('app');
-      if (!app) { setTimeout(start, 80); return; }
+      if (!app) {
+        logCandle('debug', 'app-missing-retry');
+        setTimeout(start, 80);
+        return;
+      }
       appRef = app;
+      logCandle('debug', 'start', {
+        trackedSelectors: TRACKED_CANDLE_SELECTORS.length,
+        backlitSelectors: BACKLIT_SELECTORS.length,
+      });
 
       resize(app);
       ensureInApp(app);
@@ -877,4 +890,5 @@
       start();
       initCandleLightControls();
     }
+    logCandle('debug', 'initialized');
   }

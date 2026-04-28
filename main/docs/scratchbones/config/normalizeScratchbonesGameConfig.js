@@ -115,6 +115,16 @@ export function validateScratchbonesGameConfig(rootConfig, { reportError, debugE
 
 export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
   return {
+    debug: {
+      enabled: rawGameConfig.debug?.enabled !== false,
+      includeConsoleDebug: rawGameConfig.debug?.includeConsoleDebug !== false,
+      eventLogLimit: Math.max(50, Number(rawGameConfig.debug?.eventLogLimit) || 300),
+      trace: {
+        gameplayFlow: rawGameConfig.debug?.trace?.gameplayFlow !== false,
+        audio: rawGameConfig.debug?.trace?.audio !== false,
+        candlelight: rawGameConfig.debug?.trace?.candlelight !== false,
+      },
+    },
     deck: {
       rankCount: rawGameConfig.deck?.rankCount ?? 10,
       copiesPerRank: rawGameConfig.deck?.copiesPerRank ?? 4,
