@@ -39,16 +39,17 @@ import { initCandleLight } from './fx/candlelight.js';
       'controls': 'challengePrompt',
     };
     const AUTHORED_PARENT_BOX = {};
-    const DEFAULT_AUTHORED_BOXES = {
-      topbar: { x: 8, y: 8, width: 1624, height: 120 },
-      sidebar: { x: 1640, y: 8, width: 272, height: 780 },
-      humanSeat: { x: 1640, y: 796, width: 272, height: 176 },
-      hand: { x: 8, y: 912, width: 1624, height: 160 },
-      log: { x: 8, y: 968, width: 1624, height: 104 },
-      turnSpotlight: { x: 1380, y: 164, width: 220, height: 220 },
-      claimCluster: { x: 490, y: 220, width: 620, height: 320 },
-      challengePrompt: { x: 8, y: 704, width: 1624, height: 196 },
-    };
+    const AUTHORED_BOX_DEFAULTS = SCRATCHBONES_GAME.layout?.authored?.boxes || {};
+    function applyRootCssCustomProperties(cssRootVars) {
+      const rootStyle = document.documentElement.style;
+      const entries = cssRootVars && typeof cssRootVars === 'object' ? Object.entries(cssRootVars) : [];
+      for (const [key, value] of entries) {
+        if (!String(key).startsWith('--')) continue;
+        if (value === undefined || value === null) continue;
+        rootStyle.setProperty(key, String(value));
+      }
+    }
+    applyRootCssCustomProperties(SCRATCHBONES_GAME.cssRootVars);
     const authoredEditorState = {
       selectedId: null,
       selectedSubId: null,
@@ -69,7 +70,7 @@ import { initCandleLight } from './fx/candlelight.js';
       const authored = SCRATCHBONES_GAME.layout?.authored || {};
       const boxes = authored.boxes && typeof authored.boxes === 'object' ? authored.boxes : {};
       const normalizedBoxes = {};
-      for (const [id, fallback] of Object.entries(DEFAULT_AUTHORED_BOXES)) {
+      for (const [id, fallback] of Object.entries(AUTHORED_BOX_DEFAULTS)) {
         const source = boxes[id] || {};
         normalizedBoxes[id] = {
           x: Number.isFinite(Number(source.x)) ? Number(source.x) : fallback.x,
@@ -96,9 +97,9 @@ import { initCandleLight } from './fx/candlelight.js';
       }
       SCRATCHBONES_GAME.layout.authored = {
         enabled: authored.enabled !== false,
-        designWidthPx: Math.max(320, Number(authored.designWidthPx) || 1920),
-        designHeightPx: Math.max(180, Number(authored.designHeightPx) || 1080),
-        scaleMode: String(authored.scaleMode || 'contain').toLowerCase(),
+        designWidthPx: Math.max(320, Number(authored.designWidthPx)),
+        designHeightPx: Math.max(180, Number(authored.designHeightPx)),
+        scaleMode: String(authored.scaleMode).toLowerCase(),
         boxes: normalizedBoxes,
         subOffsets,
         subSizes,
@@ -134,7 +135,7 @@ import { initCandleLight } from './fx/candlelight.js';
       return authoredEditorState.selectedId;
     }
     function selectAuthoredBox(id) {
-      authoredEditorState.selectedId = id && DEFAULT_AUTHORED_BOXES[id] ? id : null;
+      authoredEditorState.selectedId = id && AUTHORED_BOX_DEFAULTS[id] ? id : null;
       renderAuthoredOverlays();
       renderAuthoredInspector();
     }
@@ -275,7 +276,7 @@ import { initCandleLight } from './fx/candlelight.js';
     const RANK_COUNT = SCRATCHBONES_GAME.deck.rankCount;
     const COPIES_PER_RANK = SCRATCHBONES_GAME.deck.copiesPerRank;
     const PLAYER_NAMES = SCRATCHBONES_GAME.deck.humanNames; // Optional authored names; Mao-ao generation is the fallback for any seat.
-    const NAME_SEED_PREFIX = SCRATCHBONES_GAME.nameGeneration?.seedPrefix || 'madiao-player';
+    const NAME_SEED_PREFIX = SCRATCHBONES_GAME.nameGeneration.seedPrefix;
     const CONFIG = {
       startingChips: SCRATCHBONES_GAME.chips.startingChips,
       challengeBaseTransfer: SCRATCHBONES_GAME.chips.challengeBaseTransfer,
@@ -284,9 +285,9 @@ import { initCandleLight } from './fx/candlelight.js';
       challengeStakeAnimation: SCRATCHBONES_GAME.chips.challengeStakeAnimation,
       clearBonusBase: SCRATCHBONES_GAME.chips.clearBonusBase,
       clearBonusIncrement: SCRATCHBONES_GAME.chips.clearBonusIncrement,
-      aiChallengeThreshold: Number(AI_CONFIG.challengeThreshold) || 0.52,
-      aiChallengeRandomNudgeMax: Number(AI_CONFIG.challengeRandomNudgeMax) || 0.16,
-      aiBettingConfidenceSuspicionWeight: Number(AI_CONFIG.bettingConfidenceSuspicionWeight) || 0.55,
+      aiChallengeThreshold: Number(AI_CONFIG.challengeThreshold),
+      aiChallengeRandomNudgeMax: Number(AI_CONFIG.challengeRandomNudgeMax),
+      aiBettingConfidenceSuspicionWeight: Number(AI_CONFIG.bettingConfidenceSuspicionWeight),
       assets: SCRATCHBONES_GAME.assets,
     };
     const STAKE_TIERS = (Array.isArray(CONFIG.challengeStakeTiers) ? CONFIG.challengeStakeTiers : [])
@@ -297,13 +298,10 @@ import { initCandleLight } from './fx/candlelight.js';
       .filter((tier) => tier.id && tier.value > 0)
       .sort((a, b) => a.value - b.value);
     const STAKE_TIER_BY_ID = Object.fromEntries(STAKE_TIERS.map((tier) => [tier.id, tier]));
-    const STAKE_COIN_SRC = CONFIG.assets?.stakeTierCoinSrc || {
-      sun: './docs/assets/hud/coin_sun.png',
-      tinmoon: './docs/assets/hud/coin_tinmoon.png',
-      eclipse: './docs/assets/hud/coin_eclipse.png',
-    };
+    const STAKE_COIN_SRC = CONFIG.assets.stakeTierCoinSrc;
+    const STAKE_COIN_FALLBACK_TIER_ID = String(CONFIG.assets.coinFallbackTierId);
     function stakeCoinSrcForTier(tierId) {
-      const fallback = STAKE_COIN_SRC.tinmoon || CONFIG.assets?.cinematicTokenIconSrc || './docs/assets/hud/coin_tinmoon.png';
+      const fallback = STAKE_COIN_SRC[STAKE_COIN_FALLBACK_TIER_ID] || CONFIG.assets.cinematicTokenIconSrc;
       return STAKE_COIN_SRC[tierId] || fallback;
     }
     const state = createInitialState(SCRATCHBONES_GAME);
@@ -2907,7 +2905,7 @@ import { initCandleLight } from './fx/candlelight.js';
         const locked = !!state.betting?.actionInFlight;
         return `<div class="stakeTierBtnRow" data-proj-id="betting-tier-buttons">${STAKE_TIERS.map((tier) => {
           const enabled = allowedTierIds.includes(tier.id) && !locked;
-          return `<button class="stakeTierBtn" data-stake-tier-btn="${tier.id}" data-stake-tier-action="${mode}" data-stake-tier-id="${tier.id}" ${!enabled ? 'disabled' : ''}><img src="${escapeHtml(stakeCoinSrcForTier(tier.id))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier('tinmoon'))}" alt="${escapeHtml(tier.id)} coin"><span>${escapeHtml(tier.id)} · ${tier.value}</span></button>`;
+          return `<button class="stakeTierBtn" data-stake-tier-btn="${tier.id}" data-stake-tier-action="${mode}" data-stake-tier-id="${tier.id}" ${!enabled ? 'disabled' : ''}><img src="${escapeHtml(stakeCoinSrcForTier(tier.id))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tier.id)} coin"><span>${escapeHtml(tier.id)} · ${tier.value}</span></button>`;
         }).join('')}</div>`;
       };
       const renderStakeVisual = () => `
@@ -2916,16 +2914,16 @@ import { initCandleLight } from './fx/candlelight.js';
           <div class="stakeVisualRow">
             <div class="stakeContribCol">
               <div class="tiny">${seatLabel(state.betting.challengerId)} contribution</div>
-              <div class="stakeAnchor" data-stake-contrib-anchor="${state.betting.challengerId}">${state.betting.currentTierId ? `<img src="${escapeHtml(stakeCoinSrcForTier(state.betting.currentTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier('tinmoon'))}" alt="challenger coin">` : ''}</div>
+              <div class="stakeAnchor" data-stake-contrib-anchor="${state.betting.challengerId}">${state.betting.currentTierId ? `<img src="${escapeHtml(stakeCoinSrcForTier(state.betting.currentTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="challenger coin">` : ''}</div>
               <div class="tiny">${getContribution(state.betting.challengerId)}</div>
             </div>
             <div class="stakeCenterCol">
-              <div class="stakeAnchor stakeCurrent" data-stake-current-anchor>${state.betting.displayedTierId ? `<img data-stake-current-coin src="${escapeHtml(stakeCoinSrcForTier(state.betting.displayedTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier('tinmoon'))}" alt="current stake coin">` : ''}</div>
+              <div class="stakeAnchor stakeCurrent" data-stake-current-anchor>${state.betting.displayedTierId ? `<img data-stake-current-coin src="${escapeHtml(stakeCoinSrcForTier(state.betting.displayedTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="current stake coin">` : ''}</div>
               <div class="tiny">Stake: ${state.betting.currentTierId || '—'} (${state.betting.currentTierValue || 0})</div>
             </div>
             <div class="stakeContribCol">
               <div class="tiny">${seatLabel(state.betting.challengedId)} contribution</div>
-              <div class="stakeAnchor" data-stake-contrib-anchor="${state.betting.challengedId}">${getContribution(state.betting.challengedId) > 0 && state.betting.currentTierId ? `<img src="${escapeHtml(stakeCoinSrcForTier(state.betting.currentTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier('tinmoon'))}" alt="challenged coin">` : ''}</div>
+              <div class="stakeAnchor" data-stake-contrib-anchor="${state.betting.challengedId}">${getContribution(state.betting.challengedId) > 0 && state.betting.currentTierId ? `<img src="${escapeHtml(stakeCoinSrcForTier(state.betting.currentTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="challenged coin">` : ''}</div>
               <div class="tiny">${getContribution(state.betting.challengedId)}</div>
             </div>
           </div>
@@ -3455,7 +3453,7 @@ import { initCandleLight } from './fx/candlelight.js';
         const renderTierButtons = (mode) => `<div class="stakeTierBtnRow" data-proj-id="betting-tier-buttons">${STAKE_TIERS.map((tier) => {
           const enabled = legalTierIds.includes(tier.id) && !bettingLocked;
           const coinSrc = stakeCoinSrcForTier(tier.id);
-          return `<button class="stakeTierBtn" data-stake-tier-btn="${tier.id}" data-stake-tier-action="${mode}" data-stake-tier-id="${tier.id}" ${!enabled ? 'disabled' : ''}><img src="${escapeHtml(coinSrc)}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier('tinmoon'))}" alt="${escapeHtml(tier.id)} coin"><span>${tier.value}</span></button>`;
+          return `<button class="stakeTierBtn" data-stake-tier-btn="${tier.id}" data-stake-tier-action="${mode}" data-stake-tier-id="${tier.id}" ${!enabled ? 'disabled' : ''}><img src="${escapeHtml(coinSrc)}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tier.id)} coin"><span>${tier.value}</span></button>`;
         }).join('')}</div>`;
         const bettingActionsHtml = actorCanAct
           ? (openingMode
@@ -3484,8 +3482,8 @@ import { initCandleLight } from './fx/candlelight.js';
           }
           bettingLayer.style.pointerEvents = 'auto';
           statusAnchor.innerHTML = `<div class="bettingStatusTitle" data-proj-id="betting-status-title">${escapeHtml(cinematicMode?.headline || 'Challenge betting')}</div><div class="bettingStatusLine" data-proj-id="betting-status-line">${escapeHtml(seatFirstName(state.betting.currentActorId))} to act · Stake ${escapeHtml(state.betting.currentTierId || 'pending')} (${state.betting.currentTierValue || 0})</div>`;
-          leftAnchor.innerHTML = `<div class="stakeSlotLabel">Challenger</div><div class="stakeAnchor" data-stake-contrib-anchor="${state.betting.challengerId}">${challengerContributionTierId ? `<img data-stake-contrib-coin="${state.betting.challengerId}" src="${escapeHtml(stakeCoinSrcForTier(challengerContributionTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier('tinmoon'))}" alt="challenger contribution coin">` : ''}</div><div class="stakeSlotValue">${getContribution(state.betting.challengerId)}</div>`;
-          rightAnchor.innerHTML = `<div class="stakeSlotLabel">Challenged</div><div class="stakeAnchor" data-stake-contrib-anchor="${state.betting.challengedId}">${challengedContributionTierId ? `<img data-stake-contrib-coin="${state.betting.challengedId}" src="${escapeHtml(stakeCoinSrcForTier(challengedContributionTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier('tinmoon'))}" alt="challenged contribution coin">` : ''}</div><div class="stakeSlotValue">${getContribution(state.betting.challengedId)}</div>`;
+          leftAnchor.innerHTML = `<div class="stakeSlotLabel">Challenger</div><div class="stakeAnchor" data-stake-contrib-anchor="${state.betting.challengerId}">${challengerContributionTierId ? `<img data-stake-contrib-coin="${state.betting.challengerId}" src="${escapeHtml(stakeCoinSrcForTier(challengerContributionTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="challenger contribution coin">` : ''}</div><div class="stakeSlotValue">${getContribution(state.betting.challengerId)}</div>`;
+          rightAnchor.innerHTML = `<div class="stakeSlotLabel">Challenged</div><div class="stakeAnchor" data-stake-contrib-anchor="${state.betting.challengedId}">${challengedContributionTierId ? `<img data-stake-contrib-coin="${state.betting.challengedId}" src="${escapeHtml(stakeCoinSrcForTier(challengedContributionTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="challenged contribution coin">` : ''}</div><div class="stakeSlotValue">${getContribution(state.betting.challengedId)}</div>`;
           choiceAnchor.innerHTML = bettingActionsHtml;
           const coinButtons = [...choiceAnchor.querySelectorAll('[data-stake-tier-btn] img')].map((img) => ({ src: img.getAttribute('src'), fallback: img.getAttribute('data-fallback-src') }));
           const slotRects = {
