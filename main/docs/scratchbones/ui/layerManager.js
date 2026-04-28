@@ -4,6 +4,26 @@ function normalizeSelectorList(value) {
   return [];
 }
 
+function snapshotManagedElementStyle(element) {
+  if (!element) return null;
+  return {
+    margin: element.style.margin,
+    width: element.style.width,
+    height: element.style.height,
+    transform: element.style.transform,
+    transformOrigin: element.style.transformOrigin,
+  };
+}
+
+function restoreManagedElementStyle(element, styleSnapshot) {
+  if (!element || !styleSnapshot) return;
+  element.style.margin = styleSnapshot.margin;
+  element.style.width = styleSnapshot.width;
+  element.style.height = styleSnapshot.height;
+  element.style.transform = styleSnapshot.transform;
+  element.style.transformOrigin = styleSnapshot.transformOrigin;
+}
+
 export function createLayerManager({ gameConfig = null, debugLog = null } = {}) {
   const managerConfig = gameConfig?.layout?.layerManager || {};
   const enabled = managerConfig.enabled !== false;
@@ -80,9 +100,14 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
   function clearPromoted() {
     for (const entry of state.promoted) {
-      entry.element.remove();
-      entry.placeholder.remove();
-      entry.portal.remove();
+      restoreManagedElementStyle(entry.element, entry.originalElementStyle);
+      if (entry.placeholder?.isConnected && entry.element?.isConnected) {
+        entry.placeholder.parentNode?.insertBefore(entry.element, entry.placeholder);
+      } else {
+        entry.element?.remove();
+      }
+      entry.placeholder?.remove();
+      entry.portal?.remove();
     }
     state.promoted = [];
   }
@@ -114,6 +139,9 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const layoutHeight = element.offsetHeight || element.clientHeight || rect.height;
     if (layoutWidth < 1 || layoutHeight < 1) return false;
     const computed = window.getComputedStyle(element);
+    const computedTransform = computed.transform && computed.transform !== 'none' ? computed.transform : '';
+    const computedTransformOrigin = computed.transformOrigin || '50% 50%';
+    const originalElementStyle = snapshotManagedElementStyle(element);
     const placeholder = document.createElement('div');
     placeholder.dataset.layerPlaceholderFor = assignment.id;
     if (assignment.preserveSpace ?? defaultPreserveSpace) {
@@ -133,16 +161,30 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const portal = document.createElement('div');
     portal.className = `ui-layer-portal ui-layer-portal-${assignment.layer}`;
     portal.style.cssText = 'position:absolute;pointer-events:auto;';
+    if (computedTransform) {
+      portal.style.transform = computedTransform;
+      portal.style.transformOrigin = computedTransformOrigin;
+    }
     layerRoot.appendChild(portal);
     portal.appendChild(element);
 
     element.style.margin = '0';
     element.style.width = '100%';
     element.style.height = '100%';
+    if (computedTransform) {
+      element.style.transform = 'none';
+      element.style.transformOrigin = '50% 50%';
+    }
 
-    const promotedEntry = { assignment, element, placeholder, portal };
+    const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle };
     state.promoted.push(promotedEntry);
     updatePortalRect(promotedEntry);
+    log('debug', 'promoted', {
+      assignmentId: assignment.id,
+      layer: assignment.layer,
+      selectorName: element.id ? `#${element.id}` : element.className,
+      retainedTransform: computedTransform || 'none',
+    });
     return true;
   }
 
