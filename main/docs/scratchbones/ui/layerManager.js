@@ -139,8 +139,6 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const layoutHeight = element.offsetHeight || element.clientHeight || rect.height;
     if (layoutWidth < 1 || layoutHeight < 1) return false;
     const computed = window.getComputedStyle(element);
-    const computedTransform = computed.transform && computed.transform !== 'none' ? computed.transform : '';
-    const computedTransformOrigin = computed.transformOrigin || '50% 50%';
     const originalElementStyle = snapshotManagedElementStyle(element);
     const placeholder = document.createElement('div');
     placeholder.dataset.layerPlaceholderFor = assignment.id;
@@ -161,20 +159,12 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const portal = document.createElement('div');
     portal.className = `ui-layer-portal ui-layer-portal-${assignment.layer}`;
     portal.style.cssText = 'position:absolute;pointer-events:auto;';
-    if (computedTransform) {
-      portal.style.transform = computedTransform;
-      portal.style.transformOrigin = computedTransformOrigin;
-    }
     layerRoot.appendChild(portal);
     portal.appendChild(element);
 
     element.style.margin = '0';
     element.style.width = '100%';
     element.style.height = '100%';
-    if (computedTransform) {
-      element.style.transform = 'none';
-      element.style.transformOrigin = '50% 50%';
-    }
 
     const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle };
     state.promoted.push(promotedEntry);
@@ -183,7 +173,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       assignmentId: assignment.id,
       layer: assignment.layer,
       selectorName: element.id ? `#${element.id}` : element.className,
-      retainedTransform: computedTransform || 'none',
+      retainedTransform: element.style.transform || 'none',
     });
     return true;
   }
