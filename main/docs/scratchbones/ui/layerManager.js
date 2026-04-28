@@ -106,13 +106,13 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   }
 
   function promoteElementToLayer(element, assignment) {
-    if (!state.app || !state.host || !element || !(element instanceof Element) || element.closest('#uiLayerManagerHost')) return;
+    if (!state.app || !state.host || !element || !(element instanceof Element) || element.closest('#uiLayerManagerHost')) return false;
     const layerRoot = state.roots.get(assignment.layer);
-    if (!layerRoot) return;
+    if (!layerRoot) return false;
     const rect = element.getBoundingClientRect();
     const layoutWidth = element.offsetWidth || element.clientWidth || rect.width;
     const layoutHeight = element.offsetHeight || element.clientHeight || rect.height;
-    if (layoutWidth < 1 || layoutHeight < 1) return;
+    if (layoutWidth < 1 || layoutHeight < 1) return false;
     const computed = window.getComputedStyle(element);
     const placeholder = document.createElement('div');
     placeholder.dataset.layerPlaceholderFor = assignment.id;
@@ -143,6 +143,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const promotedEntry = { assignment, element, placeholder, portal };
     state.promoted.push(promotedEntry);
     updatePortalRect(promotedEntry);
+    return true;
   }
 
   function sync(app = document.getElementById('app')) {
@@ -158,8 +159,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
           if (!(node instanceof Element) || seen.has(node)) return;
           if (promotedAncestors.some((ancestor) => ancestor.contains(node))) return;
           seen.add(node);
-          promoteElementToLayer(node, assignment);
-          promotedAncestors.push(node);
+          if (promoteElementToLayer(node, assignment)) promotedAncestors.push(node);
         });
       }
     }
