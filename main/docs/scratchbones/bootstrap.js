@@ -165,6 +165,42 @@ import { createLayerManager } from './ui/layerManager.js';
         },
       }, null, 2);
     }
+    function collectRenderedTransformsSnapshot() {
+      const app = document.getElementById('app');
+      if (!app) return {};
+      const countsByProjId = new Map();
+      const snapshot = {};
+      app.querySelectorAll('[data-proj-id]').forEach((el) => {
+        const projId = String(el.getAttribute('data-proj-id') || '').trim();
+        if (!projId) return;
+        const seenCount = countsByProjId.get(projId) || 0;
+        countsByProjId.set(projId, seenCount + 1);
+        const key = seenCount === 0 ? projId : `${projId}#${seenCount + 1}`;
+        snapshot[key] = getComputedStyle(el).transform || 'none';
+      });
+      return snapshot;
+    }
+    function buildRenderedTransformsExport() {
+      const originalPreviewState = projectionUiState.showUnlayeredPreview;
+      const capture = (showUnlayeredPreview) => {
+        projectionUiState.showUnlayeredPreview = showUnlayeredPreview;
+        render();
+        return collectRenderedTransformsSnapshot();
+      };
+      const layered = capture(false);
+      const original = capture(true);
+      projectionUiState.showUnlayeredPreview = originalPreviewState;
+      render();
+      return JSON.stringify({
+        layout: {
+          mode: getScratchbonesLayoutMode(),
+          renderedTransforms: {
+            layered,
+            original,
+          },
+        },
+      }, null, 2);
+    }
     function copyTextToClipboard(payload) {
       const text = String(payload || '');
       return navigator.clipboard?.writeText(text).catch(() => {
@@ -4001,6 +4037,7 @@ import { createLayerManager } from './ui/layerManager.js';
       if (!btn || !tip || !varsBtn || !exportBtn || !varsPanel || !varsPanelTitle || !varsPanelBody || !varsCopyBtn || !varsCloseBtn) return;
       projectionUiState.ui = { varsPanelBody, varsPanelTitle };
       let layerPreviewBtn = document.getElementById('projLayerPreviewBtn');
+      let transformExportBtn = document.getElementById('projTransformExportBtn');
       if (!layerPreviewBtn) {
         layerPreviewBtn = document.createElement('button');
         layerPreviewBtn.id = 'projLayerPreviewBtn';
@@ -4008,6 +4045,17 @@ import { createLayerManager } from './ui/layerManager.js';
         layerPreviewBtn.className = 'ghost';
         layerPreviewBtn.style.marginRight = '6px';
         varsCopyBtn.parentElement?.insertBefore(layerPreviewBtn, varsCopyBtn);
+      }
+      if (!transformExportBtn) {
+        transformExportBtn = document.createElement('button');
+        transformExportBtn.id = 'projTransformExportBtn';
+        transformExportBtn.type = 'button';
+        transformExportBtn.className = 'ghost';
+        transformExportBtn.textContent = 'Export Both Transforms';
+        transformExportBtn.title = 'Read rendered transforms for layered and original preview modes and copy both.';
+        transformExportBtn.style.display = 'block';
+        transformExportBtn.style.margin = '6px 0 0';
+        layerPreviewBtn.parentElement?.insertBefore(transformExportBtn, varsCopyBtn);
       }
       const updateLayerPreviewButton = () => {
         const isUnlayered = projectionUiState.showUnlayeredPreview;
@@ -4148,6 +4196,11 @@ import { createLayerManager } from './ui/layerManager.js';
         updateEditorStatus(projectionUiState.showUnlayeredPreview
           ? 'Showing original UI positions (layer manager disabled).'
           : 'Showing layer-managed UI positions.');
+      });
+      transformExportBtn.addEventListener('click', () => {
+        copyTextToClipboard(buildRenderedTransformsExport());
+        updateLayerPreviewButton();
+        updateEditorStatus('Copied rendered transforms for layered and original modes.');
       });
       exportBtn.addEventListener('click', () => {
         copyTextToClipboard(buildAuthoredLayoutExport());
