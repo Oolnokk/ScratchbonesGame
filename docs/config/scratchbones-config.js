@@ -150,6 +150,11 @@ window.SCRATCHBONES_CONFIG = {
     },
     "layout": {
       "mode": "authored",
+      "animation": {
+        "baseDurationMs": 320,
+        "fadeInSpeed": 1.8,
+        "fadeOutSpeed": 1.8
+      },
       "viewport": {
         "widthPx": 1920,
         "heightPx": 1080
