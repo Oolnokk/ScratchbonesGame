@@ -103,6 +103,38 @@ const DEFAULT_CSS_ROOT_VARS = {
   '--layout-card-shadow-alpha': '0.34',
   '--layout-card-contact-alpha': '0.2',
 };
+const DEFAULT_LAYER_MANAGER_CONFIG = {
+  enabled: true,
+  hostZIndex: 45,
+  defaultPreserveSpace: true,
+  assignments: [
+    {
+      id: 'ui-text-over-lighting',
+      layer: 'above-lighting',
+      selectors: [
+        '.seatName',
+        '.seatMeta',
+        '.seatStatus',
+        '.turnSpotlightNameBar',
+        '.cin-name',
+        '.cin-action-burst',
+      ],
+      preserveSpace: true,
+    },
+    {
+      id: 'ui-avatars-over-lighting',
+      layer: 'above-lighting',
+      selectors: [
+        '.seatAvatarBox',
+        '.turnSpotlightAvatar',
+        '.cin-avatar',
+        '.actorAvatarFloat',
+        '.reactorAvatarFloat',
+      ],
+      preserveSpace: true,
+    },
+  ],
+};
 
 export function validateScratchbonesGameConfig(rootConfig, { reportError, debugEnabled = true } = {}) {
   const hasGameConfig = rootConfig && typeof rootConfig.game === 'object' && rootConfig.game !== null;
@@ -196,6 +228,10 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       lighting: {
         ...(rawGameConfig.layout?.lighting || {}),
         candlelight: { ...(rawGameConfig.layout?.lighting?.candlelight || {}) },
+      },
+      layerManager: {
+        ...DEFAULT_LAYER_MANAGER_CONFIG,
+        ...(rawGameConfig.layout?.layerManager || {}),
       },
     },
     uiText: {

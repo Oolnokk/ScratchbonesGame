@@ -526,6 +526,25 @@ window.SCRATCHBONES_CONFIG = {
           }
         }
       },
+      "layerManager": {
+        "enabled": true,
+        "hostZIndex": 45,
+        "defaultPreserveSpace": true,
+        "assignments": [
+          {
+            "id": "ui-text-over-lighting",
+            "layer": "above-lighting",
+            "selectors": [".seatName", ".seatMeta", ".seatStatus", ".turnSpotlightNameBar", ".cin-name", ".cin-action-burst"],
+            "preserveSpace": true
+          },
+          {
+            "id": "ui-avatars-over-lighting",
+            "layer": "above-lighting",
+            "selectors": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar", ".actorAvatarFloat", ".reactorAvatarFloat"],
+            "preserveSpace": true
+          }
+        ]
+      },
       "fitter": {
         "enabled": true,
         "reflowDebounceMs": 90,

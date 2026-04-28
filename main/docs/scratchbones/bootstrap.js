@@ -6,6 +6,7 @@ import { createScratchbonesAudio } from './fx/audio.js';
 import { initDebugPanelInterceptor } from './debug/panel.js';
 import { RECENT_CHANGE_LABEL } from './debug/metadata.js';
 import { initCandleLight } from './fx/candlelight.js';
+import { createLayerManager } from './ui/layerManager.js';
 
     initDebugPanelInterceptor();
     const DEBUG_ENABLED = true;
@@ -204,6 +205,7 @@ import { initCandleLight } from './fx/candlelight.js';
       if (DEBUG_TRACE.candlelight === false) return;
       traceEvent(level, channel, payload);
     };
+    const SCRATCHBONES_LAYER_MANAGER = createLayerManager({ gameConfig: SCRATCHBONES_GAME, debugLog: traceEvent });
     const SCRATCHBONES_AUDIO = createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog: traceAudio });
     function hashStringToSeed(text) {
       return window.SCRATCHBONES_NAME_GENERATOR.hashStringToSeed(text);
@@ -2799,6 +2801,7 @@ import { initCandleLight } from './fx/candlelight.js';
     }
 
     function render() {
+      SCRATCHBONES_LAYER_MANAGER.clear();
       seatAvatarAnim.capturePreRender();
       cardAnimator.capturePreRender();
       const app = document.getElementById('app');
@@ -2861,7 +2864,6 @@ import { initCandleLight } from './fx/candlelight.js';
       const cinematicRevealPlay = cinematicMode?.play || null;
       const cinematicRevealActive = cinematicPhase === 'reveal' && !!cinematicRevealPlay;
       const challengeIntro = state.challengeIntro;
-      const challengeVisualsActive = !!(state.challengeWindow || state.betting || state.cinematicMode || challengeIntro);
       const claimFocus = (() => {
         if (!latestPlay) {
           return {
@@ -3178,6 +3180,7 @@ import { initCandleLight } from './fx/candlelight.js';
           setTimeout(() => _announceCinematicBetAction(actionFx.playerId, actionFx.command), 0);
         }
       }
+      SCRATCHBONES_LAYER_MANAGER.sync(app);
       cardAnimator.animatePostRender();
       seatAvatarAnim.animatePostRender();
     }
@@ -3630,6 +3633,7 @@ import { initCandleLight } from './fx/candlelight.js';
       burstShell.className = 'fx-burst-shell';
       burstShell.innerHTML = `<div class="cin-action-burst ${cls}">${escapeHtml(label)}</div>`;
       overlay.appendChild(burstShell);
+      SCRATCHBONES_LAYER_MANAGER.sync(app);
       setTimeout(() => burstShell.remove(), Math.max(1000, Math.round((Number(getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration').replace('s', '')) || 2.1) * 1400)));
     }
 // Phase 2a: Reveal (no fold)
