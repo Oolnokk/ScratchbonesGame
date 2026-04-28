@@ -1,7 +1,7 @@
 export function initDebugPanelInterceptor() {
   const _logs = [];
-  const _orig = { log: console.log, warn: console.warn, error: console.error };
-  ['log', 'warn', 'error'].forEach((lvl) => {
+  const _orig = { debug: console.debug, log: console.log, warn: console.warn, error: console.error };
+  ['debug', 'log', 'warn', 'error'].forEach((lvl) => {
     console[lvl] = function (...a) {
       _orig[lvl].apply(console, a);
       const line = a.map((x) => {
