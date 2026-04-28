@@ -179,7 +179,32 @@ import { initCandleLight } from './fx/candlelight.js';
       return applyAuthoredLayoutModeModule({ app, authoredConfig, authoredBoxKeyByProjId: AUTHORED_BOX_KEY_BY_PROJ_ID, authoredParentBox: AUTHORED_PARENT_BOX, applyAuthoredBoxStyles });
     }
     const CHALLENGE_TIMER_SECS = SCRATCHBONES_GAME.timers.challengeTimerSecs;
-    const SCRATCHBONES_AUDIO = createScratchbonesAudio(SCRATCHBONES_GAME);
+    const DEBUG_OPTIONS = SCRATCHBONES_GAME.debug || {};
+    const DEBUG_TRACE = DEBUG_OPTIONS.trace || {};
+    const DEBUG_EVENT_LOG_LIMIT = Math.max(50, Number(DEBUG_OPTIONS.eventLogLimit) || 300);
+    window.__scratchbonesDebugEvents = window.__scratchbonesDebugEvents || [];
+    function traceEvent(level, channel, payload = {}) {
+      if (DEBUG_OPTIONS.enabled === false) return;
+      if (level === 'debug' && DEBUG_OPTIONS.includeConsoleDebug === false) return;
+      const entry = { ts: Date.now(), level, channel, payload };
+      window.__scratchbonesDebugEvents.unshift(entry);
+      window.__scratchbonesDebugEvents = window.__scratchbonesDebugEvents.slice(0, DEBUG_EVENT_LOG_LIMIT);
+      const logger = console[level] || console.log;
+      logger(`[scratchbones:${channel}]`, payload);
+    }
+    const traceGameplay = (channel, payload = {}, level = 'debug') => {
+      if (DEBUG_TRACE.gameplayFlow === false) return;
+      traceEvent(level, channel, payload);
+    };
+    const traceAudio = (level, channel, payload = {}) => {
+      if (DEBUG_TRACE.audio === false) return;
+      traceEvent(level, channel, payload);
+    };
+    const traceCandlelight = (level, channel, payload = {}) => {
+      if (DEBUG_TRACE.candlelight === false) return;
+      traceEvent(level, channel, payload);
+    };
+    const SCRATCHBONES_AUDIO = createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog: traceAudio });
     function hashStringToSeed(text) {
       return window.SCRATCHBONES_NAME_GENERATOR.hashStringToSeed(text);
     }
@@ -574,6 +599,13 @@ import { initCandleLight } from './fx/candlelight.js';
         challengerOptions: backups,
         backupCandidates: backups,
       };
+      traceGameplay('claim.opened', {
+        playerIndex,
+        declaredRank,
+        cardsPlayed: cards.length,
+        truthful,
+        challengerOptions: backups,
+      });
       render();
       if (playerIndex !== 0) {
         startChallengeTimer();
@@ -769,6 +801,11 @@ import { initCandleLight } from './fx/candlelight.js';
       const challengeSessionId = ++state.challengeDecisionSession;
       const staggerMs = Number(AI_DECISION_DELAYS.challengeStaggerMs) || 220;
       let maxDecisionDelay = 0;
+      traceGameplay('challenge.window-open', {
+        playerIndex,
+        challengeSessionId,
+        possibleChallengers,
+      });
       possibleChallengers.forEach((idx, order) => {
         const thinkMs = aiDecisionDelayMs('challenge', idx, { play: lastPlay });
         const delayMs = Math.max(0, thinkMs + (order * staggerMs));
@@ -855,6 +892,7 @@ import { initCandleLight } from './fx/candlelight.js';
       if (!state.challengeWindow || state.gameOver || state.betting || state.challengeIntro) return;
       clearChallengeTimer();
       clearChallengeIntro();
+      traceGameplay('challenge.started', { challengerIndex, challengedIndex, challengeWindowOpen: Boolean(state.challengeWindow) });
       state.challengeIntro = {
         challengerId: challengerIndex,
         challengedId: challengedIndex,
@@ -1276,6 +1314,7 @@ import { initCandleLight } from './fx/candlelight.js';
       clearChallengeTimer();
       clearChallengeIntro();
       state.challengeWindow = null;
+      traceGameplay('challenge.no-challenge-accepted', { lastPlayerIndex, declaredRank: state.declaredRank });
       showClaimGlow('green', 1600, () => {
         if (state.gameOver) return;
         if (checkForClearAndRedeal(lastPlayerIndex)) return;
@@ -1286,6 +1325,7 @@ import { initCandleLight } from './fx/candlelight.js';
           return;
         }
         state.currentTurn = nextPlayer;
+        traceGameplay('turn.advance', { from: lastPlayerIndex, to: nextPlayer, reason: 'claim-stood' });
         setBanner(state.currentTurn === 0
           ? `Your turn. Match ${state.declaredRank}, bluff, or concede the round.`
           : `${seatLabel(state.players[state.currentTurn])} is thinking about ${state.declaredRank}.`);
@@ -1751,6 +1791,7 @@ import { initCandleLight } from './fx/candlelight.js';
       const totalDurationMs = Math.max(1, Number(durationMs) || (CHALLENGE_TIMER_SECS * 1000));
       const tickMs = Math.max(1, Math.round(totalDurationMs / 3));
       const burstDurationMs = Math.max(120, tickMs - 80);
+      traceGameplay('challenge.timer-start', { totalDurationMs, tickMs, burstDurationMs, hasOnExpire: typeof onExpire === 'function' });
       const expireHandler = typeof onExpire === 'function'
         ? onExpire
         : () => humanAcceptNoChallenge();
@@ -1760,6 +1801,10 @@ import { initCandleLight } from './fx/candlelight.js';
       state.challengeTimer = setTimeout(() => {
         state.challengeTimer = null;
         if (state.challengeWindow && !state.betting && !state.gameOver) {
+          traceGameplay('challenge.timer-expire', {
+            activePlayer: state.challengeWindow?.lastPlay?.playerIndex ?? null,
+            challengeSession: state.challengeDecisionSession,
+          });
           expireHandler();
         }
       }, totalDurationMs);
@@ -4223,8 +4268,24 @@ import { initCandleLight } from './fx/candlelight.js';
       });
     })();
     // ── debug log panel ────────────────────────────────────────────────────
-    document.getElementById('_dbgBtn')?.addEventListener('click', () => {
-      document.getElementById('_dbgPanel').classList.toggle('open');
+    const debugBtn = document.getElementById('_dbgBtn');
+    const debugPanel = document.getElementById('_dbgPanel');
+    if (debugBtn) {
+      debugBtn.hidden = false;
+      debugBtn.removeAttribute('aria-hidden');
+      debugBtn.style.display = 'block';
+    }
+    if (debugPanel) {
+      debugPanel.hidden = false;
+      debugPanel.removeAttribute('aria-hidden');
+      debugPanel.classList.remove('open');
+      debugPanel.style.display = 'none';
+    }
+    debugBtn?.addEventListener('click', () => {
+      if (!debugPanel) return;
+      const isVisible = debugPanel.style.display !== 'none';
+      debugPanel.style.display = isVisible ? 'none' : 'block';
+      debugPanel.classList.toggle('open', isVisible);
     });
     document.getElementById('_dbgCopyBtn')?.addEventListener('click', () => {
       const text = (window._debugLogs || [])
@@ -4266,4 +4327,8 @@ import { initCandleLight } from './fx/candlelight.js';
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     window.addEventListener('keydown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     startGame();
-    initCandleLight();
+    try {
+      initCandleLight({ gameConfig: SCRATCHBONES_GAME, debugLog: traceCandlelight });
+    } catch (error) {
+      traceEvent('error', 'candlelight.init-failed', { error: String(error?.message || error) });
+    }
