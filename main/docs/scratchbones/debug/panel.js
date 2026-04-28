@@ -1,3 +1,40 @@
+function ensureDebugPanelDom() {
+  if (!document.body) return;
+
+  let debugBtn = document.getElementById('_dbgBtn');
+  if (!debugBtn) {
+    debugBtn = document.createElement('button');
+    debugBtn.id = '_dbgBtn';
+    debugBtn.type = 'button';
+    debugBtn.textContent = 'Debug Log';
+    debugBtn.style.position = 'fixed';
+    debugBtn.style.right = '12px';
+    debugBtn.style.bottom = '12px';
+    debugBtn.style.zIndex = '2147483647';
+    debugBtn.style.padding = '6px 10px';
+    debugBtn.style.fontSize = '12px';
+    document.body.appendChild(debugBtn);
+  }
+
+  let debugPanel = document.getElementById('_dbgPanel');
+  if (!debugPanel) {
+    debugPanel = document.createElement('section');
+    debugPanel.id = '_dbgPanel';
+    debugPanel.style.position = 'fixed';
+    debugPanel.style.right = '12px';
+    debugPanel.style.bottom = '48px';
+    debugPanel.style.width = 'min(640px, 90vw)';
+    debugPanel.style.height = 'min(45vh, 420px)';
+    debugPanel.style.background = 'rgba(0,0,0,0.9)';
+    debugPanel.style.color = '#ddd';
+    debugPanel.style.border = '1px solid #555';
+    debugPanel.style.zIndex = '2147483647';
+    debugPanel.style.display = 'none';
+    debugPanel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #444;"><strong>Debug Log</strong><button id="_dbgCopyBtn" type="button">Copy</button></div><div id="_dbgBody" style="height:calc(100% - 38px);overflow:auto;padding:8px;font:12px/1.3 monospace;white-space:pre-wrap;"></div>';
+    document.body.appendChild(debugPanel);
+  }
+}
+
 function copyDebugLogsToClipboard() {
   const text = (window._debugLogs || [])
     .map(e => `[${e.lvl.toUpperCase()}] ${e.line}`)
@@ -17,6 +54,7 @@ function copyDebugLogsToClipboard() {
 }
 
 function initDebugPanelUi() {
+  ensureDebugPanelDom();
   const debugBtn = document.getElementById('_dbgBtn');
   const debugPanel = document.getElementById('_dbgPanel');
   if (debugBtn) {
@@ -38,7 +76,7 @@ function initDebugPanelUi() {
       const isVisible = computedDisplay !== 'none';
       panel.style.display = isVisible ? 'none' : 'block';
       panel.dataset.visible = isVisible ? '0' : '1';
-      panel.classList.toggle('open', isVisible);
+      panel.classList.toggle('open', !isVisible);
     });
   }
   const copyBtn = document.getElementById('_dbgCopyBtn');
@@ -60,7 +98,7 @@ export function initDebugPanelInterceptor() {
       _orig[lvl].apply(console, a);
       const line = a.map((x) => {
         try { return (typeof x === 'object') ? JSON.stringify(x, null, 1) : String(x); }
-        catch (_) { return String(x); }
+        catch { return String(x); }
       }).join(' ');
       _logs.push({ lvl, line, t: Date.now() });
       const el = document.getElementById('_dbgBody');
