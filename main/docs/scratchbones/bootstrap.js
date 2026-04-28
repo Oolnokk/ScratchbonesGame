@@ -4261,4 +4261,4 @@ import { initCandleLight } from './fx/candlelight.js';
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     window.addEventListener('keydown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     startGame();
-    initCandleLight();
+    initCandleLight(SCRATCHBONES_GAME);
