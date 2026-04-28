@@ -29,6 +29,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     host: null,
     roots: new Map(),
     promoted: [],
+    resizeObserver: null,
+    windowResizeHandler: null,
   };
   const log = (level, event, payload = {}) => {
     if (typeof debugLog !== 'function') return;
@@ -60,6 +62,18 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     app.appendChild(host);
     state.host = host;
     state.roots = roots;
+    if (!state.windowResizeHandler) {
+      state.windowResizeHandler = () => {
+        for (const entry of state.promoted) updatePortalRect(entry);
+      };
+      window.addEventListener('resize', state.windowResizeHandler);
+    }
+    if (!state.resizeObserver) {
+      state.resizeObserver = new ResizeObserver(() => {
+        for (const entry of state.promoted) updatePortalRect(entry);
+      });
+    }
+    state.resizeObserver.observe(app);
     log('debug', 'host-created', { layerCount: roots.size, hostZIndex });
     return host;
   }
@@ -77,10 +91,18 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     if (!state.app || !entry?.placeholder || !entry?.portal) return;
     const appRect = state.app.getBoundingClientRect();
     const phRect = entry.placeholder.getBoundingClientRect();
-    entry.portal.style.left = `${Math.round(phRect.left - appRect.left)}px`;
-    entry.portal.style.top = `${Math.round(phRect.top - appRect.top)}px`;
-    entry.portal.style.width = `${Math.max(1, Math.round(phRect.width))}px`;
-    entry.portal.style.height = `${Math.max(1, Math.round(phRect.height))}px`;
+    const appLayoutWidth = Math.max(1, state.app.offsetWidth || state.app.clientWidth || appRect.width || 1);
+    const appLayoutHeight = Math.max(1, state.app.offsetHeight || state.app.clientHeight || appRect.height || 1);
+    const scaleX = appRect.width / appLayoutWidth || 1;
+    const scaleY = appRect.height / appLayoutHeight || 1;
+    const localLeft = (phRect.left - appRect.left) / scaleX;
+    const localTop = (phRect.top - appRect.top) / scaleY;
+    const localWidth = phRect.width / scaleX;
+    const localHeight = phRect.height / scaleY;
+    entry.portal.style.left = `${Math.round(localLeft)}px`;
+    entry.portal.style.top = `${Math.round(localTop)}px`;
+    entry.portal.style.width = `${Math.max(1, Math.round(localWidth))}px`;
+    entry.portal.style.height = `${Math.max(1, Math.round(localHeight))}px`;
   }
 
   function promoteElementToLayer(element, assignment) {
@@ -88,14 +110,16 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const layerRoot = state.roots.get(assignment.layer);
     if (!layerRoot) return;
     const rect = element.getBoundingClientRect();
-    if (rect.width < 1 || rect.height < 1) return;
+    const layoutWidth = element.offsetWidth || element.clientWidth || rect.width;
+    const layoutHeight = element.offsetHeight || element.clientHeight || rect.height;
+    if (layoutWidth < 1 || layoutHeight < 1) return;
     const computed = window.getComputedStyle(element);
     const placeholder = document.createElement('div');
     placeholder.dataset.layerPlaceholderFor = assignment.id;
     if (assignment.preserveSpace ?? defaultPreserveSpace) {
       placeholder.style.display = computed.display === 'inline' ? 'inline-block' : computed.display;
-      placeholder.style.width = `${Math.max(1, Math.round(rect.width))}px`;
-      placeholder.style.height = `${Math.max(1, Math.round(rect.height))}px`;
+      placeholder.style.width = `${Math.max(1, Math.round(layoutWidth))}px`;
+      placeholder.style.height = `${Math.max(1, Math.round(layoutHeight))}px`;
       placeholder.style.marginTop = computed.marginTop;
       placeholder.style.marginRight = computed.marginRight;
       placeholder.style.marginBottom = computed.marginBottom;
@@ -143,6 +167,14 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   function clear() {
     if (!enabled) return;
     clearPromoted();
+    if (state.resizeObserver) {
+      state.resizeObserver.disconnect();
+      state.resizeObserver = null;
+    }
+    if (state.windowResizeHandler) {
+      window.removeEventListener('resize', state.windowResizeHandler);
+      state.windowResizeHandler = null;
+    }
     if (state.host) {
       state.host.remove();
       state.host = null;
