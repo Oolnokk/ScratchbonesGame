@@ -4267,42 +4267,6 @@ import { initCandleLight } from './fx/candlelight.js';
         updateEditorStatus(`Nudged ${selected} by ${delta}px.`);
       });
     })();
-    // ── debug log panel ────────────────────────────────────────────────────
-    const debugBtn = document.getElementById('_dbgBtn');
-    const debugPanel = document.getElementById('_dbgPanel');
-    if (debugBtn) {
-      debugBtn.hidden = false;
-      debugBtn.removeAttribute('aria-hidden');
-      debugBtn.style.display = 'block';
-    }
-    if (debugPanel) {
-      debugPanel.hidden = false;
-      debugPanel.removeAttribute('aria-hidden');
-      debugPanel.classList.remove('open');
-      debugPanel.style.display = 'none';
-    }
-    debugBtn?.addEventListener('click', () => {
-      if (!debugPanel) return;
-      const isVisible = debugPanel.style.display !== 'none';
-      debugPanel.style.display = isVisible ? 'none' : 'block';
-      debugPanel.classList.toggle('open', isVisible);
-    });
-    document.getElementById('_dbgCopyBtn')?.addEventListener('click', () => {
-      const text = (window._debugLogs || [])
-        .map(e => `[${e.lvl.toUpperCase()}] ${e.line}`)
-        .join('\n');
-      navigator.clipboard?.writeText(text).catch(() => {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      });
-      const btn = document.getElementById('_dbgCopyBtn');
-      btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
-    });
     let fitReflowHandle = null;
     function scheduleResponsiveFitPass() {
       if (fitReflowHandle) clearTimeout(fitReflowHandle);
