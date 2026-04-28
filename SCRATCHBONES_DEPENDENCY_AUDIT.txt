@@ -1,44 +1,78 @@
 ScratchbonesBluffGame.html dependency audit
-Entry: ScratchbonesBluffGame.html
+Generated at: 2026-04-28T18:06:43.281Z
+Command: node main/docs/scratchbones/tools/audit-deps.js
 
-Direct HTML/runtime dependencies:
+Updated entrypoint list:
+- ScratchbonesBluffGame.html
 - docs/config/scratchbones-config.js
 - docs/js/portrait-utils.js
 - docs/js/scratchbones-name-generator.js
-- docs/assets/hud/Khymeryyanroman4.otf
-- docs/assets/hud/tankanscript_rotated_flipped_horiz.otf
+- main/docs/scratchbones/bootstrap.js
 
-Runtime dependency groups:
-1. Scratchbones game config assets from docs/config/scratchbones-config.js
-   - HUD table: docs/assets/hud/tabletop.png
-   - Scratchbone cards: docs/assets/hud/2DScratchBoneWild.png, docs/assets/hud/2DScratchBoneFlipped.png, rank cards 1-10 using 2DScratchbone{rank}.png primary and 2DScratchbones{rank}.png fallback
-   - Rank glyphs: docs/assets/symbols/boneglyph1.png through boneglyph10.png
-   - Coins: docs/assets/hud/coin_sun.png, coin_tinmoon.png, coin_eclipse.png
-   - Audio: configured movement/challenge/BGM files listed below
+Module dependency graph:
+- main/docs/scratchbones/bootstrap.js:
+  - main/docs/scratchbones/config/normalizeScratchbonesGameConfig.js
+  - main/docs/scratchbones/debug/metadata.js
+  - main/docs/scratchbones/debug/panel.js
+  - main/docs/scratchbones/fx/audio.js
+  - main/docs/scratchbones/fx/candlelight.js
+  - main/docs/scratchbones/layout/authoredLayout.js
+  - main/docs/scratchbones/layout/diagnostics.js
+  - main/docs/scratchbones/state/createInitialState.js
+- main/docs/scratchbones/config/normalizeScratchbonesGameConfig.js -> (none)
+- main/docs/scratchbones/debug/metadata.js -> (none)
+- main/docs/scratchbones/debug/panel.js -> (none)
+- main/docs/scratchbones/fx/audio.js -> (none)
+- main/docs/scratchbones/fx/candlelight.js -> (none)
+- main/docs/scratchbones/layout/authoredLayout.js -> (none)
+- main/docs/scratchbones/layout/diagnostics.js -> (none)
+- main/docs/scratchbones/state/createInitialState.js -> (none)
 
-2. Portrait system from docs/js/portrait-utils.js
-   - Fetches docs/config/cosmetics/index.json
-   - Fetches every JSON path listed in that index
-   - Fetches docs/config/species/index.json
-   - Fetches every JSON path listed in that index
-   - Loads sprite PNGs referenced by those JSON files from docs/assets/...
-   - Has raw GitHub fallback URL for cosmetics index/portrait images if local load fails
+Runtime config dependencies:
+- docs/config/cosmetics/index.json
+- docs/config/scratchbones-config.js
+- docs/config/species/index.json
 
-Missing or suspicious configured files:
-- docs/assets/hud/2DScratchboneFlipped.png is missing, but fallback docs/assets/hud/2DScratchBoneFlipped.png exists.
-- docs/assets/hud/2DScratchbones1.png through 2DScratchbones4.png are missing fallback names, but primary singular names exist.
-- docs/assets/hud/2DScratchbone5.png through 2DScratchbone8.png are missing primary names, but plural fallback names exist.
-- docs/assets/hud/2DScratchbones9.png and 2DScratchbones10.png are missing fallback names, but primary singular names exist.
-- docs/assets/audio/scratchbones/sfx/hand-to-table.mp3
-- docs/assets/audio/scratchbones/sfx/table-to-claim.mp3
-- docs/assets/audio/scratchbones/sfx/claim-to-hand.mp3
-- docs/assets/audio/scratchbones/sfx/opponent-to-table.mp3
-- docs/assets/audio/scratchbones/sfx/card-fade.mp3
-- docs/assets/audio/scratchbones/sfx/challenge-start.mp3
-- docs/assets/audio/scratchbones/sfx/challenge-end.mp3
+Runtime asset dependencies:
+- docs/assets/audio/bgm/tankan_nocturne.mp3
 - docs/assets/audio/scratchbones/bgm/challenge-loop.mp3
+- docs/assets/audio/scratchbones/sfx/card-fade.mp3
+- docs/assets/audio/scratchbones/sfx/challenge-end.mp3
+- docs/assets/audio/scratchbones/sfx/challenge-start.mp3
+- docs/assets/audio/scratchbones/sfx/claim-to-hand.mp3
+- docs/assets/audio/scratchbones/sfx/hand-to-table.mp3
+- docs/assets/audio/scratchbones/sfx/opponent-to-table.mp3
+- docs/assets/audio/scratchbones/sfx/table-to-claim.mp3
+- docs/assets/audio/sfx/tablesounds/boneclack1.m4a
+- docs/assets/hud/coin_eclipse.png
+- docs/assets/hud/coin_sun.png
+- docs/assets/hud/coin_tinmoon.png
+- docs/assets/hud/Khymeryyanroman4.otf
+- docs/assets/hud/tabletop.png
+- docs/assets/hud/tankanscript_rotated_flipped_horiz.otf
+- docs/assets/symbols/boneglyph{rank}.png
 
-Files that appear unrelated to this entry point:
-- docs/config/config.js and most combat/map/3D configs are not imported by ScratchbonesBluffGame.html.
-- docs/assets/3D/... is not used by this file.
-- package.json, tests, docs/*.html tools, and root markdown files are not runtime dependencies of this page.
+Missing runtime files:
+- docs/assets/audio/scratchbones/bgm/challenge-loop.mp3
+- docs/assets/audio/scratchbones/sfx/card-fade.mp3
+- docs/assets/audio/scratchbones/sfx/challenge-end.mp3
+- docs/assets/audio/scratchbones/sfx/challenge-start.mp3
+- docs/assets/audio/scratchbones/sfx/claim-to-hand.mp3
+- docs/assets/audio/scratchbones/sfx/hand-to-table.mp3
+- docs/assets/audio/scratchbones/sfx/opponent-to-table.mp3
+- docs/assets/audio/scratchbones/sfx/table-to-claim.mp3
+
+Files scanned for this audit:
+- docs/config/scratchbones-config.js
+- docs/js/portrait-utils.js
+- docs/js/scratchbones-name-generator.js
+- main/docs/scratchbones/bootstrap.js
+- main/docs/scratchbones/config/normalizeScratchbonesGameConfig.js
+- main/docs/scratchbones/debug/metadata.js
+- main/docs/scratchbones/debug/panel.js
+- main/docs/scratchbones/fx/audio.js
+- main/docs/scratchbones/fx/candlelight.js
+- main/docs/scratchbones/layout/authoredLayout.js
+- main/docs/scratchbones/layout/diagnostics.js
+- main/docs/scratchbones/state/createInitialState.js
+- ScratchbonesBluffGame.html
