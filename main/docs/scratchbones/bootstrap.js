@@ -4053,10 +4053,12 @@ import { createLayerManager } from './ui/layerManager.js';
         transformExportBtn.className = 'ghost';
         transformExportBtn.textContent = 'Export Both Transforms';
         transformExportBtn.title = 'Read rendered transforms for layered and original preview modes and copy both.';
-        transformExportBtn.style.display = 'block';
-        transformExportBtn.style.margin = '6px 0 0';
+        transformExportBtn.style.display = 'inline-block';
+        transformExportBtn.style.flexBasis = '100%';
+        transformExportBtn.style.marginTop = '6px';
         layerPreviewBtn.parentElement?.insertBefore(transformExportBtn, varsCopyBtn);
       }
+      if (layerPreviewBtn.parentElement) layerPreviewBtn.parentElement.style.flexWrap = 'wrap';
       const updateLayerPreviewButton = () => {
         const isUnlayered = projectionUiState.showUnlayeredPreview;
         layerPreviewBtn.textContent = isUnlayered ? 'Layered' : 'Original';
