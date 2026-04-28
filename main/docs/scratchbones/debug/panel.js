@@ -29,7 +29,7 @@ function ensureDebugPanelDom() {
     debugPanel.style.color = '#ddd';
     debugPanel.style.border = '1px solid #555';
     debugPanel.style.zIndex = '2147483647';
-    debugPanel.style.display = 'none';
+    debugPanel.style.setProperty('display', 'none', 'important');
     debugPanel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #444;"><strong>Debug Log</strong><button id="_dbgCopyBtn" type="button">Copy</button></div><div id="_dbgBody" style="height:calc(100% - 38px);overflow:auto;padding:8px;font:12px/1.3 monospace;white-space:pre-wrap;"></div>';
     document.body.appendChild(debugPanel);
   }
@@ -65,7 +65,7 @@ function initDebugPanelUi() {
   if (debugPanel) {
     debugPanel.hidden = false;
     debugPanel.removeAttribute('aria-hidden');
-    if (!debugPanel.dataset.visible) debugPanel.style.display = 'none';
+    if (!debugPanel.dataset.visible) debugPanel.style.setProperty('display', 'none', 'important');
   }
   if (debugBtn && !debugBtn.dataset.bound) {
     debugBtn.dataset.bound = 'true';
@@ -74,9 +74,13 @@ function initDebugPanelUi() {
       if (!panel) return;
       const computedDisplay = window.getComputedStyle(panel).display;
       const isVisible = computedDisplay !== 'none';
-      panel.style.display = isVisible ? 'none' : 'block';
-      panel.dataset.visible = isVisible ? '0' : '1';
-      panel.classList.toggle('open', !isVisible);
+      if (isVisible) {
+        panel.style.setProperty('display', 'none', 'important');
+        panel.dataset.visible = '0';
+      } else {
+        panel.style.setProperty('display', 'flex', 'important');
+        panel.dataset.visible = '1';
+      }
     });
   }
   const copyBtn = document.getElementById('_dbgCopyBtn');
