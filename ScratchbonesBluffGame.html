@@ -23,135 +23,7 @@
       font-style: normal;
     }
     :root {
-      --bg: #15110f;
-      --bg2: #221917;
-      --panel: rgba(46, 34, 30, 0.95);
-      --panel-soft: rgba(67, 49, 43, 0.9);
-      --accent: #c89952;
-      --accent-2: #f2d08f;
-      --danger: #c85a5a;
-      --ok: #66b17c;
-      --text: #f4e8d0;
-      --muted: #cdbb9f;
-      --card: #f8f1df;
-      --card-text: #32231d;
-      --wild: #f1d347;
-      --shadow: 0 10px 24px rgba(0,0,0,0.28);
-      --radius: 18px;
       --safe: env(safe-area-inset-bottom, 0px);
-      --layout-viewport-width: 1920px;
-      --layout-viewport-height: 1080px;
-      --hand-height-frac: 0.20;
-      --layout-hand-min-height: 160px;
-      --layout-hand-max-height: 360px;
-      --layout-challenge-font-scale: 1;
-      --layout-challenge-image-scale: 1;
-      --layout-challenge-gap-scale: 1;
-      --layout-parent-height-scale: 1;
-      --layout-fit-font-scale: 1;
-      --layout-fit-image-scale: 1;
-      --layout-fit-gap-scale: 1;
-      --layout-card-base-scale: 0.25;
-      --layout-card-hand-scale: 1;
-      --layout-card-scale: calc((var(--layout-card-base-scale) / 0.25) * var(--layout-card-hand-scale));
-      --layout-card-hit-min-width: 44px;
-      --layout-card-hit-min-height: 44px;
-      --layout-card-table-base-width: 312px;
-      --layout-card-table-base-height: 440px;
-      --layout-card-mini-base-width: 112px;
-      --layout-card-mini-base-height: 160px;
-      --layout-card-label-font-base: 2.88rem;
-      --layout-card-label-gap-base: 24px;
-      --layout-card-label-padding-y-base: 16px;
-      --layout-card-label-padding-x-base: 24px;
-      --layout-card-label-offset-base: 24px;
-      --layout-card-label-radius-base: 40px;
-      --layout-sidebar-width: 280px;
-      --layout-app-gap: 8px;
-      --layout-app-padding: 8px;
-      --layout-seat-avatar-size: 132px;
-      --layout-human-seat-avatar-size: 204px;
-      --layout-cinematic-avatar-size: 132px;
-      --layout-hand-card-min-width: 74px;
-      --layout-hand-card-max-width: 104px;
-      --layout-hand-card-min-height: 146px;
-      --layout-hand-card-max-height: 186px;
-      --layout-hand-card-gap-min: 8px;
-      --layout-hand-card-gap-max: 12px;
-      --layout-event-log-max-height: 78px;
-      --layout-controls-padding-y: 12px;
-      --layout-controls-padding-x: 12px;
-      --layout-controls-gap: 10px;
-      --layout-hand-wrap-padding-y: 8px;
-      --layout-hand-wrap-padding-x: 12px;
-      --layout-hand-wrap-gap: 6px;
-      --layout-event-log-padding-y: 8px;
-      --layout-event-log-padding-x: 12px;
-      --layout-event-log-gap: 6px;
-      --layout-log-item-padding-y: 9px;
-      --layout-log-item-padding-x: 10px;
-      --layout-sidebar-content-scale: 0.5;
-      --layout-table-view-height: 420px;
-      --layout-table-view-min-height: 260px;
-      --layout-table-view-max-height: 680px;
-      --layout-table-dominance-frac: 0.56;
-      --layout-action-column-height-scale: 0.25;
-      --layout-controls-height-scale: 0.5;
-      --layout-hand-height-scale: 0.5;
-      --layout-controls-max-height: 50dvh;
-      --layout-hand-max-row-height: 50dvh;
-      --layout-action-column-max-height: 25dvh;
-      --layout-log-max-row-height: 25dvh;
-      --layout-turn-spotlight-avatar-size: 180px;
-      --layout-claim-cluster-center-x: 0.5;
-      --layout-claim-cluster-center-y: 0.54;
-      --layout-claim-cluster-width: 78;
-      --layout-claim-cluster-height: 48;
-      --layout-claim-cluster-scale: 1;
-      --layout-ui-tabletop-url: none;
-      --layout-table-card-container-scale: 1.25;
-      --layout-table-card-content-scale: 0.8;
-      --layout-claim-avatar-size: 270px;
-      --layout-claim-avatar-zoom: 1.2;
-      --layout-claim-avatar-border-radius: 12px;
-      --layout-claim-avatar-border-color: rgba(242,208,143,0.28);
-      --layout-claim-avatar-background: rgba(22,16,14,0.72);
-      --layout-claim-title-offset-y: -150px;
-      --layout-claim-bet-controls-offset-y: 150px;
-      --layout-claim-title-scale: 1.5;
-      --layout-betting-title-offset-y: -80%;
-      --layout-betting-choice-offset-y: 115%;
-      --layout-betting-left-slot-offset-x: 260px;
-      --layout-betting-left-slot-offset-y: 150px;
-      --layout-betting-right-slot-offset-x: -260px;
-      --layout-betting-right-slot-offset-y: 150px;
-      --layout-betting-coin-button-size: clamp(58px, 8.6vw, 86px);
-      --layout-betting-contribution-coin-size: clamp(48px, 6.7vw, 72px);
-      --layout-betting-tier-gap: clamp(10px, 2.2vw, 20px);
-      --layout-table-card-auto-scale: 1;
-      --layout-fit-additive-avatar-zoom: 1;
-      --layout-turn-spotlight-offset-x: 10px;
-      --layout-turn-spotlight-offset-y: 10px;
-      --layout-cinematic-player-info-offset: 12px;
-      --layout-cinematic-player-info-font: 1.05rem;
-      --layout-cinematic-burst-font: 2rem;
-      --layout-cinematic-burst-duration: 2.1s;
-      --layout-liar-burst-font: 3.2rem;
-      --layout-liar-burst-duration: 3.2s;
-      --layout-liar-burst-end-y: -180%;
-      --layout-flame-x: 50%;
-      --layout-flame-y: 14%;
-      --layout-flame-core-alpha: 0.4;
-      --layout-flame-mid-alpha: 0.27;
-      --layout-flame-far-alpha: 0.14;
-      --layout-flame-flicker-seconds: 2.9s;
-      --layout-flame-enabled: 1;
-      --layout-card-shadow-offset-x: 1.5px;
-      --layout-card-shadow-offset-y: 9px;
-      --layout-card-shadow-blur: 12px;
-      --layout-card-shadow-spread: -2px;
-      --layout-card-shadow-alpha: 0.34;
-      --layout-card-contact-alpha: 0.2;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; background: transparent; color: var(--text); font-family: 'Khymeryyanroman4', Inter, system-ui, sans-serif; letter-spacing: 0.10em; height: 100%; }
@@ -306,11 +178,11 @@
     }
     .claimCluster {
       position: absolute;
-      left: calc(var(--layout-claim-cluster-center-x, 0.5) * 100%);
-      top: calc(var(--layout-claim-cluster-center-y, 0.54) * 100%);
-      width: calc(var(--layout-claim-cluster-width, 78) * 1%);
-      height: calc(var(--layout-claim-cluster-height, 48) * 1%);
-      transform: translate(-50%, -50%) scale(var(--layout-claim-cluster-scale, 1));
+      left: calc(var(--layout-claim-cluster-center-x) * 100%);
+      top: calc(var(--layout-claim-cluster-center-y) * 100%);
+      width: calc(var(--layout-claim-cluster-width) * 1%);
+      height: calc(var(--layout-claim-cluster-height) * 1%);
+      transform: translate(-50%, -50%) scale(var(--layout-claim-cluster-scale));
       transform-origin: center center;
       pointer-events: none;
       z-index: 3;
@@ -355,7 +227,7 @@
       justify-content: center;
     }
     .claimClusterCinematicPane .challengeBar.cinBettingActionsOffset {
-      margin-top: var(--layout-claim-bet-controls-offset-y, 150px) !important;
+      margin-top: var(--layout-claim-bet-controls-offset-y) !important;
     }
     .claimClusterCinematicPane .challengeBar button {
       min-width: 140px;
@@ -468,7 +340,7 @@
       display: grid;
       place-items: center;
       z-index: 12;
-      transform: translate(-50%, -50%) translateY(var(--layout-claim-title-offset-y, -150px)) scale(var(--layout-claim-title-scale, 1.5));
+      transform: translate(-50%, -50%) translateY(var(--layout-claim-title-offset-y)) scale(var(--layout-claim-title-scale));
       transform-origin: center center;
     }
     .claimClusterBettingLayer {
