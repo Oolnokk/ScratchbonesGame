@@ -1,5 +1,15 @@
 window.SCRATCHBONES_CONFIG = {
   game: {
+    "debug": {
+      "enabled": true,
+      "includeConsoleDebug": true,
+      "eventLogLimit": 400,
+      "trace": {
+        "gameplayFlow": true,
+        "audio": true,
+        "candlelight": true
+      }
+    },
     "deck": {
       "rankCount": 10,
       "copiesPerRank": 4,
