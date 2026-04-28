@@ -1,8 +1,10 @@
 import { getScratchbonesGameConfig } from './config/normalizeScratchbonesGameConfig.js';
 import { createInitialState } from './state/createInitialState.js';
 import { applyAuthoredLayoutMode as applyAuthoredLayoutModeModule } from './layout/authoredLayout.js';
+import { createLayoutDiagnosticsState, resetLayoutDiagnosticsState, updateLayoutDiagnosticsState } from './layout/diagnostics.js';
 import { createScratchbonesAudio } from './fx/audio.js';
 import { initDebugPanelInterceptor } from './debug/panel.js';
+import { RECENT_CHANGE_LABEL } from './debug/metadata.js';
 import { initCandleLight } from './fx/candlelight.js';
 
     initDebugPanelInterceptor();
@@ -304,7 +306,8 @@ import { initCandleLight } from './fx/candlelight.js';
       const fallback = STAKE_COIN_SRC[STAKE_COIN_FALLBACK_TIER_ID] || CONFIG.assets.cinematicTokenIconSrc;
       return STAKE_COIN_SRC[tierId] || fallback;
     }
-    const state = createInitialState(SCRATCHBONES_GAME);
+    const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
+    const layoutDiagnostics = createLayoutDiagnosticsState();
    function mulberry32(a) {
       return function() {
         let t = a += 0x6D2B79F5;
@@ -1984,10 +1987,9 @@ import { initCandleLight } from './fx/candlelight.js';
     }
     function applyResponsiveFit(rootEl = document.getElementById('app')) {
       const layoutResult = fitContainer(rootEl, SCRATCHBONES_GAME.layout?.fitter);
-      state.layoutFitStages = layoutResult.fitSummary || {};
-      state.layoutOverlapDiagnostics = layoutResult.overlap || { overlaps: [], stage: 'none', snapshot: [] };
+      updateLayoutDiagnosticsState(layoutDiagnostics, layoutResult);
       syncDebugSnapshotPre();
-      return state.layoutFitStages;
+      return layoutDiagnostics.fitStages;
     }
     function getLayoutRegionsConfig() {
       const layoutRegions = SCRATCHBONES_GAME.layout?.regions || {};
@@ -2782,12 +2784,12 @@ import { initCandleLight } from './fx/candlelight.js';
           challengedHasRaised: !!state.betting.challengedHasRaised,
         };
         const bettingUiDebugKey = JSON.stringify(bettingUiDebug);
-        if (state.bettingUiDebugKey !== bettingUiDebugKey) {
-          state.bettingUiDebugKey = bettingUiDebugKey;
+        if (uiDebugState.bettingUiDebugKey !== bettingUiDebugKey) {
+          uiDebugState.bettingUiDebugKey = bettingUiDebugKey;
           console.debug('[betting-ui-state]', bettingUiDebug);
         }
       } else {
-        state.bettingUiDebugKey = null;
+        uiDebugState.bettingUiDebugKey = null;
       }
       const challengeWindow = state.challengeWindow;
       const humanCanDecideChallenge = !!(challengeWindow && !state.betting && !state.gameOver && challengeWindow.lastPlay.playerIndex !== 0);
@@ -3042,7 +3044,7 @@ import { initCandleLight } from './fx/candlelight.js';
         ` : ''}
         <details class="debug">
           <summary>Debug tools</summary>
-          <div class="tiny" style="margin-top:8px;">Recent change: ${state.recentChange}</div>
+          <div class="tiny" style="margin-top:8px;">Recent change: ${RECENT_CHANGE_LABEL}</div>
           <pre id="debugSnapshotData">${DEBUG_ENABLED ? escapeHtml(JSON.stringify(debugSnapshot(), null, 2)) : 'Debug disabled.'}</pre>
         </details>
         ${(clusterCinematicActive && (cinematicPhase === 'reveal' || cinematicPhase === 'fold'))
@@ -3110,7 +3112,7 @@ import { initCandleLight } from './fx/candlelight.js';
       document.body.classList.toggle('layout-mode-authored', layoutMode === 'authored');
       if (layoutMode === 'authored') {
         applyAuthoredLayoutMode(app, getScratchbonesAuthoredConfig());
-        state.layoutFitStages = {};
+        resetLayoutDiagnosticsState(layoutDiagnostics);
       } else {
         app.style.width = '';
         app.style.height = '';
@@ -3175,15 +3177,20 @@ import { initCandleLight } from './fx/candlelight.js';
           reads: Object.fromEntries(Object.entries(p.reads || {}).map(([id, read]) => [seatLabel(Number(id)), { truthfulCount: read.truthfulCount, bluffCount: read.bluffCount, repeatRankCount: read.repeatRankCount, quickJudgmentBias: Number(read.quickJudgmentBias.toFixed(2)), currentTruthStreak: read.currentTruthStreak, currentBluffStreak: read.currentBluffStreak, challengeWins: read.challengeWins, challengeLosses: read.challengeLosses }])),
         })),
         config: CONFIG,
-        fitStages: state.layoutFitStages,
-        overlapDiagnostics: state.layoutOverlapDiagnostics,
+        fitStages: layoutDiagnostics.fitStages,
+        overlapDiagnostics: layoutDiagnostics.overlap,
         layoutNotes: {
           claimClusterEnabled: claimClusterConfig.enabled,
           turnSpotlightEnabled: regionsConfig.turnSpotlight.enabled,
           contextBoxMode: regionsConfig.contextBox.sharedDeclareAndChallengeSlot ? 'shared' : 'split',
         },
         stats: state.stats,
-        recentChange: state.recentChange,
+        uiDebug: {
+          debugKeys: {
+            bettingUiState: uiDebugState.bettingUiDebugKey,
+          },
+          changelogLabel: RECENT_CHANGE_LABEL,
+        },
       };
     }
     function escapeHtml(str) {
