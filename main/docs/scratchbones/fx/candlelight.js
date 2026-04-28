@@ -1,4 +1,4 @@
-  export function initCandleLight() {
+  export function initCandleLight(SCRATCHBONES_GAME) {
     const APP_REF_W = 1920, APP_REF_H = 1080;
 
     // Light position normalised from tablelight2.json (x:61, y:360) @ 1920×1080
