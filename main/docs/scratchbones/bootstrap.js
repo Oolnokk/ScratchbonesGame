@@ -4268,8 +4268,24 @@ import { initCandleLight } from './fx/candlelight.js';
       });
     })();
     // ── debug log panel ────────────────────────────────────────────────────
-    document.getElementById('_dbgBtn')?.addEventListener('click', () => {
-      document.getElementById('_dbgPanel').classList.toggle('open');
+    const debugBtn = document.getElementById('_dbgBtn');
+    const debugPanel = document.getElementById('_dbgPanel');
+    if (debugBtn) {
+      debugBtn.hidden = false;
+      debugBtn.removeAttribute('aria-hidden');
+      debugBtn.style.display = 'block';
+    }
+    if (debugPanel) {
+      debugPanel.hidden = false;
+      debugPanel.removeAttribute('aria-hidden');
+      debugPanel.classList.remove('open');
+      debugPanel.style.display = 'none';
+    }
+    debugBtn?.addEventListener('click', () => {
+      if (!debugPanel) return;
+      const isVisible = debugPanel.style.display !== 'none';
+      debugPanel.style.display = isVisible ? 'none' : 'block';
+      debugPanel.classList.toggle('open', isVisible);
     });
     document.getElementById('_dbgCopyBtn')?.addEventListener('click', () => {
       const text = (window._debugLogs || [])
