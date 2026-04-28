@@ -80,9 +80,19 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
   function clearPromoted() {
     for (const entry of state.promoted) {
-      entry.element.remove();
-      entry.placeholder.remove();
-      entry.portal.remove();
+      if (entry?.placeholder?.parentNode && entry?.element) {
+        entry.placeholder.parentNode.insertBefore(entry.element, entry.placeholder);
+      }
+      if (entry?.elementStyle) {
+        if (entry.elementStyle.margin === null) entry.element.style.removeProperty('margin');
+        else entry.element.style.margin = entry.elementStyle.margin;
+        if (entry.elementStyle.width === null) entry.element.style.removeProperty('width');
+        else entry.element.style.width = entry.elementStyle.width;
+        if (entry.elementStyle.height === null) entry.element.style.removeProperty('height');
+        else entry.element.style.height = entry.elementStyle.height;
+      }
+      entry.placeholder?.remove();
+      entry.portal?.remove();
     }
     state.promoted = [];
   }
@@ -136,11 +146,16 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     layerRoot.appendChild(portal);
     portal.appendChild(element);
 
+    const elementStyle = {
+      margin: element.style.margin || null,
+      width: element.style.width || null,
+      height: element.style.height || null,
+    };
     element.style.margin = '0';
     element.style.width = '100%';
     element.style.height = '100%';
 
-    const promotedEntry = { assignment, element, placeholder, portal };
+    const promotedEntry = { assignment, element, placeholder, portal, elementStyle };
     state.promoted.push(promotedEntry);
     updatePortalRect(promotedEntry);
   }
