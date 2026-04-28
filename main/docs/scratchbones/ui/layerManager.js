@@ -151,12 +151,15 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     if (!state.host) return;
     clearPromoted();
     const seen = new Set();
+    const promotedAncestors = [];
     for (const assignment of assignmentList) {
       for (const selector of assignment.selectors) {
         app.querySelectorAll(selector).forEach((node) => {
           if (!(node instanceof Element) || seen.has(node)) return;
+          if (promotedAncestors.some((ancestor) => ancestor.contains(node))) return;
           seen.add(node);
           promoteElementToLayer(node, assignment);
+          promotedAncestors.push(node);
         });
       }
     }
