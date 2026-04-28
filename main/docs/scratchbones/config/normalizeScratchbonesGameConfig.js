@@ -178,6 +178,11 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
     },
     layout: {
       ...(rawGameConfig.layout || {}),
+      animation: {
+        baseDurationMs: Math.max(40, Number(rawGameConfig.layout?.animation?.baseDurationMs) || 320),
+        fadeInSpeed: Math.max(0.1, Number(rawGameConfig.layout?.animation?.fadeInSpeed) || 1.8),
+        fadeOutSpeed: Math.max(0.1, Number(rawGameConfig.layout?.animation?.fadeOutSpeed) || 1.8),
+      },
       mode: String(rawGameConfig.layout?.mode || 'responsive').toLowerCase(),
       authored: {
         enabled: rawGameConfig.layout?.authored?.enabled !== false,
