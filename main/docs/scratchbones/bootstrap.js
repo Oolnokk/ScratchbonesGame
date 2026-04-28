@@ -3180,7 +3180,7 @@ import { createLayerManager } from './ui/layerManager.js';
           setTimeout(() => _announceCinematicBetAction(actionFx.playerId, actionFx.command), 0);
         }
       }
-      SCRATCHBONES_LAYER_MANAGER.sync(app);
+      if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
       cardAnimator.animatePostRender();
       seatAvatarAnim.animatePostRender();
     }
@@ -3633,7 +3633,7 @@ import { createLayerManager } from './ui/layerManager.js';
       burstShell.className = 'fx-burst-shell';
       burstShell.innerHTML = `<div class="cin-action-burst ${cls}">${escapeHtml(label)}</div>`;
       overlay.appendChild(burstShell);
-      SCRATCHBONES_LAYER_MANAGER.sync(app);
+      if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
       setTimeout(() => burstShell.remove(), Math.max(1000, Math.round((Number(getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration').replace('s', '')) || 2.1) * 1400)));
     }
 // Phase 2a: Reveal (no fold)
@@ -3690,11 +3690,15 @@ import { createLayerManager } from './ui/layerManager.js';
     const projectionUiState = {
       active: false,
       varsPanelOpen: false,
+      showUnlayeredPreview: false,
       lastSelectedProjId: null,
       lastSelectedSourceEl: null,
       editedVars: new Map(),
       ui: null,
     };
+    function shouldRenderLayerManagedUi() {
+      return !projectionUiState.showUnlayeredPreview;
+    }
     function renderAuthoredOverlays() {
       const overlay = document.getElementById('authoredOverlay');
       const app = document.getElementById('app');
@@ -3996,6 +4000,23 @@ import { createLayerManager } from './ui/layerManager.js';
       const subBtn = document.getElementById('projSubBtn');
       if (!btn || !tip || !varsBtn || !exportBtn || !varsPanel || !varsPanelTitle || !varsPanelBody || !varsCopyBtn || !varsCloseBtn) return;
       projectionUiState.ui = { varsPanelBody, varsPanelTitle };
+      let layerPreviewBtn = document.getElementById('projLayerPreviewBtn');
+      if (!layerPreviewBtn) {
+        layerPreviewBtn = document.createElement('button');
+        layerPreviewBtn.id = 'projLayerPreviewBtn';
+        layerPreviewBtn.type = 'button';
+        layerPreviewBtn.className = 'ghost';
+        layerPreviewBtn.style.marginRight = '6px';
+        varsCopyBtn.parentElement?.insertBefore(layerPreviewBtn, varsCopyBtn);
+      }
+      const updateLayerPreviewButton = () => {
+        const isUnlayered = projectionUiState.showUnlayeredPreview;
+        layerPreviewBtn.textContent = isUnlayered ? 'Layered' : 'Original';
+        layerPreviewBtn.title = isUnlayered
+          ? 'Show current layer-manager promoted positions.'
+          : 'Show UI at original positions before layer-manager promotion.';
+      };
+      updateLayerPreviewButton();
       const projectionMapConfig = SCRATCHBONES_GAME.layout?.projectionMapping || {};
       const projectionEditorConfig = projectionMapConfig.editor || {};
       const varStep = Number(projectionEditorConfig.step) || 0.01;
@@ -4087,10 +4108,13 @@ import { createLayerManager } from './ui/layerManager.js';
           varsPanel.classList.remove('open');
           varsBtn.classList.remove('active');
           projectionUiState.varsPanelOpen = false;
+          projectionUiState.showUnlayeredPreview = false;
+          updateLayerPreviewButton();
           authoredEditorState.subLayerMode = false;
           authoredEditorState.selectedSubId = null;
           if (subBtn) subBtn.classList.remove('active');
         }
+        render();
         renderAuthoredOverlays();
       });
       if (subBtn) {
@@ -4117,6 +4141,14 @@ import { createLayerManager } from './ui/layerManager.js';
         varsBtn.classList.remove('active');
         projectionUiState.varsPanelOpen = false;
       });
+      layerPreviewBtn.addEventListener('click', () => {
+        projectionUiState.showUnlayeredPreview = !projectionUiState.showUnlayeredPreview;
+        updateLayerPreviewButton();
+        render();
+        updateEditorStatus(projectionUiState.showUnlayeredPreview
+          ? 'Showing original UI positions (layer manager disabled).'
+          : 'Showing layer-managed UI positions.');
+      });
       exportBtn.addEventListener('click', () => {
         copyTextToClipboard(buildAuthoredLayoutExport());
         updateEditorStatus('Copied authored layout export JSON.');
@@ -4142,7 +4174,7 @@ import { createLayerManager } from './ui/layerManager.js';
       document.addEventListener('pointercancel', finishAuthoredPointer);
       document.addEventListener('click', (event) => {
         if (!projectionUiState.active) return;
-        if (event.target.closest('#projMapBtn,#projVarBtn,#projVarPanel,#projExportBtn,#projSubBtn')) return;
+        if (event.target.closest('#projMapBtn,#projVarBtn,#projVarPanel,#projExportBtn,#projSubBtn,#projLayerPreviewBtn')) return;
         // Sub-layer mode: select sub overlays
         if (authoredEditorState.subLayerMode) {
           const subOverlay = event.target.closest('.authoredSubOverlay');
