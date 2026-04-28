@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "name": "Splayed Knot (High)"
+  },
+  "type": "appearance",
+  "hairSlot": "back",
+  "appearance": {
+    "inheritSprite": "head",
+    "bodyColors": [
+      "A"
+    ],
+    "originalId": "kenk_splayedknot_high_m"
+  },
+  "parts": {
+    "head": {
+      "layers": {
+        "back": {
+          "image": {
+            "url": "./assets/cosmetics/appearance/kenkari/headhair/splayedknot_high_kenk_m.png"
+          },
+          "spriteStyle": {
+            "base": {
+              "xform": {
+                "head": {
+                  "ax": -0.0983,
+                  "ay": -0.0809,
+                  "scaleX": 2.49,
+                  "scaleY": 2.49,
+                  "rotDeg": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

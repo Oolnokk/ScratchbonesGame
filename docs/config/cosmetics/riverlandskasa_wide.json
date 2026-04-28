@@ -1,0 +1,44 @@
+{
+  "slot": "hat",
+  "tags": ["material:reed"],
+  "colorRange": {
+    "minH": -100,
+    "maxH":  -45,
+    "stops": [
+      { "h": -100, "sMin": -0.60, "sMax": -0.40, "vMin": -0.40, "vMax":  0.45 },
+      { "h": -100, "sMin": -0.55, "sMax": -0.30, "vMin": -0.45, "vMax":  0.45 },
+      { "h":  -70, "sMin": -0.50, "sMax": -0.05, "vMin": -0.50, "vMax":  0.40 },
+      { "h":  -45, "sMin": -0.40, "sMax":  0.20, "vMin": -0.65, "vMax":  0.15 }
+    ]
+  },
+  "parts": {
+    "head": {
+      "layers": {
+        "back": {
+          "image": {
+            "url": "./assets/cosmetics/clothes/hat/riverlandskasa_wide-back.png"
+          },
+          "spriteStyle": {
+            "base": {
+              "xform": {
+                "head": { "ax": -0.1, "ay": -0.1, "scaleX": 2, "scaleY": 2, "rotDeg": 0 }
+              }
+            }
+          }
+        },
+        "front": {
+          "image": {
+            "url": "./assets/cosmetics/clothes/hat/riverlandskasa_wide-front.png"
+          },
+          "spriteStyle": {
+            "base": {
+              "xform": {
+                "head": { "ax": -0.1, "ay": -0.1, "scaleX": 2, "scaleY": 2, "rotDeg": 0 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

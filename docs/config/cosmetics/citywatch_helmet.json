@@ -1,0 +1,37 @@
+{
+  "slot": "hat",
+  "hsv": {
+    "defaults": { "h": 0, "s": 0, "v": 0 },
+    "limits": { "h": [50, 50], "s": [-0.02, -0.02], "v": [0.2, 0.2] }
+  },
+  "parts": {
+    "head": {
+      "layers": {
+        "back": {
+          "image": {
+            "url": "./assets/cosmetics/clothes/hat/citywatch_helmet-back.png"
+          },
+          "spriteStyle": {
+            "base": {
+              "xform": {
+                "head": { "ax": 0, "ay": -0.28, "scaleX": 3, "scaleY": 3 }
+              }
+            }
+          }
+        },
+        "front": {
+          "image": {
+            "url": "./assets/cosmetics/clothes/hat/citywatch_helmet-front.png"
+          },
+          "spriteStyle": {
+            "base": {
+              "xform": {
+                "head": { "ax": 0, "ay": -0.28, "scaleX": 3, "scaleY": 3 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

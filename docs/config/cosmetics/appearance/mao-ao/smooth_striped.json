@@ -1,0 +1,28 @@
+{
+  "meta": { "name": "Smooth Striped" },
+  "type": "appearance",
+  "hairSlot": "front",
+  "appearance": {
+    "inheritSprite": "head",
+    "bodyColors": ["B"],
+    "originalId": "mao-ao_smooth_striped"
+  },
+  "parts": {
+    "head": {
+      "image": {
+        "url": "./assets/cosmetics/appearance/mao-ao/headhair/smooth_striped_mint.png"
+      },
+      "spriteStyle": {
+        "xform": {
+          "head": {
+            "ax": -0.45,
+            "ay": -0.025,
+            "scaleX": 2.9,
+            "scaleY": 2.65,
+            "rotDeg": 0
+          }
+        }
+      }
+    }
+  }
+}

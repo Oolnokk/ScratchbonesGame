@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "name": "Eye Disks"
+  },
+  "type": "appearance",
+  "appearance": {
+    "inheritSprite": "head",
+    "bodyColors": [
+      "B"
+    ],
+    "originalId": "kenk_eyedisks"
+  },
+  "parts": {
+    "head": {
+      "image": {
+        "url": "./assets/cosmetics/appearance/kenkari/kenk_m_eyedisks.png"
+      },
+      "spriteStyle": {
+        "xform": {
+          "head": {
+            "ax": -0.0983,
+            "ay": -0.0809,
+            "scaleX": 2.49,
+            "scaleY": 2.49,
+            "rotDeg": 0
+          }
+        }
+      }
+    }
+  }
+}
