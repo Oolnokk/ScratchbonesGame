@@ -552,6 +552,8 @@ window.SCRATCHBONES_CONFIG = {
               ".seatSeed",
               ".seatTags",
               ".humanSeatChipBadge",
+              ".claimCluster",
+              ".claimClusterBettingLayer",
               ".claimRankBox",
               ".claimTimesBoxLeft",
               ".claimCountBoxLeft",
