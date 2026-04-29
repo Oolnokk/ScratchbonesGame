@@ -145,7 +145,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const appLayoutHeight = Math.max(1, state.app.offsetHeight || state.app.clientHeight || appRect.height || 1);
     const scaleX = appRect.width / appLayoutWidth || 1;
     const scaleY = appRect.height / appLayoutHeight || 1;
-    const sourceRect = entry.sourceRect || entry.placeholder?.getBoundingClientRect();
+    const sourceRect = entry.placeholder?.getBoundingClientRect() || entry.element?.getBoundingClientRect();
     if (!sourceRect) return;
     const localLeft = (sourceRect.left - appRect.left) / scaleX;
     const localTop = (sourceRect.top - appRect.top) / scaleY;
@@ -210,7 +210,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       element.style.bottom = 'auto';
     }
 
-    const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle, sourceRect: rect };
+    const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle };
     state.promoted.push(promotedEntry);
     updatePortalRect(promotedEntry);
     log('debug', 'promoted', {
