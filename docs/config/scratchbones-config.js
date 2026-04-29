@@ -577,6 +577,9 @@ window.SCRATCHBONES_CONFIG = {
             "id": "ui-shell-over-lighting",
             "layer": "above-lighting",
             "selectors": [
+              ".seatHandPreview",
+              ".seatHandCard",
+              ".seatHandCard img",
               ".topbar",
               ".tableViewHeader",
               ".seatSeed",
