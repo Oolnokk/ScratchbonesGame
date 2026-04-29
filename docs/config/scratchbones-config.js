@@ -554,6 +554,23 @@ window.SCRATCHBONES_CONFIG = {
         "placementMode": "screen-space",
         "screenSpaceUseFixed": true,
         "screenSpaceRoundToPixels": false,
+        "promoteByRootSelectors": [
+          "#aiSidebar",
+          ".humanSeatZone",
+          ".claimCluster",
+          ".stakeVisualPanel",
+          ".challengePromptPane"
+        ],
+        "excludeDescendantSelectors": [
+          ".seatName",
+          ".seatMeta",
+          ".seatStatus",
+          ".seatAvatarBox",
+          ".claimAvatarNameTag",
+          ".claimAvatarCinRole",
+          ".claimAvatarCinName",
+          ".claimAvatarCinTags"
+        ],
         "layerOrder": [
           "above-lighting-shell",
           "above-lighting-content"
