@@ -162,6 +162,28 @@ export function summarizeRenderedScreenSpaceDriftByPromotedSubtree(deltas) {
 }
 
 
+function matchesProtectedIdPattern(id, pattern) {
+  const normalizedId = String(id || '').trim().toLowerCase();
+  const normalizedPattern = String(pattern || '').trim().toLowerCase();
+  if (!normalizedId || !normalizedPattern) return false;
+  if (!normalizedPattern.includes('*')) return normalizedId === normalizedPattern;
+  const segments = normalizedPattern.split('*');
+  let cursor = 0;
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    if (!segment) continue;
+    const next = normalizedId.indexOf(segment, cursor);
+    if (next === -1) return false;
+    if (index === 0 && !normalizedPattern.startsWith('*') && next !== 0) return false;
+    cursor = next + segment.length;
+  }
+  if (!normalizedPattern.endsWith('*')) {
+    const tail = segments[segments.length - 1] || '';
+    return normalizedId.endsWith(tail);
+  }
+  return true;
+}
+
 function evaluateRenderedScreenSpaceParity(deltas, parityConfig = {}) {
   const thresholds = {
     maxAbsDx: Math.max(0, Number(parityConfig.maxAbsDx) || 0),
@@ -174,6 +196,9 @@ function evaluateRenderedScreenSpaceParity(deltas, parityConfig = {}) {
     maxSidebarSeatSpacingInflation: Math.max(0, Number(parityConfig.maxSidebarSeatSpacingInflation) || 0),
     requireTransformMatchFor: Array.isArray(parityConfig.requireTransformMatchFor)
       ? parityConfig.requireTransformMatchFor.map((group) => String(group || '').trim().toLowerCase()).filter(Boolean)
+      : [],
+    requireTransformMatchForSelectors: Array.isArray(parityConfig.requireTransformMatchForSelectors)
+      ? parityConfig.requireTransformMatchForSelectors.map((selector) => String(selector || '').trim().toLowerCase()).filter(Boolean)
       : [],
   };
   const policy = String(parityConfig.transformMismatchPolicy || 'warn').toLowerCase();
@@ -200,9 +225,16 @@ function evaluateRenderedScreenSpaceParity(deltas, parityConfig = {}) {
     if (magnitude > thresholds.maxElementMagnitude) {
       failing.push({ id: entry.id, field: 'elementMagnitude', magnitude, maxAllowed: thresholds.maxElementMagnitude });
     }
-    const hasTransformMismatch = !transformsEquivalent(entry.transformA, entry.transformB);
+    const strictTransformMismatch = entry.transformA !== entry.transformB;
+    const matrixEquivalent = transformsEquivalent(entry.transformA, entry.transformB);
+    const hasTransformMismatch = !matrixEquivalent;
+    const isProtectedSelector = thresholds.requireTransformMatchForSelectors.some((pattern) => matchesProtectedIdPattern(entry.id, pattern));
+    if (isProtectedSelector && strictTransformMismatch) {
+      failing.push({ id: entry.id, field: 'transformMismatchStrict', transformA: entry.transformA, transformB: entry.transformB });
+      continue;
+    }
     if (!hasTransformMismatch || transformMismatchPolicy === 'ignore') continue;
-    const payload = { id: entry.id, transformA: entry.transformA, transformB: entry.transformB };
+    const payload = { id: entry.id, transformA: entry.transformA, transformB: entry.transformB, matrixEquivalent };
     if (transformMismatchPolicy === 'fail') failing.push({ ...payload, field: 'transformMismatch' });
     if (transformMismatchPolicy === 'warn') warnings.push(payload);
   }
@@ -217,7 +249,7 @@ function evaluateRenderedScreenSpaceParity(deltas, parityConfig = {}) {
     if (failMax) groupFailing.push({ field: 'groupMaxMagnitude', magnitude: groupEntry.maxMagnitude, maxAllowed: thresholds.maxGroupMagnitude });
     const requiresTransformMatch = thresholds.requireTransformMatchFor.includes(groupKey);
     if (requiresTransformMatch) {
-      const mismatches = trackedDeltas.filter((entry) => classifyPromotedSubtreeGroup(entry.id) === groupEntry.group && !transformsEquivalent(entry.transformA, entry.transformB));
+      const mismatches = trackedDeltas.filter((entry) => classifyPromotedSubtreeGroup(entry.id) === groupEntry.group && entry.transformA !== entry.transformB);
       if (mismatches.length > 0) {
         groupFailing.push({ field: 'transformMismatchRequired', count: mismatches.length });
       }

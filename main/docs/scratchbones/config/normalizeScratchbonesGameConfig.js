@@ -116,6 +116,17 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
     allowlistSelectors: [],
     denylistSelectors: [],
   },
+  preservePromotionTransformSelectors: [
+    '.seatAvatarBox',
+    '.turnSpotlightAvatar',
+    '.cin-avatar',
+    '.claimClusterTextAnchor',
+    '.claimAvatarNameTag',
+    '.claimAvatarCinRole',
+    '.claimAvatarCinName',
+    '.claimAvatarCinTags',
+  ],
+  disablePreservePromotionTransformSelectors: [],
   typographyBaselineRootSelector: '#app',
   typographyBaselineFields: ['font-size', 'line-height', 'font-family', 'letter-spacing', 'font-weight'],
   placementMode: 'screen-space',
@@ -285,6 +296,9 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
             requireTransformMatchFor: Array.isArray(rawParity.requireTransformMatchFor)
               ? rawParity.requireTransformMatchFor.map((group) => String(group || '').trim().toLowerCase()).filter(Boolean)
               : ['avatars', 'claim avatars'],
+            requireTransformMatchForSelectors: Array.isArray(rawParity.requireTransformMatchForSelectors)
+              ? rawParity.requireTransformMatchForSelectors.map((selector) => String(selector || '').trim().toLowerCase()).filter(Boolean)
+              : ['avatar-*', 'claim-avatar-*', 'claim-text-*'],
             transformMismatchPolicy,
           };
         })(),

@@ -169,6 +169,7 @@ window.SCRATCHBONES_CONFIG = {
           "maxGroupAverageMagnitude": 2,
           "maxGroupMagnitude": 5,
           "requireTransformMatchFor": ["avatars", "claim avatars"],
+          "requireTransformMatchForSelectors": ["avatar-*", "claim-avatar-*", "claim-text-*"],
           "transformMismatchPolicy": "warn"
         }
       },
@@ -552,6 +553,17 @@ window.SCRATCHBONES_CONFIG = {
         "hostZIndex": 45,
         "defaultPreserveSpace": true,
         "normalizePromotedElementBox": true,
+        "preservePromotionTransformSelectors": [
+          ".seatAvatarBox",
+          ".turnSpotlightAvatar",
+          ".cin-avatar",
+          ".claimClusterTextAnchor",
+          ".claimAvatarNameTag",
+          ".claimAvatarCinRole",
+          ".claimAvatarCinName",
+          ".claimAvatarCinTags"
+        ],
+        "disablePreservePromotionTransformSelectors": [],
         "normalizeBoxGuard": {
           "allowlistSelectors": [
             "*"
