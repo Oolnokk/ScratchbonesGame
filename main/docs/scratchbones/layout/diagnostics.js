@@ -208,7 +208,7 @@ function matchesProtectedIdPattern(id, pattern) {
   const normalizedPattern = String(pattern || '').trim().toLowerCase();
   if (!normalizedId || !normalizedPattern) return false;
   if (normalizedPattern.includes('*')) {
-    const escaped = normalizedPattern.replace(/[.+?^${}()|[\]\]/g, '\\$&').replace(/\*/g, '.*');
+    const escaped = normalizedPattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
     return new RegExp(`^${escaped}$`).test(normalizedId);
   }
   return normalizedId === normalizedPattern;
