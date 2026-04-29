@@ -15,10 +15,12 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
       let pendingBgmTrack = null;
       const failedPlaylistTracks = new Set();
       let playlistExhausted = false;
+      let autoplayBlockedLogged = false;
 
       function markAudioUnlocked() {
         if (audioUnlocked) return;
         audioUnlocked = true;
+        autoplayBlockedLogged = false;
         if (pendingBgmTrack) {
           const { url, loop, onTrackError } = pendingBgmTrack;
           pendingBgmTrack = null;
@@ -65,8 +67,13 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
         if (p && typeof p.catch === 'function') {
           return p.catch((error) => {
             const blocked = error?.name === 'NotAllowedError';
-            logAudio(blocked ? 'warn' : 'error', 'play-failed', { blocked, error: String(error?.message || error) });
-            if (blocked) onBlocked?.();
+            if (!blocked || !autoplayBlockedLogged) {
+              logAudio(blocked ? 'warn' : 'error', 'play-failed', { blocked, error: String(error?.message || error) });
+            }
+            if (blocked) {
+              autoplayBlockedLogged = true;
+              onBlocked?.();
+            }
           });
         }
         return Promise.resolve();
