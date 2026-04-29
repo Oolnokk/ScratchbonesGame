@@ -97,6 +97,12 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const promoteByRootSelectors = normalizeSelectorList(managerConfig.promoteByRootSelectors);
   const excludeDescendantSelectors = normalizeSelectorList(managerConfig.excludeDescendantSelectors);
   const configuredLayerOrder = normalizeStringList(managerConfig.layerOrder);
+  const typographyBaselineRootSelector = typeof managerConfig.typographyBaselineRootSelector === 'string' && managerConfig.typographyBaselineRootSelector.trim()
+    ? managerConfig.typographyBaselineRootSelector.trim()
+    : '#app';
+  const typographyBaselineFields = normalizeStringList(managerConfig.typographyBaselineFields).length
+    ? normalizeStringList(managerConfig.typographyBaselineFields)
+    : ['font-size', 'line-height', 'font-family', 'letter-spacing', 'font-weight'];
   const assignmentList = assignments
     .map((entry, index) => {
       const selectors = normalizeSelectorList(entry?.selectors);
@@ -149,6 +155,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       root.dataset.layerName = layerName;
       root.style.cssText = `position:fixed;inset:0;overflow:visible;pointer-events:none;z-index:${layerIndex};`;
       host.appendChild(root);
+      applyTypographyBaselineToRoot(root, app);
       roots.set(layerName, root);
     });
     document.body.appendChild(host);
@@ -168,6 +175,27 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     state.resizeObserver.observe(app);
     log('debug', 'host-created', { layerCount: roots.size, hostZIndex });
     return host;
+  }
+
+  function captureTypographyBaseline(app) {
+    const baselineRoot = (typographyBaselineRootSelector && app?.matches?.(typographyBaselineRootSelector))
+      ? app
+      : app?.querySelector?.(typographyBaselineRootSelector);
+    const source = baselineRoot || app || document.documentElement;
+    if (!source) return null;
+    const computed = window.getComputedStyle(source);
+    const baseline = {};
+    for (const field of typographyBaselineFields) baseline[field] = computed.getPropertyValue(field);
+    return baseline;
+  }
+
+  function applyTypographyBaselineToRoot(root, app) {
+    if (!root) return;
+    const baseline = captureTypographyBaseline(app);
+    if (!baseline) return;
+    for (const [field, value] of Object.entries(baseline)) {
+      if (value) root.style.setProperty(field, value);
+    }
   }
 
   function clearPromoted() {
@@ -299,6 +327,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     if (!enabled || !app || !assignmentList.length) return;
     ensureHost(app);
     if (!state.host) return;
+    for (const root of state.roots.values()) applyTypographyBaselineToRoot(root, app);
     clearPromoted();
 
     const nodeAssignments = new Map();

@@ -187,6 +187,7 @@ import { createLayerManager } from './ui/layerManager.js';
           const rect = el.getBoundingClientRect();
           snapshot[key] = {
             transform: getComputedStyle(el).transform || 'none',
+            typography: collectComputedTypography(el),
             rect: {
               x: Number(rect.x.toFixed(3)),
               y: Number(rect.y.toFixed(3)),
@@ -201,6 +202,33 @@ import { createLayerManager } from './ui/layerManager.js';
         });
       }
       return snapshot;
+    }
+    function collectComputedTypography(element) {
+      const computed = getComputedStyle(element);
+      return {
+        fontSize: computed.fontSize,
+        lineHeight: computed.lineHeight,
+        fontFamily: computed.fontFamily,
+        letterSpacing: computed.letterSpacing,
+        fontWeight: computed.fontWeight,
+      };
+    }
+    function compareRenderedTypography(renderedScreenSpace, topDrift = [], modeA = 'original', modeB = 'layered') {
+      const aEntries = renderedScreenSpace?.[modeA] || {};
+      const bEntries = renderedScreenSpace?.[modeB] || {};
+      const trackedIds = Array.from(new Set((Array.isArray(topDrift) ? topDrift : []).map((entry) => entry?.id).filter(Boolean)));
+      return trackedIds.map((id) => {
+        const typographyA = aEntries[id]?.typography || {};
+        const typographyB = bEntries[id]?.typography || {};
+        return {
+          id,
+          fontSize: { [modeA]: typographyA.fontSize || null, [modeB]: typographyB.fontSize || null, equal: (typographyA.fontSize || null) === (typographyB.fontSize || null) },
+          lineHeight: { [modeA]: typographyA.lineHeight || null, [modeB]: typographyB.lineHeight || null, equal: (typographyA.lineHeight || null) === (typographyB.lineHeight || null) },
+          fontFamily: { [modeA]: typographyA.fontFamily || null, [modeB]: typographyB.fontFamily || null, equal: (typographyA.fontFamily || null) === (typographyB.fontFamily || null) },
+          letterSpacing: { [modeA]: typographyA.letterSpacing || null, [modeB]: typographyB.letterSpacing || null, equal: (typographyA.letterSpacing || null) === (typographyB.letterSpacing || null) },
+          fontWeight: { [modeA]: typographyA.fontWeight || null, [modeB]: typographyB.fontWeight || null, equal: (typographyA.fontWeight || null) === (typographyB.fontWeight || null) },
+        };
+      });
     }
     function buildRenderedTransformsExport() {
       const activeMode = projectionUiState.showUnlayeredPreview ? 'original' : 'layered';
@@ -278,6 +306,7 @@ import { createLayerManager } from './ui/layerManager.js';
     async function buildRenderedTransformsDualModeExport() {
       const renderedScreenSpace = await captureRenderedScreenSpaceBothModes();
       const { renderedScreenSpaceDelta, renderedScreenSpaceTopDrift, renderedScreenSpaceGroupDrift } = computeRenderedScreenSpaceDiagnostics(renderedScreenSpace, 'original', 'layered');
+      const renderedScreenSpaceTypographyDiagnostics = compareRenderedTypography(renderedScreenSpace, renderedScreenSpaceTopDrift, 'original', 'layered');
       return JSON.stringify({
         layout: {
           mode: getScratchbonesLayoutMode(),
@@ -288,6 +317,7 @@ import { createLayerManager } from './ui/layerManager.js';
           renderedScreenSpaceDelta,
           renderedScreenSpaceTopDrift,
           renderedScreenSpaceGroupDrift,
+          renderedScreenSpaceTypographyDiagnostics,
         },
       }, null, 2);
     }

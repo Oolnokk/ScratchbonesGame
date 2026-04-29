@@ -112,6 +112,8 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   hostZIndex: 45,
   defaultPreserveSpace: true,
   normalizePromotedElementBox: false,
+  typographyBaselineRootSelector: '#app',
+  typographyBaselineFields: ['font-size', 'line-height', 'font-family', 'letter-spacing', 'font-weight'],
   placementMode: 'screen-space',
   layerOrder: ['above-lighting-shell', 'above-lighting-content'],
   assignments: [
