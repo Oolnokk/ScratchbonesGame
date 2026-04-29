@@ -57,6 +57,27 @@ function driftMagnitude(rectDelta) {
   return Number(components.reduce((total, value) => total + value, 0).toFixed(3));
 }
 
+function parseMatrixTransform(transformValue) {
+  const value = String(transformValue || '').trim();
+  if (!value || value === 'none') return null;
+  const match = value.match(/^matrix\(([^)]+)\)$/i);
+  if (!match) return null;
+  const parts = match[1].split(',').map((part) => Number(part.trim()));
+  if (parts.length !== 6 || parts.some((part) => !Number.isFinite(part))) return null;
+  return parts;
+}
+
+function transformsEquivalent(transformA, transformB, epsilon = 0.001) {
+  if (transformA === transformB) return true;
+  const matrixA = parseMatrixTransform(transformA);
+  const matrixB = parseMatrixTransform(transformB);
+  if (!matrixA || !matrixB) return false;
+  for (let index = 0; index < matrixA.length; index += 1) {
+    if (Math.abs(matrixA[index] - matrixB[index]) > epsilon) return false;
+  }
+  return true;
+}
+
 export function summarizeRenderedScreenSpaceDrift(deltas, { minMagnitude = 1, topN = 8 } = {}) {
   const numericMinMagnitude = Math.max(0, Number(minMagnitude) || 0);
   const numericTopN = Math.max(1, Number(topN) || 1);
@@ -124,7 +145,7 @@ function evaluateRenderedScreenSpaceParity(deltas, parityConfig = {}) {
     for (const [field, magnitude, maxAllowed] of checks) {
       if (magnitude > maxAllowed) failing.push({ id: entry.id, field, magnitude, maxAllowed });
     }
-    const hasTransformMismatch = entry.transformA !== entry.transformB;
+    const hasTransformMismatch = !transformsEquivalent(entry.transformA, entry.transformB);
     if (!hasTransformMismatch || transformMismatchPolicy === 'ignore') continue;
     const payload = { id: entry.id, transformA: entry.transformA, transformB: entry.transformB };
     if (transformMismatchPolicy === 'fail') failing.push({ ...payload, field: 'transformMismatch' });
