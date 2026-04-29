@@ -354,8 +354,10 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       rankCardTemplateSrc: rawGameConfig.assets?.cards?.rankTemplate?.src ?? '2DScratchbone{rank}.png',
       rankCardTemplateFallbackSrc: rawGameConfig.assets?.cards?.rankTemplate?.fallbackSrc ?? '2DScratchbones{rank}.png',
       claimRankGlyphTemplateSrc: rawGameConfig.assets?.symbols?.claimRankGlyphTemplateSrc ?? './docs/assets/symbols/boneglyph{rank}.png',
+      claimMultiplyGlyphSrc: rawGameConfig.assets?.symbols?.claimMultiplyGlyphSrc ?? './docs/assets/symbols/multglyph.png',
       cinematicTokenIconSrc: rawGameConfig.assets?.hud?.cinematicTokenIconSrc ?? './docs/assets/hud/coin_tinmoon.png',
       stakeTierCoinSrc: rawGameConfig.assets?.hud?.stakeTierCoinSrc ?? { sun: './docs/assets/hud/coin_sun.png', tinmoon: './docs/assets/hud/coin_tinmoon.png', eclipse: './docs/assets/hud/coin_eclipse.png' },
+      claimClusterFontFamily: rawGameConfig.assets?.hud?.claimClusterFontFamily ?? '"KhymeryyanRomanLetters+Numbers", serif',
       audio: {
         enabled: rawGameConfig.assets?.audio?.enabled !== false,
         sfxVolume: rawGameConfig.assets?.audio?.sfxVolume ?? 0.92,
