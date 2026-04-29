@@ -227,7 +227,11 @@ window.SCRATCHBONES_CONFIG = {
         "eventLogPaddingXpx": 12,
         "eventLogGapPx": 6,
         "logItemPaddingYpx": 9,
-        "logItemPaddingXpx": 10
+        "logItemPaddingXpx": 10,
+        "seatInfoPaddingYpx": 8,
+        "seatInfoPaddingXpx": 10,
+        "challengePanePaddingYpx": 8,
+        "challengePanePaddingXpx": 10
       },
       "hand": {
         "desiredHeightFrac": 0.2,
@@ -1231,6 +1235,10 @@ window.SCRATCHBONES_CONFIG = {
       "--layout-event-log-gap": "6px",
       "--layout-log-item-padding-y": "9px",
       "--layout-log-item-padding-x": "10px",
+      "--layout-seat-info-padding-y": "8px",
+      "--layout-seat-info-padding-x": "10px",
+      "--layout-challenge-pane-padding-y": "8px",
+      "--layout-challenge-pane-padding-x": "10px",
       "--layout-table-view-min-height": "260px",
       "--layout-table-view-max-height": "680px",
       "--layout-table-dominance-frac": "0.56",
