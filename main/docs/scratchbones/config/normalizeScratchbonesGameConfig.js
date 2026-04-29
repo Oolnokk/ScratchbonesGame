@@ -282,6 +282,9 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
           };
         })(),
       },
+      cinematic: {
+        enableLegacyBoxedBranch: rawGameConfig.layout?.cinematic?.enableLegacyBoxedBranch === true,
+      },
       authored: {
         enabled: rawGameConfig.layout?.authored?.enabled !== false,
         designWidthPx: Number(rawGameConfig.layout?.authored?.designWidthPx) || 1600,

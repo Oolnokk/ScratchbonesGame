@@ -82,7 +82,6 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const hostZIndex = Number.isFinite(Number(managerConfig.hostZIndex)) ? Number(managerConfig.hostZIndex) : 45;
   const defaultPreserveSpace = managerConfig.defaultPreserveSpace !== false;
   const normalizePromotedElementBox = managerConfig.normalizePromotedElementBox === true;
-  const placementMode = 'screen-space';
   const assignments = Array.isArray(managerConfig.assignments) ? managerConfig.assignments : [];
   const configuredLayerOrder = normalizeStringList(managerConfig.layerOrder);
   const assignmentList = assignments
@@ -194,13 +193,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
   function capturePortalPlacementFrame(entry) {
     if (!entry?.placeholder?.isConnected) return null;
-    const appRect = state.app?.getBoundingClientRect?.();
     const sourceRect = entry.placeholder.getBoundingClientRect();
-    return {
-      sourceRect,
-      appRect: appRect || null,
-      capturedAtMs: (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : Date.now(),
-    };
+    return { sourceRect };
   }
 
   function promoteElementToLayer(element, assignment) {
@@ -281,8 +275,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       normalizePromotedElementBox: shouldNormalizeBox,
       transformSensitive: isTransformSensitive,
       reanchoredAbsolutePosition: true,
-      placementMode,
-      placementFrame: promotedEntry.placementCapture?.appRect ? 'app-viewport' : 'viewport',
+      placementMode: 'screen-space',
     });
     return true;
   }
