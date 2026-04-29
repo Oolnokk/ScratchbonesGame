@@ -2587,17 +2587,18 @@ import { createLayerManager } from './ui/layerManager.js';
       }
       const overflowPx = Math.max(0, challengePane.scrollHeight - challengePane.clientHeight);
       const severity = clampNumber(overflowPx / 220, 0, 1);
+      const humanClaimDecisionTurn = state.currentTurn === 0 && !!state.challengeWindow && !state.betting;
       // Deterministic resolver order:
       // 1) wrap text
       // 2) reduce font scale
       // 3) reduce image scale
       // 4) reduce internal gaps/padding
-      // 5) reduce parent height proportionally
+      // 5) reduce parent height proportionally (except on the human decision turn)
       app.classList.toggle('layout-challenge-wrap', overflowPx > 0);
       const fontScale = overflowPx > 0 ? (1 - (0.14 * severity)) : 1;
       const imageScale = overflowPx > 0 ? (1 - (0.16 * severity)) : 1;
       const gapScale = overflowPx > 0 ? (1 - (0.24 * severity)) : 1;
-      const parentHeightScale = overflowPx > 0 ? (1 - (0.18 * severity)) : 1;
+      const parentHeightScale = (overflowPx > 0 && !humanClaimDecisionTurn) ? (1 - (0.18 * severity)) : 1;
       app.style.setProperty('--layout-challenge-font-scale', clampNumber(fontScale, 0.82, 1).toFixed(3));
       app.style.setProperty('--layout-challenge-image-scale', clampNumber(imageScale, 0.78, 1).toFixed(3));
       app.style.setProperty('--layout-challenge-gap-scale', clampNumber(gapScale, 0.72, 1).toFixed(3));
