@@ -4087,6 +4087,16 @@ import { createLayerManager } from './ui/layerManager.js';
       updateLayerPreviewButton();
       const projectionMapConfig = SCRATCHBONES_GAME.layout?.projectionMapping || {};
       const projectionEditorConfig = projectionMapConfig.editor || {};
+      const subModeForcesOriginalPreview = projectionEditorConfig.subModeForcesOriginalPreview !== false;
+      const syncSubModePreviewPolicy = () => {
+        if (!subModeForcesOriginalPreview) return false;
+        if (!projectionUiState.active) return false;
+        const shouldBeUnlayered = !!authoredEditorState.subLayerMode;
+        if (projectionUiState.showUnlayeredPreview === shouldBeUnlayered) return false;
+        projectionUiState.showUnlayeredPreview = shouldBeUnlayered;
+        updateLayerPreviewButton();
+        return true;
+      };
       const varStep = Number(projectionEditorConfig.step) || 0.01;
       const basePanelTitle = String(projectionEditorConfig.panelTitle || 'Projection Vars');
       const transformsExportButtonLabel = String(projectionEditorConfig.transformsExportButtonLabel || 'Toggle + Export Screen Space');
@@ -4196,9 +4206,15 @@ import { createLayerManager } from './ui/layerManager.js';
           authoredEditorState.subLayerMode = !authoredEditorState.subLayerMode;
           if (!authoredEditorState.subLayerMode) authoredEditorState.selectedSubId = null;
           subBtn.classList.toggle('active', authoredEditorState.subLayerMode);
+          const previewChanged = syncSubModePreviewPolicy();
+          if (previewChanged) render();
           renderAuthoredOverlays();
           renderAuthoredInspector();
-          updateEditorStatus(authoredEditorState.subLayerMode ? 'Sub-layer mode: drag nested elements.' : 'Sub-layer mode off.');
+          if (authoredEditorState.subLayerMode && subModeForcesOriginalPreview) {
+            updateEditorStatus('Sub-layer mode: forcing Original preview so handles match unlayered geometry.');
+          } else {
+            updateEditorStatus(authoredEditorState.subLayerMode ? 'Sub-layer mode: drag nested elements.' : 'Sub-layer mode off.');
+          }
         });
       }
       varsBtn.addEventListener('click', () => {
@@ -4214,6 +4230,13 @@ import { createLayerManager } from './ui/layerManager.js';
         projectionUiState.varsPanelOpen = false;
       });
       layerPreviewBtn.addEventListener('click', () => {
+        if (subModeForcesOriginalPreview && projectionUiState.active && authoredEditorState.subLayerMode) {
+          projectionUiState.showUnlayeredPreview = true;
+          updateLayerPreviewButton();
+          render();
+          updateEditorStatus('Sub-layer mode keeps preview in Original so sub handles stay geometry-accurate.');
+          return;
+        }
         projectionUiState.showUnlayeredPreview = !projectionUiState.showUnlayeredPreview;
         updateLayerPreviewButton();
         render();
@@ -4222,6 +4245,14 @@ import { createLayerManager } from './ui/layerManager.js';
           : 'Showing layer-managed UI positions.');
       });
       transformExportBtn.addEventListener('click', () => {
+        if (subModeForcesOriginalPreview && projectionUiState.active && authoredEditorState.subLayerMode) {
+          projectionUiState.showUnlayeredPreview = true;
+          render();
+          copyTextToClipboard(buildRenderedTransformsExport());
+          updateLayerPreviewButton();
+          updateEditorStatus('Sub-layer mode exported Original screen-space data (layered preview is locked off).');
+          return;
+        }
         projectionUiState.showUnlayeredPreview = !projectionUiState.showUnlayeredPreview;
         render();
         copyTextToClipboard(buildRenderedTransformsExport());
