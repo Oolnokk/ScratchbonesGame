@@ -250,22 +250,33 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     if (!entry?.portal || !entry.placeholder?.isConnected || entry.placeholder.style.display === 'none') return;
     const capture = capturePortalPlacementFrame(entry);
     if (!capture) return;
-    const { sourceRect } = capture;
+    const { sourceRect, appScaleX, appScaleY } = capture;
+    const resolvedScaleX = Number.isFinite(appScaleX) && appScaleX > 0 ? appScaleX : 1;
+    const resolvedScaleY = Number.isFinite(appScaleY) && appScaleY > 0 ? appScaleY : 1;
+    const inverseScaleX = 1 / resolvedScaleX;
+    const inverseScaleY = 1 / resolvedScaleY;
     entry.portal.style.position = 'fixed';
     entry.portal.style.right = 'auto';
     entry.portal.style.bottom = 'auto';
-    entry.portal.style.transform = 'none';
+    entry.portal.style.transform = (resolvedScaleX === 1 && resolvedScaleY === 1)
+      ? 'none'
+      : `scale(${resolvedScaleX.toFixed(6)}, ${resolvedScaleY.toFixed(6)})`;
     entry.portal.style.transformOrigin = '0 0';
     entry.portal.style.left = `${sourceRect.left.toFixed(4)}px`;
     entry.portal.style.top = `${sourceRect.top.toFixed(4)}px`;
-    entry.portal.style.width = `${Math.max(1, sourceRect.width).toFixed(4)}px`;
-    entry.portal.style.height = `${Math.max(1, sourceRect.height).toFixed(4)}px`;
+    entry.portal.style.width = `${Math.max(1, sourceRect.width * inverseScaleX).toFixed(4)}px`;
+    entry.portal.style.height = `${Math.max(1, sourceRect.height * inverseScaleY).toFixed(4)}px`;
   }
 
   function capturePortalPlacementFrame(entry) {
     if (!entry?.placeholder?.isConnected) return null;
     const sourceRect = entry.placeholder.getBoundingClientRect();
-    return { sourceRect };
+    const appRect = state.app?.getBoundingClientRect?.();
+    const appLayoutWidth = state.app?.offsetWidth || state.app?.clientWidth || 0;
+    const appLayoutHeight = state.app?.offsetHeight || state.app?.clientHeight || 0;
+    const appScaleX = appRect && appLayoutWidth > 0 ? (appRect.width / appLayoutWidth) : 1;
+    const appScaleY = appRect && appLayoutHeight > 0 ? (appRect.height / appLayoutHeight) : 1;
+    return { sourceRect, appScaleX, appScaleY };
   }
 
   function promoteElementToLayer(element, assignment) {
