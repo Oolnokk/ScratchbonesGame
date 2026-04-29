@@ -2011,10 +2011,7 @@ import { createLayerManager } from './ui/layerManager.js';
       if (!moved.length) return;
       addLog(`Punish Bone triggers: ${seatLabel(challengerId)} gives ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengedId)}.`);
     }
-    function cardLabel(card) {
-      return card.wild ? 'Wild' : String(card.rank);
-    }
-    function normalizedAssetPath(basePath, fileName) {
+        function normalizedAssetPath(basePath, fileName) {
       const safeBase = String(basePath || '').replace(/\/+$/, '');
       const safeFile = String(fileName || '').replace(/^\/+/, '');
       return `${safeBase}/${safeFile}`;
@@ -3450,12 +3447,12 @@ import { createLayerManager } from './ui/layerManager.js';
           <div class="handScroll">
               ${player.hand.map(card => {
                 const art = resolveScratchbone2DAsset(card);
-                const cardLabel = card.wild ? 'Wild' : `Rank ${card.rank}`;
+                const handCardLabel = card.wild ? 'Wild' : `Rank ${card.rank}`;
                 const cardGlyph = card.wild ? 'W' : String(card.rank);
                 return `
                 <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}" title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}">
                   <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`}">
-                  <span class="cardLabel" aria-hidden="true"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${cardLabel}</span></span>
+                  <span class="cardLabel" aria-hidden="true"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${handCardLabel}</span></span>
                 </button>
               `;
               }).join('')}
@@ -3557,7 +3554,7 @@ import { createLayerManager } from './ui/layerManager.js';
         players: state.players.map(p => ({
           name: seatLabel(p),
           seed: p.seed || 'human',
-          cards: p.hand.map(cardLabel),
+          cards: p.hand.map((card) => (card.wild ? 'Wild' : String(card.rank))),
           chips: p.chips,
           clears: p.clears,
           eliminated: p.eliminated,
