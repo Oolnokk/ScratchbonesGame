@@ -14,6 +14,7 @@ export function createInitialState(config) {
       banner: config.uiText.initialBanner,
       logs: [],
       seed: Math.floor(Math.random() * 1e9),
+      poolVisualSeed: Math.floor(Math.random() * 1e9),
       round: 1,
       stats: {
         successfulChallenges: 0,

@@ -253,6 +253,15 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         tiers: rawGameConfig.chips?.walletDisplay?.tiers ?? rawGameConfig.chips?.challengeStake?.tiers ?? [{ id: 'sun', value: 1 }, { id: 'tinmoon', value: 5 }, { id: 'eclipse', value: 20 }],
         maxIconsPerSeat: Math.max(1, Number(rawGameConfig.chips?.walletDisplay?.maxIconsPerSeat) || 18),
       },
+      poolDisplay: {
+        maxIcons: Math.max(1, Number(rawGameConfig.chips?.poolDisplay?.maxIcons) || 28),
+        widthPx: Math.max(100, Number(rawGameConfig.chips?.poolDisplay?.widthPx) || 220),
+        heightPx: Math.max(60, Number(rawGameConfig.chips?.poolDisplay?.heightPx) || 96),
+        coinSizePx: Math.max(16, Number(rawGameConfig.chips?.poolDisplay?.coinSizePx) || 30),
+        spreadXPx: Math.max(10, Number(rawGameConfig.chips?.poolDisplay?.spreadXPx) || 84),
+        spreadYPx: Math.max(8, Number(rawGameConfig.chips?.poolDisplay?.spreadYPx) || 28),
+        offsetYPx: Number(rawGameConfig.chips?.poolDisplay?.offsetYPx) || 2,
+      },
       challengeStakeTiers: rawGameConfig.chips?.challengeStake?.tiers ?? [{ id: 'sun', value: 1 }, { id: 'tinmoon', value: 5 }, { id: 'eclipse', value: 20 }],
       challengeStakeAnimation: {
         openMs: rawGameConfig.chips?.challengeStake?.animation?.openMs ?? 280,

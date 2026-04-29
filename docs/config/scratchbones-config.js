@@ -119,6 +119,15 @@ window.SCRATCHBONES_CONFIG = {
         ],
         "maxIconsPerSeat": 18
       },
+      "poolDisplay": {
+        "maxIcons": 28,
+        "widthPx": 220,
+        "heightPx": 96,
+        "coinSizePx": 30,
+        "spreadXPx": 84,
+        "spreadYPx": 28,
+        "offsetYPx": 2
+      },
       "challengeStake": {
         "tiers": [
           { "id": "sun", "value": 1 },
