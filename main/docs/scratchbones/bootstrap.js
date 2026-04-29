@@ -29,6 +29,7 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     // Most recent config-boundary cleanup: Scratchbones now reads only SCRATCHBONES_CONFIG.game.
     const SCRATCHBONES_GAME = getScratchbonesGameConfig({ rootConfig: scratchbonesRootConfig, reportError: reportScratchbonesConfigError, debugEnabled: DEBUG_ENABLED });
+    const RENDERED_SCREEN_SPACE_PARITY = SCRATCHBONES_GAME.layout?.diagnostics?.renderedScreenSpaceParity || {};
     const AUTHORED_BOX_KEY_BY_PROJ_ID = {
       'topbar': 'topbar',
       'sidebar': 'sidebar',
@@ -214,6 +215,7 @@ import { createLayerManager } from './ui/layerManager.js';
           renderedScreenSpaceCompareMode: activeMode === 'original' ? 'layered' : 'original',
           renderedScreenSpaceDelta: layoutDiagnostics.renderedScreenSpaceDelta,
           renderedScreenSpaceTopDrift: layoutDiagnostics.renderedScreenSpaceTopDrift,
+        renderedScreenSpaceParity: layoutDiagnostics.renderedScreenSpaceParity,
         },
       }, null, 2);
     }
@@ -227,6 +229,7 @@ import { createLayerManager } from './ui/layerManager.js';
           deltas,
         },
         renderedScreenSpaceTopDrift: topDrift,
+        renderedScreenSpaceParity: RENDERED_SCREEN_SPACE_PARITY,
       };
     }
     async function captureRenderedScreenSpaceBothModes() {
@@ -261,6 +264,7 @@ import { createLayerManager } from './ui/layerManager.js';
           renderedScreenSpace,
           renderedScreenSpaceBaselineMode: 'original',
           renderedScreenSpaceCompareMode: 'layered',
+          renderedScreenSpaceParity: RENDERED_SCREEN_SPACE_PARITY,
         });
         return renderedScreenSpace;
       } finally {

@@ -159,6 +159,15 @@ window.SCRATCHBONES_CONFIG = {
         "widthPx": 1920,
         "heightPx": 1080
       },
+      "diagnostics": {
+        "renderedScreenSpaceParity": {
+          "maxAbsDx": 0.5,
+          "maxAbsDy": 0.5,
+          "maxAbsDw": 0.5,
+          "maxAbsDh": 0.5,
+          "transformMismatchPolicy": "warn"
+        }
+      },
       "authored": {
         "enabled": true,
         "designWidthPx": 1600,

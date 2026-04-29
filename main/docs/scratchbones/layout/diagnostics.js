@@ -4,6 +4,7 @@ export function createLayoutDiagnosticsState() {
     overlap: { overlaps: [], stage: 'none', snapshot: [] },
     renderedScreenSpaceDelta: { modeA: null, modeB: null, deltas: [] },
     renderedScreenSpaceTopDrift: [],
+    renderedScreenSpaceParity: { policy: null, thresholds: {}, summary: { pass: true, failing: [], warnings: [] } },
   };
 }
 
@@ -61,6 +62,47 @@ export function summarizeRenderedScreenSpaceDrift(deltas, { minMagnitude = 1, to
     .slice(0, numericTopN);
 }
 
+
+function evaluateRenderedScreenSpaceParity(deltas, parityConfig = {}) {
+  const thresholds = {
+    maxAbsDx: Math.max(0, Number(parityConfig.maxAbsDx) || 0),
+    maxAbsDy: Math.max(0, Number(parityConfig.maxAbsDy) || 0),
+    maxAbsDw: Math.max(0, Number(parityConfig.maxAbsDw) || 0),
+    maxAbsDh: Math.max(0, Number(parityConfig.maxAbsDh) || 0),
+  };
+  const policy = String(parityConfig.transformMismatchPolicy || 'warn').toLowerCase();
+  const transformMismatchPolicy = policy === 'fail' || policy === 'ignore' ? policy : 'warn';
+  const failing = [];
+  const warnings = [];
+  for (const entry of Array.isArray(deltas) ? deltas : []) {
+    if (!entry?.inModeA || !entry?.inModeB) continue;
+    const rectDelta = entry.rectDelta || {};
+    const checks = [
+      ['dx', Math.abs(Number(rectDelta.x) || 0), thresholds.maxAbsDx],
+      ['dy', Math.abs(Number(rectDelta.y) || 0), thresholds.maxAbsDy],
+      ['dw', Math.abs(Number(rectDelta.width) || 0), thresholds.maxAbsDw],
+      ['dh', Math.abs(Number(rectDelta.height) || 0), thresholds.maxAbsDh],
+    ];
+    for (const [field, magnitude, maxAllowed] of checks) {
+      if (magnitude > maxAllowed) failing.push({ id: entry.id, field, magnitude, maxAllowed });
+    }
+    const hasTransformMismatch = entry.transformA !== entry.transformB;
+    if (!hasTransformMismatch || transformMismatchPolicy === 'ignore') continue;
+    const payload = { id: entry.id, transformA: entry.transformA, transformB: entry.transformB };
+    if (transformMismatchPolicy === 'fail') failing.push({ ...payload, field: 'transformMismatch' });
+    if (transformMismatchPolicy === 'warn') warnings.push(payload);
+  }
+  return {
+    policy: transformMismatchPolicy,
+    thresholds,
+    summary: {
+      pass: failing.length === 0,
+      failing,
+      warnings,
+    },
+  };
+}
+
 export function updateLayoutDiagnosticsState(layoutDiagnostics, layoutResult) {
   if (!layoutDiagnostics || !layoutResult) return layoutDiagnostics;
   layoutDiagnostics.fitStages = layoutResult.fitSummary || {};
@@ -76,6 +118,7 @@ export function updateLayoutDiagnosticsState(layoutDiagnostics, layoutResult) {
       deltas,
     };
     layoutDiagnostics.renderedScreenSpaceTopDrift = summarizeRenderedScreenSpaceDrift(deltas, driftSummary);
+    layoutDiagnostics.renderedScreenSpaceParity = evaluateRenderedScreenSpaceParity(deltas, layoutResult.renderedScreenSpaceParity);
   }
   return layoutDiagnostics;
 }
@@ -86,5 +129,6 @@ export function resetLayoutDiagnosticsState(layoutDiagnostics) {
   layoutDiagnostics.overlap = { overlaps: [], stage: 'none', snapshot: [] };
   layoutDiagnostics.renderedScreenSpaceDelta = { modeA: null, modeB: null, deltas: [] };
   layoutDiagnostics.renderedScreenSpaceTopDrift = [];
+  layoutDiagnostics.renderedScreenSpaceParity = { policy: null, thresholds: {}, summary: { pass: true, failing: [], warnings: [] } };
   return layoutDiagnostics;
 }
