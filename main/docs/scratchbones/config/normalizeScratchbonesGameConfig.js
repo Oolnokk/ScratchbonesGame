@@ -115,6 +115,14 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   normalizeBoxGuard: {
     allowlistSelectors: [],
     denylistSelectors: [],
+    marginReset: {
+      allowlistSelectors: [],
+      denylistSelectors: [],
+    },
+    fillSize: {
+      allowlistSelectors: [],
+      denylistSelectors: [],
+    },
   },
   preservePromotionTransformSelectors: [
     '.seatAvatarBox',
