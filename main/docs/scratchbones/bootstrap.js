@@ -489,6 +489,8 @@ import { createLayerManager } from './ui/layerManager.js';
       challengeStakeAnimation: SCRATCHBONES_GAME.chips.challengeStakeAnimation,
       clearBonusBase: SCRATCHBONES_GAME.chips.clearBonusBase,
       clearBonusIncrement: SCRATCHBONES_GAME.chips.clearBonusIncrement,
+      anteStart: SCRATCHBONES_GAME.chips.anteStart,
+      anteIncrement: SCRATCHBONES_GAME.chips.anteIncrement,
       aiChallengeThreshold: Number(AI_CONFIG.challengeThreshold),
       aiChallengeRandomNudgeMax: Number(AI_CONFIG.challengeRandomNudgeMax),
       aiBettingConfidenceSuspicionWeight: Number(AI_CONFIG.bettingConfidenceSuspicionWeight),
@@ -662,6 +664,18 @@ import { createLayerManager } from './ui/layerManager.js';
     function setBanner(text) {
       state.banner = text;
     }
+    function collectAnteForNewRound() {
+      let totalPaid = 0;
+      for (const player of state.players) {
+        if (player.eliminated) continue;
+        const paid = transferToBank(player.id, state.ante);
+        totalPaid += paid;
+        if (paid > 0) addLog(`${seatLabel(player)} antes ${paid} chip${paid === 1 ? '' : 's'} to the table pot.`);
+      }
+      state.tablePot += totalPaid;
+      return totalPaid;
+    }
+
     function dealFreshHands() {
       const deck = createDeck();
       for (const player of state.players) {
@@ -691,6 +705,13 @@ import { createLayerManager } from './ui/layerManager.js';
       state.round = 1;
       state.roundConcessions.clear();
       state.stats = { successfulChallenges: 0, failedChallenges: 0, bluffsCaught: 0, safeTruths: 0, totalClears: 0, chipsMovedByChallenges: 0 };
+      state.ante = Math.max(1, Number(CONFIG.anteStart) || 1);
+      state.tablePot = 0;
+      collectAnteForNewRound();
+      if (checkGameOverBySurvivors()) {
+        render();
+        return true;
+      }
       dealFreshHands();
       for (const p of state.players) p.profile = generatePlayerProfile(p);
       applyAiNamesByPortraitCulture();
@@ -1510,30 +1531,27 @@ import { createLayerManager } from './ui/layerManager.js';
         if (state.currentTurn !== 0) scheduleAiTurn();
       });
     }
-    function clearRewardForPlayer(player) {
-      return CONFIG.clearBonusBase + (player.clears * CONFIG.clearBonusIncrement);
-    }
     function checkForClearAndRedeal(playerIndex) {
       const player = state.players[playerIndex];
       if (player.eliminated || player.hand.length !== 0) return false;
-      const rewardPerOpponent = clearRewardForPlayer(player);
-      let totalWon = 0;
-      for (const other of state.players) {
-        if (other.id === playerIndex || other.eliminated) continue;
-        const paid = Math.min(other.chips, rewardPerOpponent);
-        other.chips -= paid;
-        totalWon += paid;
-        if (paid > 0) addLog(`${seatLabel(other)} pays ${paid} chip${paid === 1 ? '' : 's'} to ${seatLabel(player)} for the clear.`);
-      }
+      const totalWon = state.tablePot;
       player.chips += totalWon;
       player.clears += 1;
       state.stats.totalClears += 1;
-      addLog(`${seatLabel(player)} clears their hand and collects ${totalWon} chip${totalWon === 1 ? '' : 's'} total.`);
+      state.tablePot = 0;
+      addLog(`${seatLabel(player)} clears their hand and collects the ${totalWon} chip${totalWon === 1 ? '' : 's'} table pot.`);
+      state.ante += Math.max(1, Number(CONFIG.anteIncrement) || 1);
+      addLog(`The ante rises to ${state.ante} chip${state.ante === 1 ? '' : 's'}.`);
       let ended = false;
       for (const p of state.players) {
         if (eliminateIfNeeded(p.id, `${seatLabel(p)} is out of chips after the clear payout.`)) ended = true;
       }
       if (ended || checkGameOverBySurvivors()) {
+        render();
+        return true;
+      }
+      collectAnteForNewRound();
+      if (checkGameOverBySurvivors()) {
         render();
         return true;
       }

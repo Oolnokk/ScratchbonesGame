@@ -253,6 +253,8 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       },
       clearBonusBase: rawGameConfig.chips?.clearReward?.base ?? 1,
       clearBonusIncrement: rawGameConfig.chips?.clearReward?.increment ?? 1,
+      anteStart: rawGameConfig.chips?.ante?.start ?? 1,
+      anteIncrement: rawGameConfig.chips?.ante?.increment ?? 1,
     },
     timers: {
       challengeTimerSecs: rawGameConfig.timers?.challengeSeconds ?? 3,

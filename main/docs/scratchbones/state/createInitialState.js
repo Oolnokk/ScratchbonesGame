@@ -33,6 +33,8 @@ export function createInitialState(config) {
       cinematicMode: null,
       cinematicTimeout: null,
       roundConcessions: new Set(),
+      ante: 0,
+      tablePot: 0,
     },
     uiDebugState: {
       bettingUiDebugKey: null,
