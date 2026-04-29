@@ -3087,6 +3087,17 @@ import { createLayerManager } from './ui/layerManager.js';
       const claimRankGlyphHtml = claimRankGlyphSrc
         ? `<img class="claimRankGlyph" src="${claimRankGlyphSrc}" alt="Declared rank ${claimRankNumeric}" loading="lazy">`
         : claimRankText;
+      const claimClusterFontFamily = String(CONFIG.assets.claimClusterFontFamily || '"KhymeryyanRomanLetters+Numbers", serif').trim();
+      const claimClusterFontSrc = String(CONFIG.assets.claimClusterFontSrc || '').trim();
+      ensureClaimClusterFontFace({ family: claimClusterFontFamily, src: claimClusterFontSrc });
+      const claimMultiplyGlyphSrc = String(CONFIG.assets.claimMultiplyGlyphSrc || '').trim();
+      const claimMultiplyGlyphScaleRaw = Number(CONFIG.assets.claimMultiplyGlyphScale);
+      const claimMultiplyGlyphScale = Number.isFinite(claimMultiplyGlyphScaleRaw) && claimMultiplyGlyphScaleRaw > 0 ? claimMultiplyGlyphScaleRaw : 0.5;
+      const claimMultiplyGlyphInvert = CONFIG.assets.claimMultiplyGlyphInvert !== false;
+      const claimMultiplyGlyphStyle = `width:${(claimMultiplyGlyphScale * 100).toFixed(1)}%;height:${(claimMultiplyGlyphScale * 100).toFixed(1)}%;object-fit:contain;${claimMultiplyGlyphInvert ? 'filter:invert(1);' : ''}`;
+      const claimMultiplyGlyphHtml = claimMultiplyGlyphSrc
+        ? `<img class="claimMultiplyGlyph" src="${claimMultiplyGlyphSrc}" alt="Multiply" loading="lazy" style="${claimMultiplyGlyphStyle}">`
+        : '×';
       const claimHandCardsSource = cinematicRevealActive ? cinematicRevealPlay.cards : claimFocus.cards;
       const claimHandCardsHtml = (claimHandCardsSource?.length
         ? claimHandCardsSource.map((card) => {
@@ -3247,12 +3258,12 @@ import { createLayerManager } from './ui/layerManager.js';
         ${claimClusterEnabled ? `
           <div class="claimCluster fit-target fit-0 ${claimClusterPolicy.mustStayVisible ? 'must-stay-visible' : ''}" data-proj-id="claim-cluster">
             <div class="claimRankAnchorTop" data-proj-id="claim-rank-anchor" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimRankBox)}"></div>
-            <div class="claimRankBox ${claimClusterShellClass}" data-proj-id="claim-rank-box" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimRankBox)}">${claimRankGlyphHtml}</div>
+            <div class="claimRankBox ${claimClusterShellClass}" data-proj-id="claim-rank-box" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimRankBox)};font-family:${escapeHtml(claimClusterFontFamily)};">${claimRankGlyphHtml}</div>
             <div class="claimHandBar ${claimClusterShellClass}" data-proj-id="claim-hand-bar" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimHandBar)}">${claimHandCardsHtml}</div>
-            <div class="claimTimesBoxLeft ${claimClusterShellClass}" data-proj-id="claim-times-left" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimTimesBoxLeft)}">×</div>
-            <div class="claimCountBoxLeft ${claimClusterShellClass}" data-proj-id="claim-count-left" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimCountBoxLeft)}">${claimCount}</div>
-            <div class="claimTimesBoxRight ${claimClusterShellClass}" data-proj-id="claim-times-right" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimTimesBoxRight)}">×</div>
-            <div class="claimCountBoxRight ${claimClusterShellClass}" data-proj-id="claim-count-right" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimCountBoxRight)}">${claimCount}</div>
+            <div class="claimTimesBoxLeft ${claimClusterShellClass}" data-proj-id="claim-times-left" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimTimesBoxLeft)};font-family:${escapeHtml(claimClusterFontFamily)};">${claimMultiplyGlyphHtml}</div>
+            <div class="claimCountBoxLeft ${claimClusterShellClass}" data-proj-id="claim-count-left" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimCountBoxLeft)};font-family:${escapeHtml(claimClusterFontFamily)};">${claimCount}</div>
+            <div class="claimTimesBoxRight ${claimClusterShellClass}" data-proj-id="claim-times-right" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimTimesBoxRight)};font-family:${escapeHtml(claimClusterFontFamily)};">${claimMultiplyGlyphHtml}</div>
+            <div class="claimCountBoxRight ${claimClusterShellClass}" data-proj-id="claim-count-right" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimCountBoxRight)};font-family:${escapeHtml(claimClusterFontFamily)};">${claimCount}</div>
             <div class="actorAvatarFloat ${claimClusterShellClass}" data-proj-id="claim-avatar-actor" style="${claimClusterElementStyle(claimClusterPolicy.elements.actorAvatarFloat)}" title="${seatLabel(focusActor || claimFocus.actorId)}">
               <div class="claimAvatarShell ${(challengeIntro && focusActor) ? 'alert-pulse' : ''}">
                 <canvas class="seatPortrait" data-seat-id="${claimFocus.actorId}" width="220" height="220"></canvas>
@@ -3445,6 +3456,16 @@ import { createLayerManager } from './ui/layerManager.js';
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;');
+    }
+    function ensureClaimClusterFontFace({ family, src }) {
+      const trimmedFamily = String(family || '').trim().replace(/^['"]|['"]$/g, '');
+      const trimmedSrc = String(src || '').trim();
+      if (!trimmedFamily || !trimmedSrc) return;
+      if (document.getElementById('scratchbones-claim-cluster-font-face')) return;
+      const styleEl = document.createElement('style');
+      styleEl.id = 'scratchbones-claim-cluster-font-face';
+      styleEl.textContent = `@font-face{font-family:'${trimmedFamily.replaceAll("'", "\\'")}';src:url('${trimmedSrc.replaceAll("'", "\\'")}') format('truetype');font-display:swap;}`;
+      document.head.appendChild(styleEl);
     }
     // ── Portrait generation ────────────────────────────────
     let _portraitCosmetics = null;
