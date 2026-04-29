@@ -321,16 +321,27 @@ import { createLayerManager } from './ui/layerManager.js';
         },
       }, null, 2);
     }
-    function copyTextToClipboard(payload) {
+    async function copyTextToClipboard(payload) {
       const text = String(payload || '');
-      return navigator.clipboard?.writeText(text).catch(() => {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      });
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return;
+        } catch (error) {
+          console.warn('Clipboard API copy failed; falling back to execCommand copy.', error);
+        }
+      }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', 'readonly');
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (!copied) throw new Error('Clipboard copy failed for both Clipboard API and execCommand fallback.');
     }
     function applyAuthoredLayoutMode(app, authoredConfig) {
       return applyAuthoredLayoutModeModule({ app, authoredConfig, authoredBoxKeyByProjId: AUTHORED_BOX_KEY_BY_PROJ_ID, authoredParentBox: AUTHORED_PARENT_BOX, applyAuthoredBoxStyles });
@@ -4369,10 +4380,16 @@ import { createLayerManager } from './ui/layerManager.js';
           : 'Switched to layered preview and copied literal screen-space data.');
       });
       transformExportBothBtn.addEventListener('click', async () => {
-        const exportPayload = await buildRenderedTransformsDualModeExport();
-        copyTextToClipboard(exportPayload);
-        updateLayerPreviewButton();
-        updateEditorStatus('Captured original + layered previews and copied combined screen-space export.');
+        try {
+          const exportPayload = await buildRenderedTransformsDualModeExport();
+          await copyTextToClipboard(exportPayload);
+          updateLayerPreviewButton();
+          updateEditorStatus('Captured original + layered previews and copied combined screen-space export.');
+        } catch (error) {
+          console.error('Dual-mode screen-space export failed.', error);
+          updateLayerPreviewButton();
+          updateEditorStatus('Dual-mode export failed. Check console for details.');
+        }
       });
       exportBtn.addEventListener('click', () => {
         copyTextToClipboard(buildAuthoredLayoutExport());
