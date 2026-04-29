@@ -2604,6 +2604,26 @@ import { createLayerManager } from './ui/layerManager.js';
       app.style.setProperty('--layout-challenge-gap-scale', clampNumber(gapScale, 0.72, 1).toFixed(3));
       app.style.setProperty('--layout-parent-height-scale', clampNumber(parentHeightScale, 0.80, 1).toFixed(3));
     }
+    function enforceFitContainerBounds(app) {
+      if (!app) return;
+      const humanSeatZone = app.querySelector('.humanSeatZone');
+      if (humanSeatZone) {
+        humanSeatZone.style.minWidth = '0';
+        humanSeatZone.style.maxWidth = '100%';
+      }
+      const humanSeatCard = app.querySelector('.humanSeatCard');
+      if (humanSeatCard) {
+        humanSeatCard.style.minWidth = '0';
+        humanSeatCard.style.maxWidth = '100%';
+        humanSeatCard.style.overflow = 'hidden';
+      }
+      const declareRankSelect = app.querySelector('#declareRank');
+      if (declareRankSelect) {
+        declareRankSelect.style.width = '100%';
+        declareRankSelect.style.maxWidth = '100%';
+        declareRankSelect.style.boxSizing = 'border-box';
+      }
+    }
     function updateTableViewHeight(app, tableLayoutPolicy) {
       if (!app || !tableLayoutPolicy) return;
       const topbar = app.querySelector('.topbar');
@@ -3366,6 +3386,7 @@ import { createLayerManager } from './ui/layerManager.js';
       renderAuthoredInspector();
       updateTableCardAutoScale(app);
       syncClaimClusterCardSizeFromHand(app);
+      enforceFitContainerBounds(app);
       if (state.pendingCinematicBetAction) {
         const actionFx = state.pendingCinematicBetAction;
         state.pendingCinematicBetAction = null;
