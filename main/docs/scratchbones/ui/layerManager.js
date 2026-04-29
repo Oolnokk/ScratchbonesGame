@@ -285,18 +285,44 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     ensureHost(app);
     if (!state.host) return;
     clearPromoted();
-    const seen = new Set();
-    const promotedAncestors = [];
-    for (const assignment of assignmentList) {
-      for (const selector of assignment.selectors) {
+
+    const nodeAssignments = new Map();
+    assignmentList.forEach((assignment, assignmentIndex) => {
+      assignment.selectors.forEach((selector, selectorIndex) => {
         app.querySelectorAll(selector).forEach((node) => {
-          if (!(node instanceof Element) || seen.has(node)) return;
-          if (promotedAncestors.some((ancestor) => ancestor.contains(node))) return;
-          seen.add(node);
-          if (promoteElementToLayer(node, assignment)) promotedAncestors.push(node);
+          if (!(node instanceof Element)) return;
+          const existing = nodeAssignments.get(node);
+          const priority = assignmentIndex * 1000 + selectorIndex;
+          if (!existing || priority < existing.priority) {
+            nodeAssignments.set(node, { assignment, priority });
+          }
         });
-      }
+      });
+    });
+
+    const candidates = Array.from(nodeAssignments.entries())
+      .map(([node, data]) => ({
+        node,
+        assignment: data.assignment,
+        priority: data.priority,
+        depth: (() => {
+          let depth = 0;
+          let current = node.parentElement;
+          while (current) {
+            depth += 1;
+            current = current.parentElement;
+          }
+          return depth;
+        })(),
+      }))
+      .sort((a, b) => (a.depth - b.depth) || (a.priority - b.priority));
+
+    const promotedAncestors = [];
+    for (const candidate of candidates) {
+      if (promotedAncestors.some((ancestor) => ancestor.contains(candidate.node))) continue;
+      if (promoteElementToLayer(candidate.node, candidate.assignment)) promotedAncestors.push(candidate.node);
     }
+
     for (const entry of state.promoted) updatePortalRect(entry);
     log('debug', 'sync-complete', { promotedCount: state.promoted.length });
   }
