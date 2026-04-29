@@ -39,15 +39,9 @@ Keeping `absolute|fixed` promoted elements pinned at `left/top=0` in the portal 
 - Added a new layer-manager config flag: `normalizePromotedElementBox` (default `false`).
 - Promotion now only forces `margin:0; width:100%; height:100%` when that flag is explicitly enabled.
 - Kept existing absolute/fixed normalization and added debug payload field `normalizePromotedElementBox` so traces clearly show when coercive sizing is active.
-- Added post-placement transform composition in the portal (`translate + scale`) based on live `placeholderRect` vs promoted `elementRect` deltas. This compensates for transform/context drift introduced by reparenting, instead of assuming direct coordinate remap is sufficient in all cases.
 
 ## Interim conclusion
 There is a fundamental tradeoff in the current promotion approach: DOM reparenting will always risk semantic drift for elements that rely on ancestor layout context. The previous always-on forced sizing made this much worse. The new default removes that forced coercion so promotion behavior is closer to authored/original rendering by default.
-
-## Notes on regular UI + aspect ratio/resolution sync
-- `#app` authored scaling remains a separate transform application (`translate + uniform scale`), while promoted nodes can also carry their own local transforms.
-- The new compensation step explicitly composes those effects at the portal level, reducing mismatch when aspect ratio or resolution causes subtle scale/position drift.
-- Responsive mode and authored mode both flow through `updatePortalRect()` because rects are taken from live DOM metrics; this keeps sync tied to real rendered geometry, not assumptions.
 
 ## Remaining risk areas to validate in runtime
 - Nodes that intentionally depended on fixed positioning semantics.

@@ -139,26 +139,6 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     entry.portal.style.top = `${localTop.toFixed(4)}px`;
     entry.portal.style.width = `${Math.max(1, localWidth).toFixed(4)}px`;
     entry.portal.style.height = `${Math.max(1, localHeight).toFixed(4)}px`;
-    applyVisualCompensation(entry);
-  }
-
-  function applyVisualCompensation(entry) {
-    if (!entry?.portal || !entry?.placeholder || !entry?.element) return;
-    const phRect = entry.placeholder.getBoundingClientRect();
-    const elRect = entry.element.getBoundingClientRect();
-    const dx = phRect.left - elRect.left;
-    const dy = phRect.top - elRect.top;
-    const sx = phRect.width / Math.max(1, elRect.width || 1);
-    const sy = phRect.height / Math.max(1, elRect.height || 1);
-    const shouldTranslate = Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5;
-    const shouldScale = Math.abs(1 - sx) > 0.01 || Math.abs(1 - sy) > 0.01;
-    if (!shouldTranslate && !shouldScale) {
-      entry.portal.style.transform = '';
-      entry.portal.style.transformOrigin = '';
-      return;
-    }
-    entry.portal.style.transformOrigin = 'top left';
-    entry.portal.style.transform = `translate(${dx.toFixed(3)}px, ${dy.toFixed(3)}px) scale(${sx.toFixed(5)}, ${sy.toFixed(5)})`;
   }
 
   function promoteElementToLayer(element, assignment) {
