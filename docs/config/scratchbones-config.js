@@ -538,6 +538,7 @@ window.SCRATCHBONES_CONFIG = {
         "enabled": true,
         "hostZIndex": 45,
         "defaultPreserveSpace": true,
+        "placementMode": "screen-space",
         "layerOrder": [
           "above-lighting-shell",
           "above-lighting-content"

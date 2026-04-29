@@ -112,6 +112,7 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   hostZIndex: 45,
   defaultPreserveSpace: true,
   normalizePromotedElementBox: false,
+  placementMode: 'app-local',
   layerOrder: ['above-lighting-shell', 'above-lighting-content'],
   assignments: [
     {
