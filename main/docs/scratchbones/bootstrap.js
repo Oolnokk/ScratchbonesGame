@@ -2990,7 +2990,8 @@ import { createLayerManager } from './ui/layerManager.js';
       const contextBoxEnabled = regionsPolicy.contextBox?.enabled;
       const sharedContextBox = regionsPolicy.contextBox?.sharedDeclareAndChallengeSlot;
       const eventLogEnabled = regionsPolicy.log?.enabled === true;
-      const showLegacyActionFocus = !claimClusterEnabled && !regionsPolicy.actionFocus?.replaceWithFloatingClaimCluster && regionsPolicy.actionFocus?.enabled;
+      const legacyCinematicCompatEnabled = SCRATCHBONES_GAME.layout?.cinematic?.enableLegacyBoxedBranch === true;
+      const showLegacyActionFocus = legacyCinematicCompatEnabled && !claimClusterEnabled && !regionsPolicy.actionFocus?.replaceWithFloatingClaimCluster && regionsPolicy.actionFocus?.enabled;
       const tableCardVisualMode = tableViewPolicy.cardVisualMode || 'facedown';
       const tableCardFaceDown = tableCardVisualMode !== 'faceup';
       ensureChallengeCinematic();
@@ -3130,6 +3131,10 @@ import { createLayerManager } from './ui/layerManager.js';
           </div>
         </div>
       `;
+      const renderLegacyBoxedCinematic = (phase) => {
+        console.debug('[cinematic-cluster-stage] legacy boxed cinematic branch enabled', { phase });
+        return '';
+      };
       const clusterCinematicActive = claimClusterEnabled && !!cinematicMode;
       app.innerHTML = `
         <div class="topbar" data-proj-id="topbar">
@@ -3232,7 +3237,7 @@ import { createLayerManager } from './ui/layerManager.js';
           <pre id="debugSnapshotData">${DEBUG_ENABLED ? escapeHtml(JSON.stringify(debugSnapshot(), null, 2)) : 'Debug disabled.'}</pre>
         </details>
         ${(clusterCinematicActive && (cinematicPhase === 'reveal' || cinematicPhase === 'fold'))
-          ? (() => { console.debug('[cinematic-cluster-stage] legacy boxed cinematic branch blocked', { phase: cinematicPhase }); return ''; })()
+          ? (legacyCinematicCompatEnabled ? renderLegacyBoxedCinematic(cinematicPhase) : '')
           : ((clusterCinematicActive && cinematicPhase === 'betting')
             ? ''
             : state.betting
