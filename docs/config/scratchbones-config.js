@@ -146,8 +146,8 @@ window.SCRATCHBONES_CONFIG = {
         "increment": 1
       },
       "ante": {
-        "start": 1,
-        "increment": 1
+        "start": 2,
+        "increment": 2
       }
     },
     "timers": {
@@ -221,7 +221,7 @@ window.SCRATCHBONES_CONFIG = {
         }
       },
       "cards": {
-        "baseScale": 0.5
+        "baseScale": 0.75
       },
       "sizing": {
         "sidebarWidthFrac": 0.15,
