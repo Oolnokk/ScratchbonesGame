@@ -538,10 +538,14 @@ window.SCRATCHBONES_CONFIG = {
         "enabled": true,
         "hostZIndex": 45,
         "defaultPreserveSpace": true,
+        "layerOrder": [
+          "above-lighting-shell",
+          "above-lighting-content"
+        ],
         "assignments": [
           {
             "id": "ui-text-over-lighting",
-            "layer": "above-lighting",
+            "layer": "above-lighting-content",
             "selectors": [
               ".seatName",
               ".seatMeta",
@@ -570,14 +574,16 @@ window.SCRATCHBONES_CONFIG = {
           },
           {
             "id": "ui-avatars-over-lighting",
-            "layer": "above-lighting",
+            "layer": "above-lighting-content",
             "selectors": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar", ".actorAvatarFloat", ".reactorAvatarFloat"],
             "preserveSpace": true
           },
           {
             "id": "ui-shell-over-lighting",
-            "layer": "above-lighting",
+            "layer": "above-lighting-shell",
             "selectors": [
+              "#aiSidebar",
+              ".humanSeatZone",
               ".seatHandPreview",
               ".seatHandCard",
               ".seatHandCard img",
