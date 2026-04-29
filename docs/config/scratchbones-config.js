@@ -165,6 +165,10 @@ window.SCRATCHBONES_CONFIG = {
           "maxAbsDy": 0.5,
           "maxAbsDw": 0.5,
           "maxAbsDh": 0.5,
+          "maxElementMagnitude": 3,
+          "maxGroupAverageMagnitude": 2,
+          "maxGroupMagnitude": 5,
+          "requireTransformMatchFor": ["avatars", "claim avatars"],
           "transformMismatchPolicy": "warn"
         }
       },
