@@ -256,6 +256,26 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         fadeOutSpeed: Math.max(0.1, Number(rawGameConfig.layout?.animation?.fadeOutSpeed) || 1.8),
       },
       mode: String(rawGameConfig.layout?.mode || 'responsive').toLowerCase(),
+      diagnostics: {
+        renderedScreenSpaceParity: (() => {
+          const rawParity = rawGameConfig.layout?.diagnostics?.renderedScreenSpaceParity || {};
+          const normalizeThreshold = (value, fallback) => {
+            const numeric = Number(value);
+            return Number.isFinite(numeric) ? Math.max(0, numeric) : fallback;
+          };
+          const rawTransformPolicy = String(rawParity.transformMismatchPolicy || "warn").toLowerCase();
+          const transformMismatchPolicy = ["ignore", "warn", "fail"].includes(rawTransformPolicy)
+            ? rawTransformPolicy
+            : "warn";
+          return {
+            maxAbsDx: normalizeThreshold(rawParity.maxAbsDx, 1),
+            maxAbsDy: normalizeThreshold(rawParity.maxAbsDy, 1),
+            maxAbsDw: normalizeThreshold(rawParity.maxAbsDw, 1),
+            maxAbsDh: normalizeThreshold(rawParity.maxAbsDh, 1),
+            transformMismatchPolicy,
+          };
+        })(),
+      },
       authored: {
         enabled: rawGameConfig.layout?.authored?.enabled !== false,
         designWidthPx: Number(rawGameConfig.layout?.authored?.designWidthPx) || 1600,
