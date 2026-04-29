@@ -176,7 +176,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     element.style.width = '100%';
     element.style.height = '100%';
     if (computed.position === 'absolute' || computed.position === 'fixed') {
-      element.style.position = 'relative';
+      element.style.position = 'absolute';
       element.style.left = '0';
       element.style.top = '0';
       element.style.right = 'auto';
@@ -191,6 +191,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       layer: assignment.layer,
       selectorName: element.id ? `#${element.id}` : element.className,
       retainedTransform: element.style.transform || 'none',
+      originalPosition: computed.position,
+      placeholderRect: { width: layoutWidth, height: layoutHeight },
     });
     return true;
   }
