@@ -113,8 +113,6 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   defaultPreserveSpace: true,
   normalizePromotedElementBox: false,
   placementMode: 'app-local',
-  screenSpaceUseFixed: true,
-  screenSpaceRoundToPixels: false,
   layerOrder: ['above-lighting-shell', 'above-lighting-content'],
   assignments: [
     {
@@ -280,8 +278,6 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
           ...DEFAULT_LAYER_MANAGER_CONFIG,
           ...rawLayerManager,
           placementMode,
-          screenSpaceUseFixed: rawLayerManager.screenSpaceUseFixed !== false,
-          screenSpaceRoundToPixels: rawLayerManager.screenSpaceRoundToPixels === true,
         };
       })(),
     },

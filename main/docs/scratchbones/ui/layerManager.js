@@ -266,7 +266,6 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       originalPosition: computed.position,
       normalizePromotedElementBox: shouldNormalizeBox,
       placementMode,
-      placeholderRect: { width: layoutWidth, height: layoutHeight },
     });
     return true;
   }
