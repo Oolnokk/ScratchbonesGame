@@ -486,6 +486,7 @@ import { createLayerManager } from './ui/layerManager.js';
       challengeBaseTransfer: SCRATCHBONES_GAME.chips.challengeBaseTransfer,
       concedeRoundChipLoss: SCRATCHBONES_GAME.chips.concedeRoundChipLoss,
       walletDisplay: SCRATCHBONES_GAME.chips.walletDisplay || {},
+      poolDisplay: SCRATCHBONES_GAME.chips.poolDisplay || {},
       challengeStakeTiers: SCRATCHBONES_GAME.chips.challengeStakeTiers,
       challengeStakeAnimation: SCRATCHBONES_GAME.chips.challengeStakeAnimation,
       clearBonusBase: SCRATCHBONES_GAME.chips.clearBonusBase,
@@ -512,6 +513,7 @@ import { createLayerManager } from './ui/layerManager.js';
       .filter((tier) => tier.id && tier.value > 0)
       .sort((a, b) => b.value - a.value);
     const MAX_WALLET_ICONS_PER_SEAT = Math.max(1, Number(CONFIG.walletDisplay.maxIconsPerSeat) || 18);
+    const TABLE_POOL_DISPLAY = CONFIG.poolDisplay || {};
     function stakeCoinSrcForTier(tierId) {
       const fallback = STAKE_COIN_SRC[STAKE_COIN_FALLBACK_TIER_ID] || CONFIG.assets.cinematicTokenIconSrc;
       return STAKE_COIN_SRC[tierId] || fallback;
@@ -540,6 +542,35 @@ import { createLayerManager } from './ui/layerManager.js';
       const overflow = Math.max(0, icons.length - MAX_WALLET_ICONS_PER_SEAT);
       const visibleIcons = overflow > 0 ? icons.slice(0, MAX_WALLET_ICONS_PER_SEAT) : icons;
       return `<div class="seatCoinRow" style="display:flex;align-items:center;min-height:24px;padding-left:8px;margin:4px 0 2px;">${visibleIcons.join('')}${overflow > 0 ? `<span class="seatCoinOverflow" style="margin-left:6px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : ''}</div>`;
+    }
+
+    function renderTablePoolPile(chipCount) {
+      const breakdown = coinBreakdownForChips(chipCount);
+      const pileMaxIcons = Math.max(1, Number(TABLE_POOL_DISPLAY.maxIcons) || 28);
+      const pileWidthPx = Math.max(100, Number(TABLE_POOL_DISPLAY.widthPx) || 220);
+      const pileHeightPx = Math.max(60, Number(TABLE_POOL_DISPLAY.heightPx) || 96);
+      const coinSizePx = Math.max(16, Number(TABLE_POOL_DISPLAY.coinSizePx) || 30);
+      const spreadXPx = Math.max(10, Number(TABLE_POOL_DISPLAY.spreadXPx) || 84);
+      const spreadYPx = Math.max(8, Number(TABLE_POOL_DISPLAY.spreadYPx) || 28);
+      if (!breakdown.length) return '';
+      const icons = [];
+      for (const tier of breakdown) {
+        for (let index = 0; index < tier.count; index += 1) icons.push(tier.id);
+      }
+      const overflow = Math.max(0, icons.length - pileMaxIcons);
+      const visibleIcons = overflow > 0 ? icons.slice(0, pileMaxIcons) : icons;
+      const pileSeed = (Math.round(Number(chipCount) || 0) * 2654435761) >>> 0;
+      const pileHtml = visibleIcons.map((tierId, index) => {
+        const localSeed = (((pileSeed + (index + 1) * 1013904223) >>> 0) % 10000) / 10000;
+        const localSeedB = (((pileSeed + (index + 1) * 1664525) >>> 0) % 10000) / 10000;
+        const xPx = (localSeed - 0.5) * spreadXPx * 2;
+        const yPx = (localSeedB - 0.5) * spreadYPx * 2;
+        const rotateDeg = (localSeedB - 0.5) * 46;
+        const z = 1 + index;
+        return `<img class="tablePoolCoin" src="${escapeHtml(stakeCoinSrcForTier(tierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tierId)} coin" style="position:absolute;left:50%;top:50%;width:${coinSizePx}px;height:${coinSizePx}px;object-fit:contain;transform:translate(calc(-50% + ${xPx.toFixed(1)}px),calc(-50% + ${yPx.toFixed(1)}px)) rotate(${rotateDeg.toFixed(1)}deg);filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));z-index:${z};">`;
+      }).join('');
+      const overflowHtml = overflow > 0 ? `<span class="tablePoolOverflow" style="position:absolute;right:6px;bottom:2px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : '';
+      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" style="position:absolute;left:50%;top:calc(100% + 10px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
     const layoutDiagnostics = createLayoutDiagnosticsState();
@@ -3355,6 +3386,7 @@ import { createLayerManager } from './ui/layerManager.js';
               <div class="rightContributionAnchor" data-stake-right-contribution-anchor data-proj-id="betting-right-contribution-anchor"></div>
               <div class="bettingChoiceAnchor" data-stake-betting-choice-anchor data-proj-id="betting-choice-anchor"></div>
             </div>
+            ${renderTablePoolPile(state.tablePot)}
           </div>
         ` : ''}
         ${showLegacyActionFocus ? `
