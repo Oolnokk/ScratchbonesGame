@@ -124,10 +124,10 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const localTop = (phRect.top - appRect.top) / scaleY;
     const localWidth = phRect.width / scaleX;
     const localHeight = phRect.height / scaleY;
-    entry.portal.style.left = `${Math.round(localLeft)}px`;
-    entry.portal.style.top = `${Math.round(localTop)}px`;
-    entry.portal.style.width = `${Math.max(1, Math.round(localWidth))}px`;
-    entry.portal.style.height = `${Math.max(1, Math.round(localHeight))}px`;
+    entry.portal.style.left = `${localLeft.toFixed(4)}px`;
+    entry.portal.style.top = `${localTop.toFixed(4)}px`;
+    entry.portal.style.width = `${Math.max(1, localWidth).toFixed(4)}px`;
+    entry.portal.style.height = `${Math.max(1, localHeight).toFixed(4)}px`;
   }
 
   function promoteElementToLayer(element, assignment) {
@@ -144,8 +144,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     placeholder.dataset.layerPlaceholderFor = assignment.id;
     if (assignment.preserveSpace ?? defaultPreserveSpace) {
       placeholder.style.display = computed.display === 'inline' ? 'inline-block' : computed.display;
-      placeholder.style.width = `${Math.max(1, Math.round(layoutWidth))}px`;
-      placeholder.style.height = `${Math.max(1, Math.round(layoutHeight))}px`;
+      placeholder.style.width = `${Math.max(1, layoutWidth).toFixed(4)}px`;
+      placeholder.style.height = `${Math.max(1, layoutHeight).toFixed(4)}px`;
       placeholder.style.marginTop = computed.marginTop;
       placeholder.style.marginRight = computed.marginRight;
       placeholder.style.marginBottom = computed.marginBottom;
