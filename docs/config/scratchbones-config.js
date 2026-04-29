@@ -534,7 +534,7 @@ window.SCRATCHBONES_CONFIG = {
           {
             "id": "ui-text-over-lighting",
             "layer": "above-lighting",
-            "selectors": [".seatName", ".seatMeta", ".seatStatus", ".turnSpotlightNameBar", ".cin-name", ".cin-action-burst"],
+            "selectors": [".seatName", ".seatMeta", ".seatStatus", ".turnSpotlightNameBar", ".cin-name", ".cin-action-burst", ".seatHandPreview", ".seatHandCard", ".seatHandCard img"],
             "preserveSpace": true
           },
           {
