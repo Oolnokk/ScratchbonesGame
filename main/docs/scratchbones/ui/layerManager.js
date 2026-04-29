@@ -10,6 +10,11 @@ function snapshotManagedElementStyle(element) {
     margin: element.style.margin,
     width: element.style.width,
     height: element.style.height,
+    position: element.style.position,
+    left: element.style.left,
+    top: element.style.top,
+    right: element.style.right,
+    bottom: element.style.bottom,
     transform: element.style.transform,
     transformOrigin: element.style.transformOrigin,
   };
@@ -20,6 +25,11 @@ function restoreManagedElementStyle(element, styleSnapshot) {
   element.style.margin = styleSnapshot.margin;
   element.style.width = styleSnapshot.width;
   element.style.height = styleSnapshot.height;
+  element.style.position = styleSnapshot.position;
+  element.style.left = styleSnapshot.left;
+  element.style.top = styleSnapshot.top;
+  element.style.right = styleSnapshot.right;
+  element.style.bottom = styleSnapshot.bottom;
   element.style.transform = styleSnapshot.transform;
   element.style.transformOrigin = styleSnapshot.transformOrigin;
 }
@@ -165,6 +175,13 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     element.style.margin = '0';
     element.style.width = '100%';
     element.style.height = '100%';
+    if (computed.position === 'absolute' || computed.position === 'fixed') {
+      element.style.position = 'relative';
+      element.style.left = '0';
+      element.style.top = '0';
+      element.style.right = 'auto';
+      element.style.bottom = 'auto';
+    }
 
     const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle };
     state.promoted.push(promotedEntry);
