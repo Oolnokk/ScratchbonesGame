@@ -25,6 +25,17 @@ function isTransformSensitivePromotionTarget(element) {
   return /avatar|portrait|cinematic|cutscene/.test(marker);
 }
 
+
+function shouldPreservePromotionTransform(element) {
+  if (!element) return false;
+  const projId = String(element.getAttribute?.('data-proj-id') || '').trim().toLowerCase();
+  if (!projId) return false;
+  if (projId === 'avatar-human' || projId.startsWith('avatar-')) return true;
+  if (projId.startsWith('claim-avatar-')) return true;
+  if (projId.startsWith('claim-') && (projId.includes('anchor') || projId.includes('text'))) return true;
+  return false;
+}
+
 function canSafelyNormalizePromotedBox(element, computedStyle) {
   if (!element || !computedStyle) return false;
   if (isTransformSensitivePromotionTarget(element)) return false;
@@ -249,7 +260,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     element.style.bottom = 'auto';
     element.style.width = '100%';
     element.style.height = '100%';
-    if (isTransformSensitive && !hasInlineTransform(element) && computed.transform && computed.transform !== 'none') {
+    const preservePromotionTransform = shouldPreservePromotionTransform(element);
+    if (!preservePromotionTransform && isTransformSensitive && !hasInlineTransform(element) && computed.transform && computed.transform !== 'none') {
       element.style.transform = computed.transform;
       if (computed.transformOrigin) element.style.transformOrigin = computed.transformOrigin;
     }
@@ -274,6 +286,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       originalPosition: computed.position,
       normalizePromotedElementBox: shouldNormalizeBox,
       transformSensitive: isTransformSensitive,
+      preservePromotionTransform,
       reanchoredAbsolutePosition: true,
       placementMode: 'screen-space',
     });
