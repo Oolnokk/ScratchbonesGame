@@ -544,7 +544,7 @@ import { createLayerManager } from './ui/layerManager.js';
       return `<div class="seatCoinRow" style="display:flex;align-items:center;min-height:24px;padding-left:8px;margin:4px 0 2px;">${visibleIcons.join('')}${overflow > 0 ? `<span class="seatCoinOverflow" style="margin-left:6px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : ''}</div>`;
     }
 
-    function renderTablePoolPile(chipCount) {
+    function renderTablePoolPile(chipCount, pileSeedInput) {
       const breakdown = coinBreakdownForChips(chipCount);
       const pileMaxIcons = Math.max(1, Number(TABLE_POOL_DISPLAY.maxIcons) || 28);
       const pileWidthPx = Math.max(100, Number(TABLE_POOL_DISPLAY.widthPx) || 220);
@@ -559,7 +559,8 @@ import { createLayerManager } from './ui/layerManager.js';
       }
       const overflow = Math.max(0, icons.length - pileMaxIcons);
       const visibleIcons = overflow > 0 ? icons.slice(0, pileMaxIcons) : icons;
-      const pileSeed = (Math.round(Number(chipCount) || 0) * 2654435761) >>> 0;
+      const baseSeed = Math.round(Number(pileSeedInput) || 0) >>> 0;
+      const pileSeed = (baseSeed ^ ((Math.round(Number(chipCount) || 0) * 2654435761) >>> 0)) >>> 0;
       const pileHtml = visibleIcons.map((tierId, index) => {
         const localSeed = (((pileSeed + (index + 1) * 1013904223) >>> 0) % 10000) / 10000;
         const localSeedB = (((pileSeed + (index + 1) * 1664525) >>> 0) % 10000) / 10000;
@@ -570,7 +571,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return `<img class="tablePoolCoin" src="${escapeHtml(stakeCoinSrcForTier(tierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tierId)} coin" style="position:absolute;left:50%;top:50%;width:${coinSizePx}px;height:${coinSizePx}px;object-fit:contain;transform:translate(calc(-50% + ${xPx.toFixed(1)}px),calc(-50% + ${yPx.toFixed(1)}px)) rotate(${rotateDeg.toFixed(1)}deg);filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));z-index:${z};">`;
       }).join('');
       const overflowHtml = overflow > 0 ? `<span class="tablePoolOverflow" style="position:absolute;right:6px;bottom:2px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : '';
-      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" style="position:absolute;left:50%;top:calc(100% + 10px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
+      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" style="position:absolute;left:calc(var(--layout-claim-cluster-center-x,0.5) * 100%);top:calc((var(--layout-claim-cluster-center-y,0.54) * 100%) + (var(--layout-claim-cluster-height,48) * 0.5%) + 10px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
     const layoutDiagnostics = createLayoutDiagnosticsState();
@@ -753,6 +754,7 @@ import { createLayerManager } from './ui/layerManager.js';
       SCRATCHBONES_AUDIO.startPlaylist();
       clearChallengeTimer();
       state.seed = Math.floor(Math.random() * 1e9);
+      state.poolVisualSeed = Math.floor(Math.random() * 1e9);
       rand = mulberry32(state.seed);
       state.players = makePlayers();
       state.selectedCardIds.clear();
@@ -3386,9 +3388,9 @@ import { createLayerManager } from './ui/layerManager.js';
               <div class="rightContributionAnchor" data-stake-right-contribution-anchor data-proj-id="betting-right-contribution-anchor"></div>
               <div class="bettingChoiceAnchor" data-stake-betting-choice-anchor data-proj-id="betting-choice-anchor"></div>
             </div>
-            ${renderTablePoolPile(state.tablePot)}
-          </div>
+            </div>
         ` : ''}
+        ${claimClusterEnabled ? renderTablePoolPile(state.tablePot, state.poolVisualSeed) : ''}
         ${showLegacyActionFocus ? `
           <div class="actionFocus fit-target fit-0">
             <div class="tiny">Legacy action focus mode enabled.</div>
