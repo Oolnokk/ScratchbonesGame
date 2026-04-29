@@ -94,6 +94,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const defaultPreserveSpace = managerConfig.defaultPreserveSpace !== false;
   const normalizePromotedElementBox = managerConfig.normalizePromotedElementBox === true;
   const assignments = Array.isArray(managerConfig.assignments) ? managerConfig.assignments : [];
+  const promoteByRootSelectors = normalizeSelectorList(managerConfig.promoteByRootSelectors);
+  const excludeDescendantSelectors = normalizeSelectorList(managerConfig.excludeDescendantSelectors);
   const configuredLayerOrder = normalizeStringList(managerConfig.layerOrder);
   const assignmentList = assignments
     .map((entry, index) => {
@@ -330,9 +332,22 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       }))
       .sort((a, b) => (a.depth - b.depth) || (a.priority - b.priority));
 
+    const isPromotionRoot = (element) =>
+      !!element && promoteByRootSelectors.some((selector) => {
+        try { return element.matches(selector); } catch { return false; }
+      });
+    const isExcludedDescendant = (element, promotedRoot) =>
+      !!element && !!promotedRoot && excludeDescendantSelectors.some((selector) => {
+        try { return element !== promotedRoot && element.matches(selector) && promotedRoot.contains(element); } catch { return false; }
+      });
+
     const promotedAncestors = [];
     for (const candidate of candidates) {
-      if (promotedAncestors.some((ancestor) => ancestor.contains(candidate.node))) continue;
+      if (promotedAncestors.some((ancestor) => {
+        if (!ancestor.contains(candidate.node)) return false;
+        if (!isPromotionRoot(ancestor)) return true;
+        return isExcludedDescendant(candidate.node, ancestor);
+      })) continue;
       if (promoteElementToLayer(candidate.node, candidate.assignment)) promotedAncestors.push(candidate.node);
     }
 
