@@ -485,6 +485,7 @@ import { createLayerManager } from './ui/layerManager.js';
       startingChips: SCRATCHBONES_GAME.chips.startingChips,
       challengeBaseTransfer: SCRATCHBONES_GAME.chips.challengeBaseTransfer,
       concedeRoundChipLoss: SCRATCHBONES_GAME.chips.concedeRoundChipLoss,
+      walletDisplay: SCRATCHBONES_GAME.chips.walletDisplay || {},
       challengeStakeTiers: SCRATCHBONES_GAME.chips.challengeStakeTiers,
       challengeStakeAnimation: SCRATCHBONES_GAME.chips.challengeStakeAnimation,
       clearBonusBase: SCRATCHBONES_GAME.chips.clearBonusBase,
@@ -504,9 +505,70 @@ import { createLayerManager } from './ui/layerManager.js';
     const STAKE_TIER_BY_ID = Object.fromEntries(STAKE_TIERS.map((tier) => [tier.id, tier]));
     const STAKE_COIN_SRC = CONFIG.assets.stakeTierCoinSrc;
     const STAKE_COIN_FALLBACK_TIER_ID = String(CONFIG.assets.coinFallbackTierId);
+    const WALLET_TIERS = (Array.isArray(CONFIG.walletDisplay.tiers) ? CONFIG.walletDisplay.tiers : [])
+      .map((tier) => ({ id: String(tier?.id || ''), value: Number(tier?.value) || 0 }))
+      .filter((tier) => tier.id && tier.value > 0)
+      .sort((a, b) => b.value - a.value);
+    const MAX_WALLET_ICONS_PER_SEAT = Math.max(1, Number(CONFIG.walletDisplay.maxIconsPerSeat) || 18);
+    const POOL_PILE_CONFIG = CONFIG.walletDisplay.poolPile || {};
     function stakeCoinSrcForTier(tierId) {
       const fallback = STAKE_COIN_SRC[STAKE_COIN_FALLBACK_TIER_ID] || CONFIG.assets.cinematicTokenIconSrc;
       return STAKE_COIN_SRC[tierId] || fallback;
+    }
+    function coinBreakdownForChips(chipCount) {
+      const safeChipCount = Math.max(0, Number(chipCount) || 0);
+      if (!WALLET_TIERS.length) return [];
+      let remaining = safeChipCount;
+      const breakdown = [];
+      for (const tier of WALLET_TIERS) {
+        const count = Math.floor(remaining / tier.value);
+        if (count > 0) breakdown.push({ ...tier, count });
+        remaining -= count * tier.value;
+      }
+      return breakdown;
+    }
+    function renderSeatCoinRow(player) {
+      const breakdown = coinBreakdownForChips(player?.chips);
+      if (!breakdown.length) return '<div class="seatCoinRow seatCoinRowEmpty" aria-hidden="true" style="min-height:20px;"></div>';
+      const icons = [];
+      for (const tier of breakdown) {
+        for (let index = 0; index < tier.count; index += 1) {
+          icons.push(`<img class="seatCoinIcon" style="width:24px;height:24px;object-fit:contain;margin-left:-8px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));" src="${escapeHtml(stakeCoinSrcForTier(tier.id))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tier.id)} coin">`);
+        }
+      }
+      const overflow = Math.max(0, icons.length - MAX_WALLET_ICONS_PER_SEAT);
+      const visibleIcons = overflow > 0 ? icons.slice(0, MAX_WALLET_ICONS_PER_SEAT) : icons;
+      return `<div class="seatCoinRow" style="display:flex;align-items:center;min-height:24px;padding-left:8px;margin:4px 0 2px;">${visibleIcons.join('')}${overflow > 0 ? `<span class="seatCoinOverflow" style="margin-left:6px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : ''}</div>`;
+    }
+    function currentPoolChipTotal() {
+      const antePool = Number(state?.ante?.poolChips ?? state?.antePoolChips ?? 0);
+      if (antePool > 0) return antePool;
+      return challengePotTotal();
+    }
+    function renderPoolCoinPile() {
+      if (POOL_PILE_CONFIG.enabled === false) return '';
+      const breakdown = coinBreakdownForChips(currentPoolChipTotal());
+      if (!breakdown.length) return '';
+      const maxIcons = Math.max(1, Number(POOL_PILE_CONFIG.maxIcons) || 28);
+      const overlapPx = Math.max(1, Number(POOL_PILE_CONFIG.overlapPx) || 18);
+      const scatterYPx = Math.max(0, Number(POOL_PILE_CONFIG.scatterYPx) || 14);
+      const rotationDegMax = Math.max(0, Number(POOL_PILE_CONFIG.rotationDegMax) || 26);
+      const iconSizePx = Math.max(12, Number(POOL_PILE_CONFIG.iconSizePx) || 28);
+      const belowClaimClusterOffsetPx = Math.max(0, Number(POOL_PILE_CONFIG.belowClaimClusterOffsetPx) || 16);
+      const icons = [];
+      for (const tier of breakdown) for (let index = 0; index < tier.count; index += 1) icons.push(tier.id);
+      const overflow = Math.max(0, icons.length - maxIcons);
+      const visibleIcons = overflow > 0 ? icons.slice(0, maxIcons) : icons;
+      const iconHtml = visibleIcons.map((tierId, index) => {
+        const wave = Math.sin((index + 1) * 1.73 + (state.round * 0.37));
+        const twist = Math.cos((index + 1) * 1.11 + (state.round * 0.23));
+        const yOffset = Math.round(wave * scatterYPx);
+        const rot = (twist * rotationDegMax).toFixed(2);
+        const x = index * overlapPx;
+        return `<img class="poolCoinIcon" style="position:absolute;left:${x}px;top:${yOffset}px;width:${iconSizePx}px;height:${iconSizePx}px;transform:rotate(${rot}deg);transform-origin:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));" src="${escapeHtml(stakeCoinSrcForTier(tierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tierId)} pool coin">`;
+      }).join('');
+      const widthPx = Math.max(iconSizePx + 8, (visibleIcons.length * overlapPx) + iconSizePx);
+      return `<div class="claimPoolCoinPile fit-target fit-0" data-proj-id="claim-pool-pile" style="position:absolute;left:50%;top:calc(100% + ${belowClaimClusterOffsetPx}px);transform:translateX(-50%);width:${widthPx}px;height:${iconSizePx + scatterYPx + 8}px;pointer-events:none;z-index:12;"><div style="position:relative;width:100%;height:100%;">${iconHtml}${overflow > 0 ? `<span style="position:absolute;right:-20px;bottom:0;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : ''}</div></div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
     const layoutDiagnostics = createLayoutDiagnosticsState();
@@ -3237,6 +3299,7 @@ import { createLayerManager } from './ui/layerManager.js';
               <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
                 <div class="seatName">${seatLabel(p)}</div>
                 <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
+                ${renderSeatCoinRow(p)}
                 ${p.seed ? `<div class="seatSeed">${p.seed}</div>` : ''}
                 ${p.personality ? `<div class="seatTags">${personalityTags(p.personality)}</div>` : ''}
                 <div class="seatStatus">${p.lastAction}</div>
@@ -3252,13 +3315,13 @@ import { createLayerManager } from './ui/layerManager.js';
           <div class="humanSeatCard ${player.eliminated ? 'eliminated' : ''}" data-proj-id="human-seat">
             <div class="seatInfo" data-proj-id="info-human" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
               <div class="seatName">${seatLabel(player)}</div>
-              <div class="seatMeta">Cards ${player.hand.length} · Clears ${player.clears}</div>
+              <div class="seatMeta">Cards ${player.hand.length} · Chips ${player.chips} · Clears ${player.clears}</div>
+              ${renderSeatCoinRow(player)}
               <div class="seatStatus">${player.lastAction}</div>
             </div>
             <div class="seatAvatarBox" data-proj-id="avatar-human">
               <canvas class="seatPortrait" data-seat-id="0" width="220" height="220"></canvas>
             </div>
-            <div class="humanSeatChipBadge">Chips ${player.chips}</div>
           </div>
         </div>
         ${(turnSpotlightEnabled && turnSpotlightEmbedded) ? `
@@ -3306,6 +3369,7 @@ import { createLayerManager } from './ui/layerManager.js';
               <div class="bettingChoiceAnchor" data-stake-betting-choice-anchor data-proj-id="betting-choice-anchor"></div>
             </div>
           </div>
+          ${renderPoolCoinPile()}
         ` : ''}
         ${showLegacyActionFocus ? `
           <div class="actionFocus fit-target fit-0">

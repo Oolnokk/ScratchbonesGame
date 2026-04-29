@@ -244,6 +244,19 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       startingChips: rawGameConfig.chips?.starting ?? 30,
       challengeBaseTransfer: rawGameConfig.chips?.challengeBaseTransfer ?? 1,
       concedeRoundChipLoss: rawGameConfig.chips?.concedeRoundChipLoss ?? 1,
+      walletDisplay: {
+        tiers: rawGameConfig.chips?.walletDisplay?.tiers ?? rawGameConfig.chips?.challengeStake?.tiers ?? [{ id: 'sun', value: 1 }, { id: 'tinmoon', value: 5 }, { id: 'eclipse', value: 20 }],
+        maxIconsPerSeat: Math.max(1, Number(rawGameConfig.chips?.walletDisplay?.maxIconsPerSeat) || 18),
+        poolPile: {
+          enabled: rawGameConfig.chips?.walletDisplay?.poolPile?.enabled !== false,
+          maxIcons: Math.max(1, Number(rawGameConfig.chips?.walletDisplay?.poolPile?.maxIcons) || 28),
+          overlapPx: Math.max(1, Number(rawGameConfig.chips?.walletDisplay?.poolPile?.overlapPx) || 18),
+          scatterYPx: Math.max(0, Number(rawGameConfig.chips?.walletDisplay?.poolPile?.scatterYPx) || 14),
+          rotationDegMax: Math.max(0, Number(rawGameConfig.chips?.walletDisplay?.poolPile?.rotationDegMax) || 26),
+          iconSizePx: Math.max(12, Number(rawGameConfig.chips?.walletDisplay?.poolPile?.iconSizePx) || 28),
+          belowClaimClusterOffsetPx: Math.max(0, Number(rawGameConfig.chips?.walletDisplay?.poolPile?.belowClaimClusterOffsetPx) || 16),
+        },
+      },
       challengeStakeTiers: rawGameConfig.chips?.challengeStake?.tiers ?? [{ id: 'sun', value: 1 }, { id: 'tinmoon', value: 5 }, { id: 'eclipse', value: 20 }],
       challengeStakeAnimation: {
         openMs: rawGameConfig.chips?.challengeStake?.animation?.openMs ?? 280,

@@ -111,6 +111,23 @@ window.SCRATCHBONES_CONFIG = {
       "starting": 30,
       "challengeBaseTransfer": 1,
       "concedeRoundChipLoss": 1,
+      "walletDisplay": {
+        "tiers": [
+          { "id": "sun", "value": 1 },
+          { "id": "tinmoon", "value": 5 },
+          { "id": "eclipse", "value": 20 }
+        ],
+        "maxIconsPerSeat": 18,
+        "poolPile": {
+          "enabled": true,
+          "maxIcons": 28,
+          "overlapPx": 18,
+          "scatterYPx": 14,
+          "rotationDegMax": 26,
+          "iconSizePx": 28,
+          "belowClaimClusterOffsetPx": 16
+        }
+      },
       "challengeStake": {
         "tiers": [
           { "id": "sun", "value": 1 },
