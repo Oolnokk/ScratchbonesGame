@@ -20,6 +20,12 @@ function snapshotManagedElementStyle(element) {
   };
 }
 
+function readSizingToken(inlineValue, computedValue, fallbackPx) {
+  if (typeof inlineValue === 'string' && inlineValue.trim()) return inlineValue.trim();
+  if (typeof computedValue === 'string' && computedValue.trim() && computedValue !== 'auto') return computedValue.trim();
+  return `${Math.max(1, Number(fallbackPx) || 1).toFixed(4)}px`;
+}
+
 function restoreManagedElementStyle(element, styleSnapshot) {
   if (!element || !styleSnapshot) return;
   element.style.margin = styleSnapshot.margin;
@@ -155,13 +161,23 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     placeholder.dataset.layerPlaceholderFor = assignment.id;
     if (assignment.preserveSpace ?? defaultPreserveSpace) {
       placeholder.style.display = computed.display === 'inline' ? 'inline-block' : computed.display;
-      placeholder.style.width = `${Math.max(1, layoutWidth).toFixed(4)}px`;
-      placeholder.style.height = `${Math.max(1, layoutHeight).toFixed(4)}px`;
+      placeholder.style.width = readSizingToken(element.style.width, computed.width, layoutWidth);
+      placeholder.style.height = readSizingToken(element.style.height, computed.height, layoutHeight);
       placeholder.style.marginTop = computed.marginTop;
       placeholder.style.marginRight = computed.marginRight;
       placeholder.style.marginBottom = computed.marginBottom;
       placeholder.style.marginLeft = computed.marginLeft;
       placeholder.style.flex = computed.flex;
+      placeholder.style.position = computed.position;
+      placeholder.style.left = computed.left;
+      placeholder.style.top = computed.top;
+      placeholder.style.right = computed.right;
+      placeholder.style.bottom = computed.bottom;
+      // Keep placeholder untransformed; promoted element keeps its own transform.
+      // Applying transform to both placeholder and promoted element double-shifts translate()-anchored avatars.
+      placeholder.style.transform = '';
+      placeholder.style.transformOrigin = computed.transformOrigin;
+      placeholder.style.pointerEvents = 'none';
     } else {
       placeholder.style.display = 'none';
     }
