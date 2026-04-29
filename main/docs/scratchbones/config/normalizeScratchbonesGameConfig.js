@@ -244,6 +244,10 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       startingChips: rawGameConfig.chips?.starting ?? 30,
       challengeBaseTransfer: rawGameConfig.chips?.challengeBaseTransfer ?? 1,
       concedeRoundChipLoss: rawGameConfig.chips?.concedeRoundChipLoss ?? 1,
+      walletDisplay: {
+        tiers: rawGameConfig.chips?.walletDisplay?.tiers ?? rawGameConfig.chips?.challengeStake?.tiers ?? [{ id: 'sun', value: 1 }, { id: 'tinmoon', value: 5 }, { id: 'eclipse', value: 20 }],
+        maxIconsPerSeat: Math.max(1, Number(rawGameConfig.chips?.walletDisplay?.maxIconsPerSeat) || 18),
+      },
       challengeStakeTiers: rawGameConfig.chips?.challengeStake?.tiers ?? [{ id: 'sun', value: 1 }, { id: 'tinmoon', value: 5 }, { id: 'eclipse', value: 20 }],
       challengeStakeAnimation: {
         openMs: rawGameConfig.chips?.challengeStake?.animation?.openMs ?? 280,
