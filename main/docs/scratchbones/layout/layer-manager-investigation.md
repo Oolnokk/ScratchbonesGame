@@ -22,7 +22,10 @@ Date: 2026-04-29
 5. Render/export path in `bootstrap.js`:
    - Single-mode export (`buildRenderedTransformsExport`) captures whichever preview mode is currently active.
    - Dual-mode export (`buildRenderedTransformsDualModeExport`) deterministically captures both `original` and `layered` by temporarily toggling preview state in a fixed order, awaiting a render frame each time, then restoring prior UI state.
-6. `updateLayoutDiagnosticsState()` computes drift artifacts from `renderedScreenSpace` and stores:
+6. Drift artifacts are computed from `renderedScreenSpace` in two places:
+   - immediately in dual-mode export serialization (`buildRenderedTransformsDualModeExport`) so export payload always includes fresh comparison fields.
+   - `updateLayoutDiagnosticsState()` for the live diagnostics state shown in-editor.
+   Both produce:
    - `renderedScreenSpaceDelta`
    - `renderedScreenSpaceTopDrift`
 

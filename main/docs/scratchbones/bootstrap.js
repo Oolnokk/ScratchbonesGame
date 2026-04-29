@@ -1,7 +1,7 @@
 import { getScratchbonesGameConfig } from './config/normalizeScratchbonesGameConfig.js';
 import { createInitialState } from './state/createInitialState.js';
 import { applyAuthoredLayoutMode as applyAuthoredLayoutModeModule } from './layout/authoredLayout.js';
-import { createLayoutDiagnosticsState, resetLayoutDiagnosticsState, updateLayoutDiagnosticsState } from './layout/diagnostics.js';
+import { compareRenderedScreenSpaceModes, createLayoutDiagnosticsState, resetLayoutDiagnosticsState, summarizeRenderedScreenSpaceDrift, updateLayoutDiagnosticsState } from './layout/diagnostics.js';
 import { createScratchbonesAudio } from './fx/audio.js';
 import { initDebugPanelInterceptor } from './debug/panel.js';
 import { RECENT_CHANGE_LABEL } from './debug/metadata.js';
@@ -217,6 +217,18 @@ import { createLayerManager } from './ui/layerManager.js';
         },
       }, null, 2);
     }
+    function computeRenderedScreenSpaceDiagnostics(renderedScreenSpace, modeA = 'original', modeB = 'layered') {
+      const deltas = compareRenderedScreenSpaceModes(renderedScreenSpace, modeA, modeB);
+      const topDrift = summarizeRenderedScreenSpaceDrift(deltas);
+      return {
+        renderedScreenSpaceDelta: {
+          modeA,
+          modeB,
+          deltas,
+        },
+        renderedScreenSpaceTopDrift: topDrift,
+      };
+    }
     async function captureRenderedScreenSpaceBothModes() {
       const previousPreviewState = projectionUiState.showUnlayeredPreview;
       const nextFrame = () => new Promise((resolve) => {
@@ -258,6 +270,7 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     async function buildRenderedTransformsDualModeExport() {
       const renderedScreenSpace = await captureRenderedScreenSpaceBothModes();
+      const { renderedScreenSpaceDelta, renderedScreenSpaceTopDrift } = computeRenderedScreenSpaceDiagnostics(renderedScreenSpace, 'original', 'layered');
       return JSON.stringify({
         layout: {
           mode: getScratchbonesLayoutMode(),
@@ -265,8 +278,8 @@ import { createLayerManager } from './ui/layerManager.js';
           renderedScreenSpaceBaselineMode: 'original',
           renderedScreenSpaceCompareMode: 'layered',
           renderedScreenSpace,
-          renderedScreenSpaceDelta: layoutDiagnostics.renderedScreenSpaceDelta,
-          renderedScreenSpaceTopDrift: layoutDiagnostics.renderedScreenSpaceTopDrift,
+          renderedScreenSpaceDelta,
+          renderedScreenSpaceTopDrift,
         },
       }, null, 2);
     }
