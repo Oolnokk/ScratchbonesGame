@@ -10,6 +10,11 @@ function snapshotManagedElementStyle(element) {
     margin: element.style.margin,
     width: element.style.width,
     height: element.style.height,
+    position: element.style.position,
+    left: element.style.left,
+    top: element.style.top,
+    right: element.style.right,
+    bottom: element.style.bottom,
     transform: element.style.transform,
     transformOrigin: element.style.transformOrigin,
   };
@@ -20,6 +25,11 @@ function restoreManagedElementStyle(element, styleSnapshot) {
   element.style.margin = styleSnapshot.margin;
   element.style.width = styleSnapshot.width;
   element.style.height = styleSnapshot.height;
+  element.style.position = styleSnapshot.position;
+  element.style.left = styleSnapshot.left;
+  element.style.top = styleSnapshot.top;
+  element.style.right = styleSnapshot.right;
+  element.style.bottom = styleSnapshot.bottom;
   element.style.transform = styleSnapshot.transform;
   element.style.transformOrigin = styleSnapshot.transformOrigin;
 }
@@ -124,10 +134,10 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const localTop = (phRect.top - appRect.top) / scaleY;
     const localWidth = phRect.width / scaleX;
     const localHeight = phRect.height / scaleY;
-    entry.portal.style.left = `${Math.round(localLeft)}px`;
-    entry.portal.style.top = `${Math.round(localTop)}px`;
-    entry.portal.style.width = `${Math.max(1, Math.round(localWidth))}px`;
-    entry.portal.style.height = `${Math.max(1, Math.round(localHeight))}px`;
+    entry.portal.style.left = `${localLeft.toFixed(4)}px`;
+    entry.portal.style.top = `${localTop.toFixed(4)}px`;
+    entry.portal.style.width = `${Math.max(1, localWidth).toFixed(4)}px`;
+    entry.portal.style.height = `${Math.max(1, localHeight).toFixed(4)}px`;
   }
 
   function promoteElementToLayer(element, assignment) {
@@ -144,8 +154,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     placeholder.dataset.layerPlaceholderFor = assignment.id;
     if (assignment.preserveSpace ?? defaultPreserveSpace) {
       placeholder.style.display = computed.display === 'inline' ? 'inline-block' : computed.display;
-      placeholder.style.width = `${Math.max(1, Math.round(layoutWidth))}px`;
-      placeholder.style.height = `${Math.max(1, Math.round(layoutHeight))}px`;
+      placeholder.style.width = `${Math.max(1, layoutWidth).toFixed(4)}px`;
+      placeholder.style.height = `${Math.max(1, layoutHeight).toFixed(4)}px`;
       placeholder.style.marginTop = computed.marginTop;
       placeholder.style.marginRight = computed.marginRight;
       placeholder.style.marginBottom = computed.marginBottom;
@@ -165,6 +175,13 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     element.style.margin = '0';
     element.style.width = '100%';
     element.style.height = '100%';
+    if (computed.position === 'absolute' || computed.position === 'fixed') {
+      element.style.position = 'relative';
+      element.style.left = '0';
+      element.style.top = '0';
+      element.style.right = 'auto';
+      element.style.bottom = 'auto';
+    }
 
     const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle };
     state.promoted.push(promotedEntry);
