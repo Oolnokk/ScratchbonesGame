@@ -2011,8 +2011,12 @@ import { createLayerManager } from './ui/layerManager.js';
       if (!moved.length) return;
       addLog(`Punish Bone triggers: ${seatLabel(challengerId)} gives ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengedId)}.`);
     }
-    function cardLabel(card) {
-      return card.wild ? 'Wild' : String(card.rank);
+    function getCardBadge(card) {
+      if (card?.trickType === 'trap') return { glyph: 'T', label: 'Trap', cssClass: 'trick-trap', title: 'Trap trick card' };
+      if (card?.trickType === 'smuggle') return { glyph: 'S', label: 'Smuggle', cssClass: 'trick-smuggle', title: 'Smuggle trick card' };
+      if (card?.trickType === 'punish') return { glyph: 'P', label: 'Punish', cssClass: 'trick-punish', title: 'Punish trick card' };
+      if (card?.wild) return { glyph: 'W', label: 'Wild', cssClass: 'wild', title: 'Wild card' };
+      return { glyph: String(card?.rank), label: `Rank ${card?.rank}`, cssClass: '', title: `Scratchbone ${card?.rank}` };
     }
     function normalizedAssetPath(basePath, fileName) {
       const safeBase = String(basePath || '').replace(/\/+$/, '');
@@ -3450,12 +3454,14 @@ import { createLayerManager } from './ui/layerManager.js';
           <div class="handScroll">
               ${player.hand.map(card => {
                 const art = resolveScratchbone2DAsset(card);
-                const cardLabel = card.wild ? 'Wild' : `Rank ${card.rank}`;
-                const cardGlyph = card.wild ? 'W' : String(card.rank);
+                const badge = getCardBadge(card);
+                const altLabel = card.trickType
+                  ? `${badge.label} trick scratchbone card`
+                  : (card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`);
                 return `
-                <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}" title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}">
-                  <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`}">
-                  <span class="cardLabel" aria-hidden="true"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${cardLabel}</span></span>
+                <button class="card ${badge.cssClass} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}" title="${badge.title}">
+                  <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${altLabel}">
+                  <span class="cardLabel" aria-hidden="true"><span class="cardGlyph">${badge.glyph}</span><span class="cardText">${badge.label}</span></span>
                 </button>
               `;
               }).join('')}
