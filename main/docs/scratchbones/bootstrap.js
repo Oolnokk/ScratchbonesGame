@@ -202,8 +202,49 @@ import { createLayerManager } from './ui/layerManager.js';
           renderedScreenSpace: {
             [activeMode]: collectRenderedScreenSpaceSnapshot(),
           },
+          renderedScreenSpaceBaselineMode: 'original',
+          renderedScreenSpaceCompareMode: activeMode === 'original' ? 'layered' : 'original',
+          renderedScreenSpaceDelta: layoutDiagnostics.renderedScreenSpaceDelta,
+          renderedScreenSpaceTopDrift: layoutDiagnostics.renderedScreenSpaceTopDrift,
         },
       }, null, 2);
+    }
+    async function buildRenderedTransformsDualModeExport() {
+      const previousPreviewState = projectionUiState.showUnlayeredPreview;
+      const renderFrame = () => new Promise((resolve) => {
+        if (typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(() => resolve());
+          return;
+        }
+        setTimeout(resolve, 0);
+      });
+      try {
+        projectionUiState.showUnlayeredPreview = true;
+        render();
+        await renderFrame();
+        const originalSnapshot = collectRenderedScreenSpaceSnapshot();
+        projectionUiState.showUnlayeredPreview = false;
+        render();
+        await renderFrame();
+        const layeredSnapshot = collectRenderedScreenSpaceSnapshot();
+        return JSON.stringify({
+          layout: {
+            mode: getScratchbonesLayoutMode(),
+            projectionPreviewMode: 'both',
+            renderedScreenSpaceBaselineMode: 'original',
+            renderedScreenSpaceCompareMode: 'layered',
+            renderedScreenSpace: {
+              original: originalSnapshot,
+              layered: layeredSnapshot,
+            },
+            renderedScreenSpaceDelta: layoutDiagnostics.renderedScreenSpaceDelta,
+            renderedScreenSpaceTopDrift: layoutDiagnostics.renderedScreenSpaceTopDrift,
+          },
+        }, null, 2);
+      } finally {
+        projectionUiState.showUnlayeredPreview = previousPreviewState;
+        render();
+      }
     }
     function copyTextToClipboard(payload) {
       const text = String(payload || '');
@@ -4091,8 +4132,24 @@ import { createLayerManager } from './ui/layerManager.js';
       const basePanelTitle = String(projectionEditorConfig.panelTitle || 'Projection Vars');
       const transformsExportButtonLabel = String(projectionEditorConfig.transformsExportButtonLabel || 'Toggle + Export Screen Space');
       const transformsExportButtonTitle = String(projectionEditorConfig.transformsExportButtonTitle || 'Toggle preview mode, then copy literal screen-space rectangles and transforms for the active mode.');
+      const transformsExportBothButtonLabel = String(projectionEditorConfig.transformsExportBothButtonLabel || 'Export Both Screen Spaces');
+      const transformsExportBothButtonTitle = String(projectionEditorConfig.transformsExportBothButtonTitle || 'Capture original and layered screen-space snapshots in one deterministic export.');
       transformExportBtn.textContent = transformsExportButtonLabel;
       transformExportBtn.title = transformsExportButtonTitle;
+      let transformExportBothBtn = document.getElementById('projTransformExportBothBtn');
+      if (!transformExportBothBtn) {
+        transformExportBothBtn = document.createElement('button');
+        transformExportBothBtn.id = 'projTransformExportBothBtn';
+        transformExportBothBtn.type = 'button';
+        transformExportBothBtn.className = 'ghost';
+        transformExportBothBtn.style.display = 'inline-block';
+        transformExportBothBtn.style.flexBasis = '100%';
+        transformExportBothBtn.style.marginTop = '6px';
+        transformExportBothBtn.style.setProperty('pointer-events', 'auto', 'important');
+        transformExportBtn.parentElement?.insertBefore(transformExportBothBtn, varsCopyBtn);
+      }
+      transformExportBothBtn.textContent = transformsExportBothButtonLabel;
+      transformExportBothBtn.title = transformsExportBothButtonTitle;
       const sliderClamp = projectionEditorConfig.sliderClamp || {};
       const multiplierVarHints = Array.isArray(projectionEditorConfig.multiplierVarHints) ? projectionEditorConfig.multiplierVarHints : ['scale', 'frac', 'ratio', 'multiplier'];
       const varsByProjId = projectionMapConfig.varsByProjId || projectionMapConfig.relatedVarsByProjId || {};
@@ -4229,6 +4286,12 @@ import { createLayerManager } from './ui/layerManager.js';
         updateEditorStatus(projectionUiState.showUnlayeredPreview
           ? 'Switched to original preview and copied literal screen-space data.'
           : 'Switched to layered preview and copied literal screen-space data.');
+      });
+      transformExportBothBtn.addEventListener('click', async () => {
+        const exportPayload = await buildRenderedTransformsDualModeExport();
+        copyTextToClipboard(exportPayload);
+        updateLayerPreviewButton();
+        updateEditorStatus('Captured original + layered previews and copied combined screen-space export.');
       });
       exportBtn.addEventListener('click', () => {
         copyTextToClipboard(buildAuthoredLayoutExport());
