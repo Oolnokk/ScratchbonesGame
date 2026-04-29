@@ -551,6 +551,29 @@ window.SCRATCHBONES_CONFIG = {
         "enabled": true,
         "hostZIndex": 45,
         "defaultPreserveSpace": true,
+        "normalizePromotedElementBox": true,
+        "normalizeBoxGuard": {
+          "allowlistSelectors": [
+            "*"
+          ],
+          "denylistSelectors": [
+            ".challengePromptInfo",
+            ".cin-name",
+            ".cin-action-burst",
+            ".claimAvatarNameTag",
+            ".claimAvatarCinRole",
+            ".claimAvatarCinName",
+            ".claimAvatarCinTags",
+            ".seatName",
+            ".seatMeta",
+            ".seatStatus",
+            ".turnSpotlightNameBar",
+            ".cin-result-copy",
+            ".cinematic-vs-line",
+            ".actorAvatarFloat",
+            ".reactorAvatarFloat"
+          ]
+        },
         "placementMode": "screen-space",
         "screenSpaceUseFixed": true,
         "screenSpaceRoundToPixels": false,
