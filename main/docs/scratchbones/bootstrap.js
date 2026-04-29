@@ -4056,6 +4056,7 @@ import { createLayerManager } from './ui/layerManager.js';
         transformExportBtn.style.display = 'inline-block';
         transformExportBtn.style.flexBasis = '100%';
         transformExportBtn.style.marginTop = '6px';
+        transformExportBtn.style.setProperty('pointer-events', 'auto', 'important');
         layerPreviewBtn.parentElement?.insertBefore(transformExportBtn, varsCopyBtn);
       }
       if (layerPreviewBtn.parentElement) layerPreviewBtn.parentElement.style.flexWrap = 'wrap';
