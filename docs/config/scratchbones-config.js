@@ -127,6 +127,10 @@ window.SCRATCHBONES_CONFIG = {
       "clearReward": {
         "base": 1,
         "increment": 1
+      },
+      "ante": {
+        "start": 1,
+        "increment": 1
       }
     },
     "timers": {
