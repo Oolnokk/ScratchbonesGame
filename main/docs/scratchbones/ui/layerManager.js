@@ -178,7 +178,9 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
   function updatePortalRect(entry) {
     if (!entry?.portal || !entry.placeholder?.isConnected || entry.placeholder.style.display === 'none') return;
-    const sourceRect = entry.placeholder.getBoundingClientRect();
+    const capture = capturePortalPlacementFrame(entry);
+    if (!capture) return;
+    const { sourceRect } = capture;
     entry.portal.style.position = 'fixed';
     entry.portal.style.right = 'auto';
     entry.portal.style.bottom = 'auto';
@@ -188,6 +190,17 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     entry.portal.style.top = `${sourceRect.top.toFixed(4)}px`;
     entry.portal.style.width = `${Math.max(1, sourceRect.width).toFixed(4)}px`;
     entry.portal.style.height = `${Math.max(1, sourceRect.height).toFixed(4)}px`;
+  }
+
+  function capturePortalPlacementFrame(entry) {
+    if (!entry?.placeholder?.isConnected) return null;
+    const appRect = state.app?.getBoundingClientRect?.();
+    const sourceRect = entry.placeholder.getBoundingClientRect();
+    return {
+      sourceRect,
+      appRect: appRect || null,
+      capturedAtMs: (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : Date.now(),
+    };
   }
 
   function promoteElementToLayer(element, assignment) {
@@ -247,7 +260,14 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       if (computed.transformOrigin) element.style.transformOrigin = computed.transformOrigin;
     }
 
-    const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle };
+    const promotedEntry = {
+      assignment,
+      element,
+      placeholder,
+      portal,
+      originalElementStyle,
+      placementCapture: capturePortalPlacementFrame({ placeholder }),
+    };
     state.promoted.push(promotedEntry);
     state.resizeObserver?.observe(placeholder);
     state.resizeObserver?.observe(element);
@@ -262,6 +282,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       transformSensitive: isTransformSensitive,
       reanchoredAbsolutePosition: true,
       placementMode,
+      placementFrame: promotedEntry.placementCapture?.appRect ? 'app-viewport' : 'viewport',
     });
     return true;
   }

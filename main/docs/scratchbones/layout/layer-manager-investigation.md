@@ -13,7 +13,7 @@ Date: 2026-04-29
    - `layout.layerManager.placementMode` is normalized, but parity-test layer promotion now runs in forced `"screen-space"` mode.
 2. `createLayerManager({ gameConfig, debugLog })` reads layer assignment + preservation config and always executes in literal `"screen-space"` placement mode for parity testing.
 3. During `sync(app)` in `ui/layerManager.js`, promoted nodes are moved under per-layer portal roots.
-4. `updatePortalRect()` now always copies placeholder viewport geometry directly to `position: fixed` portal fields (`left/top/width/height`).
+4. `updatePortalRect()` now captures placeholder + app viewport rects in one measurement frame, then copies placeholder geometry to `position: fixed` portal fields (`left/top/width/height`).
 5. Render/export path in `bootstrap.js`:
    - Single-mode export (`buildRenderedTransformsExport`) captures whichever preview mode is currently active.
    - Dual-mode export (`buildRenderedTransformsDualModeExport`) deterministically captures both `original` and `layered` by temporarily toggling preview state in a fixed order, awaiting a render frame each time, then restoring prior UI state.
@@ -29,7 +29,7 @@ Date: 2026-04-29
 ### Placement is now fixed to screen-space in this parity-test path
 Current behavior:
 - Promotion host/layer roots/portals use `position: fixed`.
-- Portal geometry is derived from placeholder `getBoundingClientRect()` only.
+- Portal geometry is derived from a single capture frame (`placeholder.getBoundingClientRect()` plus app rect metadata for traceability/debug).
 - App-local inverse mapping is disabled for this path.
 
 ### Export no longer requires manual mode toggling for complete comparison
