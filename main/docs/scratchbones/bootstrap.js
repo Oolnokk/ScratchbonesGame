@@ -3111,7 +3111,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const turnPlayer = state.players[state.currentTurn];
       const turnSpotlightTitle = `${seatLabel(turnPlayer)}'s turn`;
       const renderDeclareControls = () => `
-        <div class="controls fit-target fit-0" data-proj-id="challenge-prompt">
+        <div class="controls fit-target fit-0" data-proj-id="challenge-prompt" style="max-height:none;">
           <div class="controlsRow">
             <label>
               Declare number
