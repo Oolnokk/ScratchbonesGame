@@ -221,6 +221,7 @@ window.SCRATCHBONES_CONFIG = {
         "heightScale": 0.5,
         "minHeightPx": 160,
         "maxHeightPx": 360,
+        "visible": false,
         "panel": {
           "background": "transparent",
           "border": "0",
@@ -577,6 +578,11 @@ window.SCRATCHBONES_CONFIG = {
             "id": "ui-shell-over-lighting",
             "layer": "above-lighting",
             "selectors": [
+              "#aiSidebar",
+              ".humanSeatZone",
+              ".seatHandPreview",
+              ".seatHandCard",
+              ".seatHandCard img",
               ".topbar",
               ".tableViewHeader",
               ".seatSeed",
