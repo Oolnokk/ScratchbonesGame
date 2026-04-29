@@ -230,7 +230,7 @@ window.SCRATCHBONES_CONFIG = {
         "heightScale": 0.5,
         "minHeightPx": 160,
         "maxHeightPx": 360,
-        "visible": false,
+        "visible": true,
         "panel": {
           "background": "transparent",
           "border": "0",
