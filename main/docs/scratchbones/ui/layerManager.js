@@ -115,6 +115,16 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     : {};
   const normalizeBoxAllowlistSelectors = normalizeSelectorList(normalizeBoxGuard.allowlistSelectors);
   const normalizeBoxDenylistSelectors = normalizeSelectorList(normalizeBoxGuard.denylistSelectors);
+  const normalizeMarginGuard = normalizeBoxGuard.marginReset && typeof normalizeBoxGuard.marginReset === 'object'
+    ? normalizeBoxGuard.marginReset
+    : {};
+  const normalizeMarginAllowlistSelectors = normalizeSelectorList(normalizeMarginGuard.allowlistSelectors);
+  const normalizeMarginDenylistSelectors = normalizeSelectorList(normalizeMarginGuard.denylistSelectors);
+  const normalizeFillSizeGuard = normalizeBoxGuard.fillSize && typeof normalizeBoxGuard.fillSize === 'object'
+    ? normalizeBoxGuard.fillSize
+    : {};
+  const normalizeFillSizeAllowlistSelectors = normalizeSelectorList(normalizeFillSizeGuard.allowlistSelectors);
+  const normalizeFillSizeDenylistSelectors = normalizeSelectorList(normalizeFillSizeGuard.denylistSelectors);
   const preservePromotionTransformSelectors = normalizeSelectorList(managerConfig.preservePromotionTransformSelectors);
   const disablePreservePromotionTransformSelectors = normalizeSelectorList(managerConfig.disablePreservePromotionTransformSelectors);
   const typographyBaselineRootSelector = typeof managerConfig.typographyBaselineRootSelector === 'string' && managerConfig.typographyBaselineRootSelector.trim()
@@ -305,7 +315,13 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       && canSafelyNormalizePromotedBox(element, computed)
       && isNormalizeBoxAllowed
       && !isNormalizeBoxDenied;
-    if (shouldNormalizeBox) {
+    const isNormalizeMarginDenied = selectorMatchesElement(element, normalizeMarginDenylistSelectors);
+    const isNormalizeMarginAllowed = !normalizeMarginAllowlistSelectors.length || selectorMatchesElement(element, normalizeMarginAllowlistSelectors);
+    const shouldNormalizeMargin = shouldNormalizeBox && isNormalizeMarginAllowed && !isNormalizeMarginDenied;
+    const isNormalizeFillSizeDenied = selectorMatchesElement(element, normalizeFillSizeDenylistSelectors);
+    const isNormalizeFillSizeAllowed = !normalizeFillSizeAllowlistSelectors.length || selectorMatchesElement(element, normalizeFillSizeAllowlistSelectors);
+    const shouldNormalizeFillSize = shouldNormalizeBox && isNormalizeFillSizeAllowed && !isNormalizeFillSizeDenied;
+    if (shouldNormalizeMargin) {
       element.style.margin = '0';
     }
     element.style.position = 'absolute';
@@ -313,7 +329,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     element.style.top = '0';
     element.style.right = 'auto';
     element.style.bottom = 'auto';
-    if (shouldNormalizeBox) {
+    if (shouldNormalizeFillSize) {
       element.style.width = '100%';
       element.style.height = '100%';
     }
@@ -347,6 +363,10 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       normalizePromotedElementBox: shouldNormalizeBox,
       normalizeBoxAllowlistHit: isNormalizeBoxAllowed,
       normalizeBoxDenylistHit: isNormalizeBoxDenied,
+      normalizeMarginAllowlistHit: isNormalizeMarginAllowed,
+      normalizeMarginDenylistHit: isNormalizeMarginDenied,
+      normalizeFillSizeAllowlistHit: isNormalizeFillSizeAllowed,
+      normalizeFillSizeDenylistHit: isNormalizeFillSizeDenied,
       transformSensitive: isTransformSensitive,
       preservePromotionTransform,
       reanchoredAbsolutePosition: true,

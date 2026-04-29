@@ -584,7 +584,51 @@ window.SCRATCHBONES_CONFIG = {
             ".cinematic-vs-line",
             ".actorAvatarFloat",
             ".reactorAvatarFloat"
-          ]
+          ],
+          "marginReset": {
+            "allowlistSelectors": [
+              "*"
+            ],
+            "denylistSelectors": [
+              ".challengePromptInfo",
+              ".cin-name",
+              ".cin-action-burst",
+              ".claimAvatarNameTag",
+              ".claimAvatarCinRole",
+              ".claimAvatarCinName",
+              ".claimAvatarCinTags",
+              ".seatName",
+              ".seatMeta",
+              ".seatStatus",
+              ".turnSpotlightNameBar",
+              ".cin-result-copy",
+              ".cinematic-vs-line",
+              ".actorAvatarFloat",
+              ".reactorAvatarFloat"
+            ]
+          },
+          "fillSize": {
+            "allowlistSelectors": [
+              "*"
+            ],
+            "denylistSelectors": [
+              ".challengePromptInfo",
+              ".cin-name",
+              ".cin-action-burst",
+              ".claimAvatarNameTag",
+              ".claimAvatarCinRole",
+              ".claimAvatarCinName",
+              ".claimAvatarCinTags",
+              ".seatName",
+              ".seatMeta",
+              ".seatStatus",
+              ".turnSpotlightNameBar",
+              ".cin-result-copy",
+              ".cinematic-vs-line",
+              ".actorAvatarFloat",
+              ".reactorAvatarFloat"
+            ]
+          }
         },
         "placementMode": "screen-space",
         "screenSpaceUseFixed": true,
