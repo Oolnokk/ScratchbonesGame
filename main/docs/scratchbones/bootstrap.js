@@ -1,7 +1,7 @@
 import { getScratchbonesGameConfig } from './config/normalizeScratchbonesGameConfig.js';
 import { createInitialState } from './state/createInitialState.js';
 import { applyAuthoredLayoutMode as applyAuthoredLayoutModeModule } from './layout/authoredLayout.js';
-import { compareRenderedScreenSpaceModes, createLayoutDiagnosticsState, resetLayoutDiagnosticsState, summarizeRenderedScreenSpaceDrift, updateLayoutDiagnosticsState } from './layout/diagnostics.js';
+import { compareRenderedScreenSpaceModes, createLayoutDiagnosticsState, resetLayoutDiagnosticsState, summarizeRenderedScreenSpaceDrift, summarizeRenderedScreenSpaceDriftByPromotedSubtree, updateLayoutDiagnosticsState } from './layout/diagnostics.js';
 import { createScratchbonesAudio } from './fx/audio.js';
 import { initDebugPanelInterceptor } from './debug/panel.js';
 import { RECENT_CHANGE_LABEL } from './debug/metadata.js';
@@ -215,13 +215,15 @@ import { createLayerManager } from './ui/layerManager.js';
           renderedScreenSpaceCompareMode: activeMode === 'original' ? 'layered' : 'original',
           renderedScreenSpaceDelta: layoutDiagnostics.renderedScreenSpaceDelta,
           renderedScreenSpaceTopDrift: layoutDiagnostics.renderedScreenSpaceTopDrift,
-        renderedScreenSpaceParity: layoutDiagnostics.renderedScreenSpaceParity,
+          renderedScreenSpaceGroupDrift: layoutDiagnostics.renderedScreenSpaceGroupDrift,
+          renderedScreenSpaceParity: layoutDiagnostics.renderedScreenSpaceParity,
         },
       }, null, 2);
     }
     function computeRenderedScreenSpaceDiagnostics(renderedScreenSpace, modeA = 'original', modeB = 'layered') {
       const deltas = compareRenderedScreenSpaceModes(renderedScreenSpace, modeA, modeB);
       const topDrift = summarizeRenderedScreenSpaceDrift(deltas);
+      const groupedDrift = summarizeRenderedScreenSpaceDriftByPromotedSubtree(deltas);
       return {
         renderedScreenSpaceDelta: {
           modeA,
@@ -229,6 +231,7 @@ import { createLayerManager } from './ui/layerManager.js';
           deltas,
         },
         renderedScreenSpaceTopDrift: topDrift,
+        renderedScreenSpaceGroupDrift: groupedDrift,
         renderedScreenSpaceParity: RENDERED_SCREEN_SPACE_PARITY,
       };
     }
@@ -274,7 +277,7 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     async function buildRenderedTransformsDualModeExport() {
       const renderedScreenSpace = await captureRenderedScreenSpaceBothModes();
-      const { renderedScreenSpaceDelta, renderedScreenSpaceTopDrift } = computeRenderedScreenSpaceDiagnostics(renderedScreenSpace, 'original', 'layered');
+      const { renderedScreenSpaceDelta, renderedScreenSpaceTopDrift, renderedScreenSpaceGroupDrift } = computeRenderedScreenSpaceDiagnostics(renderedScreenSpace, 'original', 'layered');
       return JSON.stringify({
         layout: {
           mode: getScratchbonesLayoutMode(),
@@ -284,6 +287,7 @@ import { createLayerManager } from './ui/layerManager.js';
           renderedScreenSpace,
           renderedScreenSpaceDelta,
           renderedScreenSpaceTopDrift,
+          renderedScreenSpaceGroupDrift,
         },
       }, null, 2);
     }
@@ -3364,6 +3368,7 @@ import { createLayerManager } from './ui/layerManager.js';
         overlapDiagnostics: layoutDiagnostics.overlap,
         renderedScreenSpaceDelta: layoutDiagnostics.renderedScreenSpaceDelta,
         renderedScreenSpaceTopDrift: layoutDiagnostics.renderedScreenSpaceTopDrift,
+        renderedScreenSpaceGroupDrift: layoutDiagnostics.renderedScreenSpaceGroupDrift,
         layoutNotes: {
           claimClusterEnabled: claimClusterConfig.enabled,
           turnSpotlightEnabled: regionsConfig.turnSpotlight.enabled,
