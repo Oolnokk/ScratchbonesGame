@@ -39,6 +39,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const enabled = managerConfig.enabled !== false;
   const hostZIndex = Number.isFinite(Number(managerConfig.hostZIndex)) ? Number(managerConfig.hostZIndex) : 45;
   const defaultPreserveSpace = managerConfig.defaultPreserveSpace !== false;
+  const normalizePromotedElementBox = managerConfig.normalizePromotedElementBox === true;
   const assignments = Array.isArray(managerConfig.assignments) ? managerConfig.assignments : [];
   const assignmentList = assignments
     .map((entry, index) => {
@@ -172,9 +173,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     layerRoot.appendChild(portal);
     portal.appendChild(element);
 
-    element.style.margin = '0';
-    element.style.width = '100%';
-    element.style.height = '100%';
+    if (normalizePromotedElementBox) {
+      element.style.margin = '0';
+      element.style.width = '100%';
+      element.style.height = '100%';
+    }
     if (computed.position === 'absolute' || computed.position === 'fixed') {
       element.style.position = 'absolute';
       element.style.left = '0';
@@ -192,6 +195,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       selectorName: element.id ? `#${element.id}` : element.className,
       retainedTransform: element.style.transform || 'none',
       originalPosition: computed.position,
+      normalizePromotedElementBox,
       placeholderRect: { width: layoutWidth, height: layoutHeight },
     });
     return true;
