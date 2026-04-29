@@ -165,7 +165,7 @@ import { createLayerManager } from './ui/layerManager.js';
         },
       }, null, 2);
     }
-    function collectRenderedTransformsSnapshot() {
+    function collectRenderedScreenSpaceSnapshot() {
       const app = document.getElementById('app');
       if (!app) return {};
       const countsByProjId = new Map();
@@ -176,27 +176,31 @@ import { createLayerManager } from './ui/layerManager.js';
         const seenCount = countsByProjId.get(projId) || 0;
         countsByProjId.set(projId, seenCount + 1);
         const key = seenCount === 0 ? projId : `${projId}#${seenCount + 1}`;
-        snapshot[key] = getComputedStyle(el).transform || 'none';
+        const rect = el.getBoundingClientRect();
+        snapshot[key] = {
+          transform: getComputedStyle(el).transform || 'none',
+          rect: {
+            x: Number(rect.x.toFixed(3)),
+            y: Number(rect.y.toFixed(3)),
+            width: Number(rect.width.toFixed(3)),
+            height: Number(rect.height.toFixed(3)),
+            left: Number(rect.left.toFixed(3)),
+            top: Number(rect.top.toFixed(3)),
+            right: Number(rect.right.toFixed(3)),
+            bottom: Number(rect.bottom.toFixed(3)),
+          },
+        };
       });
       return snapshot;
     }
     function buildRenderedTransformsExport() {
-      const originalPreviewState = projectionUiState.showUnlayeredPreview;
-      const capture = (showUnlayeredPreview) => {
-        projectionUiState.showUnlayeredPreview = showUnlayeredPreview;
-        render();
-        return collectRenderedTransformsSnapshot();
-      };
-      const layered = capture(false);
-      const original = capture(true);
-      projectionUiState.showUnlayeredPreview = originalPreviewState;
-      render();
+      const activeMode = projectionUiState.showUnlayeredPreview ? 'original' : 'layered';
       return JSON.stringify({
         layout: {
           mode: getScratchbonesLayoutMode(),
-          renderedTransforms: {
-            layered,
-            original,
+          projectionPreviewMode: activeMode,
+          renderedScreenSpace: {
+            [activeMode]: collectRenderedScreenSpaceSnapshot(),
           },
         },
       }, null, 2);
@@ -4051,8 +4055,6 @@ import { createLayerManager } from './ui/layerManager.js';
         transformExportBtn.id = 'projTransformExportBtn';
         transformExportBtn.type = 'button';
         transformExportBtn.className = 'ghost';
-        transformExportBtn.textContent = 'Export Both Transforms';
-        transformExportBtn.title = 'Read rendered transforms for layered and original preview modes and copy both.';
         transformExportBtn.style.display = 'inline-block';
         transformExportBtn.style.flexBasis = '100%';
         transformExportBtn.style.marginTop = '6px';
@@ -4072,6 +4074,10 @@ import { createLayerManager } from './ui/layerManager.js';
       const projectionEditorConfig = projectionMapConfig.editor || {};
       const varStep = Number(projectionEditorConfig.step) || 0.01;
       const basePanelTitle = String(projectionEditorConfig.panelTitle || 'Projection Vars');
+      const transformsExportButtonLabel = String(projectionEditorConfig.transformsExportButtonLabel || 'Toggle + Export Screen Space');
+      const transformsExportButtonTitle = String(projectionEditorConfig.transformsExportButtonTitle || 'Toggle preview mode, then copy literal screen-space rectangles and transforms for the active mode.');
+      transformExportBtn.textContent = transformsExportButtonLabel;
+      transformExportBtn.title = transformsExportButtonTitle;
       const sliderClamp = projectionEditorConfig.sliderClamp || {};
       const multiplierVarHints = Array.isArray(projectionEditorConfig.multiplierVarHints) ? projectionEditorConfig.multiplierVarHints : ['scale', 'frac', 'ratio', 'multiplier'];
       const varsByProjId = projectionMapConfig.varsByProjId || projectionMapConfig.relatedVarsByProjId || {};
@@ -4201,9 +4207,13 @@ import { createLayerManager } from './ui/layerManager.js';
           : 'Showing layer-managed UI positions.');
       });
       transformExportBtn.addEventListener('click', () => {
+        projectionUiState.showUnlayeredPreview = !projectionUiState.showUnlayeredPreview;
+        render();
         copyTextToClipboard(buildRenderedTransformsExport());
         updateLayerPreviewButton();
-        updateEditorStatus('Copied rendered transforms for layered and original modes.');
+        updateEditorStatus(projectionUiState.showUnlayeredPreview
+          ? 'Switched to original preview and copied literal screen-space data.'
+          : 'Switched to layered preview and copied literal screen-space data.');
       });
       exportBtn.addEventListener('click', () => {
         copyTextToClipboard(buildAuthoredLayoutExport());

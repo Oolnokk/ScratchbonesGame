@@ -698,6 +698,8 @@ window.SCRATCHBONES_CONFIG = {
         "editor": {
           "step": 0.01,
           "panelTitle": "Projection Vars",
+          "transformsExportButtonLabel": "Toggle + Export Screen Space",
+          "transformsExportButtonTitle": "Toggle preview mode, then copy literal screen-space rectangles and transforms for the active mode.",
           "sliderClamp": {
             "multiplierMin": 0,
             "multiplierMax": 5,
