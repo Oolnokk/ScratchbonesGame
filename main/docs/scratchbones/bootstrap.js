@@ -209,7 +209,7 @@ import { createLayerManager } from './ui/layerManager.js';
         },
       }, null, 2);
     }
-    async function buildRenderedTransformsDualModeExport() {
+    async function captureRenderedScreenSpaceBothModes() {
       const previousPreviewState = projectionUiState.showUnlayeredPreview;
       const renderFrame = () => new Promise((resolve) => {
         if (typeof window.requestAnimationFrame === 'function') {
@@ -218,33 +218,43 @@ import { createLayerManager } from './ui/layerManager.js';
         }
         setTimeout(resolve, 0);
       });
+      const captureModeSnapshot = async (showUnlayeredPreview) => {
+        projectionUiState.showUnlayeredPreview = showUnlayeredPreview;
+        render();
+        await renderFrame();
+        return collectRenderedScreenSpaceSnapshot();
+      };
       try {
-        projectionUiState.showUnlayeredPreview = true;
-        render();
-        await renderFrame();
-        const originalSnapshot = collectRenderedScreenSpaceSnapshot();
-        projectionUiState.showUnlayeredPreview = false;
-        render();
-        await renderFrame();
-        const layeredSnapshot = collectRenderedScreenSpaceSnapshot();
-        return JSON.stringify({
-          layout: {
-            mode: getScratchbonesLayoutMode(),
-            projectionPreviewMode: 'both',
-            renderedScreenSpaceBaselineMode: 'original',
-            renderedScreenSpaceCompareMode: 'layered',
-            renderedScreenSpace: {
-              original: originalSnapshot,
-              layered: layeredSnapshot,
-            },
-            renderedScreenSpaceDelta: layoutDiagnostics.renderedScreenSpaceDelta,
-            renderedScreenSpaceTopDrift: layoutDiagnostics.renderedScreenSpaceTopDrift,
-          },
-        }, null, 2);
+        const originalSnapshot = await captureModeSnapshot(true);
+        const layeredSnapshot = await captureModeSnapshot(false);
+        const renderedScreenSpace = {
+          original: originalSnapshot,
+          layered: layeredSnapshot,
+        };
+        updateLayoutDiagnosticsState(layoutDiagnostics, {
+          renderedScreenSpace,
+          renderedScreenSpaceBaselineMode: 'original',
+          renderedScreenSpaceCompareMode: 'layered',
+        });
+        return renderedScreenSpace;
       } finally {
         projectionUiState.showUnlayeredPreview = previousPreviewState;
         render();
       }
+    }
+    async function buildRenderedTransformsDualModeExport() {
+      const renderedScreenSpace = await captureRenderedScreenSpaceBothModes();
+      return JSON.stringify({
+        layout: {
+          mode: getScratchbonesLayoutMode(),
+          projectionPreviewMode: 'both',
+          renderedScreenSpaceBaselineMode: 'original',
+          renderedScreenSpaceCompareMode: 'layered',
+          renderedScreenSpace,
+          renderedScreenSpaceDelta: layoutDiagnostics.renderedScreenSpaceDelta,
+          renderedScreenSpaceTopDrift: layoutDiagnostics.renderedScreenSpaceTopDrift,
+        },
+      }, null, 2);
     }
     function copyTextToClipboard(payload) {
       const text = String(payload || '');
