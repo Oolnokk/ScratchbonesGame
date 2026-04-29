@@ -8,6 +8,16 @@ function normalizeStringList(value) {
   return value.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim());
 }
 
+function selectorMatchesElement(element, selectors) {
+  if (!element || !(element instanceof Element) || !Array.isArray(selectors) || !selectors.length) return false;
+  return selectors.some((selector) => {
+    try {
+      return element.matches(selector);
+    } catch {
+      return false;
+    }
+  });
+}
 
 function isTransformSensitivePromotionTarget(element) {
   if (!element) return false;
@@ -97,6 +107,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const promoteByRootSelectors = normalizeSelectorList(managerConfig.promoteByRootSelectors);
   const excludeDescendantSelectors = normalizeSelectorList(managerConfig.excludeDescendantSelectors);
   const configuredLayerOrder = normalizeStringList(managerConfig.layerOrder);
+  const normalizeBoxGuard = managerConfig.normalizeBoxGuard && typeof managerConfig.normalizeBoxGuard === 'object'
+    ? managerConfig.normalizeBoxGuard
+    : {};
+  const normalizeBoxAllowlistSelectors = normalizeSelectorList(normalizeBoxGuard.allowlistSelectors);
+  const normalizeBoxDenylistSelectors = normalizeSelectorList(normalizeBoxGuard.denylistSelectors);
   const typographyBaselineRootSelector = typeof managerConfig.typographyBaselineRootSelector === 'string' && managerConfig.typographyBaselineRootSelector.trim()
     ? managerConfig.typographyBaselineRootSelector.trim()
     : '#app';
@@ -279,7 +294,12 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     portal.appendChild(element);
 
     const isTransformSensitive = isTransformSensitivePromotionTarget(element);
-    const shouldNormalizeBox = normalizePromotedElementBox && canSafelyNormalizePromotedBox(element, computed);
+    const isNormalizeBoxDenied = selectorMatchesElement(element, normalizeBoxDenylistSelectors);
+    const isNormalizeBoxAllowed = !normalizeBoxAllowlistSelectors.length || selectorMatchesElement(element, normalizeBoxAllowlistSelectors);
+    const shouldNormalizeBox = normalizePromotedElementBox
+      && canSafelyNormalizePromotedBox(element, computed)
+      && isNormalizeBoxAllowed
+      && !isNormalizeBoxDenied;
     if (shouldNormalizeBox) {
       element.style.margin = '0';
     }
@@ -288,8 +308,10 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     element.style.top = '0';
     element.style.right = 'auto';
     element.style.bottom = 'auto';
-    element.style.width = '100%';
-    element.style.height = '100%';
+    if (shouldNormalizeBox) {
+      element.style.width = '100%';
+      element.style.height = '100%';
+    }
     const preservePromotionTransform = shouldPreservePromotionTransform(element);
     if (!preservePromotionTransform && isTransformSensitive && !hasInlineTransform(element) && computed.transform && computed.transform !== 'none') {
       element.style.transform = computed.transform;
@@ -315,6 +337,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       retainedTransform: element.style.transform || 'none',
       originalPosition: computed.position,
       normalizePromotedElementBox: shouldNormalizeBox,
+      normalizeBoxAllowlistHit: isNormalizeBoxAllowed,
+      normalizeBoxDenylistHit: isNormalizeBoxDenied,
       transformSensitive: isTransformSensitive,
       preservePromotionTransform,
       reanchoredAbsolutePosition: true,
