@@ -337,7 +337,9 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       preserveSelectors: preservePromotionTransformSelectors,
       disableSelectors: disablePreservePromotionTransformSelectors,
     });
-    if ((preservePromotionTransform || isTransformSensitive) && !hasInlineTransform(element) && computed.transform && computed.transform !== 'none') {
+    const disablePreservePromotionTransform = selectorMatchesElement(element, disablePreservePromotionTransformSelectors);
+    const shouldRetainComputedTransform = !disablePreservePromotionTransform && (preservePromotionTransform || isTransformSensitive);
+    if (shouldRetainComputedTransform && !hasInlineTransform(element) && computed.transform && computed.transform !== 'none') {
       element.style.transform = computed.transform;
       if (computed.transformOrigin) element.style.transformOrigin = computed.transformOrigin;
     }
@@ -369,6 +371,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       normalizeFillSizeDenylistHit: isNormalizeFillSizeDenied,
       transformSensitive: isTransformSensitive,
       preservePromotionTransform,
+      disablePreservePromotionTransform,
+      shouldRetainComputedTransform,
       reanchoredAbsolutePosition: true,
       placementMode: 'screen-space',
     });
