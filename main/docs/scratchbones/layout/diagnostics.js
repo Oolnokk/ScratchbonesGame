@@ -46,11 +46,21 @@ export function compareRenderedScreenSpaceModes(renderedScreenSpace, modeA = 'or
       inModeB: Boolean(b),
       transformA: a?.transform || null,
       transformB: b?.transform || null,
+      typographyA: a?.typography || null,
+      typographyB: b?.typography || null,
       rectA: a?.rect || null,
       rectB: b?.rect || null,
       rectDelta: rectDelta(a?.rect, b?.rect),
     };
   });
+}
+
+
+function parsePixelValue(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw || raw === 'normal') return null;
+  const numeric = Number.parseFloat(raw.replace('px', ''));
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
 function driftMagnitude(rectDelta) {
@@ -145,11 +155,35 @@ export function summarizeRenderedScreenSpaceDriftByPromotedSubtree(deltas) {
     const group = classifyPromotedSubtreeGroup(entry.id);
     if (!group) continue;
     const magnitude = driftMagnitude(entry.rectDelta);
-    if (!grouped.has(group)) grouped.set(group, { count: 0, totalMagnitude: 0, maxMagnitude: 0 });
+    if (!grouped.has(group)) {
+      grouped.set(group, {
+        count: 0,
+        totalMagnitude: 0,
+        maxMagnitude: 0,
+        fontSizeDeltaCount: 0,
+        totalFontSizeDelta: 0,
+        lineHeightDeltaCount: 0,
+        totalLineHeightDelta: 0,
+        transformMismatchCount: 0,
+      });
+    }
     const bucket = grouped.get(group);
     bucket.count += 1;
     bucket.totalMagnitude += magnitude;
     bucket.maxMagnitude = Math.max(bucket.maxMagnitude, magnitude);
+    const fontSizeA = parsePixelValue(entry.typographyA?.fontSize);
+    const fontSizeB = parsePixelValue(entry.typographyB?.fontSize);
+    if (fontSizeA != null && fontSizeB != null) {
+      bucket.fontSizeDeltaCount += 1;
+      bucket.totalFontSizeDelta += (fontSizeB - fontSizeA);
+    }
+    const lineHeightA = parsePixelValue(entry.typographyA?.lineHeight);
+    const lineHeightB = parsePixelValue(entry.typographyB?.lineHeight);
+    if (lineHeightA != null && lineHeightB != null) {
+      bucket.lineHeightDeltaCount += 1;
+      bucket.totalLineHeightDelta += (lineHeightB - lineHeightA);
+    }
+    if (!transformsEquivalent(entry.transformA, entry.transformB)) bucket.transformMismatchCount += 1;
   }
   return Array.from(grouped.entries())
     .map(([group, bucket]) => ({
@@ -157,6 +191,13 @@ export function summarizeRenderedScreenSpaceDriftByPromotedSubtree(deltas) {
       count: bucket.count,
       averageMagnitude: Number((bucket.totalMagnitude / Math.max(1, bucket.count)).toFixed(3)),
       maxMagnitude: Number(bucket.maxMagnitude.toFixed(3)),
+      averageFontSizeDelta: bucket.fontSizeDeltaCount > 0
+        ? Number((bucket.totalFontSizeDelta / bucket.fontSizeDeltaCount).toFixed(3))
+        : null,
+      averageLineHeightDelta: bucket.lineHeightDeltaCount > 0
+        ? Number((bucket.totalLineHeightDelta / bucket.lineHeightDeltaCount).toFixed(3))
+        : null,
+      transformMismatchCount: bucket.transformMismatchCount,
     }))
     .sort((a, b) => b.maxMagnitude - a.maxMagnitude);
 }
