@@ -3267,6 +3267,8 @@ import { createLayerManager } from './ui/layerManager.js';
         config: CONFIG,
         fitStages: layoutDiagnostics.fitStages,
         overlapDiagnostics: layoutDiagnostics.overlap,
+        renderedScreenSpaceDelta: layoutDiagnostics.renderedScreenSpaceDelta,
+        renderedScreenSpaceTopDrift: layoutDiagnostics.renderedScreenSpaceTopDrift,
         layoutNotes: {
           claimClusterEnabled: claimClusterConfig.enabled,
           turnSpotlightEnabled: regionsConfig.turnSpotlight.enabled,
