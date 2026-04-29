@@ -168,29 +168,37 @@ import { createLayerManager } from './ui/layerManager.js';
     function collectRenderedScreenSpaceSnapshot() {
       const app = document.getElementById('app');
       if (!app) return {};
+      const layerHost = document.getElementById('uiLayerManagerHost');
+      const queryRoots = [app];
+      if (layerHost) queryRoots.push(layerHost);
       const countsByProjId = new Map();
       const snapshot = {};
-      app.querySelectorAll('[data-proj-id]').forEach((el) => {
-        const projId = String(el.getAttribute('data-proj-id') || '').trim();
-        if (!projId) return;
-        const seenCount = countsByProjId.get(projId) || 0;
-        countsByProjId.set(projId, seenCount + 1);
-        const key = seenCount === 0 ? projId : `${projId}#${seenCount + 1}`;
-        const rect = el.getBoundingClientRect();
-        snapshot[key] = {
-          transform: getComputedStyle(el).transform || 'none',
-          rect: {
-            x: Number(rect.x.toFixed(3)),
-            y: Number(rect.y.toFixed(3)),
-            width: Number(rect.width.toFixed(3)),
-            height: Number(rect.height.toFixed(3)),
-            left: Number(rect.left.toFixed(3)),
-            top: Number(rect.top.toFixed(3)),
-            right: Number(rect.right.toFixed(3)),
-            bottom: Number(rect.bottom.toFixed(3)),
-          },
-        };
-      });
+      const seenElements = new Set();
+      for (const root of queryRoots) {
+        root.querySelectorAll('[data-proj-id]').forEach((el) => {
+          if (seenElements.has(el)) return;
+          seenElements.add(el);
+          const projId = String(el.getAttribute('data-proj-id') || '').trim();
+          if (!projId) return;
+          const seenCount = countsByProjId.get(projId) || 0;
+          countsByProjId.set(projId, seenCount + 1);
+          const key = seenCount === 0 ? projId : `${projId}#${seenCount + 1}`;
+          const rect = el.getBoundingClientRect();
+          snapshot[key] = {
+            transform: getComputedStyle(el).transform || 'none',
+            rect: {
+              x: Number(rect.x.toFixed(3)),
+              y: Number(rect.y.toFixed(3)),
+              width: Number(rect.width.toFixed(3)),
+              height: Number(rect.height.toFixed(3)),
+              left: Number(rect.left.toFixed(3)),
+              top: Number(rect.top.toFixed(3)),
+              right: Number(rect.right.toFixed(3)),
+              bottom: Number(rect.bottom.toFixed(3)),
+            },
+          };
+        });
+      }
       return snapshot;
     }
     function buildRenderedTransformsExport() {
@@ -211,17 +219,23 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     async function captureRenderedScreenSpaceBothModes() {
       const previousPreviewState = projectionUiState.showUnlayeredPreview;
-      const renderFrame = () => new Promise((resolve) => {
+      const nextFrame = () => new Promise((resolve) => {
         if (typeof window.requestAnimationFrame === 'function') {
           window.requestAnimationFrame(() => resolve());
           return;
         }
         setTimeout(resolve, 0);
       });
+      const renderAndWaitForStableLayout = async () => {
+        render();
+        await nextFrame();
+        const app = document.getElementById('app');
+        if (app && shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
+        await nextFrame();
+      };
       const captureModeSnapshot = async (showUnlayeredPreview) => {
         projectionUiState.showUnlayeredPreview = showUnlayeredPreview;
-        render();
-        await renderFrame();
+        await renderAndWaitForStableLayout();
         return collectRenderedScreenSpaceSnapshot();
       };
       try {
@@ -239,7 +253,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return renderedScreenSpace;
       } finally {
         projectionUiState.showUnlayeredPreview = previousPreviewState;
-        render();
+        await renderAndWaitForStableLayout();
       }
     }
     async function buildRenderedTransformsDualModeExport() {
