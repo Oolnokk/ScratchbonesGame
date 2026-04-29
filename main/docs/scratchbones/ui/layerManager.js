@@ -50,6 +50,12 @@ function snapshotManagedElementStyle(element) {
   };
 }
 
+function hasInlineTransform(element) {
+  if (!element) return false;
+  const inlineValue = element.style.transform;
+  return typeof inlineValue === 'string' && inlineValue.trim().length > 0;
+}
+
 function readSizingToken(inlineValue, computedValue, fallbackPx) {
   if (typeof inlineValue === 'string' && inlineValue.trim()) return inlineValue.trim();
   if (typeof computedValue === 'string' && computedValue.trim() && computedValue !== 'auto') return computedValue.trim();
@@ -236,6 +242,10 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     element.style.bottom = 'auto';
     element.style.width = '100%';
     element.style.height = '100%';
+    if (isTransformSensitive && !hasInlineTransform(element) && computed.transform && computed.transform !== 'none') {
+      element.style.transform = computed.transform;
+      if (computed.transformOrigin) element.style.transformOrigin = computed.transformOrigin;
+    }
 
     const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle };
     state.promoted.push(promotedEntry);
