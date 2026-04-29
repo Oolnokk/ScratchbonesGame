@@ -4,9 +4,17 @@ export function createLayoutDiagnosticsState() {
     overlap: { overlaps: [], stage: 'none', snapshot: [] },
     renderedScreenSpaceDelta: { modeA: null, modeB: null, deltas: [] },
     renderedScreenSpaceTopDrift: [],
+    renderedScreenSpaceGroupDrift: [],
     renderedScreenSpaceParity: { policy: null, thresholds: {}, summary: { pass: true, failing: [], warnings: [] } },
   };
 }
+
+const PROMOTED_SUBTREE_GROUP_RULES = [
+  { group: 'sidebar seats', test: (id) => id === 'sidebar' || id.startsWith('seat-') || id.startsWith('seat-avatar-') },
+  { group: 'claim cluster', test: (id) => id.startsWith('claim-') || id === 'claim-cluster' },
+  { group: 'betting anchors', test: (id) => id.startsWith('betting-') || id.startsWith('stake-') },
+  { group: 'avatars', test: (id) => id.startsWith('avatar-') || id.includes('avatar') },
+];
 
 function toFiniteNumber(value) {
   const numeric = Number(value);
@@ -60,6 +68,36 @@ export function summarizeRenderedScreenSpaceDrift(deltas, { minMagnitude = 1, to
     .filter((entry) => entry.inModeA && entry.inModeB && entry.magnitude >= numericMinMagnitude)
     .sort((a, b) => b.magnitude - a.magnitude)
     .slice(0, numericTopN);
+}
+
+function classifyPromotedSubtreeGroup(id) {
+  const normalizedId = String(id || '').trim().toLowerCase();
+  if (!normalizedId) return null;
+  const match = PROMOTED_SUBTREE_GROUP_RULES.find((rule) => rule.test(normalizedId));
+  return match ? match.group : null;
+}
+
+export function summarizeRenderedScreenSpaceDriftByPromotedSubtree(deltas) {
+  const grouped = new Map();
+  for (const entry of Array.isArray(deltas) ? deltas : []) {
+    if (!entry?.inModeA || !entry?.inModeB) continue;
+    const group = classifyPromotedSubtreeGroup(entry.id);
+    if (!group) continue;
+    const magnitude = driftMagnitude(entry.rectDelta);
+    if (!grouped.has(group)) grouped.set(group, { count: 0, totalMagnitude: 0, maxMagnitude: 0 });
+    const bucket = grouped.get(group);
+    bucket.count += 1;
+    bucket.totalMagnitude += magnitude;
+    bucket.maxMagnitude = Math.max(bucket.maxMagnitude, magnitude);
+  }
+  return Array.from(grouped.entries())
+    .map(([group, bucket]) => ({
+      group,
+      count: bucket.count,
+      averageMagnitude: Number((bucket.totalMagnitude / Math.max(1, bucket.count)).toFixed(3)),
+      maxMagnitude: Number(bucket.maxMagnitude.toFixed(3)),
+    }))
+    .sort((a, b) => b.maxMagnitude - a.maxMagnitude);
 }
 
 
@@ -118,6 +156,7 @@ export function updateLayoutDiagnosticsState(layoutDiagnostics, layoutResult) {
       deltas,
     };
     layoutDiagnostics.renderedScreenSpaceTopDrift = summarizeRenderedScreenSpaceDrift(deltas, driftSummary);
+    layoutDiagnostics.renderedScreenSpaceGroupDrift = summarizeRenderedScreenSpaceDriftByPromotedSubtree(deltas);
     layoutDiagnostics.renderedScreenSpaceParity = evaluateRenderedScreenSpaceParity(deltas, layoutResult.renderedScreenSpaceParity);
   }
   return layoutDiagnostics;
@@ -129,6 +168,7 @@ export function resetLayoutDiagnosticsState(layoutDiagnostics) {
   layoutDiagnostics.overlap = { overlaps: [], stage: 'none', snapshot: [] };
   layoutDiagnostics.renderedScreenSpaceDelta = { modeA: null, modeB: null, deltas: [] };
   layoutDiagnostics.renderedScreenSpaceTopDrift = [];
+  layoutDiagnostics.renderedScreenSpaceGroupDrift = [];
   layoutDiagnostics.renderedScreenSpaceParity = { policy: null, thresholds: {}, summary: { pass: true, failing: [], warnings: [] } };
   return layoutDiagnostics;
 }
