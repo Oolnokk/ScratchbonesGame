@@ -75,7 +75,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const hostZIndex = Number.isFinite(Number(managerConfig.hostZIndex)) ? Number(managerConfig.hostZIndex) : 45;
   const defaultPreserveSpace = managerConfig.defaultPreserveSpace !== false;
   const normalizePromotedElementBox = managerConfig.normalizePromotedElementBox === true;
-  const placementMode = String(managerConfig.placementMode || 'app-local').toLowerCase() === 'screen-space' ? 'screen-space' : 'app-local';
+  const placementMode = String(managerConfig.placementMode || 'screen-space').toLowerCase() === 'screen-space' ? 'screen-space' : 'app-local';
   const assignments = Array.isArray(managerConfig.assignments) ? managerConfig.assignments : [];
   const configuredLayerOrder = normalizeStringList(managerConfig.layerOrder);
   const assignmentList = assignments
