@@ -107,7 +107,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       host.appendChild(root);
       roots.set(layerName, root);
     });
-    app.appendChild(host);
+    (placementMode === 'screen-space' ? document.body : app)?.appendChild(host);
     state.host = host;
     state.roots = roots;
     if (!state.windowResizeHandler) {
