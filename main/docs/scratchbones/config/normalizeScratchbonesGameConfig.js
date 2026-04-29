@@ -291,13 +291,10 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       },
       layerManager: (() => {
         const rawLayerManager = rawGameConfig.layout?.layerManager || {};
-        const placementMode = String(rawLayerManager.placementMode || DEFAULT_LAYER_MANAGER_CONFIG.placementMode).toLowerCase() === 'screen-space'
-          ? 'screen-space'
-          : 'app-local';
         return {
           ...DEFAULT_LAYER_MANAGER_CONFIG,
           ...rawLayerManager,
-          placementMode,
+          placementMode: 'screen-space',
         };
       })(),
     },

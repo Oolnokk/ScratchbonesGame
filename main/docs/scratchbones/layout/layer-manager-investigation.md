@@ -11,9 +11,7 @@ Date: 2026-04-29
 ## Variable path walkthrough (authoritative)
 1. Raw config is normalized by `normalizeScratchbonesGameConfig()`.
    - `layout.layerManager.placementMode` is normalized, but parity-test layer promotion now runs in forced `"screen-space"` mode.
-2. `createLayerManager({ gameConfig, debugLog })` reads:
-   - `placementMode`
-   - `normalizePromotedElementBox`
+2. `createLayerManager({ gameConfig, debugLog })` reads layer assignment + preservation config and always executes in literal `"screen-space"` placement mode for parity testing.
 3. During `sync(app)` in `ui/layerManager.js`, promoted nodes are moved under per-layer portal roots.
 4. `updatePortalRect()` now always copies placeholder viewport geometry directly to `position: fixed` portal fields (`left/top/width/height`).
 5. Render/export path in `bootstrap.js`:
@@ -59,7 +57,7 @@ Practical effect:
 
 Notes:
 - Dual-mode export compares `original` vs `layered` within one deterministic capture session.
-- To compare placement strategies, run two dual-mode exports (one per `placementMode`) and diff their drift sections.
+- Placement strategy A/B by `placementMode` is no longer part of the parity path; this path is now fixed to literal viewport-space placement.
 
 ## How to interpret drift output fields
 
@@ -90,4 +88,4 @@ Use this as the first stop to find the worst offenders before drilling into raw 
 ## Updated conclusion
 The core tradeoff remains: DOM reparenting can still be semantically lossy for context-dependent layout. Reliability in this test path now comes from fixed screen-space placement plus deterministic dual-mode export capture.
 
-`normalizePromotedElementBox` remains opt-in and should only be enabled when intentional `100%` fill coercion is desired for promoted nodes.
+Promoted nodes now fill their fixed portal (`position:absolute; left/top:0; width/height:100%`) so portal geometry is the sole placement source.

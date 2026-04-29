@@ -173,6 +173,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   function updatePortalRect(entry) {
     if (!entry?.portal || !entry.placeholder?.isConnected || entry.placeholder.style.display === 'none') return;
     const sourceRect = entry.placeholder.getBoundingClientRect();
+    entry.portal.style.position = 'fixed';
+    entry.portal.style.right = 'auto';
+    entry.portal.style.bottom = 'auto';
+    entry.portal.style.transform = 'none';
+    entry.portal.style.transformOrigin = '0 0';
     entry.portal.style.left = `${sourceRect.left.toFixed(4)}px`;
     entry.portal.style.top = `${sourceRect.top.toFixed(4)}px`;
     entry.portal.style.width = `${Math.max(1, sourceRect.width).toFixed(4)}px`;
@@ -223,17 +228,14 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const shouldNormalizeBox = normalizePromotedElementBox && canSafelyNormalizePromotedBox(element, computed);
     if (shouldNormalizeBox) {
       element.style.margin = '0';
-      element.style.width = '100%';
-      element.style.height = '100%';
     }
-    const shouldReanchorAbsolute = !isTransformSensitive && (computed.position === 'absolute' || computed.position === 'fixed');
-    if (shouldReanchorAbsolute) {
-      element.style.position = 'absolute';
-      element.style.left = '0';
-      element.style.top = '0';
-      element.style.right = 'auto';
-      element.style.bottom = 'auto';
-    }
+    element.style.position = 'absolute';
+    element.style.left = '0';
+    element.style.top = '0';
+    element.style.right = 'auto';
+    element.style.bottom = 'auto';
+    element.style.width = '100%';
+    element.style.height = '100%';
 
     const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle };
     state.promoted.push(promotedEntry);
@@ -248,7 +250,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       originalPosition: computed.position,
       normalizePromotedElementBox: shouldNormalizeBox,
       transformSensitive: isTransformSensitive,
-      reanchoredAbsolutePosition: shouldReanchorAbsolute,
+      reanchoredAbsolutePosition: true,
       placementMode,
     });
     return true;
