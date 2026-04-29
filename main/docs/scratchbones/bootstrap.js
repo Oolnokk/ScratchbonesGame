@@ -1108,8 +1108,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const punishCardIndex = challenger.hand.findIndex((card) => card.trickType === 'punish');
       challenger.trickPunishActive = false;
       if (punishCardIndex >= 0) {
-        const [punishCard] = challenger.hand.splice(punishCardIndex, 1);
-        state.pile.push({ playerIndex: challengerIndex, cards: [punishCard], declaredRank: play.declaredRank, truthful: true, actualSummary: 'Punish' });
+        challenger.hand.splice(punishCardIndex, 1);
         challenger.trickPunishActive = true;
         addLog(`${seatLabel(challengerIndex)} primes a Punish Bone before betting.`);
       }
@@ -2037,13 +2036,13 @@ import { createLayerManager } from './ui/layerManager.js';
           fallbackSrc: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.flippedCardFallbackSrc),
         };
       }
+      if (card?.trickType && SCRATCHBONES_GAME.assets?.trickCardSrc?.[card.trickType]) {
+        return {
+          src: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.trickCardSrc[card.trickType]),
+          fallbackSrc: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.trickCardFallbackSrc?.[card.trickType] || SCRATCHBONES_GAME.assets.trickCardSrc[card.trickType]),
+        };
+      }
       if (card?.wild) {
-        if (card?.trickType && SCRATCHBONES_GAME.assets?.trickCardSrc?.[card.trickType]) {
-          return {
-            src: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.trickCardSrc[card.trickType]),
-            fallbackSrc: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.trickCardFallbackSrc?.[card.trickType] || SCRATCHBONES_GAME.assets.trickCardSrc[card.trickType]),
-          };
-        }
         return {
           src: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.wildCardSrc),
           fallbackSrc: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.wildCardFallbackSrc),
