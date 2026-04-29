@@ -275,6 +275,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
             maxElementMagnitude: normalizeThreshold(rawParity.maxElementMagnitude, 3),
             maxGroupAverageMagnitude: normalizeThreshold(rawParity.maxGroupAverageMagnitude, 2),
             maxGroupMagnitude: normalizeThreshold(rawParity.maxGroupMagnitude, 5),
+            maxSidebarSeatSpacingInflation: normalizeThreshold(rawParity.maxSidebarSeatSpacingInflation, 1.2),
             requireTransformMatchFor: Array.isArray(rawParity.requireTransformMatchFor)
               ? rawParity.requireTransformMatchFor.map((group) => String(group || '').trim().toLowerCase()).filter(Boolean)
               : ['avatars', 'claim avatars'],

@@ -46,6 +46,8 @@ export function compareRenderedScreenSpaceModes(renderedScreenSpace, modeA = 'or
       inModeB: Boolean(b),
       transformA: a?.transform || null,
       transformB: b?.transform || null,
+      rectA: a?.rect || null,
+      rectB: b?.rect || null,
       rectDelta: rectDelta(a?.rect, b?.rect),
     };
   });
@@ -99,6 +101,43 @@ function classifyPromotedSubtreeGroup(id) {
   return match ? match.group : null;
 }
 
+function parseSidebarSeatId(id) {
+  const match = String(id || '').trim().toLowerCase().match(/^seat-(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function assertSidebarSeatLayoutParity(entries, thresholds) {
+  const maxSpacingInflation = Number(thresholds.maxSidebarSeatSpacingInflation);
+  if (!(maxSpacingInflation > 0)) return;
+  const seats = entries
+    .map((entry) => {
+      const seatId = parseSidebarSeatId(entry.id);
+      if (seatId == null) return null;
+      const aTop = toFiniteNumber(entry.rectA?.top);
+      const aBottom = toFiniteNumber(entry.rectA?.bottom);
+      const bTop = toFiniteNumber(entry.rectB?.top);
+      const bBottom = toFiniteNumber(entry.rectB?.bottom);
+      if (aTop == null || aBottom == null || bTop == null || bBottom == null) return null;
+      return { seatId, centerA: (aTop + aBottom) / 2, centerB: (bTop + bBottom) / 2 };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.seatId - b.seatId);
+  if (seats.length < 2) return;
+  for (let index = 1; index < seats.length; index += 1) {
+    const previous = seats[index - 1];
+    const current = seats[index];
+    const originalGap = current.centerA - previous.centerA;
+    const layeredGap = current.centerB - previous.centerB;
+    if (!(originalGap > 0) || !(layeredGap > 0)) {
+      throw new Error(`[layout diagnostics] sidebar seat order mismatch between original/layered for seat-${previous.seatId}→seat-${current.seatId}: originalGap=${originalGap.toFixed(3)}, layeredGap=${layeredGap.toFixed(3)}.`);
+    }
+    const inflation = layeredGap / originalGap;
+    if (inflation > maxSpacingInflation) {
+      throw new Error(`[layout diagnostics] sidebar seat vertical spacing inflation exceeded threshold for seat-${previous.seatId}→seat-${current.seatId}: inflation=${inflation.toFixed(3)} threshold=${maxSpacingInflation.toFixed(3)}.`);
+    }
+  }
+}
+
 export function summarizeRenderedScreenSpaceDriftByPromotedSubtree(deltas) {
   const grouped = new Map();
   for (const entry of Array.isArray(deltas) ? deltas : []) {
@@ -132,6 +171,7 @@ function evaluateRenderedScreenSpaceParity(deltas, parityConfig = {}) {
     maxElementMagnitude: Math.max(0, Number(parityConfig.maxElementMagnitude) || 0),
     maxGroupAverageMagnitude: Math.max(0, Number(parityConfig.maxGroupAverageMagnitude) || 0),
     maxGroupMagnitude: Math.max(0, Number(parityConfig.maxGroupMagnitude) || 0),
+    maxSidebarSeatSpacingInflation: Math.max(0, Number(parityConfig.maxSidebarSeatSpacingInflation) || 0),
     requireTransformMatchFor: Array.isArray(parityConfig.requireTransformMatchFor)
       ? parityConfig.requireTransformMatchFor.map((group) => String(group || '').trim().toLowerCase()).filter(Boolean)
       : [],
@@ -141,6 +181,7 @@ function evaluateRenderedScreenSpaceParity(deltas, parityConfig = {}) {
   const failing = [];
   const warnings = [];
   const trackedDeltas = [];
+  assertSidebarSeatLayoutParity(deltas, thresholds);
 
   for (const entry of Array.isArray(deltas) ? deltas : []) {
     if (!entry?.inModeA || !entry?.inModeB) continue;
