@@ -2,61 +2,97 @@
 
 Date: 2026-04-29
 
-## Scope traced
-- `bootstrap.js` render pipeline and authored-mode application.
-- `layout/authoredLayout.js` transform path (`translate + scale`).
-- `ui/layerManager.js` promotion, placeholder sizing, portal rect mapping, and post-promotion style mutation.
+## Scope traced end-to-end
+- `config/normalizeScratchbonesGameConfig.js` normalization of `layout.layerManager` defaults and allowed placement mode values.
+- `ui/layerManager.js` host/root/portal creation, placement computation, and promoted-node normalization behavior.
+- `bootstrap.js` render flow, projection preview mode switching, deterministic dual-mode capture, and export payload assembly.
+- `layout/diagnostics.js` rendered-screen-space delta computation and top-drift ranking.
 
-## Variable path walkthrough
-1. `render()` applies authored mode (`applyAuthoredLayoutMode`) which sets `#app` width/height and `transform: translate(...) scale(...)`.
-2. In the same frame, `SCRATCHBONES_LAYER_MANAGER.sync(app)` runs (unless unlayered preview is active).
-3. `sync()` scans assignment selectors, inserts a placeholder at original location, and moves target into a portal root under `#uiLayerManagerHost`.
-4. `updatePortalRect()` maps placeholder viewport rect back to app-local coordinates using:
-   - `scaleX = appRect.width / appLayoutWidth`
-   - `localLeft = (phRect.left - appRect.left) / scaleX`
-   - same for top/width/height.
-5. Promoted element style is then mutated: margin reset, `width/height = 100%`, and position normalization for `absolute`/`fixed` entries.
+## Variable path walkthrough (authoritative)
+1. Raw config is normalized by `normalizeScratchbonesGameConfig()`.
+   - `layout.layerManager.placementMode` is coerced to either `"app-local"` or `"screen-space"`.
+   - Invalid values fall back to `"app-local"`.
+2. `createLayerManager({ gameConfig, debugLog })` reads:
+   - `placementMode`
+   - `normalizePromotedElementBox`
+3. During `sync(app)` in `ui/layerManager.js`, promoted nodes are moved under per-layer portal roots.
+4. `updatePortalRect()` selects coordinate mechanics by placement mode:
+   - `app-local`: maps placeholder viewport rect back into app-local coordinates using app rect + authored-layout scale.
+   - `screen-space`: copies viewport rect directly to `position: fixed` portal geometry.
+5. Render/export path in `bootstrap.js`:
+   - Single-mode export (`buildRenderedTransformsExport`) captures whichever preview mode is currently active.
+   - Dual-mode export (`buildRenderedTransformsDualModeExport`) deterministically captures both `original` and `layered` by temporarily toggling preview state in a fixed order, awaiting a render frame each time, then restoring prior UI state.
+6. `updateLayoutDiagnosticsState()` computes drift artifacts from `renderedScreenSpace` and stores:
+   - `renderedScreenSpaceDelta`
+   - `renderedScreenSpaceTopDrift`
 
-## Findings
-### 1) App-level authored transform compensation is not the primary fault
-`updatePortalRect()` remaps viewport-space placeholder geometry back into app-local coordinates via `scaleX/scaleY`. For authored mode (`transform: translate(...) scale(...)` on `#app`), this conversion is mathematically correct for left/top/width/height.
+## Current behavior corrections
 
-### 2) Promotion is inherently lossy for context-dependent layout
-Promoted nodes are physically reparented into `#uiLayerManagerHost`, so they lose original ancestor context (containing block relationships, inherited layout constraints, stacking/transform context). Placeholder geometry restores outer placement, but not all internal layout semantics.
+### Placement is no longer app-local-only
+Outdated assumption: promotion placement always remaps into app-local coordinates.
 
-### 3) Large post-promotion scale drift is amplified by forced box normalization
-The previous default always set promoted elements to:
-- `margin: 0`
-- `width: 100%`
-- `height: 100%`
+Current behavior:
+- `placementMode: "app-local"` keeps legacy inverse-transform mapping behavior.
+- `placementMode: "screen-space"` places portals in viewport/screen coordinates (`position: fixed`) and uses placeholder `getBoundingClientRect()` directly.
+- In screen-space mode, host + layer roots remain pointer-pass-through (`pointer-events:none`) while portals stay interactive (`pointer-events:auto`).
 
-That is convenient for some components, but it can significantly alter sizing for intrinsic/content-driven elements and for elements whose dimensions were previously controlled by non-portal ancestors. This is a major contributor to the observed pre/post discrepancy.
+### Export no longer requires manual mode toggling for complete comparison
+Outdated assumption: users must manually toggle preview modes and export each mode separately.
 
-### 4) Absolute/fixed normalization remains necessary but is not sufficient
-Keeping `absolute|fixed` promoted elements pinned at `left/top=0` in the portal is still needed to avoid immediate positional jumps, but this does not solve semantic drift caused by reparenting and forced box fills.
+Current behavior:
+- A deterministic dual-mode export path captures both modes in one run (`projectionPreviewMode: "both"`).
+- Capture order is fixed (`original` then `layered`) and includes a frame wait after each render, reducing race conditions and making drift reports reproducible.
+- Manual single-mode export still exists for spot checks, but it is not required for drift baselining.
 
-## Change made during investigation
-- Added a new layer-manager config flag: `normalizePromotedElementBox` (default `false`).
-- Promotion now only forces `margin:0; width:100%; height:100%` when that flag is explicitly enabled.
-- Kept existing absolute/fixed normalization and added debug payload field `normalizePromotedElementBox` so traces clearly show when coercive sizing is active.
+## Screen-space placement mechanics (detailed)
+When `placementMode` is `"screen-space"`:
+- Host is appended to `document.body` instead of `#app`.
+- Host/layer roots/portals use `position: fixed` + `overflow: visible`.
+- Portal rects are set directly from placeholder viewport rect fields (`left`, `top`, `width`, `height`).
 
-## Interim conclusion
-There is a fundamental tradeoff in the current promotion approach: DOM reparenting will always risk semantic drift for elements that rely on ancestor layout context. The previous always-on forced sizing made this much worse. The new default removes that forced coercion so promotion behavior is closer to authored/original rendering by default.
+Practical effect:
+- Promotion no longer inherits app-local transform scaling/translation math for geometry placement.
+- This minimizes authored-transform-induced drift and clipping interactions with app-local stacking/transform containers.
 
-## Remaining risk areas to validate in runtime
-- Nodes that intentionally depended on fixed positioning semantics.
-- Nodes whose dimensions are primarily intrinsic/content-driven.
-- Nested promoted/unpromoted boundary components with transform-heavy ancestors.
+## Deterministic dual-mode export workflow (recommended)
+1. In projection UI, run the dual-mode rendered transforms export action (the one that emits `projectionPreviewMode: "both"`).
+2. Keep `placementMode` fixed for the run you are testing (for example `"app-local"` or `"screen-space"`).
+3. Re-run dual-mode export after changing `placementMode` to compare strategy impact.
+4. Compare `layout.renderedScreenSpaceDelta` / `layout.renderedScreenSpaceTopDrift` between the two exports.
 
-## 2026-04-29 follow-up: screen-space placement mode
-- Added `layout.layerManager.placementMode` with two supported values:
-  - `"app-local"` (existing behavior): inverse-transform-style mapping back into app-local coordinates.
-  - `"screen-space"` (new): place portals directly in viewport coordinates from `getBoundingClientRect()`.
-- In `screen-space` mode, host/layer roots/portals are `position: fixed` with `overflow: visible`, preventing clipping from app-local stacking/transform containers while preserving pass-through pointer behavior (`pointer-events:none` on host/roots, `pointer-events:auto` on portal).
-- Existing `normalizePromotedElementBox` remains the only switch that forces promoted element `width/height:100%`.
+Notes:
+- Dual-mode export compares `original` vs `layered` within one deterministic capture session.
+- To compare placement strategies, run two dual-mode exports (one per `placementMode`) and diff their drift sections.
 
-### Drift-check workflow using existing export
-1. Open projection UI and export rendered screen-space snapshot in **original** mode (`projectionPreviewMode: "original"`).
-2. Switch to layered preview using `placementMode: "app-local"`, export snapshot.
-3. Switch to layered preview using `placementMode: "screen-space"`, export snapshot.
-4. Compare `layout.renderedScreenSpace` rect deltas per `data-proj-id`; `screen-space` should be near-zero versus original for left/top/width/height in authored transform scenarios.
+## How to interpret drift output fields
+
+### `layout.renderedScreenSpace`
+Raw snapshots keyed by mode (`original`, `layered`) and then by `data-proj-id` (with `#2`, `#3`, etc. suffixes for duplicates). Each entry includes:
+- `transform`: computed CSS transform string.
+- `rect`: rounded viewport-space geometry.
+
+Use this for forensic per-element inspection.
+
+### `layout.renderedScreenSpaceDelta`
+Structured mode-to-mode deltas:
+- `modeA` / `modeB`: compared mode names (typically `original` and `layered`).
+- `deltas[]`: one entry per matched element key containing:
+  - `id`
+  - `modeA`, `modeB` rect snapshots
+  - `rectDelta` (`dx`, `dy`, `dw`, `dh`, plus edge deltas)
+
+Use this for exact numeric regression checks and automated diff tooling.
+
+### `layout.renderedScreenSpaceTopDrift`
+Ranked summary for quick triage:
+- Pre-sorted highest-to-lowest by drift magnitude.
+- Contains per-id magnitude and threshold-classification hints from diagnostics summary.
+
+Use this as the first stop to find the worst offenders before drilling into raw deltas.
+
+## Updated conclusion
+The core tradeoff remains: DOM reparenting can still be semantically lossy for context-dependent layout. However, two major correctness upgrades now materially improve reliability:
+1. Configurable placement strategy (`app-local` vs `screen-space`).
+2. Deterministic built-in dual-mode export (no manual toggle choreography required for baseline drift capture).
+
+`normalizePromotedElementBox` remains opt-in and should only be enabled when intentional `100%` fill coercion is desired for promoted nodes.
