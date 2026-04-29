@@ -36,9 +36,12 @@ function isTransformSensitivePromotionTarget(element) {
 }
 
 
-function shouldPreservePromotionTransform(element) {
+function shouldPreservePromotionTransform(element, { preserveSelectors = [], disableSelectors = [] } = {}) {
   if (!element) return false;
   const projId = String(element.getAttribute?.('data-proj-id') || '').trim().toLowerCase();
+  const selectorMatch = (selectors) => selectorMatchesElement(element, selectors);
+  if (selectorMatch(disableSelectors)) return false;
+  if (selectorMatch(preserveSelectors)) return true;
   if (!projId) return false;
   if (projId === 'avatar-human' || projId.startsWith('avatar-')) return true;
   if (projId.startsWith('claim-avatar-')) return true;
@@ -112,6 +115,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     : {};
   const normalizeBoxAllowlistSelectors = normalizeSelectorList(normalizeBoxGuard.allowlistSelectors);
   const normalizeBoxDenylistSelectors = normalizeSelectorList(normalizeBoxGuard.denylistSelectors);
+  const preservePromotionTransformSelectors = normalizeSelectorList(managerConfig.preservePromotionTransformSelectors);
+  const disablePreservePromotionTransformSelectors = normalizeSelectorList(managerConfig.disablePreservePromotionTransformSelectors);
   const typographyBaselineRootSelector = typeof managerConfig.typographyBaselineRootSelector === 'string' && managerConfig.typographyBaselineRootSelector.trim()
     ? managerConfig.typographyBaselineRootSelector.trim()
     : '#app';
@@ -312,8 +317,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       element.style.width = '100%';
       element.style.height = '100%';
     }
-    const preservePromotionTransform = shouldPreservePromotionTransform(element);
-    if (!preservePromotionTransform && isTransformSensitive && !hasInlineTransform(element) && computed.transform && computed.transform !== 'none') {
+    const preservePromotionTransform = shouldPreservePromotionTransform(element, {
+      preserveSelectors: preservePromotionTransformSelectors,
+      disableSelectors: disablePreservePromotionTransformSelectors,
+    });
+    if ((preservePromotionTransform || isTransformSensitive) && !hasInlineTransform(element) && computed.transform && computed.transform !== 'none') {
       element.style.transform = computed.transform;
       if (computed.transformOrigin) element.style.transformOrigin = computed.transformOrigin;
     }
