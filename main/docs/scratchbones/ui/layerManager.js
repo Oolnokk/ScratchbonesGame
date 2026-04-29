@@ -130,17 +130,18 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   }
 
   function updatePortalRect(entry) {
-    if (!state.app || !entry?.placeholder || !entry?.portal) return;
+    if (!state.app || !entry?.portal) return;
     const appRect = state.app.getBoundingClientRect();
-    const phRect = entry.placeholder.getBoundingClientRect();
     const appLayoutWidth = Math.max(1, state.app.offsetWidth || state.app.clientWidth || appRect.width || 1);
     const appLayoutHeight = Math.max(1, state.app.offsetHeight || state.app.clientHeight || appRect.height || 1);
     const scaleX = appRect.width / appLayoutWidth || 1;
     const scaleY = appRect.height / appLayoutHeight || 1;
-    const localLeft = (phRect.left - appRect.left) / scaleX;
-    const localTop = (phRect.top - appRect.top) / scaleY;
-    const localWidth = phRect.width / scaleX;
-    const localHeight = phRect.height / scaleY;
+    const sourceRect = entry.sourceRect || entry.placeholder?.getBoundingClientRect();
+    if (!sourceRect) return;
+    const localLeft = (sourceRect.left - appRect.left) / scaleX;
+    const localTop = (sourceRect.top - appRect.top) / scaleY;
+    const localWidth = sourceRect.width / scaleX;
+    const localHeight = sourceRect.height / scaleY;
     entry.portal.style.left = `${localLeft.toFixed(4)}px`;
     entry.portal.style.top = `${localTop.toFixed(4)}px`;
     entry.portal.style.width = `${Math.max(1, localWidth).toFixed(4)}px`;
@@ -200,7 +201,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       element.style.bottom = 'auto';
     }
 
-    const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle };
+    const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle, sourceRect: rect };
     state.promoted.push(promotedEntry);
     updatePortalRect(promotedEntry);
     log('debug', 'promoted', {
