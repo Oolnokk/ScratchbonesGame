@@ -217,9 +217,20 @@ function evaluateRenderedScreenSpaceParity(deltas, parityConfig = {}) {
     const strictTransformMismatch = entry.transformA !== entry.transformB;
     const matrixEquivalent = transformsEquivalent(entry.transformA, entry.transformB);
     const hasTransformMismatch = !matrixEquivalent;
+    const entryGroup = classifyPromotedSubtreeGroup(entry.id);
     const isProtectedSelector = thresholds.requireTransformMatchForSelectors.some((pattern) => matchesProtectedIdPattern(entry.id, pattern));
-    if (isProtectedSelector && strictTransformMismatch) {
-      failing.push({ id: entry.id, field: 'transformMismatchStrict', transformA: entry.transformA, transformB: entry.transformB });
+    const isProtectedGroup = entryGroup && thresholds.requireTransformMatchFor.includes(String(entryGroup).toLowerCase());
+    if ((isProtectedSelector || isProtectedGroup) && strictTransformMismatch) {
+      failing.push({
+        id: entry.id,
+        field: 'transformMismatchStrict',
+        transformA: entry.transformA,
+        transformB: entry.transformB,
+        matrixEquivalent,
+        protectedBy: isProtectedSelector && isProtectedGroup
+          ? 'selector+group'
+          : (isProtectedSelector ? 'selector' : 'group'),
+      });
       continue;
     }
     if (!hasTransformMismatch || transformMismatchPolicy === 'ignore') continue;
@@ -238,9 +249,9 @@ function evaluateRenderedScreenSpaceParity(deltas, parityConfig = {}) {
     if (failMax) groupFailing.push({ field: 'groupMaxMagnitude', magnitude: groupEntry.maxMagnitude, maxAllowed: thresholds.maxGroupMagnitude });
     const requiresTransformMatch = thresholds.requireTransformMatchFor.includes(groupKey);
     if (requiresTransformMatch) {
-      const mismatches = trackedDeltas.filter((entry) => classifyPromotedSubtreeGroup(entry.id) === groupEntry.group && entry.transformA !== entry.transformB);
-      if (mismatches.length > 0) {
-        groupFailing.push({ field: 'transformMismatchRequired', count: mismatches.length });
+      const strictMismatches = trackedDeltas.filter((entry) => classifyPromotedSubtreeGroup(entry.id) === groupEntry.group && entry.transformA !== entry.transformB);
+      if (strictMismatches.length > 0) {
+        groupFailing.push({ field: 'transformMismatchRequired', count: strictMismatches.length });
       }
     }
     return {
