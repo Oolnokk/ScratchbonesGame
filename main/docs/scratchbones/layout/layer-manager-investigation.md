@@ -47,3 +47,16 @@ There is a fundamental tradeoff in the current promotion approach: DOM reparenti
 - Nodes that intentionally depended on fixed positioning semantics.
 - Nodes whose dimensions are primarily intrinsic/content-driven.
 - Nested promoted/unpromoted boundary components with transform-heavy ancestors.
+
+## 2026-04-29 follow-up: screen-space placement mode
+- Added `layout.layerManager.placementMode` with two supported values:
+  - `"app-local"` (existing behavior): inverse-transform-style mapping back into app-local coordinates.
+  - `"screen-space"` (new): place portals directly in viewport coordinates from `getBoundingClientRect()`.
+- In `screen-space` mode, host/layer roots/portals are `position: fixed` with `overflow: visible`, preventing clipping from app-local stacking/transform containers while preserving pass-through pointer behavior (`pointer-events:none` on host/roots, `pointer-events:auto` on portal).
+- Existing `normalizePromotedElementBox` remains the only switch that forces promoted element `width/height:100%`.
+
+### Drift-check workflow using existing export
+1. Open projection UI and export rendered screen-space snapshot in **original** mode (`projectionPreviewMode: "original"`).
+2. Switch to layered preview using `placementMode: "app-local"`, export snapshot.
+3. Switch to layered preview using `placementMode: "screen-space"`, export snapshot.
+4. Compare `layout.renderedScreenSpace` rect deltas per `data-proj-id`; `screen-space` should be near-zero versus original for left/top/width/height in authored transform scenarios.

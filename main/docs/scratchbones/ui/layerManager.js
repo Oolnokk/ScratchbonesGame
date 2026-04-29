@@ -50,6 +50,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const hostZIndex = Number.isFinite(Number(managerConfig.hostZIndex)) ? Number(managerConfig.hostZIndex) : 45;
   const defaultPreserveSpace = managerConfig.defaultPreserveSpace !== false;
   const normalizePromotedElementBox = managerConfig.normalizePromotedElementBox === true;
+  const placementMode = String(managerConfig.placementMode || 'app-local').toLowerCase() === 'screen-space' ? 'screen-space' : 'app-local';
   const assignments = Array.isArray(managerConfig.assignments) ? managerConfig.assignments : [];
   const configuredLayerOrder = normalizeStringList(managerConfig.layerOrder);
   const assignmentList = assignments
@@ -91,8 +92,9 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     host.id = 'uiLayerManagerHost';
     host.setAttribute('aria-hidden', 'true');
     host.style.cssText = [
-      'position:absolute',
+      placementMode === 'screen-space' ? 'position:fixed' : 'position:absolute',
       'inset:0',
+      'overflow:visible',
       'pointer-events:none',
       `z-index:${hostZIndex}`,
     ].join(';');
@@ -101,7 +103,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       const root = document.createElement('div');
       root.className = `ui-layer ui-layer-${layerName}`;
       root.dataset.layerName = layerName;
-      root.style.cssText = `position:absolute;inset:0;pointer-events:none;z-index:${layerIndex};`;
+      root.style.cssText = `${placementMode === 'screen-space' ? 'position:fixed' : 'position:absolute'};inset:0;overflow:visible;pointer-events:none;z-index:${layerIndex};`;
       host.appendChild(root);
       roots.set(layerName, root);
     });
@@ -140,13 +142,20 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
   function updatePortalRect(entry) {
     if (!state.app || !entry?.portal) return;
+    const sourceRect = entry.placeholder?.getBoundingClientRect() || entry.element?.getBoundingClientRect();
+    if (!sourceRect) return;
+    if (placementMode === 'screen-space') {
+      entry.portal.style.left = `${sourceRect.left.toFixed(4)}px`;
+      entry.portal.style.top = `${sourceRect.top.toFixed(4)}px`;
+      entry.portal.style.width = `${Math.max(1, sourceRect.width).toFixed(4)}px`;
+      entry.portal.style.height = `${Math.max(1, sourceRect.height).toFixed(4)}px`;
+      return;
+    }
     const appRect = state.app.getBoundingClientRect();
     const appLayoutWidth = Math.max(1, state.app.offsetWidth || state.app.clientWidth || appRect.width || 1);
     const appLayoutHeight = Math.max(1, state.app.offsetHeight || state.app.clientHeight || appRect.height || 1);
     const scaleX = appRect.width / appLayoutWidth || 1;
     const scaleY = appRect.height / appLayoutHeight || 1;
-    const sourceRect = entry.placeholder?.getBoundingClientRect() || entry.element?.getBoundingClientRect();
-    if (!sourceRect) return;
     const localLeft = (sourceRect.left - appRect.left) / scaleX;
     const localTop = (sourceRect.top - appRect.top) / scaleY;
     const localWidth = sourceRect.width / scaleX;
@@ -193,7 +202,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
     const portal = document.createElement('div');
     portal.className = `ui-layer-portal ui-layer-portal-${assignment.layer}`;
-    portal.style.cssText = 'position:absolute;pointer-events:auto;';
+    portal.style.cssText = `${placementMode === 'screen-space' ? 'position:fixed' : 'position:absolute'};pointer-events:auto;`;
     layerRoot.appendChild(portal);
     portal.appendChild(element);
 
@@ -220,6 +229,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       retainedTransform: element.style.transform || 'none',
       originalPosition: computed.position,
       normalizePromotedElementBox,
+      placementMode,
       placeholderRect: { width: layoutWidth, height: layoutHeight },
     });
     return true;
