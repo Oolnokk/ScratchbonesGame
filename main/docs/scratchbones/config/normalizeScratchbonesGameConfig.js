@@ -112,10 +112,11 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   hostZIndex: 45,
   defaultPreserveSpace: true,
   normalizePromotedElementBox: false,
+  layerOrder: ['above-lighting-shell', 'above-lighting-content'],
   assignments: [
     {
       id: 'ui-text-over-lighting',
-      layer: 'above-lighting',
+      layer: 'above-lighting-content',
       selectors: [
         '.seatName',
         '.seatMeta',
@@ -131,7 +132,7 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
     },
     {
       id: 'ui-avatars-over-lighting',
-      layer: 'above-lighting',
+      layer: 'above-lighting-content',
       selectors: [
         '.seatAvatarBox',
         '.turnSpotlightAvatar',
@@ -143,8 +144,10 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
     },
     {
       id: 'ui-shell-over-lighting',
-      layer: 'above-lighting',
+      layer: 'above-lighting-shell',
       selectors: [
+        '#aiSidebar',
+        '.humanSeatZone',
         '.topbar',
         '.tableViewHeader',
         '.seatInfo',

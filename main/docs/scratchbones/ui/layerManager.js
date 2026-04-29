@@ -3,6 +3,10 @@ function normalizeSelectorList(value) {
   if (typeof value === 'string' && value.trim()) return [value.trim()];
   return [];
 }
+function normalizeStringList(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim());
+}
 
 function snapshotManagedElementStyle(element) {
   if (!element) return null;
@@ -47,6 +51,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const defaultPreserveSpace = managerConfig.defaultPreserveSpace !== false;
   const normalizePromotedElementBox = managerConfig.normalizePromotedElementBox === true;
   const assignments = Array.isArray(managerConfig.assignments) ? managerConfig.assignments : [];
+  const configuredLayerOrder = normalizeStringList(managerConfig.layerOrder);
   const assignmentList = assignments
     .map((entry, index) => {
       const selectors = normalizeSelectorList(entry?.selectors);
@@ -59,7 +64,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       };
     })
     .filter(Boolean);
-  const layerNames = Array.from(new Set(assignmentList.map((entry) => entry.layer)));
+  const discoveredLayerNames = Array.from(new Set(assignmentList.map((entry) => entry.layer)));
+  const layerNames = [
+    ...configuredLayerOrder.filter((layerName) => discoveredLayerNames.includes(layerName)),
+    ...discoveredLayerNames.filter((layerName) => !configuredLayerOrder.includes(layerName)),
+  ];
 
   const state = {
     app: null,
@@ -88,14 +97,14 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       `z-index:${hostZIndex}`,
     ].join(';');
     const roots = new Map();
-    for (const layerName of layerNames) {
+    layerNames.forEach((layerName, layerIndex) => {
       const root = document.createElement('div');
       root.className = `ui-layer ui-layer-${layerName}`;
       root.dataset.layerName = layerName;
-      root.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
+      root.style.cssText = `position:absolute;inset:0;pointer-events:none;z-index:${layerIndex};`;
       host.appendChild(root);
       roots.set(layerName, root);
-    }
+    });
     app.appendChild(host);
     state.host = host;
     state.roots = roots;
