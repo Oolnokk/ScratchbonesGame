@@ -128,6 +128,10 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
   function clearPromoted() {
     for (const entry of state.promoted) {
+      if (state.resizeObserver) {
+        state.resizeObserver.unobserve(entry.placeholder);
+        state.resizeObserver.unobserve(entry.element);
+      }
       restoreManagedElementStyle(entry.element, entry.originalElementStyle);
       if (entry.placeholder?.isConnected && entry.element?.isConnected) {
         entry.placeholder.parentNode?.insertBefore(entry.element, entry.placeholder);
@@ -142,7 +146,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
   function updatePortalRect(entry) {
     if (!state.app || !entry?.portal) return;
-    const sourceRect = entry.placeholder?.getBoundingClientRect() || entry.element?.getBoundingClientRect();
+    let sourceRect = null;
+    if (entry.placeholder?.isConnected && entry.placeholder.style.display !== 'none') {
+      sourceRect = entry.placeholder.getBoundingClientRect();
+    }
+    if (!sourceRect) sourceRect = entry.element?.getBoundingClientRect();
     if (!sourceRect) return;
     if (placementMode === 'screen-space') {
       entry.portal.style.left = `${sourceRect.left.toFixed(4)}px`;
@@ -221,6 +229,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
     const promotedEntry = { assignment, element, placeholder, portal, originalElementStyle };
     state.promoted.push(promotedEntry);
+    state.resizeObserver?.observe(placeholder);
+    state.resizeObserver?.observe(element);
     updatePortalRect(promotedEntry);
     log('debug', 'promoted', {
       assignmentId: assignment.id,
