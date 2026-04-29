@@ -430,7 +430,8 @@ window.SCRATCHBONES_CONFIG = {
             "[data-stake-left-contribution-anchor]": { "backlit": false, "immune": false },
             "[data-stake-right-contribution-anchor]": { "backlit": false, "immune": false },
             "[data-stake-betting-choice-anchor]": { "backlit": false, "immune": false },
-            ".stakeTierBtnRow": { "backlit": true, "immune": false }
+            ".stakeTierBtnRow": { "backlit": true, "immune": false },
+            ".handWrap": { "backlit": false, "immune": false }
           },
           "selectorGroups": {
             "backlit": {
