@@ -272,6 +272,12 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
             maxAbsDy: normalizeThreshold(rawParity.maxAbsDy, 1),
             maxAbsDw: normalizeThreshold(rawParity.maxAbsDw, 1),
             maxAbsDh: normalizeThreshold(rawParity.maxAbsDh, 1),
+            maxElementMagnitude: normalizeThreshold(rawParity.maxElementMagnitude, 3),
+            maxGroupAverageMagnitude: normalizeThreshold(rawParity.maxGroupAverageMagnitude, 2),
+            maxGroupMagnitude: normalizeThreshold(rawParity.maxGroupMagnitude, 5),
+            requireTransformMatchFor: Array.isArray(rawParity.requireTransformMatchFor)
+              ? rawParity.requireTransformMatchFor.map((group) => String(group || '').trim().toLowerCase()).filter(Boolean)
+              : ['avatars', 'claim avatars'],
             transformMismatchPolicy,
           };
         })(),
