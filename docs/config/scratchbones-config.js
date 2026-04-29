@@ -1314,6 +1314,9 @@ window.SCRATCHBONES_CONFIG = {
         "cinematicTokenIconSrc": "./docs/assets/hud/coin_tinmoon.png",
         "coinFallbackTierId": "tinmoon",
         "claimClusterFontFamily": "\"KhymeryyanRomanLetters+Numbers\", serif",
+        "claimClusterFontSrc": "./docs/assets/hud/KhymeryyanRomanLetters+Numbers.otf.ttf",
+        "claimMultiplyGlyphScale": 0.5,
+        "claimMultiplyGlyphInvert": true,
         "stakeTierCoinSrc": {
           "sun": "./docs/assets/hud/coin_sun.png",
           "tinmoon": "./docs/assets/hud/coin_tinmoon.png",

@@ -358,6 +358,9 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       cinematicTokenIconSrc: rawGameConfig.assets?.hud?.cinematicTokenIconSrc ?? './docs/assets/hud/coin_tinmoon.png',
       stakeTierCoinSrc: rawGameConfig.assets?.hud?.stakeTierCoinSrc ?? { sun: './docs/assets/hud/coin_sun.png', tinmoon: './docs/assets/hud/coin_tinmoon.png', eclipse: './docs/assets/hud/coin_eclipse.png' },
       claimClusterFontFamily: rawGameConfig.assets?.hud?.claimClusterFontFamily ?? '"KhymeryyanRomanLetters+Numbers", serif',
+      claimClusterFontSrc: rawGameConfig.assets?.hud?.claimClusterFontSrc ?? './docs/assets/hud/KhymeryyanRomanLetters+Numbers.otf.ttf',
+      claimMultiplyGlyphScale: Number(rawGameConfig.assets?.hud?.claimMultiplyGlyphScale ?? 0.5),
+      claimMultiplyGlyphInvert: rawGameConfig.assets?.hud?.claimMultiplyGlyphInvert ?? true,
       audio: {
         enabled: rawGameConfig.assets?.audio?.enabled !== false,
         sfxVolume: rawGameConfig.assets?.audio?.sfxVolume ?? 0.92,

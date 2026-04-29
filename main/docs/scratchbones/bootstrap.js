@@ -3107,11 +3107,17 @@ import { createLayerManager } from './ui/layerManager.js';
       const claimRankGlyphHtml = claimRankGlyphSrc
         ? `<img class="claimRankGlyph" src="${claimRankGlyphSrc}" alt="Declared rank ${claimRankNumeric}" loading="lazy">`
         : claimRankText;
-      const claimMultiplyGlyphSrc = String(CONFIG.assets.claimMultiplyGlyphSrc || '').trim();
-      const claimMultiplyGlyphHtml = claimMultiplyGlyphSrc
-        ? `<img class="claimMultiplyGlyph" src="${claimMultiplyGlyphSrc}" alt="Multiply" loading="lazy">`
-        : '×';
       const claimClusterFontFamily = String(CONFIG.assets.claimClusterFontFamily || '"KhymeryyanRomanLetters+Numbers", serif').trim();
+      const claimClusterFontSrc = String(CONFIG.assets.claimClusterFontSrc || '').trim();
+      ensureClaimClusterFontFace({ family: claimClusterFontFamily, src: claimClusterFontSrc });
+      const claimMultiplyGlyphSrc = String(CONFIG.assets.claimMultiplyGlyphSrc || '').trim();
+      const claimMultiplyGlyphScaleRaw = Number(CONFIG.assets.claimMultiplyGlyphScale);
+      const claimMultiplyGlyphScale = Number.isFinite(claimMultiplyGlyphScaleRaw) && claimMultiplyGlyphScaleRaw > 0 ? claimMultiplyGlyphScaleRaw : 0.5;
+      const claimMultiplyGlyphInvert = CONFIG.assets.claimMultiplyGlyphInvert !== false;
+      const claimMultiplyGlyphStyle = `width:${(claimMultiplyGlyphScale * 100).toFixed(1)}%;height:${(claimMultiplyGlyphScale * 100).toFixed(1)}%;object-fit:contain;${claimMultiplyGlyphInvert ? 'filter:invert(1);' : ''}`;
+      const claimMultiplyGlyphHtml = claimMultiplyGlyphSrc
+        ? `<img class="claimMultiplyGlyph" src="${claimMultiplyGlyphSrc}" alt="Multiply" loading="lazy" style="${claimMultiplyGlyphStyle}">`
+        : '×';
       const claimHandCardsSource = cinematicRevealActive ? cinematicRevealPlay.cards : claimFocus.cards;
       const claimHandCardsHtml = (claimHandCardsSource?.length
         ? claimHandCardsSource.map((card) => {
@@ -3471,6 +3477,16 @@ import { createLayerManager } from './ui/layerManager.js';
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;');
+    }
+    function ensureClaimClusterFontFace({ family, src }) {
+      const trimmedFamily = String(family || '').trim().replace(/^['"]|['"]$/g, '');
+      const trimmedSrc = String(src || '').trim();
+      if (!trimmedFamily || !trimmedSrc) return;
+      if (document.getElementById('scratchbones-claim-cluster-font-face')) return;
+      const styleEl = document.createElement('style');
+      styleEl.id = 'scratchbones-claim-cluster-font-face';
+      styleEl.textContent = `@font-face{font-family:'${trimmedFamily.replaceAll("'", "\\'")}';src:url('${trimmedSrc.replaceAll("'", "\\'")}') format('truetype');font-display:swap;}`;
+      document.head.appendChild(styleEl);
     }
     // ── Portrait generation ────────────────────────────────
     let _portraitCosmetics = null;
