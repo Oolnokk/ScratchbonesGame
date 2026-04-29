@@ -1164,11 +1164,11 @@ window.SCRATCHBONES_CONFIG = {
         "bgmVolume": 0.48,
         "musicFadeMs": 280,
         "movement": {
-          "handToTable": { "url": "./docs/assets/audio/scratchbones/sfx/hand-to-table.mp3", "pitch": 1.0, "tempo": 1.0, "volume": 0.95 },
-          "tableToClaim": { "url": "./docs/assets/audio/scratchbones/sfx/table-to-claim.mp3", "pitch": 1.08, "tempo": 1.0, "volume": 0.9 },
-          "claimToHand": { "url": "./docs/assets/audio/scratchbones/sfx/claim-to-hand.mp3", "pitch": 0.92, "tempo": 0.98, "volume": 0.94 },
-          "opponentToTable": { "url": "./docs/assets/audio/scratchbones/sfx/opponent-to-table.mp3", "pitch": 0.88, "tempo": 0.94, "volume": 0.9 },
-          "fadeIn": { "url": "./docs/assets/audio/scratchbones/sfx/card-fade.mp3", "pitch": 1.0, "tempo": 1.02, "volume": 0.78 },
+          "handToTable": { "url": "./docs/assets/audio/sfx/tablesounds/boneclack1.m4a", "pitch": 1.0, "tempo": 1.0, "volume": 0.95 },
+          "tableToClaim": { "url": "./docs/assets/audio/sfx/tablesounds/boneclack1.m4a", "pitch": 1.08, "tempo": 1.0, "volume": 0.9 },
+          "claimToHand": { "url": "./docs/assets/audio/sfx/tablesounds/boneclack1.m4a", "pitch": 0.92, "tempo": 0.98, "volume": 0.94 },
+          "opponentToTable": { "url": "./docs/assets/audio/sfx/tablesounds/boneclack1.m4a", "pitch": 0.88, "tempo": 0.94, "volume": 0.9 },
+          "fadeIn": { "url": "./docs/assets/audio/sfx/tablesounds/boneclack1.m4a", "pitch": 1.0, "tempo": 1.02, "volume": 0.78 },
           "lerpComplete": {
             "url": "./docs/assets/audio/sfx/tablesounds/boneclack1.m4a",
             "pitch": 1.0,
@@ -1179,14 +1179,14 @@ window.SCRATCHBONES_CONFIG = {
           }
         },
         "challenge": {
-          "start": { "url": "./docs/assets/audio/scratchbones/sfx/challenge-start.mp3", "pitch": 1.0, "tempo": 1.0, "volume": 1.0 },
-          "end": { "url": "./docs/assets/audio/scratchbones/sfx/challenge-end.mp3", "pitch": 1.0, "tempo": 1.0, "volume": 1.0 }
+          "start": { "url": "./docs/assets/audio/sfx/tablesounds/boneclack1.m4a", "pitch": 1.0, "tempo": 1.0, "volume": 1.0 },
+          "end": { "url": "./docs/assets/audio/sfx/tablesounds/boneclack1.m4a", "pitch": 1.0, "tempo": 1.0, "volume": 1.0 }
         },
         "bgm": {
           "playlist": [
             "./docs/assets/audio/bgm/tankan_nocturne.mp3"
           ],
-          "challenge": "./docs/assets/audio/scratchbones/bgm/challenge-loop.mp3"
+          "challenge": ""
         }
       },
       "portrait": {
