@@ -2147,6 +2147,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const viewportLayout = layout.viewport || {};
       const handLayout = layout.hand || {};
       const handPanelLayout = handLayout.panel || {};
+      const handPanelVisible = handLayout.visible !== false;
       const tableViewLayout = layout.tableView || {};
       const backgroundLayout = layout.background || {};
       const lightingLayout = layout.lighting || {};
@@ -2389,6 +2390,7 @@ import { createLayerManager } from './ui/layerManager.js';
       app.classList.toggle('layout-hand-compact', compactEnabled);
       return {
         allowChallengeOverflow: layout.allowChallengeOverflow !== false,
+        handPanelVisible,
         tableView: {
           desiredHeightFrac: tableViewDesiredHeightFrac,
           minDominanceFrac: tableMinDominanceFrac,
@@ -3152,6 +3154,7 @@ import { createLayerManager } from './ui/layerManager.js';
             : (sharedContextBox && humanCanDecideChallenge
               ? renderChallengePrompt()
               : renderDeclareControls()))}
+        ${layoutPolicy?.handPanelVisible === false ? '' : `
         <div class="handWrap fit-target fit-0" data-proj-id="hand">
           <div class="handHeader">
             <div class="sectionTitle">Your hand</div>
@@ -3172,6 +3175,7 @@ import { createLayerManager } from './ui/layerManager.js';
             </div>
           </div>
         </div>
+        `}
         ${eventLogEnabled ? `
           <div class="eventLog fit-target fit-0" data-proj-id="log">
             <div class="sectionTitle">Recent events</div>
