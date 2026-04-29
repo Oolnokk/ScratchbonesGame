@@ -8,6 +8,31 @@ function normalizeStringList(value) {
   return value.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim());
 }
 
+
+function isTransformSensitivePromotionTarget(element) {
+  if (!element) return false;
+  const marker = [
+    element.id,
+    element.className,
+    element.getAttribute?.('data-ui-role'),
+    element.getAttribute?.('data-node-type'),
+    element.getAttribute?.('data-cinematic'),
+  ]
+    .filter((value) => typeof value === 'string' && value.trim())
+    .join(' ')
+    .toLowerCase();
+  return /avatar|portrait|cinematic|cutscene/.test(marker);
+}
+
+function canSafelyNormalizePromotedBox(element, computedStyle) {
+  if (!element || !computedStyle) return false;
+  if (isTransformSensitivePromotionTarget(element)) return false;
+  if (computedStyle.transform && computedStyle.transform !== 'none') return false;
+  const width = computedStyle.width;
+  const height = computedStyle.height;
+  if (!width || !height || width === 'auto' || height === 'auto') return false;
+  return true;
+}
 function snapshotManagedElementStyle(element) {
   if (!element) return null;
   return {
@@ -200,8 +225,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       placeholder.style.top = computed.top;
       placeholder.style.right = computed.right;
       placeholder.style.bottom = computed.bottom;
-      placeholder.style.transform = computed.transform === 'none' ? '' : computed.transform;
-      placeholder.style.transformOrigin = computed.transformOrigin;
+      placeholder.style.transform = '';
+      placeholder.style.transformOrigin = '';
       placeholder.style.pointerEvents = 'none';
     } else {
       placeholder.style.display = 'none';
@@ -214,7 +239,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     layerRoot.appendChild(portal);
     portal.appendChild(element);
 
-    if (normalizePromotedElementBox) {
+    const shouldNormalizeBox = normalizePromotedElementBox && canSafelyNormalizePromotedBox(element, computed);
+    if (shouldNormalizeBox) {
       element.style.margin = '0';
       element.style.width = '100%';
       element.style.height = '100%';
@@ -238,7 +264,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       selectorName: element.id ? `#${element.id}` : element.className,
       retainedTransform: element.style.transform || 'none',
       originalPosition: computed.position,
-      normalizePromotedElementBox,
+      normalizePromotedElementBox: shouldNormalizeBox,
       placementMode,
       placeholderRect: { width: layoutWidth, height: layoutHeight },
     });
