@@ -113,6 +113,8 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   defaultPreserveSpace: true,
   normalizePromotedElementBox: false,
   placementMode: 'app-local',
+  screenSpaceUseFixed: true,
+  screenSpaceRoundToPixels: false,
   layerOrder: ['above-lighting-shell', 'above-lighting-content'],
   assignments: [
     {
@@ -269,10 +271,19 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         ...(rawGameConfig.layout?.lighting || {}),
         candlelight: { ...(rawGameConfig.layout?.lighting?.candlelight || {}) },
       },
-      layerManager: {
-        ...DEFAULT_LAYER_MANAGER_CONFIG,
-        ...(rawGameConfig.layout?.layerManager || {}),
-      },
+      layerManager: (() => {
+        const rawLayerManager = rawGameConfig.layout?.layerManager || {};
+        const placementMode = String(rawLayerManager.placementMode || DEFAULT_LAYER_MANAGER_CONFIG.placementMode).toLowerCase() === 'screen-space'
+          ? 'screen-space'
+          : 'app-local';
+        return {
+          ...DEFAULT_LAYER_MANAGER_CONFIG,
+          ...rawLayerManager,
+          placementMode,
+          screenSpaceUseFixed: rawLayerManager.screenSpaceUseFixed !== false,
+          screenSpaceRoundToPixels: rawLayerManager.screenSpaceRoundToPixels === true,
+        };
+      })(),
     },
     uiText: {
       initialBanner: rawGameConfig.uiText?.initialBanner ?? 'Open a round by selecting one or more cards, then declare a number.',
