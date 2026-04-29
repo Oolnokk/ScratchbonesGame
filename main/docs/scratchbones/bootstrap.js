@@ -623,6 +623,23 @@ import { createLayerManager } from './ui/layerManager.js';
       if (a.wild && b.wild) return a.id - b.id;
       return a.rank - b.rank || a.id - b.id;
     }
+
+    function deckCompositionSnapshot() {
+      const rankCounts = {};
+      for (let rank = 1; rank <= RANK_COUNT; rank += 1) {
+        rankCounts[rank] = Math.max(0, Number(COPIES_PER_RANK) || 0);
+      }
+      const trickCounts = {
+        smuggle: Math.max(0, Number(TRICK_CARD_COUNTS.smuggle) || 0),
+        trap: Math.max(0, Number(TRICK_CARD_COUNTS.trap) || 0),
+        punish: Math.max(0, Number(TRICK_CARD_COUNTS.punish) || 0),
+      };
+      const wildCount = Math.max(0, Number(WILD_COUNT) || 0);
+      const totalCards = Object.values(rankCounts).reduce((sum, count) => sum + count, 0)
+        + wildCount
+        + Object.values(trickCounts).reduce((sum, count) => sum + count, 0);
+      return { totalCards, rankCounts, trickCounts, wildCount };
+    }
     function resolveSeatName(index, generatedName) {
       const configuredName = PLAYER_NAMES[index] || (index === 0 ? PLAYER_NAMES[0] : null);
       if (typeof configuredName === 'string' && configuredName.trim()) return configuredName;
@@ -778,6 +795,7 @@ import { createLayerManager } from './ui/layerManager.js';
       state.gameOver = false;
       state.winnerIndex = null;
       state.logs = [];
+      traceGameplay('deck-composition', deckCompositionSnapshot(), 'info');
       state.round = 1;
       state.roundConcessions.clear();
       state.stats = { successfulChallenges: 0, failedChallenges: 0, bluffsCaught: 0, safeTruths: 0, totalClears: 0, chipsMovedByChallenges: 0 };
