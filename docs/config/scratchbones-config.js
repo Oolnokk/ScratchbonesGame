@@ -125,7 +125,8 @@ window.SCRATCHBONES_CONFIG = {
         "heightPx": 96,
         "coinSizePx": 30,
         "spreadXPx": 84,
-        "spreadYPx": 28
+        "spreadYPx": 28,
+        "offsetYPx": 2
       },
       "challengeStake": {
         "tiers": [

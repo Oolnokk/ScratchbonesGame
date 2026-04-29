@@ -544,7 +544,7 @@ import { createLayerManager } from './ui/layerManager.js';
       return `<div class="seatCoinRow" style="display:flex;align-items:center;min-height:24px;padding-left:8px;margin:4px 0 2px;">${visibleIcons.join('')}${overflow > 0 ? `<span class="seatCoinOverflow" style="margin-left:6px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : ''}</div>`;
     }
 
-    function renderTablePoolPile(chipCount, pileSeedInput) {
+    function renderTablePoolPile(chipCount, pileSeedInput, anchorXPct, anchorYPct) {
       const breakdown = coinBreakdownForChips(chipCount);
       const pileMaxIcons = Math.max(1, Number(TABLE_POOL_DISPLAY.maxIcons) || 28);
       const pileWidthPx = Math.max(100, Number(TABLE_POOL_DISPLAY.widthPx) || 220);
@@ -552,6 +552,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const coinSizePx = Math.max(16, Number(TABLE_POOL_DISPLAY.coinSizePx) || 30);
       const spreadXPx = Math.max(10, Number(TABLE_POOL_DISPLAY.spreadXPx) || 84);
       const spreadYPx = Math.max(8, Number(TABLE_POOL_DISPLAY.spreadYPx) || 28);
+      const offsetYPx = Number(TABLE_POOL_DISPLAY.offsetYPx) || 2;
       if (!breakdown.length) return '';
       const icons = [];
       for (const tier of breakdown) {
@@ -571,7 +572,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return `<img class="tablePoolCoin" src="${escapeHtml(stakeCoinSrcForTier(tierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tierId)} coin" style="position:absolute;left:50%;top:50%;width:${coinSizePx}px;height:${coinSizePx}px;object-fit:contain;transform:translate(calc(-50% + ${xPx.toFixed(1)}px),calc(-50% + ${yPx.toFixed(1)}px)) rotate(${rotateDeg.toFixed(1)}deg);filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));z-index:${z};">`;
       }).join('');
       const overflowHtml = overflow > 0 ? `<span class="tablePoolOverflow" style="position:absolute;right:6px;bottom:2px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : '';
-      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" style="position:absolute;left:calc(var(--layout-claim-cluster-center-x,0.5) * 100%);top:calc((var(--layout-claim-cluster-center-y,0.54) * 100%) + (var(--layout-claim-cluster-height,48) * 0.5%) + 10px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
+      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" style="position:absolute;left:${(anchorXPct * 100).toFixed(3)}%;top:calc(${(anchorYPct * 100).toFixed(3)}% + ${offsetYPx.toFixed(1)}px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
     const layoutDiagnostics = createLayoutDiagnosticsState();
@@ -3211,6 +3212,9 @@ import { createLayerManager } from './ui/layerManager.js';
           }).join('')
         : '<div class="tiny">No claim yet.</div>');
       const claimClusterShellClass = claimClusterPolicy.transparentShells ? 'floatingTransparentShell' : '';
+      const claimHandBarLayout = claimClusterPolicy.elements.claimHandBar || { xPct: 0.50, yPct: 0.52, wPct: 0.42, hPct: 0.30 };
+      const tablePoolAnchorXPct = clampNumber(claimClusterPolicy.geometry.centerXPct, 0, 1);
+      const tablePoolAnchorYPct = clampNumber((claimClusterPolicy.geometry.centerYPct - (claimClusterPolicy.geometry.heightPctOfTableView / 2)) + ((claimHandBarLayout.yPct + (claimHandBarLayout.hPct / 2)) * claimClusterPolicy.geometry.heightPctOfTableView), 0, 1);
       const tableCardsHtml = latestPlay?.cards?.length
         ? (claimClusterEnabled
           ? `<div class="tiny">Claim cluster visualization active.</div>`
@@ -3390,7 +3394,7 @@ import { createLayerManager } from './ui/layerManager.js';
             </div>
             </div>
         ` : ''}
-        ${claimClusterEnabled ? renderTablePoolPile(state.tablePot, state.poolVisualSeed) : ''}
+        ${claimClusterEnabled ? renderTablePoolPile(state.tablePot, state.poolVisualSeed, tablePoolAnchorXPct, tablePoolAnchorYPct) : ''}
         ${showLegacyActionFocus ? `
           <div class="actionFocus fit-target fit-0">
             <div class="tiny">Legacy action focus mode enabled.</div>

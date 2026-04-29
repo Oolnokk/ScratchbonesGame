@@ -255,6 +255,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         coinSizePx: Math.max(16, Number(rawGameConfig.chips?.poolDisplay?.coinSizePx) || 30),
         spreadXPx: Math.max(10, Number(rawGameConfig.chips?.poolDisplay?.spreadXPx) || 84),
         spreadYPx: Math.max(8, Number(rawGameConfig.chips?.poolDisplay?.spreadYPx) || 28),
+        offsetYPx: Number(rawGameConfig.chips?.poolDisplay?.offsetYPx) || 2,
       },
       challengeStakeTiers: rawGameConfig.chips?.challengeStake?.tiers ?? [{ id: 'sun', value: 1 }, { id: 'tinmoon', value: 5 }, { id: 'eclipse', value: 20 }],
       challengeStakeAnimation: {
