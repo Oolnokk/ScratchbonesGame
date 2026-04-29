@@ -485,6 +485,7 @@ import { createLayerManager } from './ui/layerManager.js';
       startingChips: SCRATCHBONES_GAME.chips.startingChips,
       challengeBaseTransfer: SCRATCHBONES_GAME.chips.challengeBaseTransfer,
       concedeRoundChipLoss: SCRATCHBONES_GAME.chips.concedeRoundChipLoss,
+      walletDisplay: SCRATCHBONES_GAME.chips.walletDisplay || {},
       challengeStakeTiers: SCRATCHBONES_GAME.chips.challengeStakeTiers,
       challengeStakeAnimation: SCRATCHBONES_GAME.chips.challengeStakeAnimation,
       clearBonusBase: SCRATCHBONES_GAME.chips.clearBonusBase,
@@ -504,9 +505,39 @@ import { createLayerManager } from './ui/layerManager.js';
     const STAKE_TIER_BY_ID = Object.fromEntries(STAKE_TIERS.map((tier) => [tier.id, tier]));
     const STAKE_COIN_SRC = CONFIG.assets.stakeTierCoinSrc;
     const STAKE_COIN_FALLBACK_TIER_ID = String(CONFIG.assets.coinFallbackTierId);
+    const WALLET_TIERS = (Array.isArray(CONFIG.walletDisplay.tiers) ? CONFIG.walletDisplay.tiers : [])
+      .map((tier) => ({ id: String(tier?.id || ''), value: Number(tier?.value) || 0 }))
+      .filter((tier) => tier.id && tier.value > 0)
+      .sort((a, b) => b.value - a.value);
+    const MAX_WALLET_ICONS_PER_SEAT = Math.max(1, Number(CONFIG.walletDisplay.maxIconsPerSeat) || 18);
     function stakeCoinSrcForTier(tierId) {
       const fallback = STAKE_COIN_SRC[STAKE_COIN_FALLBACK_TIER_ID] || CONFIG.assets.cinematicTokenIconSrc;
       return STAKE_COIN_SRC[tierId] || fallback;
+    }
+    function coinBreakdownForChips(chipCount) {
+      const safeChipCount = Math.max(0, Number(chipCount) || 0);
+      if (!WALLET_TIERS.length) return [];
+      let remaining = safeChipCount;
+      const breakdown = [];
+      for (const tier of WALLET_TIERS) {
+        const count = Math.floor(remaining / tier.value);
+        if (count > 0) breakdown.push({ ...tier, count });
+        remaining -= count * tier.value;
+      }
+      return breakdown;
+    }
+    function renderSeatCoinRow(player) {
+      const breakdown = coinBreakdownForChips(player?.chips);
+      if (!breakdown.length) return '<div class="seatCoinRow seatCoinRowEmpty" aria-hidden="true" style="min-height:20px;"></div>';
+      const icons = [];
+      for (const tier of breakdown) {
+        for (let index = 0; index < tier.count; index += 1) {
+          icons.push(`<img class="seatCoinIcon" style="width:24px;height:24px;object-fit:contain;margin-left:-8px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));" src="${escapeHtml(stakeCoinSrcForTier(tier.id))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tier.id)} coin">`);
+        }
+      }
+      const overflow = Math.max(0, icons.length - MAX_WALLET_ICONS_PER_SEAT);
+      const visibleIcons = overflow > 0 ? icons.slice(0, MAX_WALLET_ICONS_PER_SEAT) : icons;
+      return `<div class="seatCoinRow" style="display:flex;align-items:center;min-height:24px;padding-left:8px;margin:4px 0 2px;">${visibleIcons.join('')}${overflow > 0 ? `<span class="seatCoinOverflow" style="margin-left:6px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : ''}</div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
     const layoutDiagnostics = createLayoutDiagnosticsState();
@@ -3237,6 +3268,7 @@ import { createLayerManager } from './ui/layerManager.js';
               <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
                 <div class="seatName">${seatLabel(p)}</div>
                 <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
+                ${renderSeatCoinRow(p)}
                 ${p.seed ? `<div class="seatSeed">${p.seed}</div>` : ''}
                 ${p.personality ? `<div class="seatTags">${personalityTags(p.personality)}</div>` : ''}
                 <div class="seatStatus">${p.lastAction}</div>
@@ -3252,13 +3284,13 @@ import { createLayerManager } from './ui/layerManager.js';
           <div class="humanSeatCard ${player.eliminated ? 'eliminated' : ''}" data-proj-id="human-seat">
             <div class="seatInfo" data-proj-id="info-human" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
               <div class="seatName">${seatLabel(player)}</div>
-              <div class="seatMeta">Cards ${player.hand.length} · Clears ${player.clears}</div>
+              <div class="seatMeta">Cards ${player.hand.length} · Chips ${player.chips} · Clears ${player.clears}</div>
+              ${renderSeatCoinRow(player)}
               <div class="seatStatus">${player.lastAction}</div>
             </div>
             <div class="seatAvatarBox" data-proj-id="avatar-human">
               <canvas class="seatPortrait" data-seat-id="0" width="220" height="220"></canvas>
             </div>
-            <div class="humanSeatChipBadge">Chips ${player.chips}</div>
           </div>
         </div>
         ${(turnSpotlightEnabled && turnSpotlightEmbedded) ? `

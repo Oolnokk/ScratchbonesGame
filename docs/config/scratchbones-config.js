@@ -111,6 +111,14 @@ window.SCRATCHBONES_CONFIG = {
       "starting": 30,
       "challengeBaseTransfer": 1,
       "concedeRoundChipLoss": 1,
+      "walletDisplay": {
+        "tiers": [
+          { "id": "sun", "value": 1 },
+          { "id": "tinmoon", "value": 5 },
+          { "id": "eclipse", "value": 20 }
+        ],
+        "maxIconsPerSeat": 18
+      },
       "challengeStake": {
         "tiers": [
           { "id": "sun", "value": 1 },
