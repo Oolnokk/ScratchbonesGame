@@ -239,13 +239,15 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     layerRoot.appendChild(portal);
     portal.appendChild(element);
 
+    const isTransformSensitive = isTransformSensitivePromotionTarget(element);
     const shouldNormalizeBox = normalizePromotedElementBox && canSafelyNormalizePromotedBox(element, computed);
     if (shouldNormalizeBox) {
       element.style.margin = '0';
       element.style.width = '100%';
       element.style.height = '100%';
     }
-    if (computed.position === 'absolute' || computed.position === 'fixed') {
+    const shouldReanchorAbsolute = !isTransformSensitive && (computed.position === 'absolute' || computed.position === 'fixed');
+    if (shouldReanchorAbsolute) {
       element.style.position = 'absolute';
       element.style.left = '0';
       element.style.top = '0';
@@ -265,6 +267,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       retainedTransform: element.style.transform || 'none',
       originalPosition: computed.position,
       normalizePromotedElementBox: shouldNormalizeBox,
+      transformSensitive: isTransformSensitive,
+      reanchoredAbsolutePosition: shouldReanchorAbsolute,
       placementMode,
     });
     return true;
