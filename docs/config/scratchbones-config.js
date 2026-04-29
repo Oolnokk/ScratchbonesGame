@@ -578,8 +578,6 @@ window.SCRATCHBONES_CONFIG = {
             "id": "ui-shell-over-lighting",
             "layer": "above-lighting",
             "selectors": [
-              "#aiSidebar",
-              ".humanSeatZone",
               ".seatHandPreview",
               ".seatHandCard",
               ".seatHandCard img",
