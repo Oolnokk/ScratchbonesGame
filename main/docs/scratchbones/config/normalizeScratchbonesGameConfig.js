@@ -227,6 +227,11 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       copiesPerRank: rawGameConfig.deck?.copiesPerRank ?? 4,
       handSize: rawGameConfig.deck?.handSize ?? 10,
       wildCount: rawGameConfig.deck?.wildCount ?? 10,
+      trickCardCounts: {
+        smuggle: Math.max(0, Number(rawGameConfig.deck?.trickCardCounts?.smuggle) || 0),
+        trap: Math.max(0, Number(rawGameConfig.deck?.trickCardCounts?.trap) || 0),
+        punish: Math.max(0, Number(rawGameConfig.deck?.trickCardCounts?.punish) || 0),
+      },
       playerCount: rawGameConfig.deck?.playerCount ?? 4,
       humanNames: rawGameConfig.deck?.humanNames ?? ['You'],
     },
@@ -359,6 +364,16 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       flippedCardFallbackSrc: rawGameConfig.assets?.cards?.flipped?.fallbackSrc ?? '2DScratchBoneFlipped.png',
       rankCardTemplateSrc: rawGameConfig.assets?.cards?.rankTemplate?.src ?? '2DScratchbone{rank}.png',
       rankCardTemplateFallbackSrc: rawGameConfig.assets?.cards?.rankTemplate?.fallbackSrc ?? '2DScratchbones{rank}.png',
+      trickCardSrc: {
+        smuggle: rawGameConfig.assets?.cards?.trick?.smuggle?.src ?? '2DScratchboneSmuggle.png',
+        trap: rawGameConfig.assets?.cards?.trick?.trap?.src ?? '2DScratchboneTrap.png',
+        punish: rawGameConfig.assets?.cards?.trick?.punish?.src ?? '2DScratchbonePunish.png',
+      },
+      trickCardFallbackSrc: {
+        smuggle: rawGameConfig.assets?.cards?.trick?.smuggle?.fallbackSrc ?? '2DScratchboneSmuggle.png',
+        trap: rawGameConfig.assets?.cards?.trick?.trap?.fallbackSrc ?? '2DScratchboneTrap.png',
+        punish: rawGameConfig.assets?.cards?.trick?.punish?.fallbackSrc ?? '2DScratchbonePunish.png',
+      },
       claimRankGlyphTemplateSrc: rawGameConfig.assets?.symbols?.claimRankGlyphTemplateSrc ?? './docs/assets/symbols/boneglyph{rank}.png',
       claimMultiplyGlyphSrc: rawGameConfig.assets?.symbols?.claimMultiplyGlyphSrc ?? './docs/assets/symbols/multglyph.png',
       cinematicTokenIconSrc: rawGameConfig.assets?.hud?.cinematicTokenIconSrc ?? './docs/assets/hud/coin_tinmoon.png',
