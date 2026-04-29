@@ -107,6 +107,7 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   enabled: true,
   hostZIndex: 45,
   defaultPreserveSpace: true,
+  normalizePromotedElementBox: false,
   assignments: [
     {
       id: 'ui-text-over-lighting',

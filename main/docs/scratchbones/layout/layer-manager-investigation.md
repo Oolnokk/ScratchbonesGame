@@ -18,21 +18,36 @@ Date: 2026-04-29
 5. Promoted element style is then mutated: margin reset, `width/height = 100%`, and position normalization for `absolute`/`fixed` entries.
 
 ## Findings
-### 1) App-level authored transform is correctly compensated
-`updatePortalRect()` divides viewport-space placeholder values by app transform scale, which is necessary because portal coordinates are app-local and app is transformed. This part is mathematically consistent.
+### 1) App-level authored transform compensation is not the primary fault
+`updatePortalRect()` remaps viewport-space placeholder geometry back into app-local coordinates via `scaleX/scaleY`. For authored mode (`transform: translate(...) scale(...)` on `#app`), this conversion is mathematically correct for left/top/width/height.
 
-### 2) Promotion mutates containing-block semantics
-Before this change, promoted elements with computed `position: absolute|fixed` were forced to `position: relative` with `left/top=0` in the portal. That can alter descendant layout and sizing behavior (especially if children rely on absolute positioning against the promoted element’s containing block behavior).
+### 2) Promotion is inherently lossy for context-dependent layout
+Promoted nodes are physically reparented into `#uiLayerManagerHost`, so they lose original ancestor context (containing block relationships, inherited layout constraints, stacking/transform context). Placeholder geometry restores outer placement, but not all internal layout semantics.
 
-### 3) Promotion drops ancestor positioning context by design
-A promoted node exits its original DOM chain and loses inherited containing context from non-promoted ancestors. Placeholder geometry preserves outer box placement, but internal layout may still diverge if descendants relied on upstream positioning context.
+### 3) Large post-promotion scale drift is amplified by forced box normalization
+The previous default always set promoted elements to:
+- `margin: 0`
+- `width: 100%`
+- `height: 100%`
 
-### 4) Scale drift can be compounded by width/height coercion
-Forced `width/height: 100%` is useful for many cards/panels, but if original sizing depended on intrinsic or content-driven sizing, post-promotion scale can deviate.
+That is convenient for some components, but it can significantly alter sizing for intrinsic/content-driven elements and for elements whose dimensions were previously controlled by non-portal ancestors. This is a major contributor to the observed pre/post discrepancy.
+
+### 4) Absolute/fixed normalization remains necessary but is not sufficient
+Keeping `absolute|fixed` promoted elements pinned at `left/top=0` in the portal is still needed to avoid immediate positional jumps, but this does not solve semantic drift caused by reparenting and forced box fills.
 
 ## Change made during investigation
-- Normalized promoted `absolute|fixed` elements to `position: absolute` (not `relative`) inside the portal so containing-block behavior is less distorted.
-- Added richer promotion debug payload (`originalPosition`, placeholder width/height) to improve root-cause visibility in debug streams.
+- Added a new layer-manager config flag: `normalizePromotedElementBox` (default `false`).
+- Promotion now only forces `margin:0; width:100%; height:100%` when that flag is explicitly enabled.
+- Kept existing absolute/fixed normalization and added debug payload field `normalizePromotedElementBox` so traces clearly show when coercive sizing is active.
+- Added post-placement transform composition in the portal (`translate + scale`) based on live `placeholderRect` vs promoted `elementRect` deltas. This compensates for transform/context drift introduced by reparenting, instead of assuming direct coordinate remap is sufficient in all cases.
+
+## Interim conclusion
+There is a fundamental tradeoff in the current promotion approach: DOM reparenting will always risk semantic drift for elements that rely on ancestor layout context. The previous always-on forced sizing made this much worse. The new default removes that forced coercion so promotion behavior is closer to authored/original rendering by default.
+
+## Notes on regular UI + aspect ratio/resolution sync
+- `#app` authored scaling remains a separate transform application (`translate + uniform scale`), while promoted nodes can also carry their own local transforms.
+- The new compensation step explicitly composes those effects at the portal level, reducing mismatch when aspect ratio or resolution causes subtle scale/position drift.
+- Responsive mode and authored mode both flow through `updatePortalRect()` because rects are taken from live DOM metrics; this keeps sync tied to real rendered geometry, not assumptions.
 
 ## Remaining risk areas to validate in runtime
 - Nodes that intentionally depended on fixed positioning semantics.
