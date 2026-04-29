@@ -477,6 +477,7 @@ import { createLayerManager } from './ui/layerManager.js';
     const AI_CONFIG = SCRATCHBONES_GAME.ai || {};
     const START_HAND_SIZE = SCRATCHBONES_GAME.deck.handSize; // Used by: dealing fresh hands at match start and after a clear.
     const WILD_COUNT = SCRATCHBONES_GAME.deck.wildCount; // Used by: deck construction and bluff validation.
+    const TRICK_CARD_COUNTS = SCRATCHBONES_GAME.deck.trickCardCounts || {};
     const RANK_COUNT = SCRATCHBONES_GAME.deck.rankCount;
     const COPIES_PER_RANK = SCRATCHBONES_GAME.deck.copiesPerRank;
     const PLAYER_NAMES = SCRATCHBONES_GAME.deck.humanNames; // Optional authored names; Mao-ao generation is the fallback for any seat.
@@ -571,6 +572,16 @@ import { createLayerManager } from './ui/layerManager.js';
         }
       }
       for (let i = 0; i < WILD_COUNT; i++) deck.push({ id: id++, rank: null, wild: true });
+      const trickSpecs = [
+        { key: 'smuggle', count: Number(TRICK_CARD_COUNTS.smuggle) || 0 },
+        { key: 'trap', count: Number(TRICK_CARD_COUNTS.trap) || 0 },
+        { key: 'punish', count: Number(TRICK_CARD_COUNTS.punish) || 0 },
+      ];
+      for (const spec of trickSpecs) {
+        for (let i = 0; i < Math.max(0, spec.count); i++) {
+          deck.push({ id: id++, rank: null, wild: spec.key === 'trap', trickType: spec.key });
+        }
+      }
       return shuffle(deck);
     }
     function sortCards(a, b) {
@@ -1093,6 +1104,14 @@ import { createLayerManager } from './ui/layerManager.js';
       SCRATCHBONES_AUDIO.playChallengeStart();
       SCRATCHBONES_AUDIO.startChallengeMusic();
       addLog(`${seatLabel(challengerIndex)} challenges ${seatLabel(challengedIndex)}.`);
+      const challenger = state.players[challengerIndex];
+      const punishCardIndex = challenger.hand.findIndex((card) => card.trickType === 'punish');
+      challenger.trickPunishActive = false;
+      if (punishCardIndex >= 0) {
+        challenger.hand.splice(punishCardIndex, 1);
+        challenger.trickPunishActive = true;
+        addLog(`${seatLabel(challengerIndex)} primes a Punish Bone before betting.`);
+      }
       state.betting = {
         play,
         challengerId: challengerIndex,
@@ -1500,9 +1519,11 @@ import { createLayerManager } from './ui/layerManager.js';
           addLog(`Challenge succeeds. ${seatLabel(loser)} was bluffing.`);
           loser.hand.push(...collectPileCards());
           loser.hand.sort(sortCards);
+          applyPunishTransferOnSuccessfulChallenge(play, challengerId, challengedId);
         } else {
           state.stats.failedChallenges += 1;
           addLog(`Challenge fails. ${state.players[challengedId].name} was truthful.`);
+          applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId);
         }
         addLog(`${seatLabel(winner)} wins ${netGain} net chip${netGain === 1 ? '' : 's'} from the challenge.`);
         state.betting = null;
@@ -1545,6 +1566,8 @@ import { createLayerManager } from './ui/layerManager.js';
       state.challengeWindow = null;
       traceGameplay('challenge.no-challenge-accepted', { lastPlayerIndex, declaredRank: state.declaredRank });
       showClaimGlow('green', 1600, () => {
+        const lastPlay = state.pile[state.pile.length - 1];
+        if (lastPlay && lastPlay.playerIndex === lastPlayerIndex) applySmuggleTransferOnPassedClaim(lastPlay);
         if (state.gameOver) return;
         if (checkForClearAndRedeal(lastPlayerIndex)) return;
         if (maybeEndRoundFromConcessions()) return;
@@ -1951,6 +1974,43 @@ import { createLayerManager } from './ui/layerManager.js';
     function humanRaiseTierSelected(tierId) {
       resolveBetAction(0, { type: 'raise-tier', tierId });
     }
+    function transferCardsBetweenHands(fromId, toId, limit) {
+      const from = state.players[fromId];
+      const to = state.players[toId];
+      if (!from || !to) return [];
+      const cap = Math.max(0, Number(limit) || 0);
+      if (!cap || !from.hand.length) return [];
+      const moved = from.hand.slice(0, cap);
+      from.hand = from.hand.slice(moved.length);
+      to.hand.push(...moved);
+      from.hand.sort(sortCards);
+      to.hand.sort(sortCards);
+      return moved;
+    }
+    function applySmuggleTransferOnPassedClaim(play) {
+      if (!play.cards.some((card) => card.trickType === 'smuggle')) return;
+      const movedCards = play.cards.filter((card) => card.trickType !== 'smuggle');
+      if (!movedCards.length) return;
+      const targetId = alivePlayers().map((player) => player.id).find((id) => id !== play.playerIndex);
+      if (targetId === undefined) return;
+      state.players[targetId].hand.push(...movedCards);
+      state.players[targetId].hand.sort(sortCards);
+      play.cards = play.cards.filter((card) => card.trickType === 'smuggle');
+      addLog(`Smuggle Bone triggers: ${seatLabel(play.playerIndex)} moves ${movedCards.length} claimed card${movedCards.length === 1 ? '' : 's'} into ${seatLabel(targetId)}'s hand.`);
+    }
+    function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
+      if (!play.cards.some((card) => card.trickType === 'trap')) return;
+      const moved = transferCardsBetweenHands(challengedId, challengerId, play.cards.length);
+      if (!moved.length) return;
+      addLog(`Trap Bone triggers: ${seatLabel(challengedId)} transfers ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
+    }
+    function applyPunishTransferOnSuccessfulChallenge(play, challengerId, challengedId) {
+      if (!state.players[challengerId]?.trickPunishActive) return;
+      state.players[challengerId].trickPunishActive = false;
+      const moved = transferCardsBetweenHands(challengerId, challengedId, play.cards.length);
+      if (!moved.length) return;
+      addLog(`Punish Bone triggers: ${seatLabel(challengerId)} gives ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengedId)}.`);
+    }
     function cardLabel(card) {
       return card.wild ? 'Wild' : String(card.rank);
     }
@@ -1974,6 +2034,12 @@ import { createLayerManager } from './ui/layerManager.js';
         return {
           src: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.flippedCardSrc),
           fallbackSrc: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.flippedCardFallbackSrc),
+        };
+      }
+      if (card?.trickType && SCRATCHBONES_GAME.assets?.trickCardSrc?.[card.trickType]) {
+        return {
+          src: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.trickCardSrc[card.trickType]),
+          fallbackSrc: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, SCRATCHBONES_GAME.assets.trickCardFallbackSrc?.[card.trickType] || SCRATCHBONES_GAME.assets.trickCardSrc[card.trickType]),
         };
       }
       if (card?.wild) {
