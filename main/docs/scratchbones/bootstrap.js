@@ -321,6 +321,15 @@ import { createLayerManager } from './ui/layerManager.js';
         },
       }, null, 2);
     }
+    function normalizeErrorForLogging(error) {
+      if (error instanceof Error) return { name: error.name, message: error.message, stack: error.stack || null };
+      if (error && typeof error === 'object') {
+        const normalized = {};
+        for (const [key, value] of Object.entries(error)) normalized[key] = value;
+        return Object.keys(normalized).length ? normalized : { value: String(error) };
+      }
+      return { value: String(error) };
+    }
     async function copyTextToClipboard(payload) {
       const text = String(payload || '');
       if (navigator.clipboard?.writeText) {
@@ -328,7 +337,7 @@ import { createLayerManager } from './ui/layerManager.js';
           await navigator.clipboard.writeText(text);
           return;
         } catch (error) {
-          console.warn('Clipboard API copy failed; falling back to execCommand copy.', error);
+          console.warn('Clipboard API copy failed; falling back to execCommand copy.', normalizeErrorForLogging(error));
         }
       }
       const ta = document.createElement('textarea');
@@ -4386,7 +4395,7 @@ import { createLayerManager } from './ui/layerManager.js';
           updateLayerPreviewButton();
           updateEditorStatus('Captured original + layered previews and copied combined screen-space export.');
         } catch (error) {
-          console.error('Dual-mode screen-space export failed.', error);
+          console.error('Dual-mode screen-space export failed.', normalizeErrorForLogging(error));
           updateLayerPreviewButton();
           updateEditorStatus('Dual-mode export failed. Check console for details.');
         }
