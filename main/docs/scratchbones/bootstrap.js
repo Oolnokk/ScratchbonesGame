@@ -4,7 +4,6 @@ import { applyAuthoredLayoutMode as applyAuthoredLayoutModeModule } from './layo
 import { compareRenderedScreenSpaceModes, createLayoutDiagnosticsState, resetLayoutDiagnosticsState, summarizeRenderedScreenSpaceDrift, summarizeRenderedScreenSpaceDriftByPromotedSubtree, updateLayoutDiagnosticsState } from './layout/diagnostics.js';
 import { createScratchbonesAudio } from './fx/audio.js';
 import { initDebugPanelInterceptor } from './debug/panel.js';
-import { RECENT_CHANGE_LABEL } from './debug/metadata.js';
 import { initCandleLight } from './fx/candlelight.js';
 import { createLayerManager } from './ui/layerManager.js';
 
@@ -3152,7 +3151,7 @@ import { createLayerManager } from './ui/layerManager.js';
         </div>
       `;
       const renderChallengePrompt = () => `
-        <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt">
+        <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
           <div class="challengeBoxHeader">
             <div class="sectionTitle" style="color:var(--danger);">Challenge window</div>
           </div>
@@ -3229,7 +3228,7 @@ import { createLayerManager } from './ui/layerManager.js';
           <div class="sectionTitle" style="padding:6px 10px 2px;color:var(--accent-2);">Table</div>
           ${state.players.slice(1).map(p => `
             <div class="aiSeat ${p.eliminated ? 'eliminated' : ''}" data-proj-id="seat-${p.id}">
-              <div class="seatInfo" data-proj-id="info-${p.id}">
+              <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
                 <div class="seatName">${seatLabel(p)}</div>
                 <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
                 ${p.seed ? `<div class="seatSeed">${p.seed}</div>` : ''}
@@ -3245,7 +3244,7 @@ import { createLayerManager } from './ui/layerManager.js';
         </div>
         <div class="humanSeatZone fit-target fit-0" data-proj-id="human-seat-zone">
           <div class="humanSeatCard ${player.eliminated ? 'eliminated' : ''}" data-proj-id="human-seat">
-            <div class="seatInfo" data-proj-id="info-human">
+            <div class="seatInfo" data-proj-id="info-human" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
               <div class="seatName">${seatLabel(player)}</div>
               <div class="seatMeta">Cards ${player.hand.length} · Clears ${player.clears}</div>
               <div class="seatStatus">${player.lastAction}</div>
@@ -3309,7 +3308,6 @@ import { createLayerManager } from './ui/layerManager.js';
         ` : ''}
         <details class="debug">
           <summary>Debug tools</summary>
-          <div class="tiny" style="margin-top:8px;">Recent change: ${RECENT_CHANGE_LABEL}</div>
           <pre id="debugSnapshotData">${DEBUG_ENABLED ? escapeHtml(JSON.stringify(debugSnapshot(), null, 2)) : 'Debug disabled.'}</pre>
         </details>
         ${(clusterCinematicActive && (cinematicPhase === 'reveal' || cinematicPhase === 'fold'))
@@ -3461,7 +3459,6 @@ import { createLayerManager } from './ui/layerManager.js';
           debugKeys: {
             bettingUiState: uiDebugState.bettingUiDebugKey,
           },
-          changelogLabel: RECENT_CHANGE_LABEL,
         },
       };
     }
