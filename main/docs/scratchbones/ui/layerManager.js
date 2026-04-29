@@ -14,6 +14,7 @@ function isTransformSensitivePromotionTarget(element) {
   const marker = [
     element.id,
     element.className,
+    element.getAttribute?.('data-proj-id'),
     element.getAttribute?.('data-ui-role'),
     element.getAttribute?.('data-node-type'),
     element.getAttribute?.('data-cinematic'),
