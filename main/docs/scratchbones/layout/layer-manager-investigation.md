@@ -10,15 +10,12 @@ Date: 2026-04-29
 
 ## Variable path walkthrough (authoritative)
 1. Raw config is normalized by `normalizeScratchbonesGameConfig()`.
-   - `layout.layerManager.placementMode` is coerced to either `"app-local"` or `"screen-space"`.
-   - Invalid values fall back to `"app-local"`.
+   - `layout.layerManager.placementMode` is normalized, but parity-test layer promotion now runs in forced `"screen-space"` mode.
 2. `createLayerManager({ gameConfig, debugLog })` reads:
    - `placementMode`
    - `normalizePromotedElementBox`
 3. During `sync(app)` in `ui/layerManager.js`, promoted nodes are moved under per-layer portal roots.
-4. `updatePortalRect()` selects coordinate mechanics by placement mode:
-   - `app-local`: maps placeholder viewport rect back into app-local coordinates using app rect + authored-layout scale.
-   - `screen-space`: copies viewport rect directly to `position: fixed` portal geometry.
+4. `updatePortalRect()` now always copies placeholder viewport geometry directly to `position: fixed` portal fields (`left/top/width/height`).
 5. Render/export path in `bootstrap.js`:
    - Single-mode export (`buildRenderedTransformsExport`) captures whichever preview mode is currently active.
    - Dual-mode export (`buildRenderedTransformsDualModeExport`) deterministically captures both `original` and `layered` by temporarily toggling preview state in a fixed order, awaiting a render frame each time, then restoring prior UI state.
@@ -31,13 +28,11 @@ Date: 2026-04-29
 
 ## Current behavior corrections
 
-### Placement is no longer app-local-only
-Outdated assumption: promotion placement always remaps into app-local coordinates.
-
+### Placement is now fixed to screen-space in this parity-test path
 Current behavior:
-- `placementMode: "app-local"` keeps legacy inverse-transform mapping behavior.
-- `placementMode: "screen-space"` places portals in viewport/screen coordinates (`position: fixed`) and uses placeholder `getBoundingClientRect()` directly.
-- In screen-space mode, host + layer roots remain pointer-pass-through (`pointer-events:none`) while portals stay interactive (`pointer-events:auto`).
+- Promotion host/layer roots/portals use `position: fixed`.
+- Portal geometry is derived from placeholder `getBoundingClientRect()` only.
+- App-local inverse mapping is disabled for this path.
 
 ### Export no longer requires manual mode toggling for complete comparison
 Outdated assumption: users must manually toggle preview modes and export each mode separately.
@@ -48,7 +43,7 @@ Current behavior:
 - Manual single-mode export still exists for spot checks, but it is not required for drift baselining.
 
 ## Screen-space placement mechanics (detailed)
-When `placementMode` is `"screen-space"`:
+In the active parity-test path:
 - Host is appended to `document.body` instead of `#app`.
 - Host/layer roots/portals use `position: fixed` + `overflow: visible`.
 - Portal rects are set directly from placeholder viewport rect fields (`left`, `top`, `width`, `height`).
@@ -59,9 +54,8 @@ Practical effect:
 
 ## Deterministic dual-mode export workflow (recommended)
 1. In projection UI, run the dual-mode rendered transforms export action (the one that emits `projectionPreviewMode: "both"`).
-2. Keep `placementMode` fixed for the run you are testing (for example `"app-local"` or `"screen-space"`).
-3. Re-run dual-mode export after changing `placementMode` to compare strategy impact.
-4. Compare `layout.renderedScreenSpaceDelta` / `layout.renderedScreenSpaceTopDrift` between the two exports.
+2. Re-run dual-mode export after code/config changes.
+3. Compare `layout.renderedScreenSpaceDelta` / `layout.renderedScreenSpaceTopDrift` between exports.
 
 Notes:
 - Dual-mode export compares `original` vs `layered` within one deterministic capture session.
@@ -94,8 +88,6 @@ Ranked summary for quick triage:
 Use this as the first stop to find the worst offenders before drilling into raw deltas.
 
 ## Updated conclusion
-The core tradeoff remains: DOM reparenting can still be semantically lossy for context-dependent layout. However, two major correctness upgrades now materially improve reliability:
-1. Configurable placement strategy (`app-local` vs `screen-space`).
-2. Deterministic built-in dual-mode export (no manual toggle choreography required for baseline drift capture).
+The core tradeoff remains: DOM reparenting can still be semantically lossy for context-dependent layout. Reliability in this test path now comes from fixed screen-space placement plus deterministic dual-mode export capture.
 
 `normalizePromotedElementBox` remains opt-in and should only be enabled when intentional `100%` fill coercion is desired for promoted nodes.
