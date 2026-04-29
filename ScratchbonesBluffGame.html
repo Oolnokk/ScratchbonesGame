@@ -133,7 +133,7 @@
       0% { transform: translateX(-0.7%); }
       100% { transform: translateX(0.7%); }
     }
-    .topbar, .controls, .handWrap, .eventLog {
+    .topbar, .controls, .eventLog {
       background: var(--panel);
       border: 1px solid rgba(255,255,255,0.08);
       box-shadow: var(--shadow);
@@ -760,6 +760,11 @@
       display: none !important;
     }
     .handWrap {
+      background: var(--layout-hand-panel-background, var(--panel));
+      border: var(--layout-hand-panel-border, 1px solid rgba(255,255,255,0.08));
+      outline: var(--layout-hand-panel-outline, none);
+      box-shadow: var(--layout-hand-panel-shadow, var(--shadow));
+      border-radius: var(--radius);
       padding: calc(var(--layout-hand-wrap-padding-y) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale))
                calc(var(--layout-hand-wrap-padding-x) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
       display: grid;
