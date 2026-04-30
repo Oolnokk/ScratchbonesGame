@@ -782,13 +782,17 @@ window.SCRATCHBONES_CONFIG = {
               ".cinematic-vs-line",
               ".cin-result-copy"
             ],
-            "preserveSpace": true
+            "preserveSpace": true,
+            "keepOriginal": true,
+            "promotedOpacity": 0.9
           },
           {
             "id": "ui-avatars-over-lighting",
             "layer": "above-lighting-content",
             "selectors": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar", ".actorAvatarFloat", ".reactorAvatarFloat"],
-            "preserveSpace": true
+            "preserveSpace": true,
+            "keepOriginal": true,
+            "promotedOpacity": 0.72
           },
           {
             "id": "ui-shell-over-lighting",
@@ -822,7 +826,9 @@ window.SCRATCHBONES_CONFIG = {
               ".rightContributionAnchor",
               ".bettingChoiceAnchor"
             ],
-            "preserveSpace": true
+            "preserveSpace": true,
+            "keepOriginal": true,
+            "promotedOpacity": 0.25
           }
         ]
       },

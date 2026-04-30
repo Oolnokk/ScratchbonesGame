@@ -4826,6 +4826,13 @@ import { createLayerManager } from './ui/layerManager.js';
       const varsByProjId = projectionMapConfig.varsByProjId || projectionMapConfig.relatedVarsByProjId || {};
       const sharedVars = Array.isArray(projectionMapConfig.sharedVars) ? projectionMapConfig.sharedVars : [];
       const fallbackVars = Array.isArray(projectionMapConfig.fallbackVars) ? projectionMapConfig.fallbackVars : [];
+      const layerManagerAssignments = Array.isArray(SCRATCHBONES_GAME.layout?.layerManager?.assignments) ? SCRATCHBONES_GAME.layout.layerManager.assignments : [];
+      const layerPreviewAssignments = [
+        { id: 'ui-text-over-lighting', label: 'Text/symbols over lighting' },
+        { id: 'ui-avatars-over-lighting', label: 'Avatars over lighting' },
+        { id: 'ui-shell-over-lighting', label: 'Back panels over lighting' },
+      ];
+      const findLayerAssignment = (assignmentId) => layerManagerAssignments.find((entry) => String(entry?.id || '') === assignmentId) || null;
       const matchesProjPattern = (pattern, projId) => (typeof pattern === 'string' && pattern.endsWith('*'))
         ? projId.startsWith(pattern.slice(0, -1))
         : pattern === projId;
@@ -5084,6 +5091,13 @@ import { createLayerManager } from './ui/layerManager.js';
       const selectorVarsByProjId = projectionMapConfig.selectorVarsByProjId || {};
       const sharedVars = Array.isArray(projectionMapConfig.sharedVars) ? projectionMapConfig.sharedVars : [];
       const fallbackVars = Array.isArray(projectionMapConfig.fallbackVars) ? projectionMapConfig.fallbackVars : [];
+      const layerManagerAssignments = Array.isArray(SCRATCHBONES_GAME.layout?.layerManager?.assignments) ? SCRATCHBONES_GAME.layout.layerManager.assignments : [];
+      const layerPreviewAssignments = [
+        { id: 'ui-text-over-lighting', label: 'Text/symbols over lighting' },
+        { id: 'ui-avatars-over-lighting', label: 'Avatars over lighting' },
+        { id: 'ui-shell-over-lighting', label: 'Back panels over lighting' },
+      ];
+      const findLayerAssignment = (assignmentId) => layerManagerAssignments.find((entry) => String(entry?.id || '') === assignmentId) || null;
       const DEFAULT_SLIDER_MIN = Number.isFinite(Number(sliderClamp.absoluteMin)) ? Number(sliderClamp.absoluteMin) : -2000;
       const DEFAULT_SLIDER_MAX = Number.isFinite(Number(sliderClamp.absoluteMax)) ? Number(sliderClamp.absoluteMax) : 2000;
       const MULTIPLIER_SLIDER_MIN = Number.isFinite(Number(sliderClamp.multiplierMin)) ? Number(sliderClamp.multiplierMin) : 0;
@@ -5136,22 +5150,26 @@ import { createLayerManager } from './ui/layerManager.js';
         varsPanelTitle.textContent = projectionUiState.lastSelectedProjId
           ? `${basePanelTitle} · ${projectionUiState.lastSelectedProjId}`
           : basePanelTitle;
-        if (!projectionUiState.lastSelectedProjId) {
-          varsPanelBody.innerHTML = '<div class="projVarHint">Select an outlined element in map mode, then open Vars.</div>';
-          return;
-        }
-        const relatedVars = resolveRelatedVars(projectionUiState.lastSelectedProjId, projectionUiState.lastSelectedSourceEl);
-        if (!relatedVars.length) {
-          varsPanelBody.innerHTML = '<div class="projVarHint">No configured variables for this element yet.</div>';
-          return;
-        }
+        const hasSelection = Boolean(projectionUiState.lastSelectedProjId);
+        const relatedVars = hasSelection ? resolveRelatedVars(projectionUiState.lastSelectedProjId, projectionUiState.lastSelectedSourceEl) : [];
         const computedRootStyles = getComputedStyle(document.documentElement);
-        varsPanelBody.innerHTML = relatedVars.map((varName) => {
+        const cssVarRows = relatedVars.map((varName) => {
           const value = normalizeCssVarValue(projectionUiState.editedVars.get(varName) ?? computedRootStyles.getPropertyValue(varName));
           const numericValue = parseNumericCssVar(value);
           const bounds = resolveSliderBounds(varName, value);
           return `<label class="projVarRow"><span class="projVarLabel">${escapeHtml(varName)}</span><input class="projVarInput" data-proj-kind="text" data-proj-var="${escapeHtml(varName)}" type="text" value="${escapeHtml(value)}"><input class="projVarInput" data-proj-kind="number" data-proj-var="${escapeHtml(varName)}" type="number" step="${varStep}" value="${numericValue ?? ''}"><input class="projVarInput" data-proj-kind="range" data-proj-var="${escapeHtml(varName)}" type="range" min="${bounds.min}" max="${bounds.max}" step="${varStep}" value="${numericValue ?? bounds.min}"></label>`;
         }).join('');
+        const layerRows = layerPreviewAssignments.map((entry) => {
+          const assignment = findLayerAssignment(entry.id);
+          if (!assignment) return '';
+          const keepOriginal = assignment.keepOriginal === true;
+          const promotedOpacity = Number.isFinite(Number(assignment.promotedOpacity)) ? Number(assignment.promotedOpacity) : 1;
+          return `<div class="projVarHint" style="margin-top:8px;font-weight:700;">${escapeHtml(entry.label)}</div><label class="projVarRow" style="gap:8px;align-items:center"><span class="projVarLabel">keep original</span><input class="projVarInput" data-layer-setting="keepOriginal" data-layer-assignment="${entry.id}" type="checkbox" ${keepOriginal ? 'checked' : ''}></label><label class="projVarRow"><span class="projVarLabel">promoted opacity</span><input class="projVarInput" data-layer-setting="promotedOpacity" data-layer-assignment="${entry.id}" type="number" min="0" max="1" step="0.01" value="${promotedOpacity.toFixed(2)}"><input class="projVarInput" data-layer-setting="promotedOpacity" data-layer-assignment="${entry.id}" type="range" min="0" max="1" step="0.01" value="${promotedOpacity.toFixed(2)}"></label>`;
+        }).join('');
+        const selectionHint = !hasSelection
+          ? '<div class="projVarHint">Select an outlined element in map mode to edit CSS vars for that projection.</div>'
+          : (!relatedVars.length ? '<div class="projVarHint">No configured CSS variables for this element yet.</div>' : '');
+        varsPanelBody.innerHTML = `${selectionHint}${cssVarRows}${layerRows ? `<div class="projVarHint" style="margin-top:10px;color:#c89952;">Layer promotion preview controls</div>${layerRows}` : ''}`;
       };
       btn.addEventListener('click', () => {
         projectionUiState.active = !projectionUiState.active;
@@ -5311,6 +5329,27 @@ import { createLayerManager } from './ui/layerManager.js';
             updateAuthoredSubSize(projId, authoredSubField === 'width' ? numeric : currentSize.width, authoredSubField === 'height' ? numeric : currentSize.height);
             updateEditorStatus(`Sub size ${projId}.${authoredSubField}=${Math.round(numeric)}.`);
           }
+          return;
+        }
+        const layerSetting = event.target.getAttribute('data-layer-setting');
+        if (layerSetting) {
+          const assignmentId = event.target.getAttribute('data-layer-assignment');
+          const targetAssignment = findLayerAssignment(assignmentId);
+          if (!targetAssignment) return;
+          if (layerSetting === 'keepOriginal') {
+            targetAssignment.keepOriginal = Boolean(event.target.checked);
+          } else if (layerSetting === 'promotedOpacity') {
+            const nextOpacity = Number(event.target.value);
+            if (!Number.isFinite(nextOpacity)) return;
+            targetAssignment.promotedOpacity = Math.min(1, Math.max(0, nextOpacity));
+          }
+          SCRATCHBONES_LAYER_MANAGER.setAssignmentOptions?.(assignmentId, {
+            keepOriginal: targetAssignment.keepOriginal,
+            promotedOpacity: targetAssignment.promotedOpacity,
+          });
+          render();
+          if (projectionUiState.varsPanelOpen) renderVarEditor();
+          updateEditorStatus(`Layer setting updated: ${assignmentId}.${layerSetting}.`);
           return;
         }
         const authoredField = event.target.getAttribute('data-authored-field');
