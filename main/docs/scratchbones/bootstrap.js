@@ -490,6 +490,7 @@ import { createLayerManager } from './ui/layerManager.js';
       poolDisplay: SCRATCHBONES_GAME.chips.poolDisplay || {},
       challengeStakeTiers: SCRATCHBONES_GAME.chips.challengeStakeTiers,
       challengeStakeAnimation: SCRATCHBONES_GAME.chips.challengeStakeAnimation,
+      transferAnimation: SCRATCHBONES_GAME.chips.transferAnimation,
       clearBonusBase: SCRATCHBONES_GAME.chips.clearBonusBase,
       clearBonusIncrement: SCRATCHBONES_GAME.chips.clearBonusIncrement,
       anteStart: SCRATCHBONES_GAME.chips.anteStart,
@@ -531,19 +532,34 @@ import { createLayerManager } from './ui/layerManager.js';
       }
       return breakdown;
     }
-    function renderSeatCoinRow(player) {
-      const breakdown = coinBreakdownForChips(player?.chips);
-      if (!breakdown.length) return '<div class="seatCoinRow seatCoinRowEmpty" aria-hidden="true" style="min-height:20px;"></div>';
+    function coinsForTransferAmount(chipCount, maxIcons) {
+      const breakdown = coinBreakdownForChips(chipCount);
       const icons = [];
       for (const tier of breakdown) {
-        for (let index = 0; index < tier.count; index += 1) {
-          icons.push(`<img class="seatCoinIcon" style="width:24px;height:24px;object-fit:contain;margin-left:-8px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));" src="${escapeHtml(stakeCoinSrcForTier(tier.id))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tier.id)} coin">`);
-        }
+        for (let index = 0; index < tier.count; index += 1) icons.push(tier.id);
       }
-      const overflow = Math.max(0, icons.length - MAX_WALLET_ICONS_PER_SEAT);
-      const visibleIcons = overflow > 0 ? icons.slice(0, MAX_WALLET_ICONS_PER_SEAT) : icons;
-      return `<div class="seatCoinRow" style="display:flex;align-items:center;min-height:24px;padding-left:8px;margin:4px 0 2px;">${visibleIcons.join('')}${overflow > 0 ? `<span class="seatCoinOverflow" style="margin-left:6px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : ''}</div>`;
+      const safeMax = Math.max(1, Number(maxIcons) || 1);
+      const overflow = Math.max(0, icons.length - safeMax);
+      const visibleTierIds = overflow > 0 ? icons.slice(0, safeMax) : icons;
+      return {
+        icons,
+        visibleTierIds,
+        overflow,
+      };
     }
+    function walletCoinRowAnchorForPlayer(playerId) {
+      return document.querySelector(`[data-wallet-coin-row-anchor="${playerId}"]`);
+    }
+    function tablePotPileAnchor() {
+      return document.querySelector('[data-pot-pile-anchor], [data-proj-id="claim-pool-pile"]');
+    }
+    function renderSeatCoinRow(player) {
+      const transferCoins = coinsForTransferAmount(player?.chips, MAX_WALLET_ICONS_PER_SEAT);
+      if (!transferCoins.icons.length) return `<div class="seatCoinRow seatCoinRowEmpty" data-wallet-coin-row-anchor="${Number(player?.id ?? -1)}" aria-hidden="true" style="min-height:20px;"></div>`;
+      const iconHtml = transferCoins.visibleTierIds.map((tierId) => `<img class="seatCoinIcon" style="width:24px;height:24px;object-fit:contain;margin-left:-8px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));" src="${escapeHtml(stakeCoinSrcForTier(tierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tierId)} coin">`).join('');
+      return `<div class="seatCoinRow" data-wallet-coin-row-anchor="${Number(player?.id ?? -1)}" style="display:flex;align-items:center;min-height:24px;padding-left:8px;margin:4px 0 2px;">${iconHtml}${transferCoins.overflow > 0 ? `<span class="seatCoinOverflow" style="margin-left:6px;font-size:.76rem;color:var(--muted);">+${transferCoins.overflow}</span>` : ''}</div>`;
+    }
+
 
     function renderTablePoolPile(chipCount, pileSeedInput, anchorXPct, anchorYPct) {
       const breakdown = coinBreakdownForChips(chipCount);
@@ -555,12 +571,9 @@ import { createLayerManager } from './ui/layerManager.js';
       const spreadYPx = Math.max(8, Number(TABLE_POOL_DISPLAY.spreadYPx) || 28);
       const offsetYPx = Number(TABLE_POOL_DISPLAY.offsetYPx) || 2;
       if (!breakdown.length) return '';
-      const icons = [];
-      for (const tier of breakdown) {
-        for (let index = 0; index < tier.count; index += 1) icons.push(tier.id);
-      }
-      const overflow = Math.max(0, icons.length - pileMaxIcons);
-      const visibleIcons = overflow > 0 ? icons.slice(0, pileMaxIcons) : icons;
+      const transferCoins = coinsForTransferAmount(chipCount, pileMaxIcons);
+      const overflow = transferCoins.overflow;
+      const visibleIcons = transferCoins.visibleTierIds;
       const baseSeed = Math.round(Number(pileSeedInput) || 0) >>> 0;
       const pileSeed = (baseSeed ^ ((Math.round(Number(chipCount) || 0) * 2654435761) >>> 0)) >>> 0;
       const pileHtml = visibleIcons.map((tierId, index) => {
@@ -573,7 +586,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return `<img class="tablePoolCoin" src="${escapeHtml(stakeCoinSrcForTier(tierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tierId)} coin" style="position:absolute;left:50%;top:50%;width:${coinSizePx}px;height:${coinSizePx}px;object-fit:contain;transform:translate(calc(-50% + ${xPx.toFixed(1)}px),calc(-50% + ${yPx.toFixed(1)}px)) rotate(${rotateDeg.toFixed(1)}deg);filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));z-index:${z};">`;
       }).join('');
       const overflowHtml = overflow > 0 ? `<span class="tablePoolOverflow" style="position:absolute;right:6px;bottom:2px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : '';
-      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" style="position:absolute;left:${(anchorXPct * 100).toFixed(3)}%;top:calc(${(anchorYPct * 100).toFixed(3)}% + ${offsetYPx.toFixed(1)}px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
+      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" data-pot-pile-anchor style="position:absolute;left:${(anchorXPct * 100).toFixed(3)}%;top:calc(${(anchorYPct * 100).toFixed(3)}% + ${offsetYPx.toFixed(1)}px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
     const layoutDiagnostics = createLayoutDiagnosticsState();
@@ -756,15 +769,19 @@ import { createLayerManager } from './ui/layerManager.js';
     function setBanner(text) {
       state.banner = text;
     }
-    function collectAnteForNewRound() {
+    async function collectAnteForNewRound() {
       let totalPaid = 0;
       for (const player of state.players) {
         if (player.eliminated) continue;
         const paid = transferToBank(player.id, state.ante);
+        if (paid <= 0) continue;
+        render();
+        await animateCoinTransferCluster({ fromAnchor: walletCoinRowAnchorForPlayer(player.id), toAnchor: tablePotPileAnchor(), transferAmount: paid, durationMs: CONFIG.transferAnimation.anteMs });
+        state.tablePot += paid;
+        render();
         totalPaid += paid;
-        if (paid > 0) addLog(`${seatLabel(player)} antes ${paid} chip${paid === 1 ? '' : 's'} to the table pot.`);
+        addLog(`${seatLabel(player)} antes ${paid} chip${paid === 1 ? '' : 's'} to the table pot.`);
       }
-      state.tablePot += totalPaid;
       return totalPaid;
     }
 
@@ -805,7 +822,7 @@ import { createLayerManager } from './ui/layerManager.js';
         player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
       }
     }
-    function startGame() {
+    async function startGame() {
       SCRATCHBONES_AUDIO.startPlaylist();
       clearChallengeTimer();
       state.seed = Math.floor(Math.random() * 1e9);
@@ -826,8 +843,7 @@ import { createLayerManager } from './ui/layerManager.js';
       state.roundConcessions.clear();
       state.stats = { successfulChallenges: 0, failedChallenges: 0, bluffsCaught: 0, safeTruths: 0, totalClears: 0, chipsMovedByChallenges: 0 };
       state.ante = Math.max(1, Number(CONFIG.anteStart) || 1);
-      state.tablePot = 0;
-      collectAnteForNewRound();
+      await collectAnteForNewRound();
       if (checkGameOverBySurvivors()) {
         render();
         return true;
@@ -1385,6 +1401,34 @@ import { createLayerManager } from './ui/layerManager.js';
       await sleep(durationMs + 30);
       clone.remove();
     }
+
+    async function animateCoinTransferCluster({ fromAnchor, toAnchor, transferAmount, durationMs = CONFIG.transferAnimation.clusterMoveMs } = {}) {
+      if (!fromAnchor || !toAnchor || transferAmount <= 0) {
+        console.warn('[chip-transfer] skipped: missing anchors or non-positive amount', { hasFrom: !!fromAnchor, hasTo: !!toAnchor, transferAmount });
+        return;
+      }
+      const fromRect = fromAnchor.getBoundingClientRect();
+      const toRect = toAnchor.getBoundingClientRect();
+      if (!fromRect.width || !fromRect.height || !toRect.width || !toRect.height) {
+        console.warn('[chip-transfer] skipped: zero-size source/target rect', { fromRect: { width: fromRect.width, height: fromRect.height }, toRect: { width: toRect.width, height: toRect.height } });
+        return;
+      }
+      const transferCoins = coinsForTransferAmount(transferAmount, CONFIG.transferAnimation.maxIconsPerCluster);
+      if (!transferCoins.visibleTierIds.length) return;
+      const cluster = document.createElement('div');
+      cluster.className = 'chipTransferCluster';
+      cluster.style.cssText = `position:fixed;left:${fromRect.left}px;top:${fromRect.top}px;display:flex;align-items:center;pointer-events:none;z-index:10012;`;
+      cluster.innerHTML = transferCoins.visibleTierIds.map((tierId) => `<img style="width:${CONFIG.transferAnimation.coinSizePx}px;height:${CONFIG.transferAnimation.coinSizePx}px;object-fit:contain;margin-left:-8px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));" src="${escapeHtml(stakeCoinSrcForTier(tierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tierId)} coin">`).join('') + (transferCoins.overflow > 0 ? `<span style="margin-left:6px;font-size:.76rem;color:var(--muted);">+${transferCoins.overflow}</span>` : '');
+      document.body.appendChild(cluster);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
+      const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
+      cluster.style.transition = `transform ${durationMs}ms ease, opacity ${durationMs}ms ease`;
+      cluster.style.transform = `translate(${dx}px, ${dy}px) scale(0.9)`;
+      cluster.style.opacity = '0.2';
+      await sleep(durationMs + 40);
+      cluster.remove();
+    }
     function coinButtonForTier(tierId) {
       return document.querySelector(`[data-stake-tier-btn="${tierId}"]`);
     }
@@ -1574,7 +1618,7 @@ import { createLayerManager } from './ui/layerManager.js';
       }
       showFoldCinematic(winnerId, loserId, () => {
         state.betting = null;
-        concludeChallengeFlow(winnerId);
+        void concludeChallengeFlow(winnerId);
       });
     }
     function revealChallenge() {
@@ -1612,16 +1656,16 @@ import { createLayerManager } from './ui/layerManager.js';
         addLog(`${seatLabel(winner)} wins ${netGain} net chip${netGain === 1 ? '' : 's'} from the challenge.`);
         state.betting = null;
         showRevealCinematic(challengerId, challengedId, play, success, () => {
-          concludeChallengeFlow(winnerId);
+          void concludeChallengeFlow(winnerId);
         });
       });
     }
-    function concludeChallengeFlow(winnerId) {
+    async function concludeChallengeFlow(winnerId) {
       if (state.gameOver) return;
       if (checkGameOverBySurvivors()) return;
       if (state.pile.length) {
         const lastPlay = state.pile[state.pile.length - 1];
-        if (lastPlay && lastPlay.playerIndex === winnerId && checkForClearAndRedeal(winnerId)) return;
+        if (lastPlay && lastPlay.playerIndex === winnerId && await checkForClearAndRedeal(winnerId)) return;
       }
       openNewRound(winnerId);
     }
@@ -1656,12 +1700,12 @@ import { createLayerManager } from './ui/layerManager.js';
           state.smuggleSelection.resumePlayerIndex = lastPlayerIndex;
           return;
         }
-        continueAfterNoChallenge(lastPlayerIndex);
+        void continueAfterNoChallenge(lastPlayerIndex);
       });
     }
-    function continueAfterNoChallenge(lastPlayerIndex) {
+    async function continueAfterNoChallenge(lastPlayerIndex) {
         if (state.gameOver) return;
-        if (checkForClearAndRedeal(lastPlayerIndex)) return;
+        if (await checkForClearAndRedeal(lastPlayerIndex)) return;
         if (maybeEndRoundFromConcessions()) return;
         const nextPlayer = nextRoundEligibleIndex(lastPlayerIndex);
         if (nextPlayer === null) {
@@ -1676,14 +1720,16 @@ import { createLayerManager } from './ui/layerManager.js';
         render();
         if (state.currentTurn !== 0) scheduleAiTurn();
     }
-    function checkForClearAndRedeal(playerIndex) {
+    async function checkForClearAndRedeal(playerIndex) {
       const player = state.players[playerIndex];
       if (player.eliminated || player.hand.length !== 0) return false;
       const totalWon = state.tablePot;
+      state.tablePot = 0;
+      render();
+      await animateCoinTransferCluster({ fromAnchor: tablePotPileAnchor(), toAnchor: walletCoinRowAnchorForPlayer(playerIndex), transferAmount: totalWon, durationMs: CONFIG.transferAnimation.clearPayoutMs });
       player.chips += totalWon;
       player.clears += 1;
       state.stats.totalClears += 1;
-      state.tablePot = 0;
       addLog(`${seatLabel(player)} clears their hand and collects the ${totalWon} chip${totalWon === 1 ? '' : 's'} table pot.`);
       state.ante += Math.max(1, Number(CONFIG.anteIncrement) || 1);
       addLog(`The ante rises to ${state.ante} chip${state.ante === 1 ? '' : 's'}.`);
@@ -1695,7 +1741,7 @@ import { createLayerManager } from './ui/layerManager.js';
         render();
         return true;
       }
-      collectAnteForNewRound();
+      await collectAnteForNewRound();
       if (checkGameOverBySurvivors()) {
         render();
         return true;
@@ -2152,7 +2198,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const resumePlayerIndex = selection.resumePlayerIndex;
       state.smuggleSelection = null;
       render();
-      if (Number.isInteger(resumePlayerIndex)) continueAfterNoChallenge(resumePlayerIndex);
+      if (Number.isInteger(resumePlayerIndex)) void continueAfterNoChallenge(resumePlayerIndex);
     }
     function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return;
