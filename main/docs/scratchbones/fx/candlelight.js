@@ -17,6 +17,14 @@
       turbulence: Math.max(0, Number(source?.turbulence) || 1),
     }));
     const RADIUS_REF = Math.max(0, Number(candlelightConfig.radiusRefPx) || 1200);
+    const thevmenuOpacityConfigValue = Number(candlelightConfig.thevmenuOpacity);
+    const THEVMENU_CANDLELIGHT_OPACITY_DEFAULT = Number.isFinite(thevmenuOpacityConfigValue)
+      ? clamp(thevmenuOpacityConfigValue, 0, 1)
+      : 0.1;
+    const thevmenuLayerZIndexConfig = Number(candlelightConfig.thevmenuLayerZIndex);
+    const THEVMENU_CANDLELIGHT_LAYER_Z_INDEX = Number.isFinite(thevmenuLayerZIndexConfig)
+      ? Math.round(thevmenuLayerZIndexConfig)
+      : 2147483646;
 
     // Shadow height parameters (demo occluder convention)
     const CARD_SHADOW_HEIGHT = 36;
@@ -56,9 +64,21 @@
     glowCanvas.id = 'candleGlowCanvas';
     glowCanvas.setAttribute('aria-hidden', 'true');
 
+    const thevmenuCandlelightCanvas = document.createElement('canvas');
+    thevmenuCandlelightCanvas.id = 'thevmenuCandlelightLayer';
+    thevmenuCandlelightCanvas.setAttribute('aria-hidden', 'true');
+    thevmenuCandlelightCanvas.style.opacity = String(THEVMENU_CANDLELIGHT_OPACITY_DEFAULT);
+    thevmenuCandlelightCanvas.style.position = 'absolute';
+    thevmenuCandlelightCanvas.style.top = '0';
+    thevmenuCandlelightCanvas.style.left = '0';
+    thevmenuCandlelightCanvas.style.zIndex = String(THEVMENU_CANDLELIGHT_LAYER_Z_INDEX);
+    thevmenuCandlelightCanvas.style.pointerEvents = 'none';
+    thevmenuCandlelightCanvas.style.mixBlendMode = 'screen';
+
     const shadowCtx = shadowCanvas.getContext('2d', { alpha: true });
     const darkCtx   = darkCanvas.getContext('2d',   { alpha: true });
     const glowCtx   = glowCanvas.getContext('2d',   { alpha: true });
+    const thevmenuGlowCtx = thevmenuCandlelightCanvas.getContext('2d', { alpha: true });
 
     // Off-screen work buffers
     const workDark    = document.createElement('canvas');
@@ -243,6 +263,7 @@
     if (!Number.isFinite(BACKLIT_ALPHA)) BACKLIT_ALPHA = CANDLELIGHT_FALLBACKS.backlitAlphaDefault;
     let BACKLIT_BLUR = Math.max(0, Number(candlelightConfig.backlitBlurDefault));
     if (!Number.isFinite(BACKLIT_BLUR)) BACKLIT_BLUR = CANDLELIGHT_FALLBACKS.backlitBlurDefault;
+    let THEVMENU_CANDLELIGHT_OPACITY = THEVMENU_CANDLELIGHT_OPACITY_DEFAULT;
     // Per-selector state
     const TRACKED_CANDLE_SELECTORS = uniqSelectors([
       ...BACKLIT_SELECTORS,
@@ -524,7 +545,7 @@
       w = Math.max(1, Math.round(rect.width));
       h = Math.max(1, Math.round(rect.height));
       const dpr = Math.min(devicePixelRatio || 1, 2);
-      for (const cv of [shadowCanvas, darkCanvas, glowCanvas]) {
+      for (const cv of [shadowCanvas, darkCanvas, glowCanvas, thevmenuCandlelightCanvas]) {
         cv.width  = w * dpr;
         cv.height = h * dpr;
         cv.style.width  = w + 'px';
@@ -533,6 +554,7 @@
       shadowCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
       darkCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
       glowCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      thevmenuGlowCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
       workDark.width    = w; workDark.height    = h;
       workGlow.width    = w; workGlow.height    = h;
       workShadow.width  = w; workShadow.height  = h;
@@ -544,6 +566,7 @@
       if (shadowCanvas.parentNode !== app) app.appendChild(shadowCanvas);
       if (darkCanvas.parentNode   !== app) app.appendChild(darkCanvas);
       if (glowCanvas.parentNode   !== app) app.appendChild(glowCanvas);
+      if (thevmenuCandlelightCanvas.parentNode !== app) app.appendChild(thevmenuCandlelightCanvas);
     }
 
     // ── Occluder gathering ────────────────────────────────────────────────────
@@ -743,6 +766,9 @@
       punchOutImmune(glowCtx);
       drawImmuneDebugOverlay(glowCtx);
 
+      thevmenuGlowCtx.clearRect(0, 0, w, h);
+      thevmenuGlowCtx.drawImage(glowCanvas, 0, 0);
+
       // ── Lerp clone lighting ─────────────────────────────────────────────────
       // Clones on document.body get a CSS filter that approximates their position
       // in the candlelight (dark + warm near source, dim + cool far from it).
@@ -796,6 +822,12 @@
         const value = Number(candlelightConfig.backlitBlurDefault);
         return Number.isFinite(value) ? Math.max(0, value) : CANDLELIGHT_FALLBACKS.backlitBlurDefault;
       },
+      get thevmenuOpacity() { return THEVMENU_CANDLELIGHT_OPACITY; },
+      set thevmenuOpacity(v) {
+        THEVMENU_CANDLELIGHT_OPACITY = clamp(Number(v) || 0, 0, 1);
+        thevmenuCandlelightCanvas.style.opacity = String(THEVMENU_CANDLELIGHT_OPACITY);
+      },
+      get thevmenuOpacityDefault() { return THEVMENU_CANDLELIGHT_OPACITY_DEFAULT; },
       get debugImmuneMasks()  { return DEBUG_IMMUNE_MASKS; },
       set debugImmuneMasks(v) { DEBUG_IMMUNE_MASKS = Boolean(v); },
       resolveSelectors(targetOrProjId, role) { return getCandleSelectors(targetOrProjId, role); },
@@ -855,6 +887,10 @@
             <input class="projVarInput" type="number" data-cl="backlitBlur" step="1" min="0" max="300" value="${window.__candleLight.backlitBlur}">
             <input class="projVarInput" type="range"  data-cl="backlitBlur" step="1" min="0" max="300" value="${window.__candleLight.backlitBlur}">
           </label>
+          <label class="projVarRow"><span class="projVarLabel">thevmenu opacity</span>
+            <input class="projVarInput" type="number" data-cl="thevmenuOpacity" step="0.01" min="0" max="1" value="${window.__candleLight.thevmenuOpacity.toFixed(2)}">
+            <input class="projVarInput" type="range"  data-cl="thevmenuOpacity" step="0.01" min="0" max="1" value="${window.__candleLight.thevmenuOpacity.toFixed(2)}">
+          </label>
           <label class="projVarRow" style="gap:8px;align-items:center">
             <span class="projVarLabel">debug immune masks</span>
             <input type="checkbox" data-cl="debugImmuneMasks" ${window.__candleLight.debugImmuneMasks ? 'checked' : ''}>
@@ -879,6 +915,10 @@
           } else if (key === 'backlitBlur') {
             window.__candleLight.backlitBlur = e.target.value;
             sec.querySelectorAll('[data-cl="backlitBlur"]').forEach(i => { if (i !== e.target) i.value = e.target.value; });
+          } else if (key === 'thevmenuOpacity') {
+            window.__candleLight.thevmenuOpacity = e.target.value;
+            const synced = window.__candleLight.thevmenuOpacity.toFixed(2);
+            sec.querySelectorAll('[data-cl="thevmenuOpacity"]').forEach(i => { if (i !== e.target) i.value = synced; });
           } else if (key === 'debugImmuneMasks') {
             window.__candleLight.debugImmuneMasks = e.target.checked;
           } else if (key === 'backlit' && elSel) {
