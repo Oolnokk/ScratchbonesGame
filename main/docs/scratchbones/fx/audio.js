@@ -16,6 +16,7 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
       const failedPlaylistTracks = new Set();
       let playlistExhausted = false;
       let autoplayBlockedLogged = false;
+      let playlistRequested = false;
 
       function markAudioUnlocked() {
         if (audioUnlocked) return;
@@ -29,6 +30,9 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
         while (pendingSfx.length) {
           const entry = pendingSfx.shift();
           playSfx(entry);
+        }
+        if (playlistRequested && !challengeBgmActive && (!bgmAudio || bgmAudio.paused)) {
+          playNextPlaylistTrack();
         }
       }
       function attachUnlockListeners() {
@@ -209,8 +213,12 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
       }
       function startPlaylist() {
         if (!cfg.enabled || challengeBgmActive) return;
-        logAudio('debug', 'playlist-start', { challengeBgmActive, hasCurrentTrack: Boolean(bgmAudio) });
-        attachUnlockListeners();
+        playlistRequested = true;
+        logAudio('debug', 'playlist-start', { challengeBgmActive, hasCurrentTrack: Boolean(bgmAudio), audioUnlocked });
+        if (!audioUnlocked) {
+          attachUnlockListeners();
+          return;
+        }
         if (bgmAudio && !bgmAudio.paused) return;
         playNextPlaylistTrack();
       }
