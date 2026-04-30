@@ -296,6 +296,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
           deckDealInterPlayerDelayMs: Math.max(0, Number(rawGameConfig.chips?.cards?.transferAnimation?.deckDealInterPlayerDelayMs) || Number(rawGameConfig.chips?.dealAnimation?.interPlayerDelayMs) || 0),
           transferEasing: String(rawGameConfig.chips?.cards?.transferAnimation?.transferEasing || rawGameConfig.chips?.cardTransferAnimation?.easing || 'cubic-bezier(0.22, 0.61, 0.36, 1)'),
           deckDealEasing: String(rawGameConfig.chips?.cards?.transferAnimation?.deckDealEasing || 'cubic-bezier(0.4,0,0.2,1)'),
+          dealSpeedMultiplier: Math.max(0.1, Number(rawGameConfig.chips?.cards?.transferAnimation?.dealSpeedMultiplier) || 1),
         },
       },
       clearBonusBase: rawGameConfig.chips?.clearReward?.base ?? 1,
