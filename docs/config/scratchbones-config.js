@@ -34,7 +34,8 @@ window.SCRATCHBONES_CONFIG = {
         "speciesToCultureId": {
           "mao_ao": "mao_ao",
           "mao-ao": "mao_ao",
-          "kenkari": "kenkari"
+          "kenkari": "kenkari",
+          "tletingan": "slagothim"
         }
       },
       "cultures": {
@@ -108,6 +109,27 @@ window.SCRATCHBONES_CONFIG = {
               "malePrefix": "ao",
               "femalePrefix": "u"
             }
+          }
+        },
+        "slagothim": {
+          "id": "slagothim",
+          "displayName": "Slagothim",
+          "casing": "title",
+          "slagothimRules": {
+            "locations": ["Ikinga", "Bahangi", "Hatonga", "Rahingi", "B'bonga", "Niringi", "Ununga", "Gorungi"],
+            "firstConsonants": ["b", "g", "n", "p", "t", "d", "k", "m", "sl", "shr", "tr", "gr", "br", "gl"],
+            "firstConsonantClusters": ["sl", "shr", "tr", "gr", "br", "gl"],
+            "vowels": ["a", "e", "i", "o", "u"],
+            "secondConsonants": ["b", "g", "p", "t", "d", "k", "r", "n", "ng"],
+            "rareSecondConsonantCluster": "mn",
+            "maleSlOnlyEndings": ["o", "u"],
+            "femaleSlOnlyEndings": ["a", "i"],
+            "maleSuffix": "mir",
+            "femaleSuffix": "mira",
+            "startWithSlChance": 0.58,
+            "slNameUsesSuffixChance": 0.2,
+            "optionalBridgeVowelChance": 0.55,
+            "mnClusterChance": 0.08
           }
         }
       }

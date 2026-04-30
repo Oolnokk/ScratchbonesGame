@@ -351,10 +351,67 @@
     throw new Error('Could not generate a Kenkari name within the current template rules.');
   }
 
+  function startsWithSl(name) {
+    return String(name || '').toLowerCase().startsWith('sl');
+  }
+
+  function endsWithToken(name, token) {
+    return String(name || '').toLowerCase().endsWith(String(token || '').toLowerCase());
+  }
+
+  function chance(rng, probability) {
+    return rng() < probability;
+  }
+
+  function buildSlagothimGivenName(rng, culture, gender) {
+    const rules = culture.slagothimRules || {};
+    const useSl = chance(rng, Number(rules.startWithSlChance ?? 0.58));
+    const willUseSuffix = useSl ? chance(rng, Number(rules.slNameUsesSuffixChance ?? 0.2)) : true;
+    const c1 = useSl ? 'sl' : pickFromRng(rng, rules.firstConsonants || []);
+    const v1 = pickFromRng(rng, rules.vowels || []);
+    const useMnCluster = chance(rng, Number(rules.mnClusterChance ?? 0.08));
+    const c2 = useMnCluster ? rules.rareSecondConsonantCluster : pickFromRng(rng, rules.secondConsonants || []);
+    const c2AllowsVowel = c2 === 'ng' || c2 === 'r' || c2 === rules.rareSecondConsonantCluster;
+    const c2ForcesVowel = c2 === rules.rareSecondConsonantCluster;
+    let v2 = '';
+    let ending = '';
+
+    if (willUseSuffix) {
+      if (c2ForcesVowel || (c2AllowsVowel && chance(rng, Number(rules.optionalBridgeVowelChance ?? 0.55)))) {
+        v2 = pickFromRng(rng, rules.vowels || []);
+      }
+      ending = gender === 'male' ? rules.maleSuffix : rules.femaleSuffix;
+    } else {
+      if (!useSl || !c2AllowsVowel) return buildSlagothimGivenName(rng, culture, gender);
+      v2 = pickFromRng(rng, gender === 'male' ? (rules.maleSlOnlyEndings || []) : (rules.femaleSlOnlyEndings || []));
+    }
+
+    const given = (c1 + v1 + c2 + v2 + ending).toLowerCase();
+    if (gender === 'male') {
+      if (!(startsWithSl(given) || endsWithToken(given, rules.maleSuffix))) return buildSlagothimGivenName(rng, culture, gender);
+      if (startsWithSl(given) && !endsWithToken(given, rules.maleSuffix) && !/[ou]$/i.test(given)) return buildSlagothimGivenName(rng, culture, gender);
+    } else {
+      if (!(startsWithSl(given) || endsWithToken(given, rules.femaleSuffix))) return buildSlagothimGivenName(rng, culture, gender);
+      if (startsWithSl(given) && !endsWithToken(given, rules.femaleSuffix) && !/[ai]$/i.test(given)) return buildSlagothimGivenName(rng, culture, gender);
+    }
+    return applyCasing(given, culture.casing);
+  }
+
+  function buildSlagothimSurname(rng, culture) {
+    const rules = culture.slagothimRules || {};
+    const location = pickFromRng(rng, rules.locations || []);
+    return `tley ${titleCase(location)}`;
+  }
+
   function generateCultureNameFromSeed(seedString, gender = 'male', culture, options = {}) {
     const resolvedCulture = culture || {};
     const numericSeed = hashStringToSeed(seedString);
     const rng = mulberry32(numericSeed);
+    if (resolvedCulture.slagothimRules) {
+      const firstName = buildSlagothimGivenName(rng, resolvedCulture, gender);
+      const surname = buildSlagothimSurname(rng, resolvedCulture);
+      return [firstName, surname].filter(Boolean).join(' ');
+    }
     if (resolvedCulture.kenkariRules) {
       const firstName = buildKenkariGivenName(rng, resolvedCulture, gender);
       const providedFather = String(options.fatherFirstName || '').trim();
