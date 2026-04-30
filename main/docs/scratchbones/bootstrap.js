@@ -2462,6 +2462,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const inner = document.createElement('div');
       inner.className = 'cin-action-burst burst-countdown';
       inner.textContent = count;
+      inner.style.fontFamily = String(CONFIG.assets.claimClusterFontFamily || '"KhymeryyanRomanLetters+Numbers", serif').trim();
       inner.style.animation = `cinBurst ${(durationMs / 1000).toFixed(2)}s both`;
       shell.appendChild(inner);
       cluster.appendChild(shell);
