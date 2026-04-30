@@ -1726,6 +1726,12 @@ import { createLayerManager } from './ui/layerManager.js';
       winner.chips += award;
       state.stats.chipsMovedByChallenges += award;
       addLog(`${seatLabel(loser)} ${reason}. ${seatLabel(winner)} wins ${netGain} net chip${netGain === 1 ? '' : 's'} from the challenge.`);
+      if (loserId === state.betting.challengedId && state.betting.play) {
+        loser.lastAction = 'Folded while challenged';
+        loser.hand.push(...collectPileCards());
+        loser.hand.sort(sortCards);
+        addLog(`${seatLabel(loser)} folds under challenge and takes back the claim pile.`);
+      }
       if (winnerId === state.betting.challengerId) {
         state.stats.successfulChallenges += 1;
         noteChallengeReadResult(state.betting.challengerId, state.betting.challengedId, true);
