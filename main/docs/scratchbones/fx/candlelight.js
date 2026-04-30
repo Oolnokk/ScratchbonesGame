@@ -17,6 +17,7 @@
       turbulence: Math.max(0, Number(source?.turbulence) || 1),
     }));
     const RADIUS_REF = Math.max(0, Number(candlelightConfig.radiusRefPx) || 1200);
+    const THEVMENU_CANDLELIGHT_OPACITY = Math.min(1, Math.max(0, Number(candlelightConfig.thevmenuOpacity) || 0.1));
 
     // Shadow height parameters (demo occluder convention)
     const CARD_SHADOW_HEIGHT = 36;
@@ -56,9 +57,20 @@
     glowCanvas.id = 'candleGlowCanvas';
     glowCanvas.setAttribute('aria-hidden', 'true');
 
+    const thevmenuCandlelightCanvas = document.createElement('canvas');
+    thevmenuCandlelightCanvas.id = 'thevmenuCandlelightLayer';
+    thevmenuCandlelightCanvas.setAttribute('aria-hidden', 'true');
+    thevmenuCandlelightCanvas.style.opacity = String(THEVMENU_CANDLELIGHT_OPACITY);
+    thevmenuCandlelightCanvas.style.position = 'absolute';
+    thevmenuCandlelightCanvas.style.inset = '0';
+    thevmenuCandlelightCanvas.style.zIndex = '100000';
+    thevmenuCandlelightCanvas.style.pointerEvents = 'none';
+    thevmenuCandlelightCanvas.style.mixBlendMode = 'screen';
+
     const shadowCtx = shadowCanvas.getContext('2d', { alpha: true });
     const darkCtx   = darkCanvas.getContext('2d',   { alpha: true });
     const glowCtx   = glowCanvas.getContext('2d',   { alpha: true });
+    const thevmenuGlowCtx = thevmenuCandlelightCanvas.getContext('2d', { alpha: true });
 
     // Off-screen work buffers
     const workDark    = document.createElement('canvas');
@@ -524,7 +536,7 @@
       w = Math.max(1, Math.round(rect.width));
       h = Math.max(1, Math.round(rect.height));
       const dpr = Math.min(devicePixelRatio || 1, 2);
-      for (const cv of [shadowCanvas, darkCanvas, glowCanvas]) {
+      for (const cv of [shadowCanvas, darkCanvas, glowCanvas, thevmenuCandlelightCanvas]) {
         cv.width  = w * dpr;
         cv.height = h * dpr;
         cv.style.width  = w + 'px';
@@ -533,6 +545,7 @@
       shadowCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
       darkCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
       glowCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      thevmenuGlowCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
       workDark.width    = w; workDark.height    = h;
       workGlow.width    = w; workGlow.height    = h;
       workShadow.width  = w; workShadow.height  = h;
@@ -544,6 +557,7 @@
       if (shadowCanvas.parentNode !== app) app.appendChild(shadowCanvas);
       if (darkCanvas.parentNode   !== app) app.appendChild(darkCanvas);
       if (glowCanvas.parentNode   !== app) app.appendChild(glowCanvas);
+      if (thevmenuCandlelightCanvas.parentNode !== app) app.appendChild(thevmenuCandlelightCanvas);
     }
 
     // ── Occluder gathering ────────────────────────────────────────────────────
@@ -742,6 +756,9 @@
       glowCtx.drawImage(workGlow, 0, 0);
       punchOutImmune(glowCtx);
       drawImmuneDebugOverlay(glowCtx);
+
+      thevmenuGlowCtx.clearRect(0, 0, w, h);
+      thevmenuGlowCtx.drawImage(glowCanvas, 0, 0);
 
       // ── Lerp clone lighting ─────────────────────────────────────────────────
       // Clones on document.body get a CSS filter that approximates their position
