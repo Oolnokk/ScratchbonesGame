@@ -594,6 +594,7 @@ import { createLayerManager } from './ui/layerManager.js';
       return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" data-pot-pile-anchor style="position:absolute;left:${(anchorXPct * 100).toFixed(3)}%;top:calc(${(anchorYPct * 100).toFixed(3)}% + ${offsetYPx.toFixed(1)}px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
+    state.humanSeat = 0; // index of the currently active human player (hot-seat support)
     const layoutDiagnostics = createLayoutDiagnosticsState();
    function mulberry32(a) {
       return function() {
@@ -664,23 +665,60 @@ import { createLayerManager } from './ui/layerManager.js';
       return generatedName;
     }
     function makePlayers() {
+      const session = window.SCRATCHBONES_SESSION || {};
+      const humanSeats = Array.isArray(session.humanSeats) ? new Set(session.humanSeats) : new Set([0]);
+      const playerNames = session.playerNames || {};
       return Array.from({ length: SCRATCHBONES_GAME.deck.playerCount }, (_, index) => {
+        const isHuman = humanSeats.has(index);
         const aiIdentity = generateAiIdentity(index);
+        const sessionName = playerNames[index];
+        const name = isHuman && sessionName ? sessionName : resolveSeatName(index, aiIdentity.name);
         return {
           id: index,
-          name: resolveSeatName(index, aiIdentity.name),
+          name,
           hand: [],
           chips: CONFIG.startingChips,
           eliminated: false,
-          isHuman: index === 0,
+          isHuman,
           lastAction: 'Ready',
           clears: 0,
           seed: aiIdentity.seed,
           gender: aiIdentity.gender,
-          personality: index === 0 ? null : aiIdentity.personality,
+          personality: isHuman ? null : aiIdentity.personality,
           reads: {},
         };
       });
+    }
+    function isHumanSeat(index) {
+      return state.players[index]?.isHuman === true;
+    }
+    // After any turn transition, schedule AI for AI seats or show a hot-seat cover
+    // for human seats that are not the currently active human player.
+    function scheduleNextTurnOrCover() {
+      if (!isHumanSeat(state.currentTurn)) {
+        scheduleAiTurn();
+      } else if (state.currentTurn !== state.humanSeat) {
+        showHotSeatCover(state.currentTurn);
+      }
+      // If state.currentTurn === state.humanSeat: UI is visible; wait for input.
+    }
+    function showHotSeatCover(targetSeat) {
+      const coverEl = document.getElementById('sb-cover');
+      if (!coverEl) { state.humanSeat = targetSeat; render(); return; }
+      const name = state.players[targetSeat]?.name || `Player ${targetSeat + 1}`;
+      coverEl.innerHTML = `
+        <div class="sb-cover-card">
+          <div class="sb-cover-label">Pass the device</div>
+          <div class="sb-cover-name">${escapeHtml(name)}</div>
+          <div class="sb-cover-hint">Your turn — tap when ready</div>
+          <button class="sb-btn-primary" id="sb-cover-ready" style="margin-top:8px;">I'm ready</button>
+        </div>`;
+      coverEl.style.display = 'flex';
+      document.getElementById('sb-cover-ready')?.addEventListener('click', () => {
+        coverEl.style.display = 'none';
+        state.humanSeat = targetSeat;
+        render();
+      }, { once: true });
     }
     function inferPlayerCultureFromProfile(player) {
       const cultureCfg = SCRATCHBONES_GAME.nameGeneration?.aiCultureSelection || {};
@@ -753,7 +791,7 @@ import { createLayerManager } from './ui/layerManager.js';
       return true;
     }
     function selectedCards() {
-      return state.players[0].hand.filter(c => state.selectedCardIds.has(c.id));
+      return state.players[state.humanSeat].hand.filter(c => state.selectedCardIds.has(c.id));
     }
     function addLog(text) {
       state.logs.unshift({ text, ts: Date.now() });
@@ -942,6 +980,7 @@ import { createLayerManager } from './ui/layerManager.js';
     async function startGame() {
       await preloadScratchboneCardArt();
       clearChallengeTimer();
+      state.humanSeat = 0;
       state.seed = Math.floor(Math.random() * 1e9);
       state.poolVisualSeed = Math.floor(Math.random() * 1e9);
       rand = mulberry32(state.seed);
@@ -968,17 +1007,18 @@ import { createLayerManager } from './ui/layerManager.js';
       await dealFreshHandsAnimated();
       SCRATCHBONES_AUDIO.startPlaylist();
       for (const p of state.players) p.profile = generatePlayerProfile(p);
+      applyEquippedCosmeticsToHumanPlayers();
       applyAiNamesByPortraitCulture();
       for (const p of state.players) logPlayerPortraitXforms(p);
       state.leaderIndex = rngInt(0, state.players.length - 1);
       state.currentTurn = state.leaderIndex;
-      setBanner(state.currentTurn === 0 ? SCRATCHBONES_GAME.uiText.yourLeadBanner : `${seatLabel(state.currentTurn)} opens the round.`);
+      setBanner(isHumanSeat(state.currentTurn) ? SCRATCHBONES_GAME.uiText.yourLeadBanner : `${seatLabel(state.currentTurn)} opens the round.`);
       addLog(`A new match begins. ${seatLabel(state.leaderIndex)} leads the first round.`);
       render();
-      if (state.currentTurn !== 0) scheduleAiTurn();
+      scheduleNextTurnOrCover();
     }
     function toggleSelect(cardId) {
-      if (state.gameOver || state.currentTurn !== 0 || state.challengeWindow || state.betting) return;
+      if (state.gameOver || state.currentTurn !== state.humanSeat || state.challengeWindow || state.betting) return;
       if (state.selectedCardIds.has(cardId)) state.selectedCardIds.delete(cardId);
       else state.selectedCardIds.add(cardId);
       render();
@@ -997,21 +1037,22 @@ import { createLayerManager } from './ui/layerManager.js';
         render();
         return;
       }
-      performPlay(0, cards.map(c => c.id), declaredRank);
+      performPlay(state.humanSeat, cards.map(c => c.id), declaredRank);
     }
     function humanConcedeRound() {
-      if (state.gameOver || state.currentTurn !== 0 || state.challengeWindow || state.betting) return;
+      if (state.gameOver || state.currentTurn !== state.humanSeat || state.challengeWindow || state.betting) return;
       if (state.declaredRank === null) {
         setBanner('You can only concede after a declaration exists.', 'warn');
         render();
         return;
       }
-      const amount = transferToBank(0, CONFIG.concedeRoundChipLoss, 'You concede the claim and pay 1 chip to the bank.');
-      state.players[0].lastAction = 'Conceded round';
+      const hs = state.humanSeat;
+      const amount = transferToBank(hs, CONFIG.concedeRoundChipLoss, 'You concede the claim and pay 1 chip to the bank.');
+      state.players[hs].lastAction = 'Conceded round';
       if (amount <= 0) return;
-      state.roundConcessions.add(0);
+      state.roundConcessions.add(hs);
       if (maybeEndRoundFromConcessions()) return;
-      const nextPlayer = nextRoundEligibleIndex(0);
+      const nextPlayer = nextRoundEligibleIndex(hs);
       if (nextPlayer === null) {
         openNewRound(currentDeclarerIndex());
         return;
@@ -1019,7 +1060,7 @@ import { createLayerManager } from './ui/layerManager.js';
       state.currentTurn = nextPlayer;
       setBanner(`${seatLabel(state.players[nextPlayer])} is up on ${state.declaredRank}.`);
       render();
-      if (nextPlayer !== 0) scheduleAiTurn();
+      scheduleNextTurnOrCover();
     }
     function performPlay(playerIndex, cardIds, declaredRank) {
       const player = state.players[playerIndex];
@@ -1059,7 +1100,7 @@ import { createLayerManager } from './ui/layerManager.js';
         challengerOptions: backups,
       });
       render();
-      if (playerIndex !== 0) {
+      if (!isHumanSeat(playerIndex)) {
         startChallengeTimer();
       }
       scheduleAiChallengeWindowDecisions(playerIndex);
@@ -1179,7 +1220,7 @@ import { createLayerManager } from './ui/layerManager.js';
       suspicion += play.cards.length >= 5 ? 0.08 : 0;
       suspicion += challenger.chips <= 2 ? -0.18 : 0;
       suspicion += challenger.chips >= 8 ? 0.05 : 0;
-      suspicion += play.playerIndex === 0 ? 0.1 : 0;
+      suspicion += isHumanSeat(play.playerIndex) ? 0.1 : 0;
       suspicion += suspicionFromReadProfile(read, pers);
       if (includeRandom) suspicion += rand() * CONFIG.aiChallengeRandomNudgeMax;
       if (pers) {
@@ -1272,7 +1313,7 @@ import { createLayerManager } from './ui/layerManager.js';
           }
         }, delayMs);
       });
-      if (playerIndex === 0) {
+      if (isHumanSeat(playerIndex)) {
         const baseChallengeDurationMs = CHALLENGE_TIMER_SECS * 1000;
         const countdownDurationMs = Math.min(baseChallengeDurationMs, maxDecisionDelay + 30);
         startChallengeTimer({
@@ -1289,9 +1330,9 @@ import { createLayerManager } from './ui/layerManager.js';
     function humanChallenge() {
       if (!state.challengeWindow || state.gameOver || state.betting) return;
       const target = state.challengeWindow.lastPlay.playerIndex;
-      if (target === 0) return;
+      if (target === state.humanSeat) return;
       clearChallengeTimer();
-      startChallenge(0, target);
+      startChallenge(state.humanSeat, target);
     }
     function humanAcceptNoChallenge() {
       if (!state.challengeWindow || state.gameOver || state.betting) return;
@@ -1884,11 +1925,11 @@ import { createLayerManager } from './ui/layerManager.js';
         }
         state.currentTurn = nextPlayer;
         traceGameplay('turn.advance', { from: lastPlayerIndex, to: nextPlayer, reason: 'claim-stood' });
-        setBanner(state.currentTurn === 0
+        setBanner(state.currentTurn === state.humanSeat
           ? `Your turn. Match ${state.declaredRank}, bluff, or concede the round.`
           : `${seatLabel(state.players[state.currentTurn])} is thinking about ${state.declaredRank}.`);
         render();
-        if (state.currentTurn !== 0) scheduleAiTurn();
+        scheduleNextTurnOrCover();
     }
     async function checkForClearAndRedeal(playerIndex) {
       const player = state.players[playerIndex];
@@ -1925,11 +1966,11 @@ import { createLayerManager } from './ui/layerManager.js';
       state.round += 1;
       state.leaderIndex = playerIndex;
       state.currentTurn = playerIndex;
-      setBanner(playerIndex === 0
+      setBanner(isHumanSeat(playerIndex)
         ? `You cleared your hand. Hands refill up to ${START_HAND_SIZE} cards in turn order, and you lead again.`
         : `${seatLabel(player)} cleared their hand. Hands refill up to ${START_HAND_SIZE} cards in turn order, and they lead again.`, 'good');
       render();
-      if (state.currentTurn !== 0) scheduleAiTurn();
+      scheduleNextTurnOrCover();
       return true;
     }
     function openNewRound(leaderIndex) {
@@ -1946,30 +1987,43 @@ import { createLayerManager } from './ui/layerManager.js';
       state.round += 1;
       state.selectedCardIds.clear();
       state.roundConcessions.clear();
-      setBanner(state.currentTurn === 0
+      setBanner(state.currentTurn === state.humanSeat
         ? 'You open the new round. Select cards and declare any number.'
         : `${seatLabel(state.currentTurn)} opens a new round.`);
       render();
-      if (state.currentTurn !== 0) scheduleAiTurn();
+      scheduleNextTurnOrCover();
     }
     function checkGameOverBySurvivors() {
       const survivors = alivePlayers();
       if (survivors.length === 1) {
         state.gameOver = true;
         state.winnerIndex = survivors[0].id;
-        setBanner(survivors[0].id === 0 ? 'You win. Everyone else ran out of chips.' : `${seatLabel(survivors[0])} wins. Everyone else ran out of chips.`, 'good');
+        const winnerIsHuman = isHumanSeat(survivors[0].id);
+        setBanner(winnerIsHuman ? 'You win. Everyone else ran out of chips.' : `${seatLabel(survivors[0])} wins. Everyone else ran out of chips.`, 'good');
         addLog(state.banner);
         render();
         return true;
       }
       return false;
     }
+    function humanChipCountForAward() {
+      // Award Bronze equal to seat-0's chips (the primary/account player).
+      return state.players[0]?.chips ?? 0;
+    }
+    function goToLobby() {
+      const chips = humanChipCountForAward();
+      if (window.ScratchbonesLobby) {
+        window.ScratchbonesLobby.onGameEnd(chips);
+      } else {
+        void startGame();
+      }
+    }
     function scheduleAiTurn() {
       if (state.gameOver) return;
       const actorId = state.currentTurn;
       const thinkMs = aiDecisionDelayMs('turn', actorId);
       window.setTimeout(() => {
-        if (!state.gameOver && state.currentTurn !== 0 && !state.challengeWindow && !state.betting) {
+        if (!state.gameOver && !isHumanSeat(state.currentTurn) && !state.challengeWindow && !state.betting) {
           aiTakeTurn(state.currentTurn);
         }
       }, thinkMs);
@@ -1977,7 +2031,7 @@ import { createLayerManager } from './ui/layerManager.js';
     function scheduleBettingAiIfNeeded() {
       if (!state.betting || state.gameOver) return;
       const actorId = state.betting.currentActorId;
-      if (actorId === 0) return;
+      if (isHumanSeat(actorId)) return;
       const intent = aiBetIntent(actorId);
       const thinkMs = aiDecisionDelayMs('betting', actorId);
       window.setTimeout(() => {
@@ -2308,7 +2362,7 @@ import { createLayerManager } from './ui/layerManager.js';
       return moved;
     }
     function humanPickSmuggleTarget(play, candidateIds) {
-      if (play.playerIndex !== 0 || candidateIds.length <= 1) return candidateIds[0];
+      if (!isHumanSeat(play.playerIndex) || candidateIds.length <= 1) return candidateIds[0];
       const list = candidateIds.map((id) => `${id}: ${seatLabel(id)}`).join('\n');
       const picked = window.prompt(`Smuggle Bone: choose target seat id\n${list}`, String(candidateIds[0]));
       const pickedId = Number(picked);
@@ -2316,7 +2370,7 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     function humanPickTrapCardIds(fromId, maxCount) {
       const from = state.players[fromId];
-      if (fromId !== 0 || !from) return null;
+      if (!isHumanSeat(fromId) || !from) return null;
       const cap = Math.min(Math.max(0, Number(maxCount) || 0), from.hand.length);
       if (!cap) return [];
       const options = from.hand.map((card, index) => `${index + 1}: ${card.trickType ? card.trickType.toUpperCase() : (card.wild ? 'Wild' : `Rank ${card.rank}`)}`);
@@ -2333,7 +2387,7 @@ import { createLayerManager } from './ui/layerManager.js';
       if (!movedCards.length) return;
       const candidateIds = alivePlayers().map((player) => player.id).filter((id) => id !== play.playerIndex);
       if (!candidateIds.length) return;
-      if (play.playerIndex === 0) {
+      if (isHumanSeat(play.playerIndex)) {
         state.smuggleSelection = {
           playCardIds: movedCards.map((card) => card.id),
           candidateIds,
@@ -2344,7 +2398,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return;
       }
       const targetId = humanPickSmuggleTarget(play, candidateIds);
-      await animateCardTransferBatch({ cards: movedCards, fromKind: 'table', toKind: targetId === 0 ? 'hand' : 'seatHand', toPlayerId: targetId });
+      await animateCardTransferBatch({ cards: movedCards, fromKind: 'table', toKind: isHumanSeat(targetId) ? 'hand' : 'seatHand', toPlayerId: targetId });
       state.players[targetId].hand.push(...movedCards);
       state.players[targetId].hand.sort(sortCards);
       play.cards = play.cards.filter((card) => card.trickType === 'smuggle');
@@ -2361,7 +2415,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const movedCards = lastPlay.cards.filter((card) => selection.playCardIds.includes(card.id));
       const targetId = selection.selectedTargetId;
       if (movedCards.length && Number.isInteger(targetId)) {
-        await animateCardTransferBatch({ cards: movedCards, fromKind: 'table', toKind: targetId === 0 ? 'hand' : 'seatHand', toPlayerId: targetId });
+        await animateCardTransferBatch({ cards: movedCards, fromKind: 'table', toKind: isHumanSeat(targetId) ? 'hand' : 'seatHand', toPlayerId: targetId });
         state.players[targetId].hand.push(...movedCards);
         state.players[targetId].hand.sort(sortCards);
         lastPlay.cards = lastPlay.cards.filter((card) => !selection.playCardIds.includes(card.id));
@@ -2374,8 +2428,8 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     async function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return;
-      if (challengedId === 0) {
-        const maxCount = Math.min(play.cards.length, state.players[0].hand.length);
+      if (isHumanSeat(challengedId)) {
+        const maxCount = Math.min(play.cards.length, state.players[state.humanSeat].hand.length);
         if (maxCount <= 0) {
           addLog('Trap Bone fizzles: no cards available to offload.');
           return;
@@ -2390,16 +2444,16 @@ import { createLayerManager } from './ui/layerManager.js';
       if (Array.isArray(selectedCardIds)) moved = transferSpecificCardsBetweenHands(challengedId, challengerId, selectedCardIds);
       if (!moved.length) moved = transferCardsBetweenHands(challengedId, challengerId, play.cards.length);
       if (!moved.length) return;
-      await animateCardTransferBatch({ cards: moved, fromKind: challengedId === 0 ? 'hand' : 'seatHand', fromPlayerId: challengedId, toKind: challengerId === 0 ? 'hand' : 'seatHand', toPlayerId: challengerId, arcMode: challengedId !== 0 && challengerId !== 0 ? 'inward' : 'auto' });
+      await animateCardTransferBatch({ cards: moved, fromKind: isHumanSeat(challengedId) ? 'hand' : 'seatHand', fromPlayerId: challengedId, toKind: isHumanSeat(challengerId) ? 'hand' : 'seatHand', toPlayerId: challengerId, arcMode: !isHumanSeat(challengedId) && !isHumanSeat(challengerId) ? 'inward' : 'auto' });
       addLog(`Trap Bone triggers: ${seatLabel(challengedId)} transfers ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
     }
     async function resolvePendingTrapSelection() {
       if (!state.trapSelection) return;
       const { challengerId, maxCount } = state.trapSelection;
       const selectedIds = [...state.selectedCardIds].slice(0, maxCount);
-      let moved = transferSpecificCardsBetweenHands(0, challengerId, selectedIds);
-      if (!moved.length) moved = transferCardsBetweenHands(0, challengerId, maxCount);
-      if (moved.length) await animateCardTransferBatch({ cards: moved, fromKind: 'hand', toKind: challengerId === 0 ? 'hand' : 'seatHand', toPlayerId: challengerId });
+      let moved = transferSpecificCardsBetweenHands(state.humanSeat, challengerId, selectedIds);
+      if (!moved.length) moved = transferCardsBetweenHands(state.humanSeat, challengerId, maxCount);
+      if (moved.length) await animateCardTransferBatch({ cards: moved, fromKind: 'hand', toKind: isHumanSeat(challengerId) ? 'hand' : 'seatHand', toPlayerId: challengerId });
       if (moved.length) addLog(`Trap Bone triggers: You transfer ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
       state.selectedCardIds.clear();
       state.trapSelection = null;
@@ -2410,7 +2464,7 @@ import { createLayerManager } from './ui/layerManager.js';
       state.players[challengerId].trickPunishActive = false;
       const moved = transferCardsBetweenHands(challengerId, challengedId, play.cards.length);
       if (!moved.length) return;
-      await animateCardTransferBatch({ cards: moved, fromKind: challengerId === 0 ? 'hand' : 'seatHand', fromPlayerId: challengerId, toKind: challengedId === 0 ? 'hand' : 'seatHand', toPlayerId: challengedId, arcMode: challengerId !== 0 && challengedId !== 0 ? 'inward' : 'auto' });
+      await animateCardTransferBatch({ cards: moved, fromKind: isHumanSeat(challengerId) ? 'hand' : 'seatHand', fromPlayerId: challengerId, toKind: isHumanSeat(challengedId) ? 'hand' : 'seatHand', toPlayerId: challengedId, arcMode: !isHumanSeat(challengerId) && !isHumanSeat(challengedId) ? 'inward' : 'auto' });
       addLog(`Punish Bone triggers: ${seatLabel(challengerId)} gives ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengedId)}.`);
     }
         function normalizedAssetPath(basePath, fileName) {
@@ -3143,7 +3197,7 @@ import { createLayerManager } from './ui/layerManager.js';
       }
       const overflowPx = Math.max(0, challengePane.scrollHeight - challengePane.clientHeight);
       const severity = clampNumber(overflowPx / 220, 0, 1);
-      const humanClaimDecisionTurn = state.currentTurn === 0 && !!state.challengeWindow && !state.betting;
+      const humanClaimDecisionTurn = state.currentTurn === state.humanSeat && !!state.challengeWindow && !state.betting;
       // Deterministic resolver order:
       // 1) wrap text
       // 2) reduce font scale
@@ -3464,7 +3518,7 @@ import { createLayerManager } from './ui/layerManager.js';
 
         // Determine if an opponent just played (for avatar-origin card flights)
         const latestPlay = state.betting?.play || state.challengeWindow?.lastPlay || state.pile.at(-1) || null;
-        const actorIsOpponent = !!(latestPlay && latestPlay.playerIndex !== 0);
+        const actorIsOpponent = !!(latestPlay && !isHumanSeat(latestPlay.playerIndex));
         const actorRect = actorIsOpponent ? seatAvatarAnim.getPreRenderClusterRect() : null;
         const deckRect = document.querySelector('.tableDeckPlaceholder')?.getBoundingClientRect() || null;
 
@@ -3763,16 +3817,17 @@ import { createLayerManager } from './ui/layerManager.js';
       cardAnimator.capturePreRender();
       const app = document.getElementById('app');
       const layoutPolicy = applyLayoutContract(app);
-      const player = state.players[0] || { hand: [], chips: 0, clears: 0 };
+      const hs = state.humanSeat;
+      const player = state.players[hs] || { hand: [], chips: 0, clears: 0 };
       const selected = selectedCards();
-      const canHumanAct = !state.gameOver && state.currentTurn === 0 && !state.challengeWindow && !state.betting && !hasConcededThisRound(0);
+      const canHumanAct = !state.gameOver && state.currentTurn === hs && !state.challengeWindow && !state.betting && !hasConcededThisRound(hs);
       const declareOptions = Array.from({ length: RANK_COUNT }, (_, i) => i + 1)
         .map(rank => `<option value="${rank}" ${state.declaredRank === rank ? 'selected' : ''}>${rank}</option>`)
         .join('');
-      const bettingActorHuman = !!state.betting && state.betting.currentActorId === 0;
-      const humanCallAmount = state.betting ? amountToCall(0) : 0;
-      const humanLegalActions = state.betting && bettingActorHuman ? legalBettingActionsFor(0) : [];
-      const humanRaiseTierIds = state.betting && bettingActorHuman ? legalStakeTierIdsForPlayer(0) : [];
+      const bettingActorHuman = !!state.betting && state.betting.currentActorId === hs;
+      const humanCallAmount = state.betting ? amountToCall(hs) : 0;
+      const humanLegalActions = state.betting && bettingActorHuman ? legalBettingActionsFor(hs) : [];
+      const humanRaiseTierIds = state.betting && bettingActorHuman ? legalStakeTierIdsForPlayer(hs) : [];
       const humanCanRaise = humanLegalActions.includes('raise-tier') && humanRaiseTierIds.length > 0;
       if (state.betting) {
         const bettingUiDebug = {
@@ -3797,7 +3852,7 @@ import { createLayerManager } from './ui/layerManager.js';
         uiDebugState.bettingUiDebugKey = null;
       }
       const challengeWindow = state.challengeWindow;
-      const humanCanDecideChallenge = !!(challengeWindow && !state.betting && !state.gameOver && challengeWindow.lastPlay.playerIndex !== 0);
+      const humanCanDecideChallenge = !!(challengeWindow && !state.betting && !state.gameOver && challengeWindow.lastPlay.playerIndex !== hs);
       const challengePromptText = humanCanDecideChallenge ? formatChallengePrompt(challengeWindow.lastPlay) : '';
       const latestPilePlay = state.pile.at(-1) || null;
       const latestPlay = state.betting?.play || state.challengeWindow?.lastPlay || (state.challengeIntro ? latestPilePlay : null);
@@ -4005,7 +4060,8 @@ import { createLayerManager } from './ui/layerManager.js';
         <div class="topbar" data-proj-id="topbar">
           <div class="titleRow">
             <h1>${escapeHtml(GAME_TITLE)}</h1>
-            <button class="ghost" id="restartBtn">New Match</button>
+            ${window.ScratchbonesAccount ? `<div class="chip" style="display:inline-flex;align-items:center;gap:3px;"><span style="font-style:normal;">🪙</span>${window.ScratchbonesAccount.getBronze()} Bronze</div>` : ''}
+            <button class="ghost" id="lobbyBtn">← Lobby</button>
           </div>
           <div class="chipRow">
             <div class="chip">Round ${state.round}</div>
@@ -4016,7 +4072,7 @@ import { createLayerManager } from './ui/layerManager.js';
         </div>
         <div id="aiSidebar" class="fit-target fit-0" data-proj-id="sidebar">
           <div class="sectionTitle" style="padding:6px 10px 2px;color:var(--accent-2);">Table</div>
-          ${state.players.slice(1).map(p => `
+          ${state.players.filter(p => p.id !== hs).map(p => `
             <div class="aiSeat ${p.eliminated ? 'eliminated' : ''}" data-proj-id="seat-${p.id}" data-ai-seat-id="${p.id}" style="${state.smuggleSelection ? `outline:2px solid ${state.smuggleSelection.selectedTargetId === p.id ? 'var(--warning)' : 'var(--text)'};cursor:pointer;` : (state.trapSelection && state.trapSelection.challengerId === p.id ? 'outline:2px solid var(--danger);' : '')}">
               <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
                 <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
@@ -4158,7 +4214,7 @@ import { createLayerManager } from './ui/layerManager.js';
         const select = document.getElementById('declareRank');
         if (select) select.value = String(state.declaredRank);
       }
-      document.getElementById('restartBtn')?.addEventListener('click', startGame);
+      document.getElementById('lobbyBtn')?.addEventListener('click', goToLobby);
       document.getElementById('playBtn')?.addEventListener('click', humanPlay);
       document.getElementById('concedeBtn')?.addEventListener('click', humanConcedeRound);
       document.getElementById('challengeBtnFixed')?.addEventListener('click', () => { clearChallengeTimer(); humanChallenge(); });
@@ -4347,6 +4403,18 @@ import { createLayerManager } from './ui/layerManager.js';
                         : player.gender === 'female' ? FIGHTERS.filter(f => fighterGender(f) === 'female')
                         : FIGHTERS;
       return randomProfileSeeded(rng, fighterPool.length ? fighterPool : FIGHTERS, hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
+    }
+    function applyEquippedCosmeticsToHumanPlayers() {
+      if (!_portraitCosmetics) return;
+      const acc = window.ScratchbonesAccount;
+      if (!acc) return;
+      for (const player of state.players) {
+        if (!player.isHuman || !player.profile) continue;
+        const equippedHatId = acc.getEquippedForCategory('hat');
+        if (equippedHatId && _portraitCosmetics.optionCache?.has(equippedHatId)) {
+          player.profile.hat = _portraitCosmetics.optionCache.get(equippedHatId);
+        }
+      }
     }
     function logPlayerPortraitXforms(player) {
       if (!player?.profile || !window.getProfileSpriteXforms) return;
@@ -4635,7 +4703,7 @@ import { createLayerManager } from './ui/layerManager.js';
         const loser = state.players[cinematicMode.loserId];
         const winnerName = winner?.isHuman ? 'You' : (winner?.name || 'Unknown');
         const loserName = loser?.isHuman ? 'You' : (loser?.name || 'Unknown');
-        const resultToneClass = cinematicMode.winnerId === 0 ? 'res-good' : (cinematicMode.loserId === 0 ? 'res-warn' : 'res-neutral');
+        const resultToneClass = isHumanSeat(cinematicMode.winnerId) ? 'res-good' : (isHumanSeat(cinematicMode.loserId) ? 'res-warn' : 'res-neutral');
         const headlineClass = cinematicPhase === 'reveal' ? (cinematicMode.winnerId === cinematicMode.challengerId ? 'cin-caught' : 'cin-defended') : 'cin-fold';
         const subtitle = cinematicPhase === 'reveal' ? `${winnerName} wins the challenge.` : `${loserName} folds — ${winnerName} takes the pot.`;
         textAnchor.classList.add('claimClusterCinematicPane', 'cinematic-resolution-pane');
@@ -5515,9 +5583,13 @@ import { createLayerManager } from './ui/layerManager.js';
     window.addEventListener('orientationchange', scheduleResponsiveFitPass, { passive: true });
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     window.addEventListener('keydown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
-    void startGame().catch((error) => {
-      console.error('[game] startGame failed', error);
-    });
+    // Expose startGame so the lobby can launch matches.
+    window.scratchbonesStartGame = startGame;
+    window.dispatchEvent(new CustomEvent('scratchbones:ready'));
+    // Auto-start only when the lobby system is absent (dev/standalone mode).
+    if (!window.ScratchbonesLobby) {
+      void startGame().catch((error) => { console.error('[game] startGame failed', error); });
+    }
     try {
       initCandleLight({ gameConfig: SCRATCHBONES_GAME, debugLog: traceCandlelight });
     } catch (error) {
