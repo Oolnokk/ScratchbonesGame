@@ -491,6 +491,7 @@ import { createLayerManager } from './ui/layerManager.js';
       challengeStakeTiers: SCRATCHBONES_GAME.chips.challengeStakeTiers,
       challengeStakeAnimation: SCRATCHBONES_GAME.chips.challengeStakeAnimation,
       transferAnimation: SCRATCHBONES_GAME.chips.transferAnimation,
+      cardTransferAnimation: SCRATCHBONES_GAME.chips.cardTransferAnimation,
       clearBonusBase: SCRATCHBONES_GAME.chips.clearBonusBase,
       clearBonusIncrement: SCRATCHBONES_GAME.chips.clearBonusIncrement,
       anteStart: SCRATCHBONES_GAME.chips.anteStart,
@@ -1430,6 +1431,52 @@ import { createLayerManager } from './ui/layerManager.js';
       await sleep(durationMs + 40);
       cluster.remove();
     }
+    function cardTransferAnchorRect(kind, playerId, cardIndex = 0) {
+      const pickRect = (container) => {
+        if (!container) return null;
+        const slots = [...container.querySelectorAll('.card, .seatHandCard, .tableViewCard')];
+        const slot = slots[Math.min(Math.max(0, cardIndex), Math.max(0, slots.length - 1))];
+        return slot?.getBoundingClientRect() || container.getBoundingClientRect();
+      };
+      if (kind === 'hand') return pickRect(document.querySelector('.handScroll'));
+      if (kind === 'table') return pickRect(document.querySelector('.tableViewCards')) || document.querySelector('.claimHandBar')?.getBoundingClientRect() || null;
+      if (kind === 'seatHand') return pickRect(document.querySelector(`.seatHandPreview[data-seat-id="${playerId}"]`));
+      if (kind === 'deck') return document.querySelector('.tableDeckPlaceholder')?.getBoundingClientRect() || null;
+      return null;
+    }
+    async function animateCardTransferBatch({ cards, fromKind, fromPlayerId = null, toKind, toPlayerId = null, arcMode = 'auto', durationMs = CONFIG.cardTransferAnimation.durationMs, staggerMs = CONFIG.cardTransferAnimation.staggerMs } = {}) {
+      const transferCards = Array.isArray(cards) ? cards : [];
+      if (!transferCards.length) return;
+      const fromRect = cardTransferAnchorRect(fromKind, fromPlayerId);
+      const toRect = cardTransferAnchorRect(toKind, toPlayerId);
+      if (!fromRect || !toRect || !fromRect.width || !fromRect.height || !toRect.width || !toRect.height) return;
+      const inwardArc = arcMode === 'inward' || (arcMode === 'auto' && fromKind === 'seatHand' && toKind === 'seatHand');
+      const promises = transferCards.map((card, index) => new Promise((resolve) => {
+        const art = resolveScratchbone2DAsset(card, { flipped: toKind === 'seatHand' });
+        const cardWidth = Math.max(22, Math.round(Math.min(72, fromRect.width || 50)));
+        const cardHeight = Math.round(cardWidth * 1.4);
+        const startX = fromRect.left + (fromRect.width / 2) - (cardWidth / 2);
+        const startY = fromRect.top + (fromRect.height / 2) - (cardHeight / 2);
+        const endX = toRect.left + (toRect.width / 2) - (cardWidth / 2);
+        const endY = toRect.top + (toRect.height / 2) - (cardHeight / 2);
+        const fly = document.createElement('img');
+        fly.src = art.src;
+        fly.setAttribute('data-fallback-src', art.fallbackSrc);
+        fly.style.cssText = `position:fixed;left:${startX}px;top:${startY}px;width:${cardWidth}px;height:${cardHeight}px;object-fit:contain;border-radius:6px;pointer-events:none;z-index:10020;opacity:.96;transform:translate(0px,0px);`;
+        document.body.appendChild(fly);
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            const offsetX = (index - (transferCards.length - 1) / 2) * 10;
+            const arcY = inwardArc ? -Math.min(48, Math.abs(endX - startX) * 0.12) : 0;
+            fly.style.transition = `transform ${durationMs}ms ${CONFIG.cardTransferAnimation.easing}, opacity ${durationMs}ms ${CONFIG.cardTransferAnimation.easing}`;
+            fly.style.transform = `translate(${(endX - startX) + offsetX}px, ${(endY - startY) + arcY}px)`;
+            fly.style.opacity = '0.88';
+          });
+        }, index * staggerMs);
+        setTimeout(() => { fly.remove(); resolve(); }, durationMs + (index * staggerMs) + 60);
+      }));
+      await Promise.all(promises);
+    }
     function coinButtonForTier(tierId) {
       return document.querySelector(`[data-stake-tier-btn="${tierId}"]`);
     }
@@ -1636,7 +1683,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const loser = state.players[loserId];
       const pot = challengePotTotal();
       const netGain = netChallengeGainFor(winnerId, pot);
-      showClaimGlow('red', 2500, () => {
+      showClaimGlow('red', 2500, async () => {
         winner.chips += pot;
         state.stats.chipsMovedByChallenges += pot;
         observeRevealedTruthForReads(play, play.truthful);
@@ -1648,11 +1695,11 @@ import { createLayerManager } from './ui/layerManager.js';
           addLog(`Challenge succeeds. ${seatLabel(loser)} was bluffing.`);
           loser.hand.push(...collectPileCards());
           loser.hand.sort(sortCards);
-          applyPunishTransferOnSuccessfulChallenge(play, challengerId, challengedId);
+          await applyPunishTransferOnSuccessfulChallenge(play, challengerId, challengedId);
         } else {
           state.stats.failedChallenges += 1;
           addLog(`Challenge fails. ${state.players[challengedId].name} was truthful.`);
-          applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId);
+          await applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId);
         }
         addLog(`${seatLabel(winner)} wins ${netGain} net chip${netGain === 1 ? '' : 's'} from the challenge.`);
         state.betting = null;
@@ -1694,9 +1741,9 @@ import { createLayerManager } from './ui/layerManager.js';
       clearChallengeIntro();
       state.challengeWindow = null;
       traceGameplay('challenge.no-challenge-accepted', { lastPlayerIndex, declaredRank: state.declaredRank });
-      showClaimGlow('green', 1600, () => {
+      showClaimGlow('green', 1600, async () => {
         const lastPlay = state.pile[state.pile.length - 1];
-        if (lastPlay && lastPlay.playerIndex === lastPlayerIndex) applySmuggleTransferOnPassedClaim(lastPlay);
+        if (lastPlay && lastPlay.playerIndex === lastPlayerIndex) await applySmuggleTransferOnPassedClaim(lastPlay);
         if (state.smuggleSelection) {
           state.smuggleSelection.resumePlayerIndex = lastPlayerIndex;
           return;
@@ -2158,7 +2205,7 @@ import { createLayerManager } from './ui/layerManager.js';
       if (uniqueIndexes.length !== cap) return null;
       return uniqueIndexes.map((index) => from.hand[index].id);
     }
-    function applySmuggleTransferOnPassedClaim(play) {
+    async function applySmuggleTransferOnPassedClaim(play) {
       if (!play.cards.some((card) => card.trickType === 'smuggle')) return;
       const movedCards = play.cards.filter((card) => card.trickType !== 'smuggle');
       if (!movedCards.length) return;
@@ -2175,12 +2222,13 @@ import { createLayerManager } from './ui/layerManager.js';
         return;
       }
       const targetId = humanPickSmuggleTarget(play, candidateIds);
+      await animateCardTransferBatch({ cards: movedCards, fromKind: 'table', toKind: targetId === 0 ? 'hand' : 'seatHand', toPlayerId: targetId });
       state.players[targetId].hand.push(...movedCards);
       state.players[targetId].hand.sort(sortCards);
       play.cards = play.cards.filter((card) => card.trickType === 'smuggle');
       addLog(`Smuggle Bone triggers: ${seatLabel(play.playerIndex)} moves ${movedCards.length} claimed card${movedCards.length === 1 ? '' : 's'} into ${seatLabel(targetId)}'s hand.`);
     }
-    function resolvePendingSmuggleSelection() {
+    async function resolvePendingSmuggleSelection() {
       const selection = state.smuggleSelection;
       if (!selection) return;
       const lastPlay = state.pile[state.pile.length - 1];
@@ -2191,6 +2239,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const movedCards = lastPlay.cards.filter((card) => selection.playCardIds.includes(card.id));
       const targetId = selection.selectedTargetId;
       if (movedCards.length && Number.isInteger(targetId)) {
+        await animateCardTransferBatch({ cards: movedCards, fromKind: 'table', toKind: targetId === 0 ? 'hand' : 'seatHand', toPlayerId: targetId });
         state.players[targetId].hand.push(...movedCards);
         state.players[targetId].hand.sort(sortCards);
         lastPlay.cards = lastPlay.cards.filter((card) => !selection.playCardIds.includes(card.id));
@@ -2201,7 +2250,7 @@ import { createLayerManager } from './ui/layerManager.js';
       render();
       if (Number.isInteger(resumePlayerIndex)) void continueAfterNoChallenge(resumePlayerIndex);
     }
-    function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
+    async function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return;
       if (challengedId === 0) {
         state.trapSelection = { challengerId, maxCount: Math.min(play.cards.length, state.players[0].hand.length) };
@@ -2214,24 +2263,27 @@ import { createLayerManager } from './ui/layerManager.js';
       if (Array.isArray(selectedCardIds)) moved = transferSpecificCardsBetweenHands(challengedId, challengerId, selectedCardIds);
       if (!moved.length) moved = transferCardsBetweenHands(challengedId, challengerId, play.cards.length);
       if (!moved.length) return;
+      await animateCardTransferBatch({ cards: moved, fromKind: challengedId === 0 ? 'hand' : 'seatHand', fromPlayerId: challengedId, toKind: challengerId === 0 ? 'hand' : 'seatHand', toPlayerId: challengerId, arcMode: challengedId !== 0 && challengerId !== 0 ? 'inward' : 'auto' });
       addLog(`Trap Bone triggers: ${seatLabel(challengedId)} transfers ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
     }
-    function resolvePendingTrapSelection() {
+    async function resolvePendingTrapSelection() {
       if (!state.trapSelection) return;
       const { challengerId, maxCount } = state.trapSelection;
       const selectedIds = [...state.selectedCardIds].slice(0, maxCount);
       let moved = transferSpecificCardsBetweenHands(0, challengerId, selectedIds);
       if (!moved.length) moved = transferCardsBetweenHands(0, challengerId, maxCount);
+      if (moved.length) await animateCardTransferBatch({ cards: moved, fromKind: 'hand', toKind: challengerId === 0 ? 'hand' : 'seatHand', toPlayerId: challengerId });
       if (moved.length) addLog(`Trap Bone triggers: You transfer ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
       state.selectedCardIds.clear();
       state.trapSelection = null;
       render();
     }
-    function applyPunishTransferOnSuccessfulChallenge(play, challengerId, challengedId) {
+    async function applyPunishTransferOnSuccessfulChallenge(play, challengerId, challengedId) {
       if (!state.players[challengerId]?.trickPunishActive) return;
       state.players[challengerId].trickPunishActive = false;
       const moved = transferCardsBetweenHands(challengerId, challengedId, play.cards.length);
       if (!moved.length) return;
+      await animateCardTransferBatch({ cards: moved, fromKind: challengerId === 0 ? 'hand' : 'seatHand', fromPlayerId: challengerId, toKind: challengedId === 0 ? 'hand' : 'seatHand', toPlayerId: challengedId, arcMode: challengerId !== 0 && challengedId !== 0 ? 'inward' : 'auto' });
       addLog(`Punish Bone triggers: ${seatLabel(challengerId)} gives ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengedId)}.`);
     }
         function normalizedAssetPath(basePath, fileName) {
@@ -3797,7 +3849,7 @@ import { createLayerManager } from './ui/layerManager.js';
           render();
         });
       });
-      document.getElementById('smuggleOffloadBtn')?.addEventListener('click', resolvePendingSmuggleSelection);
+      document.getElementById('smuggleOffloadBtn')?.addEventListener('click', () => { void resolvePendingSmuggleSelection(); });
       app.querySelectorAll('[data-ai-seat-id]').forEach((seat) => {
         seat.addEventListener('click', () => {
           if (!state.smuggleSelection) return;
@@ -3807,7 +3859,7 @@ import { createLayerManager } from './ui/layerManager.js';
           render();
         });
       });
-      document.getElementById('trapOffloadBtn')?.addEventListener('click', resolvePendingTrapSelection);
+      document.getElementById('trapOffloadBtn')?.addEventListener('click', () => { void resolvePendingTrapSelection(); });
       app.querySelectorAll('[data-stake-tier-action="open"]').forEach((btn) => {
         btn.addEventListener('click', () => humanOpenTierSelected(btn.getAttribute('data-stake-tier-id')));
       });
