@@ -65,15 +65,22 @@
     glowCanvas.setAttribute('aria-hidden', 'true');
 
     const thevmenuCandlelightCanvas = document.createElement('canvas');
+    const thevmenuCandlelightHost = document.createElement('div');
+    thevmenuCandlelightHost.id = 'thevmenuCandlelightHost';
+    thevmenuCandlelightHost.setAttribute('aria-hidden', 'true');
+    thevmenuCandlelightHost.style.position = 'fixed';
+    thevmenuCandlelightHost.style.inset = '0';
+    thevmenuCandlelightHost.style.pointerEvents = 'none';
+    thevmenuCandlelightHost.style.zIndex = String(THEVMENU_CANDLELIGHT_LAYER_Z_INDEX);
     thevmenuCandlelightCanvas.id = 'thevmenuCandlelightLayer';
     thevmenuCandlelightCanvas.setAttribute('aria-hidden', 'true');
     thevmenuCandlelightCanvas.style.opacity = String(THEVMENU_CANDLELIGHT_OPACITY_DEFAULT);
-    thevmenuCandlelightCanvas.style.position = 'absolute';
+    thevmenuCandlelightCanvas.style.position = 'fixed';
     thevmenuCandlelightCanvas.style.top = '0';
     thevmenuCandlelightCanvas.style.left = '0';
-    thevmenuCandlelightCanvas.style.zIndex = String(THEVMENU_CANDLELIGHT_LAYER_Z_INDEX);
     thevmenuCandlelightCanvas.style.pointerEvents = 'none';
     thevmenuCandlelightCanvas.style.mixBlendMode = 'screen';
+    thevmenuCandlelightHost.appendChild(thevmenuCandlelightCanvas);
 
     const shadowCtx = shadowCanvas.getContext('2d', { alpha: true });
     const darkCtx   = darkCanvas.getContext('2d',   { alpha: true });
@@ -559,6 +566,15 @@
       workGlow.width    = w; workGlow.height    = h;
       workShadow.width  = w; workShadow.height  = h;
       workBacklit.width = w; workBacklit.height = h;
+      syncThevmenuLayerGeometry(app);
+    }
+
+    function syncThevmenuLayerGeometry(app) {
+      const rect = app.getBoundingClientRect();
+      thevmenuCandlelightCanvas.style.left = `${rect.left}px`;
+      thevmenuCandlelightCanvas.style.top = `${rect.top}px`;
+      thevmenuCandlelightCanvas.style.width = `${rect.width}px`;
+      thevmenuCandlelightCanvas.style.height = `${rect.height}px`;
     }
 
     function ensureInApp(app) {
@@ -566,7 +582,9 @@
       if (shadowCanvas.parentNode !== app) app.appendChild(shadowCanvas);
       if (darkCanvas.parentNode   !== app) app.appendChild(darkCanvas);
       if (glowCanvas.parentNode   !== app) app.appendChild(glowCanvas);
-      if (thevmenuCandlelightCanvas.parentNode !== app) app.appendChild(thevmenuCandlelightCanvas);
+      if (thevmenuCandlelightHost.parentNode !== document.body) document.body.appendChild(thevmenuCandlelightHost);
+      if (thevmenuCandlelightCanvas.parentNode !== thevmenuCandlelightHost) thevmenuCandlelightHost.appendChild(thevmenuCandlelightCanvas);
+      syncThevmenuLayerGeometry(app);
     }
 
     // ── Occluder gathering ────────────────────────────────────────────────────
