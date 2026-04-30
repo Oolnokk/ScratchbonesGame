@@ -150,7 +150,7 @@ window.SCRATCHBONES_CONFIG = {
         "maxIcons": 28,
         "widthPx": 220,
         "heightPx": 96,
-        "coinSizePx": 30,
+        "coinSizePx": 50,
         "spreadXPx": 84,
         "spreadYPx": 28,
         "offsetYPx": 2
@@ -1409,7 +1409,7 @@ window.SCRATCHBONES_CONFIG = {
             "tempo": 1.0,
             "volume": 0.9,
             "leadMs": 120,
-            "extraCardDelayMs": 35
+            "extraCardDelayMs": 12
           }
         },
         "challenge": {
