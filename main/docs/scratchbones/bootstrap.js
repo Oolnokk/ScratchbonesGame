@@ -1726,6 +1726,12 @@ import { createLayerManager } from './ui/layerManager.js';
       winner.chips += award;
       state.stats.chipsMovedByChallenges += award;
       addLog(`${seatLabel(loser)} ${reason}. ${seatLabel(winner)} wins ${netGain} net chip${netGain === 1 ? '' : 's'} from the challenge.`);
+      if (loserId === state.betting.challengedId && state.betting.play) {
+        loser.lastAction = 'Folded while challenged';
+        loser.hand.push(...collectPileCards());
+        loser.hand.sort(sortCards);
+        addLog(`${seatLabel(loser)} folds under challenge and takes back the claim pile.`);
+      }
       if (winnerId === state.betting.challengerId) {
         state.stats.successfulChallenges += 1;
         noteChallengeReadResult(state.betting.challengerId, state.betting.challengedId, true);
@@ -2322,7 +2328,12 @@ import { createLayerManager } from './ui/layerManager.js';
     async function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return;
       if (challengedId === 0) {
-        state.trapSelection = { challengerId, maxCount: Math.min(play.cards.length, state.players[0].hand.length) };
+        const maxCount = Math.min(play.cards.length, state.players[0].hand.length);
+        if (maxCount <= 0) {
+          addLog('Trap Bone fizzles: no cards available to offload.');
+          return;
+        }
+        state.trapSelection = { challengerId, maxCount };
         state.selectedCardIds.clear();
         render();
         return;
