@@ -815,6 +815,13 @@ import { createLayerManager } from './ui/layerManager.js';
       render();
       if (CONFIG.cards.transferAnimation.deckDealStaggerMs > 0) await sleep(CONFIG.cards.transferAnimation.deckDealStaggerMs);
     }
+    function sortDealQueueRightToLeft(queue) {
+      return [...queue].sort((a, b) => {
+        if (a.playerIndex !== b.playerIndex) return a.playerIndex - b.playerIndex;
+        if (a.passNumber !== b.passNumber) return (a.passNumber || 0) - (b.passNumber || 0);
+        return b.landingCardIndex - a.landingCardIndex;
+      });
+    }
     async function dealFreshHandsAnimated() {
       const deck = createDeck();
       const dealQueue = [];
@@ -841,7 +848,7 @@ import { createLayerManager } from './ui/layerManager.js';
         }
       }
       render();
-      for (const dealStep of dealQueue) {
+      for (const dealStep of sortDealQueueRightToLeft(dealQueue)) {
         await animateDealCardToPlayer(dealStep);
       }
     }
@@ -878,6 +885,7 @@ import { createLayerManager } from './ui/layerManager.js';
         drawOrder.push((clearerIndex + offset) % state.players.length);
       }
       const refillQueue = [];
+      let refillPassCount = 0;
       let dealtInPass = true;
       while (deck.length && dealtInPass) {
         dealtInPass = false;
@@ -891,20 +899,18 @@ import { createLayerManager } from './ui/layerManager.js';
           player.hand.sort(sortCards);
           const landingCardIndex = player.hand.findIndex((handCard) => handCard.id === card.id);
           state.dealLandingHiddenCardIds.add(card.id);
-          refillQueue.push({ card, playerIndex, landingCardIndex, passBreakAfter: false });
+          refillQueue.push({ card, playerIndex, landingCardIndex, passNumber: refillPassCount });
           dealtInPass = true;
-        }
-        if (dealtInPass && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) {
-          const lastStep = refillQueue.at(-1);
-          if (lastStep) lastStep.passBreakAfter = true;
         }
       }
       render();
-      for (const refillStep of refillQueue) {
-        await animateDealCardToPlayer(refillStep);
-        if (refillStep.passBreakAfter && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) {
+      let activePassNumber = sortDealQueueRightToLeft(refillQueue)[0]?.passNumber ?? null;
+      for (const refillStep of sortDealQueueRightToLeft(refillQueue)) {
+        if (activePassNumber !== null && refillStep.passNumber !== activePassNumber && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) {
           await sleep(CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs);
+          activePassNumber = refillStep.passNumber;
         }
+        await animateDealCardToPlayer(refillStep);
       }
       for (const player of state.players) {
         if (player.eliminated) {
