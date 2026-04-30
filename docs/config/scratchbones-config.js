@@ -168,6 +168,15 @@ window.SCRATCHBONES_CONFIG = {
           "raiseInMs": 300
         }
       },
+      "transferAnimation": {
+        "clusterMoveMs": 320,
+        "anteMs": 300,
+        "clearPayoutMs": 360,
+        "multiAnteSettleDelayMs": 120,
+        "easing": "ease",
+        "coinSizePx": 24,
+        "maxIconsPerCluster": 10
+      },
       "clearReward": {
         "base": 1,
         "increment": 1
