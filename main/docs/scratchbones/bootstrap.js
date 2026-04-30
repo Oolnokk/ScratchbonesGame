@@ -3988,6 +3988,7 @@ import { createLayerManager } from './ui/layerManager.js';
       document.body.classList.toggle('layout-mode-authored', layoutMode === 'authored');
       if (layoutMode === 'authored') {
         applyAuthoredLayoutMode(app, getScratchbonesAuthoredConfig());
+        applyAuthoredSubAdjustments(app);
         resetLayoutDiagnosticsState(layoutDiagnostics);
       } else {
         app.style.width = '';
@@ -4602,15 +4603,37 @@ import { createLayerManager } from './ui/layerManager.js';
         }
       }
     }
+
+    function applyAuthoredSubAdjustments(app = document.getElementById('app')) {
+      if (!app) return;
+      const authored = getScratchbonesAuthoredConfig();
+      const offsets = authored.subOffsets && typeof authored.subOffsets === 'object' ? authored.subOffsets : {};
+      const sizes = authored.subSizes && typeof authored.subSizes === 'object' ? authored.subSizes : {};
+      for (const [projId, offset] of Object.entries(offsets)) {
+        const el = app.querySelector(`[data-proj-id="${projId}"]`);
+        if (!el) continue;
+        const baseTransform = el.getAttribute('data-authored-base-transform') ?? (el.style.transform || '');
+        el.setAttribute('data-authored-base-transform', baseTransform);
+        const dx = Math.round(Number(offset?.dx) || 0);
+        const dy = Math.round(Number(offset?.dy) || 0);
+        const translated = `translate(${dx}px, ${dy}px)`;
+        el.style.transform = baseTransform ? `${baseTransform} ${translated}` : translated;
+      }
+      for (const [projId, subSize] of Object.entries(sizes)) {
+        const el = app.querySelector(`[data-proj-id="${projId}"]`);
+        if (!el) continue;
+        const width = Math.max(12, Math.round(Number(subSize?.width) || 0));
+        const height = Math.max(12, Math.round(Number(subSize?.height) || 0));
+        if (width > 0) el.style.width = `${width}px`;
+        if (height > 0) el.style.height = `${height}px`;
+      }
+    }
+
     function updateAuthoredSubOffset(projId, dx, dy) {
       const authored = getScratchbonesAuthoredConfig();
       if (!authored.subOffsets) authored.subOffsets = {};
       authored.subOffsets[projId] = { dx: Math.round(dx), dy: Math.round(dy) };
-      const app = document.getElementById('app');
-      if (app) {
-        const el = app.querySelector(`[data-proj-id="${projId}"]`);
-        if (el) el.style.transform = `translate(${Math.round(dx)}px, ${Math.round(dy)}px)`;
-      }
+      applyAuthoredSubAdjustments(document.getElementById('app'));
       renderAuthoredOverlays();
     }
     function updateAuthoredSubSize(projId, width, height) {
