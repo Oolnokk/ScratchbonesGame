@@ -492,6 +492,7 @@ import { createLayerManager } from './ui/layerManager.js';
       challengeStakeAnimation: SCRATCHBONES_GAME.chips.challengeStakeAnimation,
       transferAnimation: SCRATCHBONES_GAME.chips.transferAnimation,
       cardTransferAnimation: SCRATCHBONES_GAME.chips.cardTransferAnimation,
+      dealAnimation: SCRATCHBONES_GAME.chips.dealAnimation,
       clearBonusBase: SCRATCHBONES_GAME.chips.clearBonusBase,
       clearBonusIncrement: SCRATCHBONES_GAME.chips.clearBonusIncrement,
       anteStart: SCRATCHBONES_GAME.chips.anteStart,
