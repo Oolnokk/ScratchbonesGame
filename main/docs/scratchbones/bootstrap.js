@@ -3670,7 +3670,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const scaleY = app.offsetHeight > 0 ? (appRect.height / app.offsetHeight) : 1;
       const widthInAppPx = targetWidthPx / (scaleX > 0 ? scaleX : 1);
       const heightInAppPx = targetHeightPx / (scaleY > 0 ? scaleY : 1);
-      app.querySelectorAll('.handScroll .card, .tableViewCard').forEach((cardEl) => {
+      app.querySelectorAll('.handScroll .card, .tableViewCards .tableViewCard').forEach((cardEl) => {
         if (cardEl.closest('.seatHandPreview')) return;
         cardEl.style.width = `${widthInAppPx.toFixed(3)}px`;
         cardEl.style.height = `${heightInAppPx.toFixed(3)}px`;
