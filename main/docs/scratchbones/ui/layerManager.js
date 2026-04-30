@@ -142,6 +142,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
         layer: String(entry?.layer || 'overlay'),
         selectors,
         preserveSpace: entry?.preserveSpace !== false,
+        keepOriginal: entry?.keepOriginal === true,
+        promotedOpacity: Number.isFinite(Number(entry?.promotedOpacity)) ? Math.min(1, Math.max(0, Number(entry.promotedOpacity))) : 1,
       };
     })
     .filter(Boolean);
@@ -233,10 +235,15 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       if (state.resizeObserver) {
         state.resizeObserver.unobserve(entry.placeholder);
         state.resizeObserver.unobserve(entry.element);
+        if (entry.sourceElement && entry.sourceElement !== entry.element) state.resizeObserver.unobserve(entry.sourceElement);
       }
-      restoreManagedElementStyle(entry.element, entry.originalElementStyle);
-      if (entry.placeholder?.isConnected && entry.element?.isConnected) {
-        entry.placeholder.parentNode?.insertBefore(entry.element, entry.placeholder);
+      if (!entry.assignment?.keepOriginal && entry.sourceElement) {
+        restoreManagedElementStyle(entry.sourceElement, entry.originalElementStyle);
+        if (entry.placeholder?.isConnected && entry.sourceElement?.isConnected) {
+          entry.placeholder.parentNode?.insertBefore(entry.sourceElement, entry.placeholder);
+        } else {
+          entry.sourceElement?.remove();
+        }
       } else {
         entry.element?.remove();
       }
@@ -316,10 +323,12 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const portal = document.createElement('div');
     portal.className = `ui-layer-portal ui-layer-portal-${assignment.layer}`;
     portal.style.cssText = 'position:fixed;pointer-events:auto;';
+    portal.style.opacity = `${assignment.promotedOpacity}`;
     layerRoot.appendChild(portal);
-    portal.appendChild(element);
+    const promotedNode = assignment.keepOriginal ? element.cloneNode(true) : element;
+    portal.appendChild(promotedNode);
 
-    const isTransformSensitive = isTransformSensitivePromotionTarget(element);
+    const isTransformSensitive = isTransformSensitivePromotionTarget(promotedNode);
     const isNormalizeBoxDenied = selectorMatchesElement(element, normalizeBoxDenylistSelectors);
     const isNormalizeBoxAllowed = !normalizeBoxAllowlistSelectors.length || selectorMatchesElement(element, normalizeBoxAllowlistSelectors);
     const shouldNormalizeBox = normalizePromotedElementBox
@@ -333,31 +342,32 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const isNormalizeFillSizeAllowed = !normalizeFillSizeAllowlistSelectors.length || selectorMatchesElement(element, normalizeFillSizeAllowlistSelectors);
     const shouldNormalizeFillSize = shouldNormalizeBox && isNormalizeFillSizeAllowed && !isNormalizeFillSizeDenied;
     if (shouldNormalizeMargin) {
-      element.style.margin = '0';
+      promotedNode.style.margin = '0';
     }
-    element.style.position = 'absolute';
-    element.style.left = '0';
-    element.style.top = '0';
-    element.style.right = 'auto';
-    element.style.bottom = 'auto';
+    promotedNode.style.position = 'absolute';
+    promotedNode.style.left = '0';
+    promotedNode.style.top = '0';
+    promotedNode.style.right = 'auto';
+    promotedNode.style.bottom = 'auto';
     if (shouldNormalizeFillSize) {
-      element.style.width = '100%';
-      element.style.height = '100%';
+      promotedNode.style.width = '100%';
+      promotedNode.style.height = '100%';
     }
-    const preservePromotionTransform = shouldPreservePromotionTransform(element, {
+    const preservePromotionTransform = shouldPreservePromotionTransform(promotedNode, {
       preserveSelectors: preservePromotionTransformSelectors,
       disableSelectors: disablePreservePromotionTransformSelectors,
     });
-    const disablePreservePromotionTransform = selectorMatchesElement(element, disablePreservePromotionTransformSelectors);
+    const disablePreservePromotionTransform = selectorMatchesElement(promotedNode, disablePreservePromotionTransformSelectors);
     const shouldRetainComputedTransform = !disablePreservePromotionTransform && (preservePromotionTransform || isTransformSensitive);
-    if (shouldRetainComputedTransform && !hasInlineTransform(element) && computed.transform && computed.transform !== 'none') {
-      element.style.transform = computed.transform;
-      if (computed.transformOrigin) element.style.transformOrigin = computed.transformOrigin;
+    if (shouldRetainComputedTransform && !hasInlineTransform(promotedNode) && computed.transform && computed.transform !== 'none') {
+      promotedNode.style.transform = computed.transform;
+      if (computed.transformOrigin) promotedNode.style.transformOrigin = computed.transformOrigin;
     }
 
     const promotedEntry = {
       assignment,
-      element,
+      element: promotedNode,
+      sourceElement: element,
       placeholder,
       portal,
       originalElementStyle,
@@ -365,13 +375,14 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     };
     state.promoted.push(promotedEntry);
     state.resizeObserver?.observe(placeholder);
-    state.resizeObserver?.observe(element);
+    state.resizeObserver?.observe(promotedNode);
+    if (element !== promotedNode) state.resizeObserver?.observe(element);
     updatePortalRect(promotedEntry);
     log('debug', 'promoted', {
       assignmentId: assignment.id,
       layer: assignment.layer,
       selectorName: element.id ? `#${element.id}` : element.className,
-      retainedTransform: element.style.transform || 'none',
+      retainedTransform: promotedNode.style.transform || 'none',
       originalPosition: computed.position,
       normalizePromotedElementBox: shouldNormalizeBox,
       normalizeBoxAllowlistHit: isNormalizeBoxAllowed,
