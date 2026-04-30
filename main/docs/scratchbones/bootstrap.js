@@ -3422,7 +3422,7 @@ import { createLayerManager } from './ui/layerManager.js';
         const FLY_MS = base;
         const FADE_MS = Math.round(base / animCfg.fadeInSpeed);
         const cloneLayerCfg = animCfg.cardCloneLayering || {};
-        const cloneZBelowLighting = Number.isFinite(Number(cloneLayerCfg.belowLightingZIndex)) ? Number(cloneLayerCfg.belowLightingZIndex) : 44;
+        const cloneZBelowLighting = Number.isFinite(Number(cloneLayerCfg.belowLightingZIndex)) ? Number(cloneLayerCfg.belowLightingZIndex) : 1;
         const cloneZAboveLighting = Number.isFinite(Number(cloneLayerCfg.aboveLightingZIndex)) ? Number(cloneLayerCfg.aboveLightingZIndex) : 9999;
         const cloneBoundarySelector = String(cloneLayerCfg.sidebarBoundarySelector || '#aiSidebar');
 
@@ -3657,6 +3657,51 @@ import { createLayerManager } from './ui/layerManager.js';
       }
       return { capturePreRender, animatePostRender };
     })();
+
+
+    function syncStationaryCardScreenSpace(app) {
+      if (!app) return;
+      const layoutCardConfig = SCRATCHBONES_GAME.layout?.cards || {};
+      const stationaryCardConfig = layoutCardConfig.stationaryScreenSpacePx || {};
+      const targetWidthPx = Number(stationaryCardConfig.width);
+      const targetHeightPx = Number(stationaryCardConfig.height);
+      if (!(targetWidthPx > 0) || !(targetHeightPx > 0)) return;
+      const appRect = app.getBoundingClientRect();
+      const scaleX = app.offsetWidth > 0 ? (appRect.width / app.offsetWidth) : 1;
+      const scaleY = app.offsetHeight > 0 ? (appRect.height / app.offsetHeight) : 1;
+      const widthInAppPx = targetWidthPx / (scaleX > 0 ? scaleX : 1);
+      const heightInAppPx = targetHeightPx / (scaleY > 0 ? scaleY : 1);
+      app.querySelectorAll('.handScroll .card, .tableViewCard').forEach((cardEl) => {
+        if (cardEl.closest('.seatHandPreview')) return;
+        cardEl.style.width = `${widthInAppPx.toFixed(3)}px`;
+        cardEl.style.height = `${heightInAppPx.toFixed(3)}px`;
+        cardEl.style.minWidth = `${widthInAppPx.toFixed(3)}px`;
+        cardEl.style.minHeight = `${heightInAppPx.toFixed(3)}px`;
+      });
+      const deckPlaceholderConfig = layoutCardConfig.deckPlaceholderPx || {};
+      const referenceWidthPx = Number(stationaryCardConfig.referenceWidthPx) || 86;
+      const deckScale = targetWidthPx / Math.max(1, referenceWidthPx);
+      const deckStack = app.querySelector('.tableDeckPlaceholder [data-deck-stack]');
+      if (deckStack) {
+        const stackWidth = Number(deckPlaceholderConfig.stackWidth);
+        const stackHeight = Number(deckPlaceholderConfig.stackHeight);
+        if (stackWidth > 0) deckStack.style.width = `${(stackWidth * deckScale).toFixed(3)}px`;
+        if (stackHeight > 0) deckStack.style.height = `${(stackHeight * deckScale).toFixed(3)}px`;
+      }
+      app.querySelectorAll('.tableDeckPlaceholder .tableDeckCard').forEach((cardEl) => {
+        const left = Number(cardEl.dataset.baseLeft || 0);
+        const top = Number(cardEl.dataset.baseTop || 0);
+        const width = Number(cardEl.dataset.baseWidth || 0);
+        const height = Number(cardEl.dataset.baseHeight || 0);
+        cardEl.style.left = `${(left * deckScale).toFixed(3)}px`;
+        cardEl.style.top = `${(top * deckScale).toFixed(3)}px`;
+        cardEl.style.width = `${(width * deckScale).toFixed(3)}px`;
+        cardEl.style.height = `${(height * deckScale).toFixed(3)}px`;
+      });
+      const deckLabelGap = Number(deckPlaceholderConfig.labelGap);
+      const deckLabel = app.querySelector('.tableDeckPlaceholder .tiny');
+      if (deckLabel && deckLabelGap > 0) deckLabel.style.marginTop = `${(deckLabelGap * deckScale).toFixed(3)}px`;
+    }
 
     function syncClaimClusterCardSizeFromHand(app) {
       if (!app) return;
@@ -3965,13 +4010,25 @@ import { createLayerManager } from './ui/layerManager.js';
             </div>
           </div>
         </div>
-        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;z-index:0;">
-          <div style="position:relative;width:68px;height:96px;">
-            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:16px;top:12px;width:58px;height:84px;opacity:.55;object-fit:contain;filter:brightness(.82);">
-            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:9px;top:6px;width:58px;height:84px;opacity:.75;object-fit:contain;filter:brightness(.9);">
-            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:2px;top:0;width:58px;height:84px;object-fit:contain;">
+        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:0;">
+          <div data-deck-stack style="position:relative;">
+            ${(() => {
+              const deckCfg = SCRATCHBONES_GAME.layout?.cards?.deckPlaceholderPx || {};
+              const cards = Array.isArray(deckCfg.cards) ? deckCfg.cards : [];
+              const backArt = resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true });
+              return cards.map((deckCard) => {
+                const left = Number(deckCard.left) || 0;
+                const top = Number(deckCard.top) || 0;
+                const width = Number(deckCard.width) || 0;
+                const height = Number(deckCard.height) || 0;
+                const opacity = Number.isFinite(Number(deckCard.opacity)) ? Number(deckCard.opacity) : 1;
+                const brightness = Number.isFinite(Number(deckCard.brightness)) ? Number(deckCard.brightness) : 1;
+                return `<img class="tableDeckCard" src="${escapeHtml(backArt.src)}" data-fallback-src="${escapeHtml(backArt.fallbackSrc)}" alt="Deck placeholder" data-base-left="${left}" data-base-top="${top}" data-base-width="${width}" data-base-height="${height}" style="position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;opacity:${opacity};object-fit:contain;filter:brightness(${brightness});">`;
+              }).join('');
+            })()}
           </div>
           <div class="tiny" style="font-weight:700;letter-spacing:.08em;">DECK</div>
+        </div>
         </div>
         <div class="tableViewHeader">
           <div class="sectionTitle">Table View</div>
@@ -4128,6 +4185,7 @@ import { createLayerManager } from './ui/layerManager.js';
       renderAuthoredOverlays();
       renderAuthoredInspector();
       updateTableCardAutoScale(app);
+      syncStationaryCardScreenSpace(app);
       syncClaimClusterCardSizeFromHand(app);
       enforceFitContainerBounds(app);
       if (state.pendingCinematicBetAction) {
@@ -5375,6 +5433,7 @@ import { createLayerManager } from './ui/layerManager.js';
           applyResponsiveFit(app);
         }
         updateTableCardAutoScale(app);
+        syncStationaryCardScreenSpace(app);
         syncClaimClusterCardSizeFromHand(app);
       }, fitDebounceMs);
     }
