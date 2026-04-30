@@ -278,15 +278,18 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         coinSizePx: Math.max(16, Number(rawGameConfig.chips?.transferAnimation?.coinSizePx) || 24),
         maxIconsPerCluster: Math.max(1, Number(rawGameConfig.chips?.transferAnimation?.maxIconsPerCluster) || 10),
       },
-      cardTransferAnimation: {
-        durationMs: Math.max(120, Number(rawGameConfig.chips?.cardTransferAnimation?.durationMs) || 360),
-        staggerMs: Math.max(0, Number(rawGameConfig.chips?.cardTransferAnimation?.staggerMs) || 40),
-        easing: String(rawGameConfig.chips?.cardTransferAnimation?.easing || 'cubic-bezier(0.22, 0.61, 0.36, 1)'),
-      },
-      dealAnimation: {
-        perCardFlightMs: Math.max(80, Number(rawGameConfig.chips?.dealAnimation?.perCardFlightMs) || 260),
-        perCardStaggerMs: Math.max(0, Number(rawGameConfig.chips?.dealAnimation?.perCardStaggerMs) || 50),
-        interPlayerDelayMs: Math.max(0, Number(rawGameConfig.chips?.dealAnimation?.interPlayerDelayMs) || 0),
+      cards: {
+        transferAnimation: {
+          baseMs: Math.max(120, Number(rawGameConfig.chips?.cards?.transferAnimation?.baseMs) || Number(rawGameConfig.chips?.cardTransferAnimation?.durationMs) || 360),
+          staggerMs: Math.max(0, Number(rawGameConfig.chips?.cards?.transferAnimation?.staggerMs) || Number(rawGameConfig.chips?.cardTransferAnimation?.staggerMs) || 40),
+          aiToAiArcLiftPx: Math.max(0, Number(rawGameConfig.chips?.cards?.transferAnimation?.aiToAiArcLiftPx) || 48),
+          aiToAiArcPerPx: Math.max(0, Number(rawGameConfig.chips?.cards?.transferAnimation?.aiToAiArcPerPx) || 0.12),
+          deckDealMs: Math.max(80, Number(rawGameConfig.chips?.cards?.transferAnimation?.deckDealMs) || Number(rawGameConfig.chips?.dealAnimation?.perCardFlightMs) || 260),
+          deckDealStaggerMs: Math.max(0, Number(rawGameConfig.chips?.cards?.transferAnimation?.deckDealStaggerMs) || Number(rawGameConfig.chips?.dealAnimation?.perCardStaggerMs) || 50),
+          deckDealInterPlayerDelayMs: Math.max(0, Number(rawGameConfig.chips?.cards?.transferAnimation?.deckDealInterPlayerDelayMs) || Number(rawGameConfig.chips?.dealAnimation?.interPlayerDelayMs) || 0),
+          transferEasing: String(rawGameConfig.chips?.cards?.transferAnimation?.transferEasing || rawGameConfig.chips?.cardTransferAnimation?.easing || 'cubic-bezier(0.22, 0.61, 0.36, 1)'),
+          deckDealEasing: String(rawGameConfig.chips?.cards?.transferAnimation?.deckDealEasing || 'cubic-bezier(0.4,0,0.2,1)'),
+        },
       },
       clearBonusBase: rawGameConfig.chips?.clearReward?.base ?? 1,
       clearBonusIncrement: rawGameConfig.chips?.clearReward?.increment ?? 1,
