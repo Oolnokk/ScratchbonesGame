@@ -1626,6 +1626,14 @@ import { createLayerManager } from './ui/layerManager.js';
       showClaimGlow('green', 1600, () => {
         const lastPlay = state.pile[state.pile.length - 1];
         if (lastPlay && lastPlay.playerIndex === lastPlayerIndex) applySmuggleTransferOnPassedClaim(lastPlay);
+        if (state.smuggleSelection) {
+          state.smuggleSelection.resumePlayerIndex = lastPlayerIndex;
+          return;
+        }
+        continueAfterNoChallenge(lastPlayerIndex);
+      });
+    }
+    function continueAfterNoChallenge(lastPlayerIndex) {
         if (state.gameOver) return;
         if (checkForClearAndRedeal(lastPlayerIndex)) return;
         if (maybeEndRoundFromConcessions()) return;
@@ -1641,7 +1649,6 @@ import { createLayerManager } from './ui/layerManager.js';
           : `${seatLabel(state.players[state.currentTurn])} is thinking about ${state.declaredRank}.`);
         render();
         if (state.currentTurn !== 0) scheduleAiTurn();
-      });
     }
     function checkForClearAndRedeal(playerIndex) {
       const player = state.players[playerIndex];
@@ -2116,8 +2123,10 @@ import { createLayerManager } from './ui/layerManager.js';
         lastPlay.cards = lastPlay.cards.filter((card) => !selection.playCardIds.includes(card.id));
         addLog(`Smuggle Bone triggers: You offload ${movedCards.length} claimed card${movedCards.length === 1 ? '' : 's'} to ${seatLabel(targetId)}.`);
       }
+      const resumePlayerIndex = selection.resumePlayerIndex;
       state.smuggleSelection = null;
       render();
+      if (Number.isInteger(resumePlayerIndex)) continueAfterNoChallenge(resumePlayerIndex);
     }
     function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return;
@@ -3457,6 +3466,14 @@ import { createLayerManager } from './ui/layerManager.js';
         return '';
       };
       const clusterCinematicActive = claimClusterEnabled && !!cinematicMode;
+      const renderSmuggleTableOverlay = () => {
+        if (!state.smuggleSelection) return '';
+        const seatButtons = state.smuggleSelection.candidateIds.map((id) => {
+          const selected = id === state.smuggleSelection.selectedTargetId;
+          return `<button class="${selected ? 'danger' : 'secondary'}" data-smuggle-seat="${id}" style="${selected ? 'border-color:var(--warning);background:var(--warning);color:var(--bg);' : ''}">${escapeHtml(seatLabel(id))}</button>`;
+        }).join('');
+        return `<div class="fit-target fit-0" data-proj-id="table-view" style="z-index:72;display:flex;align-items:flex-start;justify-content:center;pointer-events:auto;"><div style="margin-top:8px;width:min(92%,900px);padding:10px 12px;border:2px solid var(--warning);background:rgba(6,10,16,0.92);border-radius:12px;text-align:center;"><div class="fx-burst-shell"><div class="cin-action-burst burst-liar">SMUGGLE TARGET</div></div><div class="challengeBar" style="margin-top:10px;">${seatButtons}<button id="smuggleOffloadBtn">Offload Bones</button></div></div></div>`;
+      };
       app.innerHTML = `
         <div class="topbar" data-proj-id="topbar">
           <div class="titleRow">
@@ -3515,6 +3532,7 @@ import { createLayerManager } from './ui/layerManager.js';
           <div class="tiny">${claimClusterEnabled ? 'Visual claim cluster active' : (latestPlay ? `Latest: ${seatLabel(latestPlay.playerIndex)} · ${latestPlay.cards?.length || 0} card(s)` : 'Waiting for opening play')}</div>
         </div>
         <div class="tableViewCards">${tableCardsHtml}</div>
+        ${renderSmuggleTableOverlay()}
         ${claimClusterEnabled ? `
           <div class="claimCluster fit-target fit-0 ${claimClusterPolicy.mustStayVisible ? 'must-stay-visible' : ''}" data-proj-id="claim-cluster">
             <div class="claimRankAnchorTop" data-proj-id="claim-rank-anchor" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimRankBox)}"></div>
@@ -4075,22 +4093,9 @@ import { createLayerManager } from './ui/layerManager.js';
       if (reactorCanvas && Number(reactorCanvas.getAttribute('data-seat-id')) === Number(playerId)) return reactorCanvas.closest('.reactorAvatarFloat');
       return null;
     }
-    function mountSmuggleSelectionOverlay(app) {
-      if (!state.smuggleSelection) return;
-      const textAnchor = app?.querySelector('.claimClusterTextAnchor');
-      if (!textAnchor) return;
-      const optionsHtml = state.smuggleSelection.candidateIds.map((id) => {
-        const selected = id === state.smuggleSelection.selectedTargetId;
-        return `<button class="secondary ${selected ? 'danger' : ''}" data-smuggle-seat="${id}" style="${selected ? 'border-color:var(--warning);background:var(--warning);color:var(--bg);' : ''}">${escapeHtml(seatFirstName(id))}</button>`;
-      }).join('');
-      textAnchor.classList.add('claimClusterCinematicPane');
-      textAnchor.style.pointerEvents = 'auto';
-      textAnchor.innerHTML = `<div class="fx-burst-shell"><div class="cin-action-burst burst-liar">SMUGGLE TARGET</div></div><div class="challengeBar cinBettingActionsOffset">${optionsHtml}<button id="smuggleOffloadBtn">Offload Bones</button></div>`;
-    }
     function mountClaimClusterCinematicStage(app, context = {}) {
       const { cinematicMode, cinematicPhase, cinematicRevealPlay, bettingActorHuman, humanCallAmount } = context;
       if (!cinematicMode) {
-        mountSmuggleSelectionOverlay(app);
         if (clusterCinematicStageRuntime.phaseKey !== null) {
           clearAvatarCinematics(app);
           clearHandCinematics(app);
@@ -4117,7 +4122,6 @@ import { createLayerManager } from './ui/layerManager.js';
       mountActorAvatarCinematic(app, cinematicMode);
       mountReactorAvatarCinematic(app, cinematicMode);
       mountClusterHeadlineCinematic(app, { cinematicMode, cinematicPhase, bettingActorHuman, humanCallAmount });
-      mountSmuggleSelectionOverlay(app);
       if (cinematicPhase === 'reveal') {
         const revealKey = phaseKey;
         if (revealKey !== clusterCinematicStageRuntime.revealSpawnKey) {
