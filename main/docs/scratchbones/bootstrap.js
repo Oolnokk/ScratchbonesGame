@@ -668,7 +668,11 @@ import { createLayerManager } from './ui/layerManager.js';
       const session = window.SCRATCHBONES_SESSION || {};
       const humanSeats = Array.isArray(session.humanSeats) ? new Set(session.humanSeats) : new Set([0]);
       const playerNames = session.playerNames || {};
-      return Array.from({ length: SCRATCHBONES_GAME.deck.playerCount }, (_, index) => {
+      const mode = session.mode || 'pve';
+      // PvP: all seats are human — total equals human count, no AI fills.
+      // PvE / PvPvE: full configured table; AI occupies remaining seats.
+      const totalPlayers = mode === 'pvp' ? humanSeats.size : SCRATCHBONES_GAME.deck.playerCount;
+      return Array.from({ length: totalPlayers }, (_, index) => {
         const isHuman = humanSeats.has(index);
         const aiIdentity = generateAiIdentity(index);
         const sessionName = playerNames[index];
@@ -4080,6 +4084,7 @@ import { createLayerManager } from './ui/layerManager.js';
           ${state.players.filter(p => p.id !== hs).map(p => `
             <div class="aiSeat ${p.eliminated ? 'eliminated' : ''}" data-proj-id="seat-${p.id}" data-ai-seat-id="${p.id}" style="${state.smuggleSelection ? `outline:2px solid ${state.smuggleSelection.selectedTargetId === p.id ? 'var(--warning)' : 'var(--text)'};cursor:pointer;` : (state.trapSelection && state.trapSelection.challengerId === p.id ? 'outline:2px solid var(--danger);' : '')}">
               <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
+                <div class="seatName">${escapeHtml(p.name)}</div>
                 <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
                 ${renderSeatCoinRow(p)}
                 <div class="seatStatus">${p.lastAction}</div>
@@ -4100,7 +4105,7 @@ import { createLayerManager } from './ui/layerManager.js';
               <div class="seatStatus">${player.lastAction}</div>
             </div>
             <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
-              <canvas class="seatPortrait" data-seat-id="0" width="220" height="220"></canvas>
+              <canvas class="seatPortrait" data-seat-id="${hs}" width="220" height="220"></canvas>
             </div>
           </div>
         </div>
