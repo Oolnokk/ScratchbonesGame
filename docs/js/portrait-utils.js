@@ -103,6 +103,50 @@ let HEAD_XFORM = _portraitConfig.headXform || _PORTRAIT_DEFAULTS.headXform;
 let FIGHTERS = (_portraitConfig.fighters || _PORTRAIT_DEFAULTS.fighters).map(normalizedFighterPortrait);
 let BODYCOLOR_LIMITS = _portraitConfig.bodyColorLimits || _PORTRAIT_DEFAULTS.bodyColorLimits;
 let LAST_RANDOMIZATION_RULES_BY_FIGHTER = {};
+const BLINK_STATE_BY_HEAD_URL = new Map();
+
+function getBlinkConfig() {
+  const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.blink || {};
+  return {
+    enabled: cfg.enabled !== false,
+    minIntervalMs: Number(cfg.minIntervalMs) || 1800,
+    maxIntervalMs: Number(cfg.maxIntervalMs) || 7000,
+    durationMs: Number(cfg.durationMs) || 140,
+  };
+}
+
+function blinkUrlFor(headOverlayUrl) {
+  if (typeof headOverlayUrl !== 'string' || !headOverlayUrl.endsWith('.png')) return null;
+  return headOverlayUrl.replace(/\.png$/i, '_blink.png');
+}
+
+function getBlinkState(headUrl) {
+  if (!headUrl) return null;
+  let state = BLINK_STATE_BY_HEAD_URL.get(headUrl);
+  if (!state) {
+    state = { supported: null, nextBlinkAtMs: 0, closeUntilMs: 0 };
+    BLINK_STATE_BY_HEAD_URL.set(headUrl, state);
+  }
+  return state;
+}
+
+function shouldRenderBlink(headUrl, nowMs) {
+  const cfg = getBlinkConfig();
+  if (!cfg.enabled || !headUrl) return false;
+  const state = getBlinkState(headUrl);
+  if (!state || state.supported !== true) return false;
+  const minGap = Math.min(cfg.minIntervalMs, cfg.maxIntervalMs);
+  const maxGap = Math.max(cfg.minIntervalMs, cfg.maxIntervalMs);
+  if (!state.nextBlinkAtMs) {
+    state.nextBlinkAtMs = nowMs + minGap + Math.random() * (maxGap - minGap);
+    return false;
+  }
+  if (nowMs >= state.closeUntilMs && nowMs >= state.nextBlinkAtMs) {
+    state.closeUntilMs = nowMs + cfg.durationMs;
+    state.nextBlinkAtMs = state.closeUntilMs + minGap + Math.random() * (maxGap - minGap);
+  }
+  return nowMs < state.closeUntilMs;
+}
 
 // ── Image loading ──────────────────────────────────────────
 
@@ -265,6 +309,12 @@ async function renderProfile(canvas, profile) {
   const headUrl = resolvedFighter?.headUrl || fighter?.headUrl;
   const bodyLayerSource = resolvedFighter?.bodyLayers || fighter?.bodyLayers || [];
   const urLayerSource = resolvedFighter?.urLayers || fighter?.urLayers || [];
+  const nowMs = Date.now();
+  const blinkOverlayUrlsByBase = new Map();
+  for (const layer of urLayerSource) {
+    const blinkUrl = blinkUrlFor(layer?.url);
+    if (blinkUrl) blinkOverlayUrlsByBase.set(layer.url, blinkUrl);
+  }
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, PORTRAIT_CW, PORTRAIT_CH);
 
@@ -308,6 +358,7 @@ async function renderProfile(canvas, profile) {
     ...frontLayers.map(({ layer }) => layer.url),
     ...bodyFrontLayers.map(({ layer }) => layer.url),
     ...(opacityMaskLayer?.url ? [opacityMaskLayer.url] : []),
+    ...blinkOverlayUrlsByBase.values(),
   ]);
 
   let imgMap;
@@ -329,6 +380,17 @@ async function renderProfile(canvas, profile) {
     ctx.fillText('Load error', PORTRAIT_CW / 2, PORTRAIT_CH / 2);
     return;
   }
+  const headBlinkState = getBlinkState(headUrl);
+  if (headBlinkState) {
+    headBlinkState.supported = false;
+    for (const blinkUrl of blinkOverlayUrlsByBase.values()) {
+      if (imgMap.get(blinkUrl)) {
+        headBlinkState.supported = true;
+        break;
+      }
+    }
+  }
+  const isBlinkFrame = shouldRenderBlink(headUrl, nowMs);
 
   for (const { layer, filter } of bodyBackLayers) {
     const img = imgMap.get(layer.url);
@@ -341,7 +403,8 @@ async function renderProfile(canvas, profile) {
   { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, headXform, filterA); }
   for (const mid of urLayerSource) {
     if (mid.renderOrder === 'topLayer') continue;
-    const img = imgMap.get(mid.url);
+    const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
+    const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
     if (img) drawPortraitLayer(ctx, img, headXform, 'none');
   }
   for (const { layer, filter } of frontLayers) {
@@ -350,7 +413,8 @@ async function renderProfile(canvas, profile) {
   }
   for (const mid of urLayerSource) {
     if (mid.renderOrder !== 'topLayer') continue;
-    const img = imgMap.get(mid.url);
+    const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
+    const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
     if (img) drawPortraitLayer(ctx, img, headXform, 'none');
   }
   for (const { layer, filter } of bodyFrontLayers) {

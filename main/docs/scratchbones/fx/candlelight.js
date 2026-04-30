@@ -35,7 +35,7 @@
 
     // CSS selectors that identify card and coin <img> elements
     const CARD_IMG_SEL = '.handScroll .cardArt, .tableViewCard img, .seatHandCard img';
-    const COIN_IMG_SEL = '.stakeTierBtn img, .stakeAnchor img';
+    const COIN_IMG_SEL = '.stakeTierBtn img, .stakeAnchor img, .tablePoolCoin';
 
     function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
     function lerp(a, b, t)    { return a + (b - a) * t; }
@@ -613,24 +613,36 @@
       const appRect = app.getBoundingClientRect();
       const occluders = [];
 
-      function addImgs(selector, shadowHeight) {
+      function resolveCoinShadowHeight(img) {
+        const tierId = img.getAttribute('data-stake-tier-id')
+          || img.closest('[data-stake-tier-id]')?.getAttribute('data-stake-tier-id');
+        const tierHeight = tierId ? Number(coinByTierShadowHeight[tierId]) : NaN;
+        return Number.isFinite(tierHeight) ? Math.max(0, tierHeight) : COIN_SHADOW_HEIGHT;
+      }
+
+      function addImgs(selector, shadowHeight, resolveShadowHeight = null) {
         app.querySelectorAll(selector).forEach(img => {
           if (!img.complete || !img.naturalWidth) return;
+          const style = window.getComputedStyle(img);
+          if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) <= 0) return;
           const r = img.getBoundingClientRect();
           if (r.width < 2 || r.height < 2) return;
+          const localShadowHeight = typeof resolveShadowHeight === 'function'
+            ? resolveShadowHeight(img)
+            : shadowHeight;
           occluders.push({
             img,
             cx: r.left - appRect.left + r.width  * 0.5,
             cy: r.top  - appRect.top  + r.height * 0.5,
             iw: r.width,
             ih: r.height,
-            sh: shadowHeight
+            sh: localShadowHeight
           });
         });
       }
 
       addImgs(CARD_IMG_SEL, CARD_SHADOW_HEIGHT);
-      addImgs(COIN_IMG_SEL, COIN_SHADOW_HEIGHT);
+      addImgs(COIN_IMG_SEL, COIN_SHADOW_HEIGHT, resolveCoinShadowHeight);
 
       // Card lerp clones live on document.body — include their shadows too
       document.querySelectorAll('[data-candle-lerp-clone]').forEach(el => {
