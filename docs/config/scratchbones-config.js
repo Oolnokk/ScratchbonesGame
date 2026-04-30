@@ -207,6 +207,14 @@ window.SCRATCHBONES_CONFIG = {
         "challengeStaggerMs": 220
       }
     },
+    "portrait": {
+      "blink": {
+        "enabled": true,
+        "minIntervalMs": 1800,
+        "maxIntervalMs": 7000,
+        "durationMs": 140
+      }
+    },
     "ai": {
       "challengeThreshold": 0.52,
       "challengeRandomNudgeMax": 0.16,
