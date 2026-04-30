@@ -3679,8 +3679,8 @@ import { createLayerManager } from './ui/layerManager.js';
         cardEl.style.minHeight = `${heightInAppPx.toFixed(3)}px`;
       });
       const deckPlaceholderConfig = layoutCardConfig.deckPlaceholderPx || {};
-      const referenceWidthPx = Number(stationaryCardConfig.referenceWidthPx) || 86;
-      const deckScale = targetWidthPx / Math.max(1, referenceWidthPx);
+      const deckReferenceCardWidthPx = Number(deckPlaceholderConfig.referenceCardWidthPx) || 58;
+      const deckScale = targetWidthPx / Math.max(1, deckReferenceCardWidthPx);
       const deckStack = app.querySelector('.tableDeckPlaceholder [data-deck-stack]');
       if (deckStack) {
         const stackWidth = Number(deckPlaceholderConfig.stackWidth);
