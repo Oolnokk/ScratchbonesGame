@@ -4,16 +4,19 @@
       if (typeof debugLog === 'function') debugLog(level, `candlelight.${event}`, payload);
     };
     const APP_REF_W = 1920, APP_REF_H = 1080;
-
-    // Light position normalised from tablelight2.json (x:61, y:360) @ 1920×1080
-    const LIGHT_NORM_X = 61  / APP_REF_W;   // ≈ 0.032
-    const LIGHT_NORM_Y = 360 / APP_REF_H;   // ≈ 0.333
-
-    // Controls from tablelight2.json
-    const INTENSITY  = 0.77;
-    const RADIUS_REF = 1200;   // px measured at APP_REF_H
-    const SPEED      = 4.17;
-    const TURBULENCE = 1.0;
+    const candlelightConfig = SCRATCHBONES_GAME.layout?.lighting?.candlelight || {};
+    const rawSources = Array.isArray(candlelightConfig.sources) ? candlelightConfig.sources : [];
+    const lightSources = (rawSources.length ? rawSources : [
+      { xPct: 61 / APP_REF_W, yPct: 360 / APP_REF_H, intensity: 0.77, radiusMultiplier: 1, flickerSpeed: 4.17, turbulence: 1 },
+    ]).map((source) => ({
+      xPct: Number.isFinite(Number(source?.xPct)) ? Number(source.xPct) : (61 / APP_REF_W),
+      yPct: Number.isFinite(Number(source?.yPct)) ? Number(source.yPct) : (360 / APP_REF_H),
+      intensity: Math.max(0, Number(source?.intensity) || 0.77),
+      radiusMultiplier: Math.max(0, Number(source?.radiusMultiplier) || 1),
+      flickerSpeed: Math.max(0.01, Number(source?.flickerSpeed) || 4.17),
+      turbulence: Math.max(0, Number(source?.turbulence) || 1),
+    }));
+    const RADIUS_REF = Math.max(0, Number(candlelightConfig.radiusRefPx) || 1200);
 
     // Shadow height parameters (demo occluder convention)
     const CARD_SHADOW_HEIGHT = 36;
@@ -99,7 +102,6 @@
     // Each panel gets its own element-shaped light source: the box IS the core,
     // glow spills from the edges via blur-blit (no hard edge, low desaturation).
     const CANDLELIGHT_ROLE_KEYS = ['container', 'avatar', 'text', 'sub'];
-    const candlelightConfig = SCRATCHBONES_GAME.layout?.lighting?.candlelight || {};
     const candlelightMaskingConfig = candlelightConfig.masking || {};
     const CANDLELIGHT_FALLBACKS = {
       backlitAlphaDefault: 0.14,
@@ -636,25 +638,35 @@
       if (!w || !h || !appRef) return;
 
       // Scale radius to match the current #app height vs reference
-      const radius = RADIUS_REF * (h / APP_REF_H);
-
-      // Flicker
-      const noise  = smoothNoise(time * SPEED);
-      const qp     = Math.sin(time * 31.0) * 0.025;
-      const flick  = clamp(1 + noise * 0.16 * TURBULENCE + qp, 0.72, 1.28);
-      const driftX = Math.sin(time * 2.2) * 16 * TURBULENCE + noise * 10 * TURBULENCE;
-      const driftY = Math.cos(time * 2.9) * 10 * TURBULENCE;
-      const lx     = LIGHT_NORM_X * w + driftX;
-      const ly     = LIGHT_NORM_Y * h - 12 + driftY;
-      const pulse  = clamp(0.86 + (flick - 1) * 0.8, 0.68, 1.18);
-      const alpha  = clamp(0.5 * INTENSITY * pulse, 0.08, 1.25);
+      const baseRadius = RADIUS_REF * (h / APP_REF_H);
+      const lights = lightSources.map((source) => {
+        const noise = smoothNoise(time * source.flickerSpeed);
+        const qp = Math.sin(time * 31.0) * 0.025;
+        const flick = clamp(1 + noise * 0.16 * source.turbulence + qp, 0.72, 1.28);
+        const driftX = Math.sin(time * 2.2) * 16 * source.turbulence + noise * 10 * source.turbulence;
+        const driftY = Math.cos(time * 2.9) * 10 * source.turbulence;
+        const lx = source.xPct * w + driftX;
+        const ly = source.yPct * h - 12 + driftY;
+        const pulse = clamp(0.86 + (flick - 1) * 0.8, 0.68, 1.18);
+        return {
+          lx,
+          ly,
+          radius: baseRadius * source.radiusMultiplier,
+          alpha: clamp(0.5 * source.intensity * pulse, 0.08, 1.25),
+          shadowIntensity: source.intensity * pulse,
+          pulse,
+          flick,
+          turbulence: source.turbulence,
+        };
+      });
+      const primaryLight = lights[0];
 
       // Gather backlit panel rects (~10 fps)
       maybeGatherBacklit(appRef);
 
       // ── Shadow layer ────────────────────────────────────────────────────────
       const occluders = maybeGather(appRef);
-      drawOccluderShadows(lx, ly, INTENSITY * pulse, occluders);
+      drawOccluderShadows(primaryLight.lx, primaryLight.ly, primaryLight.shadowIntensity, occluders);
       shadowCtx.clearRect(0, 0, w, h);
       shadowCtx.filter = 'blur(3px)';
       shadowCtx.drawImage(workShadow, 0, 0);
@@ -663,8 +675,8 @@
 
       // ── Darkness layer ─────────────────────────────────────────────────────
       wdCtx.clearRect(0, 0, w, h);
-      const dg = wdCtx.createRadialGradient(lx, ly, 0, lx, ly, radius * 1.45);
-      dg.addColorStop(0,    `rgba(255, 200, 100, ${0.04 * flick})`);
+      const dg = wdCtx.createRadialGradient(primaryLight.lx, primaryLight.ly, 0, primaryLight.lx, primaryLight.ly, primaryLight.radius * 1.45);
+      dg.addColorStop(0,    `rgba(255, 200, 100, ${0.04 * primaryLight.flick})`);
       dg.addColorStop(0.18, 'rgba(200, 140, 60, 0.18)');
       dg.addColorStop(0.40, 'rgba(60, 36, 14, 0.54)');
       dg.addColorStop(0.68, 'rgba(16, 10, 4, 0.76)');
@@ -679,48 +691,48 @@
       wgCtx.clearRect(0, 0, w, h);
       wgCtx.globalCompositeOperation = 'source-over';
 
-      wgCtx.save();
-      wgCtx.translate(lx, ly + radius * 0.12);
-      wgCtx.scale(1.12, 0.72);
-      const gg = wgCtx.createRadialGradient(0, 0, 0, 0, 0, radius);
-      gg.addColorStop(0,    `rgba(255, 223, 136, ${alpha})`);
-      gg.addColorStop(0.14, `rgba(255, 223, 136, ${alpha})`);
-      gg.addColorStop(0.55, `rgba(255, 166, 54, ${alpha * 0.5})`);
-      gg.addColorStop(1,    'rgba(255, 120, 16, 0)');
-      wgCtx.fillStyle = gg;
-      wgCtx.beginPath();
-      wgCtx.arc(0, 0, radius, 0, Math.PI * 2);
-      wgCtx.fill();
-      wgCtx.restore();
-
-      const cg = wgCtx.createRadialGradient(lx, ly - 18, 0, lx, ly - 18, radius * 0.07);
-      cg.addColorStop(0, `rgba(255, 248, 200, ${alpha * 0.9})`);
-      cg.addColorStop(1, 'rgba(255, 145, 32, 0)');
-      wgCtx.fillStyle = cg;
-      wgCtx.beginPath();
-      wgCtx.arc(lx, ly - 18, radius * 0.07, 0, Math.PI * 2);
-      wgCtx.fill();
-
-      wgCtx.globalCompositeOperation = 'screen';
-      wgCtx.lineWidth = 1;
-      for (let i = 0; i < 14; i++) {
-        const ang    = (i / 14) * Math.PI * 2 + Math.sin(time + i) * 0.08;
-        const len    = radius * (0.42 + (i % 4) * 0.055);
-        const start  = 34 + (i % 3) * 10;
-        const wobble = Math.sin(time * (2.1 + i * 0.13) + i) * 18 * TURBULENCE;
-        const x1 = lx + Math.cos(ang) * start  + wobble;
-        const y1 = ly + Math.sin(ang) * start  * 0.64;
-        const x2 = lx + Math.cos(ang) * len    + wobble * 0.45;
-        const y2 = ly + Math.sin(ang) * len    * 0.64;
-        const sg = wgCtx.createLinearGradient(x1, y1, x2, y2);
-        sg.addColorStop(0, `rgba(255, 221, 140, ${alpha * 0.11})`);
-        sg.addColorStop(1, 'rgba(255, 130, 28, 0)');
-        wgCtx.strokeStyle = sg;
+      lights.forEach((light) => {
+        wgCtx.save();
+        wgCtx.translate(light.lx, light.ly + light.radius * 0.12);
+        wgCtx.scale(1.12, 0.72);
+        const gg = wgCtx.createRadialGradient(0, 0, 0, 0, 0, light.radius);
+        gg.addColorStop(0,    `rgba(255, 223, 136, ${light.alpha})`);
+        gg.addColorStop(0.14, `rgba(255, 223, 136, ${light.alpha})`);
+        gg.addColorStop(0.55, `rgba(255, 166, 54, ${light.alpha * 0.5})`);
+        gg.addColorStop(1,    'rgba(255, 120, 16, 0)');
+        wgCtx.fillStyle = gg;
         wgCtx.beginPath();
-        wgCtx.moveTo(x1, y1);
-        wgCtx.lineTo(x2, y2);
-        wgCtx.stroke();
-      }
+        wgCtx.arc(0, 0, light.radius, 0, Math.PI * 2);
+        wgCtx.fill();
+        wgCtx.restore();
+        const cg = wgCtx.createRadialGradient(light.lx, light.ly - 18, 0, light.lx, light.ly - 18, light.radius * 0.07);
+        cg.addColorStop(0, `rgba(255, 248, 200, ${light.alpha * 0.9})`);
+        cg.addColorStop(1, 'rgba(255, 145, 32, 0)');
+        wgCtx.fillStyle = cg;
+        wgCtx.beginPath();
+        wgCtx.arc(light.lx, light.ly - 18, light.radius * 0.07, 0, Math.PI * 2);
+        wgCtx.fill();
+        wgCtx.globalCompositeOperation = 'screen';
+        wgCtx.lineWidth = 1;
+        for (let i = 0; i < 14; i++) {
+          const ang = (i / 14) * Math.PI * 2 + Math.sin(time + i) * 0.08;
+          const len = light.radius * (0.42 + (i % 4) * 0.055);
+          const start = 34 + (i % 3) * 10;
+          const wobble = Math.sin(time * (2.1 + i * 0.13) + i) * 18 * light.turbulence;
+          const x1 = light.lx + Math.cos(ang) * start + wobble;
+          const y1 = light.ly + Math.sin(ang) * start * 0.64;
+          const x2 = light.lx + Math.cos(ang) * len + wobble * 0.45;
+          const y2 = light.ly + Math.sin(ang) * len * 0.64;
+          const sg = wgCtx.createLinearGradient(x1, y1, x2, y2);
+          sg.addColorStop(0, `rgba(255, 221, 140, ${light.alpha * 0.11})`);
+          sg.addColorStop(1, 'rgba(255, 130, 28, 0)');
+          wgCtx.strokeStyle = sg;
+          wgCtx.beginPath();
+          wgCtx.moveTo(x1, y1);
+          wgCtx.lineTo(x2, y2);
+          wgCtx.stroke();
+        }
+      });
 
       // Backlit panels — element-shaped amber glow, soft blur edges
       wgCtx.globalCompositeOperation = 'source-over';
@@ -739,9 +751,9 @@
         const r  = el.getBoundingClientRect();
         const cx = r.left + r.width  * 0.5 - ar.left;
         const cy = r.top  + r.height * 0.5 - ar.top;
-        const falloff = Math.max(0, 1 - Math.hypot(cx - lx, cy - ly) / radius);
+        const falloff = Math.max(0, 1 - Math.hypot(cx - primaryLight.lx, cy - primaryLight.ly) / primaryLight.radius);
         el.style.filter =
-          `brightness(${(0.28 + falloff * 0.72 * pulse).toFixed(3)})` +
+          `brightness(${(0.28 + falloff * 0.72 * primaryLight.pulse).toFixed(3)})` +
           ` sepia(${(falloff * 0.5).toFixed(3)})`;
       });
     }
