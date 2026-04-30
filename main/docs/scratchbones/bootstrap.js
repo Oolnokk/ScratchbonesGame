@@ -1157,13 +1157,7 @@ import { createLayerManager } from './ui/layerManager.js';
       SCRATCHBONES_AUDIO.startChallengeMusic();
       addLog(`${seatLabel(challengerIndex)} challenges ${seatLabel(challengedIndex)}.`);
       const challenger = state.players[challengerIndex];
-      const punishCardIndex = challenger.hand.findIndex((card) => card.trickType === 'punish');
       challenger.trickPunishActive = false;
-      if (punishCardIndex >= 0) {
-        challenger.hand.splice(punishCardIndex, 1);
-        challenger.trickPunishActive = true;
-        addLog(`${seatLabel(challengerIndex)} primes a Punish Bone before betting.`);
-      }
       state.betting = {
         play,
         challengerId: challengerIndex,
@@ -1182,6 +1176,8 @@ import { createLayerManager } from './ui/layerManager.js';
         phase: 'opening',
         pendingAutoReveal: false,
         actionInFlight: false,
+        punishArmed: false,
+        punishAvailable: challenger.hand.some((card) => card.trickType === 'punish'),
       };
       state.challengeWindow = null;
       setBanner(`${seatLabel(challengerIndex)} and ${seatLabel(challengedIndex)} are betting on the challenge.`);
@@ -1424,6 +1420,16 @@ import { createLayerManager } from './ui/layerManager.js';
       const player = state.players[playerId];
       const opponentId = getOpponentId(playerId);
       const toCall = amountToCall(playerId);
+      if (state.betting.punishArmed && playerId === state.betting.challengerId && ['open-tier', 'raise-tier', 'call'].includes(command)) {
+        const punishCardIndex = player.hand.findIndex((card) => card.trickType === 'punish');
+        if (punishCardIndex >= 0) {
+          player.hand.splice(punishCardIndex, 1);
+          state.betting.punishAvailable = false;
+          state.players[playerId].trickPunishActive = true;
+          addLog(`${seatLabel(playerId)} arms a Punish Bone.`);
+        }
+        state.betting.punishArmed = false;
+      }
       if (!options.allowWhileLocked) {
         state.betting.actionInFlight = true;
         render();
@@ -2039,20 +2045,86 @@ import { createLayerManager } from './ui/layerManager.js';
       to.hand.sort(sortCards);
       return moved;
     }
+    function transferSpecificCardsBetweenHands(fromId, toId, cardIds) {
+      const from = state.players[fromId];
+      const to = state.players[toId];
+      if (!from || !to || !Array.isArray(cardIds) || !cardIds.length) return [];
+      const chosen = new Set(cardIds.map((id) => Number(id)));
+      const moved = from.hand.filter((card) => chosen.has(card.id));
+      if (!moved.length) return [];
+      from.hand = from.hand.filter((card) => !chosen.has(card.id));
+      to.hand.push(...moved);
+      from.hand.sort(sortCards);
+      to.hand.sort(sortCards);
+      return moved;
+    }
+    function humanPickSmuggleTarget(play, candidateIds) {
+      if (play.playerIndex !== 0 || candidateIds.length <= 1) return candidateIds[0];
+      const list = candidateIds.map((id) => `${id}: ${seatLabel(id)}`).join('\n');
+      const picked = window.prompt(`Smuggle Bone: choose target seat id\n${list}`, String(candidateIds[0]));
+      const pickedId = Number(picked);
+      return candidateIds.includes(pickedId) ? pickedId : candidateIds[0];
+    }
+    function humanPickTrapCardIds(fromId, maxCount) {
+      const from = state.players[fromId];
+      if (fromId !== 0 || !from) return null;
+      const cap = Math.min(Math.max(0, Number(maxCount) || 0), from.hand.length);
+      if (!cap) return [];
+      const options = from.hand.map((card, index) => `${index + 1}: ${card.trickType ? card.trickType.toUpperCase() : (card.wild ? 'Wild' : `Rank ${card.rank}`)}`);
+      const answer = window.prompt(`Trap Bone: choose ${cap} card index${cap === 1 ? '' : 'es'} to give (comma-separated)\n${options.join('\n')}`);
+      if (!answer) return null;
+      const pickedIndexes = answer.split(',').map((token) => Number(token.trim()) - 1).filter((index) => Number.isInteger(index) && index >= 0 && index < from.hand.length);
+      const uniqueIndexes = [...new Set(pickedIndexes)].slice(0, cap);
+      if (uniqueIndexes.length !== cap) return null;
+      return uniqueIndexes.map((index) => from.hand[index].id);
+    }
     function applySmuggleTransferOnPassedClaim(play) {
       if (!play.cards.some((card) => card.trickType === 'smuggle')) return;
       const movedCards = play.cards.filter((card) => card.trickType !== 'smuggle');
       if (!movedCards.length) return;
-      const targetId = alivePlayers().map((player) => player.id).find((id) => id !== play.playerIndex);
-      if (targetId === undefined) return;
+      const candidateIds = alivePlayers().map((player) => player.id).filter((id) => id !== play.playerIndex);
+      if (!candidateIds.length) return;
+      if (play.playerIndex === 0) {
+        state.smuggleSelection = {
+          playCardIds: movedCards.map((card) => card.id),
+          candidateIds,
+          selectedTargetId: candidateIds[0],
+        };
+        addLog('Smuggle Bone ready: choose a seat and offload bones.');
+        render();
+        return;
+      }
+      const targetId = humanPickSmuggleTarget(play, candidateIds);
       state.players[targetId].hand.push(...movedCards);
       state.players[targetId].hand.sort(sortCards);
       play.cards = play.cards.filter((card) => card.trickType === 'smuggle');
       addLog(`Smuggle Bone triggers: ${seatLabel(play.playerIndex)} moves ${movedCards.length} claimed card${movedCards.length === 1 ? '' : 's'} into ${seatLabel(targetId)}'s hand.`);
     }
+    function resolvePendingSmuggleSelection() {
+      const selection = state.smuggleSelection;
+      if (!selection) return;
+      const lastPlay = state.pile[state.pile.length - 1];
+      if (!lastPlay) {
+        state.smuggleSelection = null;
+        return;
+      }
+      const movedCards = lastPlay.cards.filter((card) => selection.playCardIds.includes(card.id));
+      const targetId = selection.selectedTargetId;
+      if (movedCards.length && Number.isInteger(targetId)) {
+        state.players[targetId].hand.push(...movedCards);
+        state.players[targetId].hand.sort(sortCards);
+        lastPlay.cards = lastPlay.cards.filter((card) => !selection.playCardIds.includes(card.id));
+        addLog(`Smuggle Bone triggers: You offload ${movedCards.length} claimed card${movedCards.length === 1 ? '' : 's'} to ${seatLabel(targetId)}.`);
+      }
+      state.smuggleSelection = null;
+      render();
+    }
     function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return;
-      const moved = transferCardsBetweenHands(challengedId, challengerId, play.cards.length);
+      let moved = [];
+      const selectedCardIds = humanPickTrapCardIds(challengedId, play.cards.length);
+      if (Array.isArray(selectedCardIds)) moved = transferSpecificCardsBetweenHands(challengedId, challengerId, selectedCardIds);
+      if (!moved.length) moved = transferCardsBetweenHands(challengedId, challengerId, play.cards.length);
       if (!moved.length) return;
       addLog(`Trap Bone triggers: ${seatLabel(challengedId)} transfers ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
     }
@@ -3374,6 +3446,7 @@ import { createLayerManager } from './ui/layerManager.js';
                 : `<button class="secondary" id="betCallBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Call ${humanCallAmount}</button>
                    ${humanCanRaise ? renderStakeTierButtons('raise') : ''}
                    <button class="danger" id="betFoldBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Fold</button>`}
+              ${state.betting.punishAvailable ? `<button class="secondary" id="betPunishToggleBtn" ${state.betting.actionInFlight ? 'disabled' : ''} style="border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};">Punish Bone ${state.betting.punishArmed ? 'Armed' : 'Off'}</button>` : ''}
             ` : `<div class="tiny">${seatLabel(state.betting.currentActorId)} is deciding the next betting action.</div>`}
             ${bettingActorHuman && state.betting.phase === 'opening' ? `<button class="danger" id="betFoldBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Fold</button>` : ''}
           </div>
@@ -3541,6 +3614,19 @@ import { createLayerManager } from './ui/layerManager.js';
       mountClaimClusterCinematicStage(app, { cinematicMode, cinematicPhase, cinematicRevealPlay, bettingActorHuman, humanCallAmount });
       document.getElementById('betCallBtn')?.addEventListener('click', () => humanBetAction('call'));
       document.getElementById('betFoldBtn')?.addEventListener('click', () => humanBetAction('fold'));
+      document.getElementById('betPunishToggleBtn')?.addEventListener('click', () => {
+        if (!state.betting || state.betting.currentActorId !== 0) return;
+        state.betting.punishArmed = !state.betting.punishArmed;
+        render();
+      });
+      app.querySelectorAll('[data-smuggle-seat]').forEach((button) => {
+        button.addEventListener('click', () => {
+          if (!state.smuggleSelection) return;
+          state.smuggleSelection.selectedTargetId = Number(button.getAttribute('data-smuggle-seat'));
+          render();
+        });
+      });
+      document.getElementById('smuggleOffloadBtn')?.addEventListener('click', resolvePendingSmuggleSelection);
       app.querySelectorAll('[data-stake-tier-action="open"]').forEach((btn) => {
         btn.addEventListener('click', () => humanOpenTierSelected(btn.getAttribute('data-stake-tier-id')));
       });
@@ -3916,10 +4002,13 @@ import { createLayerManager } from './ui/layerManager.js';
           const coinSrc = stakeCoinSrcForTier(tier.id);
           return `<button class="stakeTierBtn" data-stake-tier-btn="${tier.id}" data-stake-tier-action="${mode}" data-stake-tier-id="${tier.id}" ${!enabled ? 'disabled' : ''}><img src="${escapeHtml(coinSrc)}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tier.id)} coin"><span>${tier.value}</span></button>`;
         }).join('')}</div>`;
+        const punishToggleHtml = (state.betting.punishAvailable && bettingActorId === state.betting.challengerId)
+          ? `<button class="secondary" id="betPunishToggleBtn" ${bettingLocked ? 'disabled' : ''} style="border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};">Punish Bone ${state.betting.punishArmed ? 'Armed' : 'Off'}</button>`
+          : '';
         const bettingActionsHtml = actorCanAct
           ? (openingMode
-            ? `${renderTierButtons('open')}<div class="duelChoiceControls"><button class="danger" id="betFoldBtn" ${bettingLocked ? 'disabled' : ''}>Fold</button></div>`
-            : `${canRaise ? renderTierButtons('raise') : ''}<div class="duelChoiceControls"><button class="secondary" id="betCallBtn" ${bettingLocked ? 'disabled' : ''}>Call ${humanCallAmount}</button><button class="danger" id="betFoldBtn" ${bettingLocked ? 'disabled' : ''}>Fold</button></div>`)
+            ? `${renderTierButtons('open')}${punishToggleHtml}<div class="duelChoiceControls"><button class="danger" id="betFoldBtn" ${bettingLocked ? 'disabled' : ''}>Fold</button></div>`
+            : `${canRaise ? renderTierButtons('raise') : ''}${punishToggleHtml}<div class="duelChoiceControls"><button class="secondary" id="betCallBtn" ${bettingLocked ? 'disabled' : ''}>Call ${humanCallAmount}</button><button class="danger" id="betFoldBtn" ${bettingLocked ? 'disabled' : ''}>Fold</button></div>`)
           : `<div class="tiny">${seatLabel(bettingActorId)} is deciding the next betting action.</div>`;
         const challengerContributionTierId = tierIdForContributionValue(getContribution(state.betting.challengerId));
         const challengedContributionTierId = tierIdForContributionValue(getContribution(state.betting.challengedId));
@@ -3986,9 +4075,22 @@ import { createLayerManager } from './ui/layerManager.js';
       if (reactorCanvas && Number(reactorCanvas.getAttribute('data-seat-id')) === Number(playerId)) return reactorCanvas.closest('.reactorAvatarFloat');
       return null;
     }
+    function mountSmuggleSelectionOverlay(app) {
+      if (!state.smuggleSelection) return;
+      const textAnchor = app?.querySelector('.claimClusterTextAnchor');
+      if (!textAnchor) return;
+      const optionsHtml = state.smuggleSelection.candidateIds.map((id) => {
+        const selected = id === state.smuggleSelection.selectedTargetId;
+        return `<button class="secondary ${selected ? 'danger' : ''}" data-smuggle-seat="${id}" style="${selected ? 'border-color:var(--warning);background:var(--warning);color:var(--bg);' : ''}">${escapeHtml(seatFirstName(id))}</button>`;
+      }).join('');
+      textAnchor.classList.add('claimClusterCinematicPane');
+      textAnchor.style.pointerEvents = 'auto';
+      textAnchor.innerHTML = `<div class="fx-burst-shell"><div class="cin-action-burst burst-liar">SMUGGLE TARGET</div></div><div class="challengeBar cinBettingActionsOffset">${optionsHtml}<button id="smuggleOffloadBtn">Offload Bones</button></div>`;
+    }
     function mountClaimClusterCinematicStage(app, context = {}) {
       const { cinematicMode, cinematicPhase, cinematicRevealPlay, bettingActorHuman, humanCallAmount } = context;
       if (!cinematicMode) {
+        mountSmuggleSelectionOverlay(app);
         if (clusterCinematicStageRuntime.phaseKey !== null) {
           clearAvatarCinematics(app);
           clearHandCinematics(app);
@@ -4015,6 +4117,7 @@ import { createLayerManager } from './ui/layerManager.js';
       mountActorAvatarCinematic(app, cinematicMode);
       mountReactorAvatarCinematic(app, cinematicMode);
       mountClusterHeadlineCinematic(app, { cinematicMode, cinematicPhase, bettingActorHuman, humanCallAmount });
+      mountSmuggleSelectionOverlay(app);
       if (cinematicPhase === 'reveal') {
         const revealKey = phaseKey;
         if (revealKey !== clusterCinematicStageRuntime.revealSpawnKey) {
