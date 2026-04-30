@@ -491,7 +491,7 @@ import { createLayerManager } from './ui/layerManager.js';
       challengeStakeTiers: SCRATCHBONES_GAME.chips.challengeStakeTiers,
       challengeStakeAnimation: SCRATCHBONES_GAME.chips.challengeStakeAnimation,
       transferAnimation: SCRATCHBONES_GAME.chips.transferAnimation,
-      cardTransferAnimation: SCRATCHBONES_GAME.chips.cardTransferAnimation,
+      cards: SCRATCHBONES_GAME.chips.cards || {},
       clearBonusBase: SCRATCHBONES_GAME.chips.clearBonusBase,
       clearBonusIncrement: SCRATCHBONES_GAME.chips.clearBonusIncrement,
       anteStart: SCRATCHBONES_GAME.chips.anteStart,
@@ -807,13 +807,14 @@ import { createLayerManager } from './ui/layerManager.js';
         fromKind: 'deck',
         toKind: player.isHuman ? 'hand' : 'seatHand',
         toPlayerId: playerIndex,
-        durationMs: CONFIG.dealAnimation.perCardFlightMs,
+        durationMs: CONFIG.cards.transferAnimation.deckDealMs,
+        easing: CONFIG.cards.transferAnimation.deckDealEasing,
         staggerMs: 0,
       });
       player.hand.push(card);
       player.hand.sort(sortCards);
       render();
-      if (CONFIG.dealAnimation.perCardStaggerMs > 0) await sleep(CONFIG.dealAnimation.perCardStaggerMs);
+      if (CONFIG.cards.transferAnimation.deckDealStaggerMs > 0) await sleep(CONFIG.cards.transferAnimation.deckDealStaggerMs);
     }
     async function dealFreshHandsAnimated() {
       const deck = createDeck();
@@ -880,7 +881,7 @@ import { createLayerManager } from './ui/layerManager.js';
           dealtInPass = true;
           await animateDealCardToPlayer({ card, playerIndex });
         }
-        if (dealtInPass && CONFIG.dealAnimation.interPlayerDelayMs > 0) await sleep(CONFIG.dealAnimation.interPlayerDelayMs);
+        if (dealtInPass && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) await sleep(CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs);
       }
       for (const player of state.players) {
         if (player.eliminated) {
@@ -1512,7 +1513,7 @@ import { createLayerManager } from './ui/layerManager.js';
       if (kind === 'deck') return document.querySelector('.tableDeckPlaceholder')?.getBoundingClientRect() || null;
       return null;
     }
-    async function animateCardTransferBatch({ cards, fromKind, fromPlayerId = null, toKind, toPlayerId = null, arcMode = 'auto', durationMs = CONFIG.cardTransferAnimation.durationMs, staggerMs = CONFIG.cardTransferAnimation.staggerMs } = {}) {
+    async function animateCardTransferBatch({ cards, fromKind, fromPlayerId = null, toKind, toPlayerId = null, arcMode = 'auto', durationMs = CONFIG.cards.transferAnimation.baseMs, staggerMs = CONFIG.cards.transferAnimation.staggerMs, easing = CONFIG.cards.transferAnimation.transferEasing } = {}) {
       const transferCards = Array.isArray(cards) ? cards : [];
       if (!transferCards.length) return;
       const fromRect = cardTransferAnchorRect(fromKind, fromPlayerId);
@@ -1535,8 +1536,8 @@ import { createLayerManager } from './ui/layerManager.js';
         setTimeout(() => {
           requestAnimationFrame(() => {
             const offsetX = (index - (transferCards.length - 1) / 2) * 10;
-            const arcY = inwardArc ? -Math.min(48, Math.abs(endX - startX) * 0.12) : 0;
-            fly.style.transition = `transform ${durationMs}ms ${CONFIG.cardTransferAnimation.easing}, opacity ${durationMs}ms ${CONFIG.cardTransferAnimation.easing}`;
+            const arcY = inwardArc ? -Math.min(CONFIG.cards.transferAnimation.aiToAiArcLiftPx, Math.abs(endX - startX) * CONFIG.cards.transferAnimation.aiToAiArcPerPx) : 0;
+            fly.style.transition = `transform ${durationMs}ms ${easing}, opacity ${durationMs}ms ${easing}`;
             fly.style.transform = `translate(${(endX - startX) + offsetX}px, ${(endY - startY) + arcY}px)`;
             fly.style.opacity = '0.88';
           });
