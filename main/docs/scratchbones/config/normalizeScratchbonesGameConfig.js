@@ -392,6 +392,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       letStandButton: rawGameConfig.uiText?.letStandButton ?? 'Let it stand',
     },
     assets: {
+      preloadCards: rawGameConfig.assets?.cards?.preload?.enabled !== false,
       cardHudBasePath: rawGameConfig.assets?.cards?.hudBasePath ?? './docs/assets/hud/',
       wildCardSrc: rawGameConfig.assets?.cards?.wild?.src ?? '2DScratchBoneWild.png',
       wildCardFallbackSrc: rawGameConfig.assets?.cards?.wild?.fallbackSrc ?? '2DScratchBoneWild.png',
