@@ -798,26 +798,26 @@ import { createLayerManager } from './ui/layerManager.js';
         player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
       }
     }
-    async function animateDealCardToPlayer({ card, playerIndex }) {
+    async function animateDealCardToPlayer({ card, playerIndex, landingCardIndex }) {
       const player = state.players[playerIndex];
       if (!card || !player || player.eliminated) return;
-      render();
       await animateCardTransferBatch({
         cards: [card],
         fromKind: 'deck',
         toKind: player.isHuman ? 'hand' : 'seatHand',
         toPlayerId: playerIndex,
+        toCardIndex: landingCardIndex,
         durationMs: CONFIG.cards.transferAnimation.deckDealMs,
         easing: CONFIG.cards.transferAnimation.deckDealEasing,
         staggerMs: 0,
       });
-      player.hand.push(card);
-      player.hand.sort(sortCards);
+      state.dealLandingHiddenCardIds.delete(card.id);
       render();
       if (CONFIG.cards.transferAnimation.deckDealStaggerMs > 0) await sleep(CONFIG.cards.transferAnimation.deckDealStaggerMs);
     }
     async function dealFreshHandsAnimated() {
       const deck = createDeck();
+      const dealQueue = [];
       for (const player of state.players) {
         if (player.eliminated) {
           player.hand = [];
@@ -826,15 +826,23 @@ import { createLayerManager } from './ui/layerManager.js';
         player.hand = [];
         player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
       }
-      render();
       for (let cardSlot = 0; cardSlot < START_HAND_SIZE; cardSlot++) {
         for (let playerIndex = 0; playerIndex < state.players.length; playerIndex++) {
           const player = state.players[playerIndex];
           if (!deck.length) break;
           if (!player || player.eliminated || player.hand.length >= START_HAND_SIZE) continue;
           const card = deck.shift();
-          await animateDealCardToPlayer({ card, playerIndex });
+          if (!card) continue;
+          player.hand.push(card);
+          player.hand.sort(sortCards);
+          const landingCardIndex = player.hand.findIndex((handCard) => handCard.id === card.id);
+          state.dealLandingHiddenCardIds.add(card.id);
+          dealQueue.push({ card, playerIndex, landingCardIndex });
         }
+      }
+      render();
+      for (const dealStep of dealQueue) {
+        await animateDealCardToPlayer(dealStep);
       }
     }
     function refillHandsAfterClearInTurnOrder(clearerIndex) {
@@ -869,7 +877,7 @@ import { createLayerManager } from './ui/layerManager.js';
       for (let offset = 0; offset < state.players.length; offset++) {
         drawOrder.push((clearerIndex + offset) % state.players.length);
       }
-      render();
+      const refillQueue = [];
       let dealtInPass = true;
       while (deck.length && dealtInPass) {
         dealtInPass = false;
@@ -878,10 +886,25 @@ import { createLayerManager } from './ui/layerManager.js';
           const player = state.players[playerIndex];
           if (!player || player.eliminated || player.hand.length >= START_HAND_SIZE) continue;
           const card = deck.shift();
+          if (!card) continue;
+          player.hand.push(card);
+          player.hand.sort(sortCards);
+          const landingCardIndex = player.hand.findIndex((handCard) => handCard.id === card.id);
+          state.dealLandingHiddenCardIds.add(card.id);
+          refillQueue.push({ card, playerIndex, landingCardIndex, passBreakAfter: false });
           dealtInPass = true;
-          await animateDealCardToPlayer({ card, playerIndex });
         }
-        if (dealtInPass && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) await sleep(CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs);
+        if (dealtInPass && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) {
+          const lastStep = refillQueue.at(-1);
+          if (lastStep) lastStep.passBreakAfter = true;
+        }
+      }
+      render();
+      for (const refillStep of refillQueue) {
+        await animateDealCardToPlayer(refillStep);
+        if (refillStep.passBreakAfter && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) {
+          await sleep(CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs);
+        }
       }
       for (const player of state.players) {
         if (player.eliminated) {
@@ -1513,11 +1536,11 @@ import { createLayerManager } from './ui/layerManager.js';
       if (kind === 'deck') return document.querySelector('.tableDeckPlaceholder')?.getBoundingClientRect() || null;
       return null;
     }
-    async function animateCardTransferBatch({ cards, fromKind, fromPlayerId = null, toKind, toPlayerId = null, arcMode = 'auto', durationMs = CONFIG.cards.transferAnimation.baseMs, staggerMs = CONFIG.cards.transferAnimation.staggerMs, easing = CONFIG.cards.transferAnimation.transferEasing } = {}) {
+    async function animateCardTransferBatch({ cards, fromKind, fromPlayerId = null, fromCardIndex = 0, toKind, toPlayerId = null, toCardIndex = 0, arcMode = 'auto', durationMs = CONFIG.cards.transferAnimation.baseMs, staggerMs = CONFIG.cards.transferAnimation.staggerMs, easing = CONFIG.cards.transferAnimation.transferEasing } = {}) {
       const transferCards = Array.isArray(cards) ? cards : [];
       if (!transferCards.length) return;
-      const fromRect = cardTransferAnchorRect(fromKind, fromPlayerId);
-      const toRect = cardTransferAnchorRect(toKind, toPlayerId);
+      const fromRect = cardTransferAnchorRect(fromKind, fromPlayerId, fromCardIndex);
+      const toRect = cardTransferAnchorRect(toKind, toPlayerId, toCardIndex);
       if (!fromRect || !toRect || !fromRect.width || !fromRect.height || !toRect.width || !toRect.height) return;
       const inwardArc = arcMode === 'inward' || (arcMode === 'auto' && fromKind === 'seatHand' && toKind === 'seatHand');
       const promises = transferCards.map((card, index) => new Promise((resolve) => {
@@ -3854,7 +3877,7 @@ import { createLayerManager } from './ui/layerManager.js';
                 ${p.seed ? `<div class="seatSeed">${p.seed}</div>` : ''}
                 ${p.personality ? `<div class="seatTags">${personalityTags(p.personality)}</div>` : ''}
                 <div class="seatStatus">${p.lastAction}</div>
-                ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
+                ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
               </div>
               <div class="seatAvatarBox" data-proj-id="avatar-${p.id}">
                 <canvas class="seatPortrait" data-seat-id="${p.id}" width="200" height="200"></canvas>
@@ -3955,8 +3978,9 @@ import { createLayerManager } from './ui/layerManager.js';
                 const art = resolveScratchbone2DAsset(card);
                 const handCardLabel = card.wild ? 'Wild' : `Rank ${card.rank}`;
                 const cardGlyph = card.wild ? 'W' : String(card.rank);
+                const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id);
                 return `
-                <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}" title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}" style="background:transparent;border:0;box-shadow:none;outline:none;padding:0;width:fit-content;min-width:0;">
+                <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}" title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}"${hiddenDealCard ? ' style=\"visibility:hidden;\"' : ' style=\"background:transparent;border:0;box-shadow:none;outline:none;padding:0;width:fit-content;min-width:0;\"'}>
                   <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`}">
                   <span class="cardLabel" aria-hidden="true"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${handCardLabel}</span></span>
                 </button>
