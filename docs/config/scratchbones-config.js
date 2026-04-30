@@ -169,11 +169,11 @@ window.SCRATCHBONES_CONFIG = {
         }
       },
       "transferAnimation": {
-        "clusterMoveMs": 320,
-        "anteMs": 300,
-        "clearPayoutMs": 360,
-        "multiAnteSettleDelayMs": 120,
-        "easing": "ease",
+        "clusterMoveMs": 210,
+        "anteMs": 190,
+        "clearPayoutMs": 240,
+        "multiAnteSettleDelayMs": 60,
+        "easing": "cubic-bezier(0.22, 0.61, 0.36, 1)",
         "coinSizePx": 24,
         "maxIconsPerCluster": 10
       },
@@ -208,9 +208,9 @@ window.SCRATCHBONES_CONFIG = {
     "layout": {
       "mode": "authored",
       "animation": {
-        "baseDurationMs": 320,
-        "fadeInSpeed": 1.8,
-        "fadeOutSpeed": 1.8
+        "baseDurationMs": 220,
+        "fadeInSpeed": 2.6,
+        "fadeOutSpeed": 2.2
       },
       "viewport": {
         "widthPx": 1920,
@@ -1409,7 +1409,7 @@ window.SCRATCHBONES_CONFIG = {
             "tempo": 1.0,
             "volume": 0.9,
             "leadMs": 120,
-            "extraCardDelayMs": 35
+            "extraCardDelayMs": 12
           }
         },
         "challenge": {
