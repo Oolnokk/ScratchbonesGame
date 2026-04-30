@@ -949,6 +949,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return true;
       }
       await dealFreshHandsAnimated();
+      SCRATCHBONES_AUDIO.startPlaylist();
       for (const p of state.players) p.profile = generatePlayerProfile(p);
       applyAiNamesByPortraitCulture();
       for (const p of state.players) logPlayerPortraitXforms(p);
@@ -2943,6 +2944,9 @@ import { createLayerManager } from './ui/layerManager.js';
       const handWrapPaddingYpx = clampNumber(Number(layoutSizing.handWrapPaddingYpx) || 8, 0, 32);
       const handWrapPaddingXpx = clampNumber(Number(layoutSizing.handWrapPaddingXpx) || 12, 0, 40);
       const handWrapGapPx = clampNumber(Number(layoutSizing.handWrapGapPx) || 6, 0, 24);
+      const handCardContainerWidthOffsetPx = clampNumber(numberOrDefault(layoutSizing.handCardContainerWidthOffsetPx, 4), 0, 24);
+      const handCardLabelInsetLeftPx = clampNumber(numberOrDefault(layoutSizing.handCardLabelInsetLeftPx, 2), 0, 24);
+      const handCardLabelInsetBottomPx = clampNumber(numberOrDefault(layoutSizing.handCardLabelInsetBottomPx, 2), 0, 24);
       const handPanelBackground = String(handPanelLayout.background ?? 'transparent').trim() || 'transparent';
       const handPanelBorder = String(handPanelLayout.border ?? '0').trim() || '0';
       const handPanelOutline = String(handPanelLayout.outline ?? 'none').trim() || 'none';
@@ -3044,6 +3048,9 @@ import { createLayerManager } from './ui/layerManager.js';
       setCssVar('--layout-hand-wrap-padding-y', `${handWrapPaddingYpx.toFixed(2)}px`);
       setCssVar('--layout-hand-wrap-padding-x', `${handWrapPaddingXpx.toFixed(2)}px`);
       setCssVar('--layout-hand-wrap-gap', `${handWrapGapPx.toFixed(2)}px`);
+      setCssVar('--layout-hand-card-shell-width-offset', `${handCardContainerWidthOffsetPx.toFixed(2)}px`);
+      setCssVar('--layout-hand-card-label-inset-left', `${handCardLabelInsetLeftPx.toFixed(2)}px`);
+      setCssVar('--layout-hand-card-label-inset-bottom', `${handCardLabelInsetBottomPx.toFixed(2)}px`);
       setCssVar('--layout-hand-panel-background', handPanelBackground);
       setCssVar('--layout-hand-panel-border', handPanelBorder);
       setCssVar('--layout-hand-panel-outline', handPanelOutline);
@@ -3988,7 +3995,7 @@ import { createLayerManager } from './ui/layerManager.js';
                 return `
                 <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}" title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}"${hiddenDealCard ? ' style=\"visibility:hidden;\"' : ' style=\"background:transparent;border:0;box-shadow:none;outline:none;padding:0;width:fit-content;min-width:0;\"'}>
                   <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`}">
-                  <span class="cardLabel" aria-hidden="true"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${handCardLabel}</span></span>
+                  <span class="cardLabel" aria-hidden="true" style="left:var(--layout-hand-card-label-inset-left,2px);bottom:var(--layout-hand-card-label-inset-bottom,2px);right:auto;top:auto;"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${handCardLabel}</span></span>
                 </button>
               `;
               }).join('')}
