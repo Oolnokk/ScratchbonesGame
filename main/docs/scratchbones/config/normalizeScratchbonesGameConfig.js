@@ -169,7 +169,7 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
         '.actorAvatarFloat',
         '.reactorAvatarFloat',
       ],
-      preserveSpace: true,
+      preserveSpace: false,
       keepOriginal: true,
       promotedOpacity: 0.72,
     },
