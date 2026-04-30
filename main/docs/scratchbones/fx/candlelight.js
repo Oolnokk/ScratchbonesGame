@@ -20,16 +20,18 @@
     const thevmenuOpacityConfigValue = Number(candlelightConfig.thevmenuOpacity);
     const THEVMENU_CANDLELIGHT_OPACITY_DEFAULT = Number.isFinite(thevmenuOpacityConfigValue)
       ? clamp(thevmenuOpacityConfigValue, 0, 1)
-      : 0.1;
+      : 0.2;
     const thevmenuLayerZIndexConfig = Number(candlelightConfig.thevmenuLayerZIndex);
     const THEVMENU_CANDLELIGHT_LAYER_Z_INDEX = Number.isFinite(thevmenuLayerZIndexConfig)
       ? Math.round(thevmenuLayerZIndexConfig)
       : 2147483646;
+    const THEVMENU_OCCLUDER_SELECTORS = Array.isArray(candlelightConfig.thevmenuOccluderSelectors)
+      ? candlelightConfig.thevmenuOccluderSelectors.filter(sel => typeof sel === 'string' && sel.trim())
+      : ['#aiSidebar', '.humanSeatZone', '.turnSpotlight', '.claimCluster'];
 
-    const occluderHeights = candlelightConfig.occluderShadowHeights || {};
-    const coinByTierShadowHeight = occluderHeights.coinByTier || {};
-    const CARD_SHADOW_HEIGHT = Math.max(0, Number(occluderHeights.card) || 36);
-    const COIN_SHADOW_HEIGHT = Math.max(0, Number(occluderHeights.coinDefault) || 11);
+    // Shadow height parameters (demo occluder convention)
+    const CARD_SHADOW_HEIGHT = 36;
+    const COIN_SHADOW_HEIGHT = 11;
 
     // CSS selectors that identify card and coin <img> elements
     const CARD_IMG_SEL = '.handScroll .cardArt, .tableViewCard img, .seatHandCard img';
@@ -66,14 +68,22 @@
     glowCanvas.setAttribute('aria-hidden', 'true');
 
     const thevmenuCandlelightCanvas = document.createElement('canvas');
+    const thevmenuCandlelightHost = document.createElement('div');
+    thevmenuCandlelightHost.id = 'thevmenuCandlelightHost';
+    thevmenuCandlelightHost.setAttribute('aria-hidden', 'true');
+    thevmenuCandlelightHost.style.position = 'fixed';
+    thevmenuCandlelightHost.style.inset = '0';
+    thevmenuCandlelightHost.style.pointerEvents = 'none';
+    thevmenuCandlelightHost.style.zIndex = String(THEVMENU_CANDLELIGHT_LAYER_Z_INDEX);
     thevmenuCandlelightCanvas.id = 'thevmenuCandlelightLayer';
     thevmenuCandlelightCanvas.setAttribute('aria-hidden', 'true');
     thevmenuCandlelightCanvas.style.opacity = String(THEVMENU_CANDLELIGHT_OPACITY_DEFAULT);
-    thevmenuCandlelightCanvas.style.position = 'absolute';
-    thevmenuCandlelightCanvas.style.inset = '0';
-    thevmenuCandlelightCanvas.style.zIndex = String(THEVMENU_CANDLELIGHT_LAYER_Z_INDEX);
+    thevmenuCandlelightCanvas.style.position = 'fixed';
+    thevmenuCandlelightCanvas.style.top = '0';
+    thevmenuCandlelightCanvas.style.left = '0';
     thevmenuCandlelightCanvas.style.pointerEvents = 'none';
     thevmenuCandlelightCanvas.style.mixBlendMode = 'screen';
+    thevmenuCandlelightHost.appendChild(thevmenuCandlelightCanvas);
 
     const shadowCtx = shadowCanvas.getContext('2d', { alpha: true });
     const darkCtx   = darkCanvas.getContext('2d',   { alpha: true });
@@ -508,6 +518,22 @@
       }
       ctx.restore();
     }
+    function punchOutThevmenuOccluders(ctx) {
+      if (!appRef || !THEVMENU_OCCLUDER_SELECTORS.length) return;
+      const appRect = appRef.getBoundingClientRect();
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      for (const selector of THEVMENU_OCCLUDER_SELECTORS) {
+        appRef.querySelectorAll(selector).forEach((el) => {
+          const r = el.getBoundingClientRect();
+          const x = r.left - appRect.left;
+          const y = r.top - appRect.top;
+          if (r.width <= 0 || r.height <= 0) return;
+          ctx.fillRect(x, y, r.width, r.height);
+        });
+      }
+      ctx.restore();
+    }
     function drawImmuneDebugOverlay(ctx) {
       if (!DEBUG_IMMUNE_MASKS || !cachedImmune.length) return;
       ctx.save();
@@ -559,6 +585,15 @@
       workGlow.width    = w; workGlow.height    = h;
       workShadow.width  = w; workShadow.height  = h;
       workBacklit.width = w; workBacklit.height = h;
+      syncThevmenuLayerGeometry(app);
+    }
+
+    function syncThevmenuLayerGeometry(app) {
+      const rect = app.getBoundingClientRect();
+      thevmenuCandlelightCanvas.style.left = `${rect.left}px`;
+      thevmenuCandlelightCanvas.style.top = `${rect.top}px`;
+      thevmenuCandlelightCanvas.style.width = `${rect.width}px`;
+      thevmenuCandlelightCanvas.style.height = `${rect.height}px`;
     }
 
     function ensureInApp(app) {
@@ -566,7 +601,9 @@
       if (shadowCanvas.parentNode !== app) app.appendChild(shadowCanvas);
       if (darkCanvas.parentNode   !== app) app.appendChild(darkCanvas);
       if (glowCanvas.parentNode   !== app) app.appendChild(glowCanvas);
-      if (thevmenuCandlelightCanvas.parentNode !== app) app.appendChild(thevmenuCandlelightCanvas);
+      if (thevmenuCandlelightHost.parentNode !== document.body) document.body.appendChild(thevmenuCandlelightHost);
+      if (thevmenuCandlelightCanvas.parentNode !== thevmenuCandlelightHost) thevmenuCandlelightHost.appendChild(thevmenuCandlelightCanvas);
+      syncThevmenuLayerGeometry(app);
     }
 
     // ── Occluder gathering ────────────────────────────────────────────────────
@@ -780,6 +817,7 @@
 
       thevmenuGlowCtx.clearRect(0, 0, w, h);
       thevmenuGlowCtx.drawImage(glowCanvas, 0, 0);
+      punchOutThevmenuOccluders(thevmenuGlowCtx);
 
       // ── Lerp clone lighting ─────────────────────────────────────────────────
       // Clones on document.body get a CSS filter that approximates their position

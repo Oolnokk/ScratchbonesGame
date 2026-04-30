@@ -550,13 +550,9 @@ window.SCRATCHBONES_CONFIG = {
             }
           ],
           "backlitAlphaDefault": 0.14,
-          "thevmenuOpacity": 0.1,
+          "thevmenuOpacity": 0.2,
           "thevmenuLayerZIndex": 2147483646,
-          "occluderShadowHeights": {
-            "card": 36,
-            "coinDefault": 11,
-            "coinByTier": { "sun": 7, "tinmoon": 11, "eclipse": 16 }
-          },
+          "thevmenuOccluderSelectors": ["#aiSidebar", ".humanSeatZone", ".turnSpotlight", ".claimCluster"],
           "backlitBlurDefault": 0,
           "masking": {
             "gatherCadenceMs": 100,
