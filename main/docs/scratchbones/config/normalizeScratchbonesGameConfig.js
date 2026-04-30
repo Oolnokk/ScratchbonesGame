@@ -283,6 +283,11 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         staggerMs: Math.max(0, Number(rawGameConfig.chips?.cardTransferAnimation?.staggerMs) || 40),
         easing: String(rawGameConfig.chips?.cardTransferAnimation?.easing || 'cubic-bezier(0.22, 0.61, 0.36, 1)'),
       },
+      dealAnimation: {
+        perCardFlightMs: Math.max(80, Number(rawGameConfig.chips?.dealAnimation?.perCardFlightMs) || 260),
+        perCardStaggerMs: Math.max(0, Number(rawGameConfig.chips?.dealAnimation?.perCardStaggerMs) || 50),
+        interPlayerDelayMs: Math.max(0, Number(rawGameConfig.chips?.dealAnimation?.interPlayerDelayMs) || 0),
+      },
       clearBonusBase: rawGameConfig.chips?.clearReward?.base ?? 1,
       clearBonusIncrement: rawGameConfig.chips?.clearReward?.increment ?? 1,
       anteStart: rawGameConfig.chips?.ante?.start ?? 1,
