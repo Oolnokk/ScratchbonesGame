@@ -1157,13 +1157,7 @@ import { createLayerManager } from './ui/layerManager.js';
       SCRATCHBONES_AUDIO.startChallengeMusic();
       addLog(`${seatLabel(challengerIndex)} challenges ${seatLabel(challengedIndex)}.`);
       const challenger = state.players[challengerIndex];
-      const punishCardIndex = challenger.hand.findIndex((card) => card.trickType === 'punish');
       challenger.trickPunishActive = false;
-      if (punishCardIndex >= 0) {
-        challenger.hand.splice(punishCardIndex, 1);
-        challenger.trickPunishActive = true;
-        addLog(`${seatLabel(challengerIndex)} primes a Punish Bone before betting.`);
-      }
       state.betting = {
         play,
         challengerId: challengerIndex,
@@ -1182,6 +1176,8 @@ import { createLayerManager } from './ui/layerManager.js';
         phase: 'opening',
         pendingAutoReveal: false,
         actionInFlight: false,
+        punishArmed: false,
+        punishAvailable: challenger.hand.some((card) => card.trickType === 'punish'),
       };
       state.challengeWindow = null;
       setBanner(`${seatLabel(challengerIndex)} and ${seatLabel(challengedIndex)} are betting on the challenge.`);
@@ -1424,6 +1420,16 @@ import { createLayerManager } from './ui/layerManager.js';
       const player = state.players[playerId];
       const opponentId = getOpponentId(playerId);
       const toCall = amountToCall(playerId);
+      if (state.betting.punishArmed && playerId === state.betting.challengerId && ['open-tier', 'raise-tier', 'call'].includes(command)) {
+        const punishCardIndex = player.hand.findIndex((card) => card.trickType === 'punish');
+        if (punishCardIndex >= 0) {
+          player.hand.splice(punishCardIndex, 1);
+          state.betting.punishAvailable = false;
+          state.players[playerId].trickPunishActive = true;
+          addLog(`${seatLabel(playerId)} arms a Punish Bone.`);
+        }
+        state.betting.punishArmed = false;
+      }
       if (!options.allowWhileLocked) {
         state.betting.actionInFlight = true;
         render();
@@ -2039,12 +2045,46 @@ import { createLayerManager } from './ui/layerManager.js';
       to.hand.sort(sortCards);
       return moved;
     }
+    function transferSpecificCardsBetweenHands(fromId, toId, cardIds) {
+      const from = state.players[fromId];
+      const to = state.players[toId];
+      if (!from || !to || !Array.isArray(cardIds) || !cardIds.length) return [];
+      const chosen = new Set(cardIds.map((id) => Number(id)));
+      const moved = from.hand.filter((card) => chosen.has(card.id));
+      if (!moved.length) return [];
+      from.hand = from.hand.filter((card) => !chosen.has(card.id));
+      to.hand.push(...moved);
+      from.hand.sort(sortCards);
+      to.hand.sort(sortCards);
+      return moved;
+    }
+    function humanPickSmuggleTarget(play, candidateIds) {
+      if (play.playerIndex !== 0 || candidateIds.length <= 1) return candidateIds[0];
+      const list = candidateIds.map((id) => `${id}: ${seatLabel(id)}`).join('\n');
+      const picked = window.prompt(`Smuggle Bone: choose target seat id\n${list}`, String(candidateIds[0]));
+      const pickedId = Number(picked);
+      return candidateIds.includes(pickedId) ? pickedId : candidateIds[0];
+    }
+    function humanPickTrapCardIds(fromId, maxCount) {
+      const from = state.players[fromId];
+      if (fromId !== 0 || !from) return null;
+      const cap = Math.min(Math.max(0, Number(maxCount) || 0), from.hand.length);
+      if (!cap) return [];
+      const options = from.hand.map((card, index) => `${index + 1}: ${card.trickType ? card.trickType.toUpperCase() : (card.wild ? 'Wild' : `Rank ${card.rank}`)}`);
+      const answer = window.prompt(`Trap Bone: choose ${cap} card index${cap === 1 ? '' : 'es'} to give (comma-separated)\n${options.join('\n')}`);
+      if (!answer) return null;
+      const pickedIndexes = answer.split(',').map((token) => Number(token.trim()) - 1).filter((index) => Number.isInteger(index) && index >= 0 && index < from.hand.length);
+      const uniqueIndexes = [...new Set(pickedIndexes)].slice(0, cap);
+      if (uniqueIndexes.length !== cap) return null;
+      return uniqueIndexes.map((index) => from.hand[index].id);
+    }
     function applySmuggleTransferOnPassedClaim(play) {
       if (!play.cards.some((card) => card.trickType === 'smuggle')) return;
       const movedCards = play.cards.filter((card) => card.trickType !== 'smuggle');
       if (!movedCards.length) return;
-      const targetId = alivePlayers().map((player) => player.id).find((id) => id !== play.playerIndex);
-      if (targetId === undefined) return;
+      const candidateIds = alivePlayers().map((player) => player.id).filter((id) => id !== play.playerIndex);
+      if (!candidateIds.length) return;
+      const targetId = humanPickSmuggleTarget(play, candidateIds);
       state.players[targetId].hand.push(...movedCards);
       state.players[targetId].hand.sort(sortCards);
       play.cards = play.cards.filter((card) => card.trickType === 'smuggle');
@@ -2052,7 +2092,10 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return;
-      const moved = transferCardsBetweenHands(challengedId, challengerId, play.cards.length);
+      let moved = [];
+      const selectedCardIds = humanPickTrapCardIds(challengedId, play.cards.length);
+      if (Array.isArray(selectedCardIds)) moved = transferSpecificCardsBetweenHands(challengedId, challengerId, selectedCardIds);
+      if (!moved.length) moved = transferCardsBetweenHands(challengedId, challengerId, play.cards.length);
       if (!moved.length) return;
       addLog(`Trap Bone triggers: ${seatLabel(challengedId)} transfers ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
     }
@@ -3374,6 +3417,7 @@ import { createLayerManager } from './ui/layerManager.js';
                 : `<button class="secondary" id="betCallBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Call ${humanCallAmount}</button>
                    ${humanCanRaise ? renderStakeTierButtons('raise') : ''}
                    <button class="danger" id="betFoldBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Fold</button>`}
+              ${state.betting.punishAvailable ? `<button class="secondary" id="betPunishToggleBtn" ${state.betting.actionInFlight ? 'disabled' : ''} style="border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};">Punish Bone ${state.betting.punishArmed ? 'Armed' : 'Off'}</button>` : ''}
             ` : `<div class="tiny">${seatLabel(state.betting.currentActorId)} is deciding the next betting action.</div>`}
             ${bettingActorHuman && state.betting.phase === 'opening' ? `<button class="danger" id="betFoldBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Fold</button>` : ''}
           </div>
@@ -3541,6 +3585,11 @@ import { createLayerManager } from './ui/layerManager.js';
       mountClaimClusterCinematicStage(app, { cinematicMode, cinematicPhase, cinematicRevealPlay, bettingActorHuman, humanCallAmount });
       document.getElementById('betCallBtn')?.addEventListener('click', () => humanBetAction('call'));
       document.getElementById('betFoldBtn')?.addEventListener('click', () => humanBetAction('fold'));
+      document.getElementById('betPunishToggleBtn')?.addEventListener('click', () => {
+        if (!state.betting || state.betting.currentActorId !== 0) return;
+        state.betting.punishArmed = !state.betting.punishArmed;
+        render();
+      });
       app.querySelectorAll('[data-stake-tier-action="open"]').forEach((btn) => {
         btn.addEventListener('click', () => humanOpenTierSelected(btn.getAttribute('data-stake-tier-id')));
       });
