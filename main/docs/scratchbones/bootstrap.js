@@ -3424,6 +3424,11 @@ import { createLayerManager } from './ui/layerManager.js';
           return `<button class="stakeTierBtn" data-stake-tier-btn="${tier.id}" data-stake-tier-action="${mode}" data-stake-tier-id="${tier.id}" ${!enabled ? 'disabled' : ''}><img src="${escapeHtml(stakeCoinSrcForTier(tier.id))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tier.id)} coin"><span>${escapeHtml(tier.id)} · ${tier.value}</span></button>`;
         }).join('')}</div>`;
       };
+      const renderPunishToggleButton = (locked) => {
+        if (!state.betting?.punishAvailable) return '';
+        const punishArt = resolveScratchbone2DAsset({ trickType: 'punish', rank: null, wild: false }, { flipped: false });
+        return `<button class="secondary" id="betPunishToggleBtn" ${locked ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:8px;border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};"><img src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:34px;height:48px;object-fit:contain;border-radius:4px;">${state.betting.punishArmed ? 'Punish Armed' : 'Arm Punish'}</button>`;
+      };
       const renderStakeVisual = () => `
         <div class="stakeVisualPanel">
           <div class="stakeVisualHeader tiny">Current stake</div>
@@ -3451,11 +3456,11 @@ import { createLayerManager } from './ui/layerManager.js';
           <div class="challengeBar">
             ${bettingActorHuman ? `
               ${state.betting.phase === 'opening'
-                ? renderStakeTierButtons('open')
+                ? `${renderStakeTierButtons('open')}${renderPunishToggleButton(state.betting.actionInFlight)}`
                 : `<button class="secondary" id="betCallBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Call ${humanCallAmount}</button>
                    ${humanCanRaise ? renderStakeTierButtons('raise') : ''}
+                   ${renderPunishToggleButton(state.betting.actionInFlight)}
                    <button class="danger" id="betFoldBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Fold</button>`}
-              ${state.betting.punishAvailable ? `<button class="secondary" id="betPunishToggleBtn" ${state.betting.actionInFlight ? 'disabled' : ''} style="border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};">Punish Bone ${state.betting.punishArmed ? 'Armed' : 'Off'}</button>` : ''}
             ` : `<div class="tiny">${seatLabel(state.betting.currentActorId)} is deciding the next betting action.</div>`}
             ${bettingActorHuman && state.betting.phase === 'opening' ? `<button class="danger" id="betFoldBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Fold</button>` : ''}
           </div>
@@ -4020,8 +4025,9 @@ import { createLayerManager } from './ui/layerManager.js';
           const coinSrc = stakeCoinSrcForTier(tier.id);
           return `<button class="stakeTierBtn" data-stake-tier-btn="${tier.id}" data-stake-tier-action="${mode}" data-stake-tier-id="${tier.id}" ${!enabled ? 'disabled' : ''}><img src="${escapeHtml(coinSrc)}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tier.id)} coin"><span>${tier.value}</span></button>`;
         }).join('')}</div>`;
+        const punishArt = resolveScratchbone2DAsset({ trickType: 'punish', rank: null, wild: false }, { flipped: false });
         const punishToggleHtml = (state.betting.punishAvailable && bettingActorId === state.betting.challengerId)
-          ? `<button class="secondary" id="betPunishToggleBtn" ${bettingLocked ? 'disabled' : ''} style="border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};">Punish Bone ${state.betting.punishArmed ? 'Armed' : 'Off'}</button>`
+          ? `<button class="secondary" id="betPunishToggleBtn" ${bettingLocked ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:8px;border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};"><img src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:34px;height:48px;object-fit:contain;border-radius:4px;">${state.betting.punishArmed ? 'Punish Armed' : 'Arm Punish'}</button>`
           : '';
         const bettingActionsHtml = actorCanAct
           ? (openingMode
