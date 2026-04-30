@@ -2031,14 +2031,19 @@ import { createLayerManager } from './ui/layerManager.js';
     function scheduleBettingAiIfNeeded() {
       if (!state.betting || state.gameOver) return;
       const actorId = state.betting.currentActorId;
-      if (isHumanSeat(actorId)) return;
-      const intent = aiBetIntent(actorId);
-      const thinkMs = aiDecisionDelayMs('betting', actorId);
-      window.setTimeout(() => {
-        if (state.betting && !state.gameOver && state.betting.currentActorId === actorId) {
-          aiTakeBettingAction(actorId, intent);
-        }
-      }, thinkMs);
+      if (!isHumanSeat(actorId)) {
+        const intent = aiBetIntent(actorId);
+        const thinkMs = aiDecisionDelayMs('betting', actorId);
+        window.setTimeout(() => {
+          if (state.betting && !state.gameOver && state.betting.currentActorId === actorId) {
+            aiTakeBettingAction(actorId, intent);
+          }
+        }, thinkMs);
+      } else if (actorId !== state.humanSeat) {
+        // Hot-seat PvP: betting switched to a different human — show cover before they see their hand.
+        showHotSeatCover(actorId);
+      }
+      // If actorId === state.humanSeat the UI is already visible; wait for input.
     }
     function aiTakeTurn(playerIndex) {
       const player = state.players[playerIndex];
