@@ -542,8 +542,9 @@ window.SCRATCHBONES_CONFIG = {
             }
           ],
           "backlitAlphaDefault": 0.14,
-          "thevmenuOpacity": 0.1,
+          "thevmenuOpacity": 0.2,
           "thevmenuLayerZIndex": 2147483646,
+          "thevmenuOccluderSelectors": ["#aiSidebar", ".humanSeatZone", ".turnSpotlight", ".claimCluster"],
           "backlitBlurDefault": 0,
           "masking": {
             "gatherCadenceMs": 100,

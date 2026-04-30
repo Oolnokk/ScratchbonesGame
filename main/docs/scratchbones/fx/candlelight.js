@@ -20,11 +20,14 @@
     const thevmenuOpacityConfigValue = Number(candlelightConfig.thevmenuOpacity);
     const THEVMENU_CANDLELIGHT_OPACITY_DEFAULT = Number.isFinite(thevmenuOpacityConfigValue)
       ? clamp(thevmenuOpacityConfigValue, 0, 1)
-      : 0.1;
+      : 0.2;
     const thevmenuLayerZIndexConfig = Number(candlelightConfig.thevmenuLayerZIndex);
     const THEVMENU_CANDLELIGHT_LAYER_Z_INDEX = Number.isFinite(thevmenuLayerZIndexConfig)
       ? Math.round(thevmenuLayerZIndexConfig)
       : 2147483646;
+    const THEVMENU_OCCLUDER_SELECTORS = Array.isArray(candlelightConfig.thevmenuOccluderSelectors)
+      ? candlelightConfig.thevmenuOccluderSelectors.filter(sel => typeof sel === 'string' && sel.trim())
+      : ['#aiSidebar', '.humanSeatZone', '.turnSpotlight', '.claimCluster'];
 
     // Shadow height parameters (demo occluder convention)
     const CARD_SHADOW_HEIGHT = 36;
@@ -515,6 +518,22 @@
       }
       ctx.restore();
     }
+    function punchOutThevmenuOccluders(ctx) {
+      if (!appRef || !THEVMENU_OCCLUDER_SELECTORS.length) return;
+      const appRect = appRef.getBoundingClientRect();
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      for (const selector of THEVMENU_OCCLUDER_SELECTORS) {
+        appRef.querySelectorAll(selector).forEach((el) => {
+          const r = el.getBoundingClientRect();
+          const x = r.left - appRect.left;
+          const y = r.top - appRect.top;
+          if (r.width <= 0 || r.height <= 0) return;
+          ctx.fillRect(x, y, r.width, r.height);
+        });
+      }
+      ctx.restore();
+    }
     function drawImmuneDebugOverlay(ctx) {
       if (!DEBUG_IMMUNE_MASKS || !cachedImmune.length) return;
       ctx.save();
@@ -786,6 +805,7 @@
 
       thevmenuGlowCtx.clearRect(0, 0, w, h);
       thevmenuGlowCtx.drawImage(glowCanvas, 0, 0);
+      punchOutThevmenuOccluders(thevmenuGlowCtx);
 
       // ── Lerp clone lighting ─────────────────────────────────────────────────
       // Clones on document.body get a CSS filter that approximates their position
