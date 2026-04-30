@@ -153,6 +153,7 @@ window.SCRATCHBONES_CONFIG = {
         "coinSizePx": 50,
         "spreadXPx": 84,
         "spreadYPx": 28,
+        "offsetXPx": 100,
         "offsetYPx": 2
       },
       "challengeStake": {
