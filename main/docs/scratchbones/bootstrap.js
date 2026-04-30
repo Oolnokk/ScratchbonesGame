@@ -894,7 +894,6 @@ import { createLayerManager } from './ui/layerManager.js';
       render();
     }
     async function startGame() {
-      SCRATCHBONES_AUDIO.startPlaylist();
       await preloadScratchboneCardArt();
       clearChallengeTimer();
       state.seed = Math.floor(Math.random() * 1e9);
@@ -2462,6 +2461,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const inner = document.createElement('div');
       inner.className = 'cin-action-burst burst-countdown';
       inner.textContent = count;
+      inner.style.fontFamily = String(CONFIG.assets.claimClusterFontFamily || '"KhymeryyanRomanLetters+Numbers", serif').trim();
       inner.style.animation = `cinBurst ${(durationMs / 1000).toFixed(2)}s both`;
       shell.appendChild(inner);
       cluster.appendChild(shell);
@@ -4118,8 +4118,16 @@ import { createLayerManager } from './ui/layerManager.js';
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;');
     }
+
+    function primaryFontFamily(fontFamilyWithFallback = '') {
+      const raw = String(fontFamilyWithFallback || '').trim();
+      if (!raw) return '';
+      const first = raw.split(',')[0]?.trim() || '';
+      return first.replace(/^['"]|['"]$/g, '');
+    }
+
     function ensureClaimClusterFontFace({ family, src }) {
-      const trimmedFamily = String(family || '').trim().replace(/^['"]|['"]$/g, '');
+      const trimmedFamily = primaryFontFamily(family);
       const trimmedSrc = String(src || '').trim();
       if (!trimmedFamily || !trimmedSrc) return;
       if (document.getElementById('scratchbones-claim-cluster-font-face')) return;
