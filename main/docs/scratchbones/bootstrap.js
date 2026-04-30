@@ -365,6 +365,7 @@ import { createLayerManager } from './ui/layerManager.js';
     function traceEvent(level, channel, payload = {}) {
       if (DEBUG_OPTIONS.enabled === false) return;
       if (level === 'debug' && DEBUG_OPTIONS.includeConsoleDebug === false) return;
+      if (DEBUG_TRACE.layerPromotion === false && channel.startsWith('layer-manager.promoted')) return;
       const entry = { ts: Date.now(), level, channel, payload };
       window.__scratchbonesDebugEvents.unshift(entry);
       window.__scratchbonesDebugEvents = window.__scratchbonesDebugEvents.slice(0, DEBUG_EVENT_LOG_LIMIT);

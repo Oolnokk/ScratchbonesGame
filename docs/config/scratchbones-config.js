@@ -6,6 +6,7 @@ window.SCRATCHBONES_CONFIG = {
       "eventLogLimit": 400,
       "trace": {
         "gameplayFlow": true,
+        "layerPromotion": false,
         "audio": true,
         "candlelight": true
       }
