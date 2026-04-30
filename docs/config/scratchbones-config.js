@@ -219,7 +219,7 @@ window.SCRATCHBONES_CONFIG = {
         "fadeInSpeed": 3.4,
         "fadeOutSpeed": 3.0,
         "cardCloneLayering": {
-          "belowLightingZIndex": 44,
+          "belowLightingZIndex": 1,
           "aboveLightingZIndex": 9999,
           "sidebarBoundarySelector": "#aiSidebar"
         }
@@ -270,7 +270,11 @@ window.SCRATCHBONES_CONFIG = {
         }
       },
       "cards": {
-        "baseScale": 0.75
+        "baseScale": 0.75,
+        "stationaryScreenSpacePx": {
+          "width": 86,
+          "height": 164
+        }
       },
       "sizing": {
         "sidebarWidthFrac": 0.15,

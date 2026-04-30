@@ -3422,7 +3422,7 @@ import { createLayerManager } from './ui/layerManager.js';
         const FLY_MS = base;
         const FADE_MS = Math.round(base / animCfg.fadeInSpeed);
         const cloneLayerCfg = animCfg.cardCloneLayering || {};
-        const cloneZBelowLighting = Number.isFinite(Number(cloneLayerCfg.belowLightingZIndex)) ? Number(cloneLayerCfg.belowLightingZIndex) : 44;
+        const cloneZBelowLighting = Number.isFinite(Number(cloneLayerCfg.belowLightingZIndex)) ? Number(cloneLayerCfg.belowLightingZIndex) : 1;
         const cloneZAboveLighting = Number.isFinite(Number(cloneLayerCfg.aboveLightingZIndex)) ? Number(cloneLayerCfg.aboveLightingZIndex) : 9999;
         const cloneBoundarySelector = String(cloneLayerCfg.sidebarBoundarySelector || '#aiSidebar');
 
@@ -3657,6 +3657,27 @@ import { createLayerManager } from './ui/layerManager.js';
       }
       return { capturePreRender, animatePostRender };
     })();
+
+
+    function syncStationaryCardScreenSpace(app) {
+      if (!app) return;
+      const stationaryCardConfig = SCRATCHBONES_GAME.layout?.cards?.stationaryScreenSpacePx || {};
+      const targetWidthPx = Number(stationaryCardConfig.width);
+      const targetHeightPx = Number(stationaryCardConfig.height);
+      if (!(targetWidthPx > 0) || !(targetHeightPx > 0)) return;
+      const appRect = app.getBoundingClientRect();
+      const scaleX = app.offsetWidth > 0 ? (appRect.width / app.offsetWidth) : 1;
+      const scaleY = app.offsetHeight > 0 ? (appRect.height / app.offsetHeight) : 1;
+      const widthInAppPx = targetWidthPx / (scaleX > 0 ? scaleX : 1);
+      const heightInAppPx = targetHeightPx / (scaleY > 0 ? scaleY : 1);
+      app.querySelectorAll('.handScroll .card, .tableViewCard').forEach((cardEl) => {
+        if (cardEl.closest('.seatHandPreview')) return;
+        cardEl.style.width = `${widthInAppPx.toFixed(3)}px`;
+        cardEl.style.height = `${heightInAppPx.toFixed(3)}px`;
+        cardEl.style.minWidth = `${widthInAppPx.toFixed(3)}px`;
+        cardEl.style.minHeight = `${heightInAppPx.toFixed(3)}px`;
+      });
+    }
 
     function syncClaimClusterCardSizeFromHand(app) {
       if (!app) return;
@@ -4128,6 +4149,7 @@ import { createLayerManager } from './ui/layerManager.js';
       renderAuthoredOverlays();
       renderAuthoredInspector();
       updateTableCardAutoScale(app);
+      syncStationaryCardScreenSpace(app);
       syncClaimClusterCardSizeFromHand(app);
       enforceFitContainerBounds(app);
       if (state.pendingCinematicBetAction) {
@@ -5375,6 +5397,7 @@ import { createLayerManager } from './ui/layerManager.js';
           applyResponsiveFit(app);
         }
         updateTableCardAutoScale(app);
+        syncStationaryCardScreenSpace(app);
         syncClaimClusterCardSizeFromHand(app);
       }, fitDebounceMs);
     }
