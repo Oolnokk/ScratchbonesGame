@@ -15,6 +15,11 @@ window.SCRATCHBONES_CONFIG = {
       "copiesPerRank": 4,
       "handSize": 10,
       "wildCount": 10,
+      "trickCardCounts": {
+        "smuggle": 2,
+        "trap": 2,
+        "punish": 2
+      },
       "playerCount": 4,
       "humanNames": [
         "You"
@@ -213,7 +218,8 @@ window.SCRATCHBONES_CONFIG = {
           "betting-left-contribution-anchor": { "dx": 260, "dy": 150 },
           "betting-tier-buttons": { "dx": 8, "dy": 4 },
           "betting-right-contribution-anchor": { "dx": -260, "dy": 150 },
-          "betting-choice-anchor": { "dx": -385, "dy": -40 }
+          "betting-choice-anchor": { "dx": -385, "dy": -40 },
+          "claim-pool-pile": { "dx": -200, "dy": -100 }
         },
         "subSizes": {
           "betting-right-contribution-anchor": { "width": 92, "height": 114 },
