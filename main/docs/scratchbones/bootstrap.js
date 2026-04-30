@@ -822,6 +822,13 @@ import { createLayerManager } from './ui/layerManager.js';
         return b.landingCardIndex - a.landingCardIndex;
       });
     }
+    function queueWithResolvedLandingIndexes(queue) {
+      return queue.map((queueEntry) => {
+        const player = state.players[queueEntry.playerIndex];
+        const landingCardIndex = player?.hand.findIndex((handCard) => handCard.id === queueEntry.card.id) ?? -1;
+        return { ...queueEntry, landingCardIndex };
+      });
+    }
     async function dealFreshHandsAnimated() {
       const deck = createDeck();
       const dealQueue = [];
@@ -842,13 +849,13 @@ import { createLayerManager } from './ui/layerManager.js';
           if (!card) continue;
           player.hand.push(card);
           player.hand.sort(sortCards);
-          const landingCardIndex = player.hand.findIndex((handCard) => handCard.id === card.id);
           state.dealLandingHiddenCardIds.add(card.id);
-          dealQueue.push({ card, playerIndex, landingCardIndex });
+          dealQueue.push({ card, playerIndex });
         }
       }
+      const dealQueueWithResolvedIndexes = queueWithResolvedLandingIndexes(dealQueue);
       render();
-      for (const dealStep of sortDealQueueRightToLeft(dealQueue)) {
+      for (const dealStep of sortDealQueueRightToLeft(dealQueueWithResolvedIndexes)) {
         await animateDealCardToPlayer(dealStep);
       }
     }
@@ -897,15 +904,17 @@ import { createLayerManager } from './ui/layerManager.js';
           if (!card) continue;
           player.hand.push(card);
           player.hand.sort(sortCards);
-          const landingCardIndex = player.hand.findIndex((handCard) => handCard.id === card.id);
           state.dealLandingHiddenCardIds.add(card.id);
-          refillQueue.push({ card, playerIndex, landingCardIndex, passNumber: refillPassCount });
+          refillQueue.push({ card, playerIndex, passNumber: refillPassCount });
           dealtInPass = true;
         }
+        if (dealtInPass) refillPassCount++;
       }
+      const refillQueueWithResolvedIndexes = queueWithResolvedLandingIndexes(refillQueue);
+      const sortedRefillQueue = sortDealQueueRightToLeft(refillQueueWithResolvedIndexes);
       render();
-      let activePassNumber = sortDealQueueRightToLeft(refillQueue)[0]?.passNumber ?? null;
-      for (const refillStep of sortDealQueueRightToLeft(refillQueue)) {
+      let activePassNumber = sortedRefillQueue[0]?.passNumber ?? null;
+      for (const refillStep of sortedRefillQueue) {
         if (activePassNumber !== null && refillStep.passNumber !== activePassNumber && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) {
           await sleep(CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs);
           activePassNumber = refillStep.passNumber;
