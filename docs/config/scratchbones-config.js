@@ -272,8 +272,20 @@ window.SCRATCHBONES_CONFIG = {
       "cards": {
         "baseScale": 0.75,
         "stationaryScreenSpacePx": {
-          "width": 86,
-          "height": 164
+          "width": 43,
+          "height": 82,
+          "referenceWidthPx": 86
+        },
+        "deckPlaceholderPx": {
+          "stackWidth": 68,
+          "stackHeight": 96,
+          "labelGap": 10,
+          "referenceCardWidthPx": 58,
+          "cards": [
+            { "left": 16, "top": 12, "width": 58, "height": 84, "opacity": 0.55, "brightness": 0.82 },
+            { "left": 9, "top": 6, "width": 58, "height": 84, "opacity": 0.75, "brightness": 0.9 },
+            { "left": 2, "top": 0, "width": 58, "height": 84, "opacity": 1, "brightness": 1 }
+          ]
         }
       },
       "sizing": {
@@ -798,6 +810,7 @@ window.SCRATCHBONES_CONFIG = {
             "selectors": [
               "#aiSidebar",
               ".humanSeatZone",
+          ".claimCluster",
               ".seatHandPreview",
               ".seatHandCard",
               ".seatHandCard img",
@@ -807,7 +820,7 @@ window.SCRATCHBONES_CONFIG = {
               ".seatTags",
               ".humanSeatChipBadge",
               ".claimCluster",
-              ".claimClusterBettingLayer",
+                  ".claimClusterBettingLayer",
               ".claimRankBox",
               ".claimTimesBoxLeft",
               ".claimCountBoxLeft",
