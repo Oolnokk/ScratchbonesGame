@@ -798,6 +798,44 @@ import { createLayerManager } from './ui/layerManager.js';
         player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
       }
     }
+    async function animateDealCardToPlayer({ card, playerIndex }) {
+      const player = state.players[playerIndex];
+      if (!card || !player || player.eliminated) return;
+      render();
+      await animateCardTransferBatch({
+        cards: [card],
+        fromKind: 'deck',
+        toKind: player.isHuman ? 'hand' : 'seatHand',
+        toPlayerId: playerIndex,
+        durationMs: CONFIG.dealAnimation.perCardFlightMs,
+        staggerMs: 0,
+      });
+      player.hand.push(card);
+      player.hand.sort(sortCards);
+      render();
+      if (CONFIG.dealAnimation.perCardStaggerMs > 0) await sleep(CONFIG.dealAnimation.perCardStaggerMs);
+    }
+    async function dealFreshHandsAnimated() {
+      const deck = createDeck();
+      for (const player of state.players) {
+        if (player.eliminated) {
+          player.hand = [];
+          continue;
+        }
+        player.hand = [];
+        player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
+      }
+      render();
+      for (let cardSlot = 0; cardSlot < START_HAND_SIZE; cardSlot++) {
+        for (let playerIndex = 0; playerIndex < state.players.length; playerIndex++) {
+          const player = state.players[playerIndex];
+          if (!deck.length) break;
+          if (!player || player.eliminated || player.hand.length >= START_HAND_SIZE) continue;
+          const card = deck.shift();
+          await animateDealCardToPlayer({ card, playerIndex });
+        }
+      }
+    }
     function refillHandsAfterClearInTurnOrder(clearerIndex) {
       const deck = createDeck();
       const drawOrder = [];
@@ -823,6 +861,36 @@ import { createLayerManager } from './ui/layerManager.js';
         player.hand.sort(sortCards);
         player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
       }
+    }
+    async function refillHandsAfterClearInTurnOrderAnimated(clearerIndex) {
+      const deck = createDeck();
+      const drawOrder = [];
+      for (let offset = 0; offset < state.players.length; offset++) {
+        drawOrder.push((clearerIndex + offset) % state.players.length);
+      }
+      render();
+      let dealtInPass = true;
+      while (deck.length && dealtInPass) {
+        dealtInPass = false;
+        for (const playerIndex of drawOrder) {
+          if (!deck.length) break;
+          const player = state.players[playerIndex];
+          if (!player || player.eliminated || player.hand.length >= START_HAND_SIZE) continue;
+          const card = deck.shift();
+          dealtInPass = true;
+          await animateDealCardToPlayer({ card, playerIndex });
+        }
+        if (dealtInPass && CONFIG.dealAnimation.interPlayerDelayMs > 0) await sleep(CONFIG.dealAnimation.interPlayerDelayMs);
+      }
+      for (const player of state.players) {
+        if (player.eliminated) {
+          player.hand = [];
+          continue;
+        }
+        player.hand.sort(sortCards);
+        player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
+      }
+      render();
     }
     async function startGame() {
       SCRATCHBONES_AUDIO.startPlaylist();
@@ -850,7 +918,7 @@ import { createLayerManager } from './ui/layerManager.js';
         render();
         return true;
       }
-      dealFreshHands();
+      await dealFreshHandsAnimated();
       for (const p of state.players) p.profile = generatePlayerProfile(p);
       applyAiNamesByPortraitCulture();
       for (const p of state.players) logPlayerPortraitXforms(p);
@@ -1794,7 +1862,7 @@ import { createLayerManager } from './ui/layerManager.js';
         render();
         return true;
       }
-      refillHandsAfterClearInTurnOrder(playerIndex);
+      await refillHandsAfterClearInTurnOrderAnimated(playerIndex);
       state.pile = [];
       state.declaredRank = null;
       state.challengeWindow = null;
@@ -5143,7 +5211,9 @@ import { createLayerManager } from './ui/layerManager.js';
     window.addEventListener('orientationchange', scheduleResponsiveFitPass, { passive: true });
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     window.addEventListener('keydown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
-    startGame();
+    void startGame().catch((error) => {
+      console.error('[game] startGame failed', error);
+    });
     try {
       initCandleLight({ gameConfig: SCRATCHBONES_GAME, debugLog: traceCandlelight });
     } catch (error) {
