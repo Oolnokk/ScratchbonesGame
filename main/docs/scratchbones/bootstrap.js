@@ -840,6 +840,7 @@ import { createLayerManager } from './ui/layerManager.js';
       state.logs = [];
       traceGameplay('deck-composition', deckCompositionSnapshot(), 'info');
       state.round = 1;
+      state.tablePot = 0;
       state.roundConcessions.clear();
       state.stats = { successfulChallenges: 0, failedChallenges: 0, bluffsCaught: 0, safeTruths: 0, totalClears: 0, chipsMovedByChallenges: 0 };
       state.ante = Math.max(1, Number(CONFIG.anteStart) || 1);
