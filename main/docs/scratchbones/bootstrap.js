@@ -801,6 +801,10 @@ import { createLayerManager } from './ui/layerManager.js';
         player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
       }
     }
+    function scaledDealAnimationMs(durationMs) {
+      const speedMultiplier = Math.max(0.1, Number(CONFIG.cards.transferAnimation.dealSpeedMultiplier) || 1);
+      return Math.max(1, Math.round(Number(durationMs || 0) / speedMultiplier));
+    }
     async function animateDealCardToPlayer({ card, playerIndex, landingCardIndex }) {
       const player = state.players[playerIndex];
       if (!card || !player || player.eliminated) return;
@@ -810,13 +814,13 @@ import { createLayerManager } from './ui/layerManager.js';
         toKind: player.isHuman ? 'hand' : 'seatHand',
         toPlayerId: playerIndex,
         toCardIndex: landingCardIndex,
-        durationMs: CONFIG.cards.transferAnimation.deckDealMs,
+        durationMs: scaledDealAnimationMs(CONFIG.cards.transferAnimation.deckDealMs),
         easing: CONFIG.cards.transferAnimation.deckDealEasing,
         staggerMs: 0,
       });
       state.dealLandingHiddenCardIds.delete(card.id);
       render();
-      if (CONFIG.cards.transferAnimation.deckDealStaggerMs > 0) await sleep(CONFIG.cards.transferAnimation.deckDealStaggerMs);
+      if (CONFIG.cards.transferAnimation.deckDealStaggerMs > 0) await sleep(scaledDealAnimationMs(CONFIG.cards.transferAnimation.deckDealStaggerMs));
     }
     function sortDealQueueRightToLeft(queue) {
       return [...queue].sort((a, b) => {
@@ -919,7 +923,7 @@ import { createLayerManager } from './ui/layerManager.js';
       let activePassNumber = sortedRefillQueue[0]?.passNumber ?? null;
       for (const refillStep of sortedRefillQueue) {
         if (activePassNumber !== null && refillStep.passNumber !== activePassNumber && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) {
-          await sleep(CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs);
+          await sleep(scaledDealAnimationMs(CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs));
           activePassNumber = refillStep.passNumber;
         }
         await animateDealCardToPlayer(refillStep);
@@ -3899,14 +3903,12 @@ import { createLayerManager } from './ui/layerManager.js';
                 <div class="seatName">${seatLabel(p)}</div>
                 <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
                 ${renderSeatCoinRow(p)}
-                ${p.seed ? `<div class="seatSeed">${p.seed}</div>` : ''}
-                ${p.personality ? `<div class="seatTags">${personalityTags(p.personality)}</div>` : ''}
                 <div class="seatStatus">${p.lastAction}</div>
-                ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
               </div>
-              <div class="seatAvatarBox" data-proj-id="avatar-${p.id}">
+              <div class="seatAvatarBox" data-proj-id="avatar-${p.id}" style="width:var(--layout-seat-avatar-size,132px);height:var(--layout-seat-avatar-size,132px);aspect-ratio:1/1;">
                 <canvas class="seatPortrait" data-seat-id="${p.id}" width="200" height="200"></canvas>
               </div>
+              ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
             </div>
           `).join('')}
         </div>
@@ -3918,15 +3920,15 @@ import { createLayerManager } from './ui/layerManager.js';
               ${renderSeatCoinRow(player)}
               <div class="seatStatus">${player.lastAction}</div>
             </div>
-            <div class="seatAvatarBox" data-proj-id="avatar-human">
+            <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
               <canvas class="seatPortrait" data-seat-id="0" width="220" height="220"></canvas>
             </div>
           </div>
         </div>
-        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;pointer-events:none;z-index:3;">
+        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;z-index:0;">
           <div style="position:relative;width:68px;height:96px;">
-            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:10px;top:8px;width:58px;height:84px;opacity:.55;object-fit:contain;filter:brightness(.82);">
-            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:6px;top:4px;width:58px;height:84px;opacity:.75;object-fit:contain;filter:brightness(.9);">
+            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:16px;top:12px;width:58px;height:84px;opacity:.55;object-fit:contain;filter:brightness(.82);">
+            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:9px;top:6px;width:58px;height:84px;opacity:.75;object-fit:contain;filter:brightness(.9);">
             <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:2px;top:0;width:58px;height:84px;object-fit:contain;">
           </div>
           <div class="tiny" style="font-weight:700;letter-spacing:.08em;">DECK</div>

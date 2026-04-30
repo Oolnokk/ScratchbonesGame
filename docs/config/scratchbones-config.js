@@ -178,6 +178,11 @@ window.SCRATCHBONES_CONFIG = {
         "coinSizePx": 24,
         "maxIconsPerCluster": 10
       },
+      "cards": {
+        "transferAnimation": {
+          "dealSpeedMultiplier": 2.0
+        }
+      },
       "clearReward": {
         "base": 1,
         "increment": 1
