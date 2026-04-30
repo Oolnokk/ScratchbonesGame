@@ -3111,6 +3111,7 @@ import { createLayerManager } from './ui/layerManager.js';
         if (el.closest('.handScroll')) return 'hand';
         if (el.closest('.tableViewCards')) return 'table';
         if (el.closest('.claimHandBar')) return 'claim';
+        if (el.closest('.tableDeckPlaceholder')) return 'deck';
         return 'other';
       }
       function capturePreRender() {
@@ -3141,6 +3142,7 @@ import { createLayerManager } from './ui/layerManager.js';
         const latestPlay = state.betting?.play || state.challengeWindow?.lastPlay || state.pile.at(-1) || null;
         const actorIsOpponent = !!(latestPlay && latestPlay.playerIndex !== 0);
         const actorRect = actorIsOpponent ? seatAvatarAnim.getPreRenderClusterRect() : null;
+        const deckRect = document.querySelector('.tableDeckPlaceholder')?.getBoundingClientRect() || null;
 
         const newCards = [];
         document.querySelectorAll('[data-card-id]').forEach(el => {
@@ -3164,7 +3166,43 @@ import { createLayerManager } from './ui/layerManager.js';
 
             if (!snapshot) {
               const isClaimOrTable = containerType === 'claim' || containerType === 'table';
-              if (actorRect && isClaimOrTable) {
+              if (deckRect && containerType === 'hand') {
+                SCRATCHBONES_AUDIO.playMovement('handToTable');
+                const existing = activeClones.get(id);
+                if (existing) existing.remove();
+                const deckCx = deckRect.left + deckRect.width / 2;
+                const deckCy = deckRect.top + deckRect.height / 2;
+                const cardCx = newRect.left + newRect.width / 2;
+                const cardCy = newRect.top + newRect.height / 2;
+                const dx = deckCx - cardCx;
+                const dy = deckCy - cardCy;
+                const clone = document.createElement('img');
+                clone.src = img.src;
+                clone.dataset.candleLerpClone = '1';
+                clone.style.cssText = [
+                  'position:fixed',
+                  `left:${newRect.left}px`, `top:${newRect.top}px`,
+                  `width:${newRect.width}px`, `height:${newRect.height}px`,
+                  'object-fit:contain', 'pointer-events:none', 'z-index:9999',
+                  'transform-origin:center center',
+                  `transform:translate(${dx}px,${dy}px) scale(0.14)`,
+                  'transition:none',
+                ].join(';');
+                document.body.appendChild(clone);
+                activeClones.set(id, clone);
+                img.style.opacity = '0';
+                requestAnimationFrame(() => {
+                  clone.style.transition = `transform ${FLY_MS}ms cubic-bezier(0.4,0,0.2,1)`;
+                  clone.style.transform = 'none';
+                  const done = () => {
+                    clone.remove();
+                    if (activeClones.get(id) === clone) activeClones.delete(id);
+                    img.style.opacity = '';
+                  };
+                  clone.addEventListener('transitionend', done, { once: true });
+                  setTimeout(done, FLY_MS + 100);
+                });
+              } else if (actorRect && isClaimOrTable) {
                 // Opponent card: fly from cluster avatar center, start tiny
                 SCRATCHBONES_AUDIO.playMovement('opponentToTable');
                 const staggerDelay = opponentCardIdx * OPPONENT_STAGGER_MS;
@@ -3343,8 +3381,6 @@ import { createLayerManager } from './ui/layerManager.js';
       const regionsPolicy = layoutPolicy?.regions || getLayoutRegionsConfig();
       const claimClusterPolicy = layoutPolicy?.claimCluster || getClaimClusterConfig();
       const claimClusterEnabled = claimClusterPolicy.enabled;
-      const turnSpotlightEnabled = regionsPolicy.turnSpotlight?.enabled;
-      const turnSpotlightEmbedded = tableViewPolicy.turnSpotlight?.embedded !== false;
       const contextBoxEnabled = regionsPolicy.contextBox?.enabled;
       const sharedContextBox = regionsPolicy.contextBox?.sharedDeclareAndChallengeSlot;
       const eventLogEnabled = regionsPolicy.log?.enabled === true;
@@ -3430,7 +3466,6 @@ import { createLayerManager } from './ui/layerManager.js';
         : '<div class="tiny">No cards on the table yet.</div>';
       const recentLogs = eventLogEnabled ? state.logs.slice(0, 4) : [];
       const turnPlayer = state.players[state.currentTurn];
-      const turnSpotlightTitle = `${seatLabel(turnPlayer)}'s turn`;
       const renderDeclareControls = () => `
         <div class="controls fit-target fit-0" data-proj-id="challenge-prompt" style="max-height:none;">
           <div class="controlsRow">
@@ -3587,14 +3622,14 @@ import { createLayerManager } from './ui/layerManager.js';
             </div>
           </div>
         </div>
-        ${(turnSpotlightEnabled && turnSpotlightEmbedded) ? `
-          <div class="turnSpotlight fit-target fit-0" data-proj-id="turn-spotlight">
-            <div class="turnSpotlightAvatar">
-              <canvas class="seatPortrait" data-seat-id="${state.currentTurn}" width="220" height="220"></canvas>
-            </div>
-            <div class="turnSpotlightNameBar">${turnSpotlightTitle}</div>
+        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;pointer-events:none;z-index:3;">
+          <div style="position:relative;width:68px;height:96px;">
+            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:10px;top:8px;width:58px;height:84px;opacity:.55;object-fit:contain;filter:brightness(.82);">
+            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:6px;top:4px;width:58px;height:84px;opacity:.75;object-fit:contain;filter:brightness(.9);">
+            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:2px;top:0;width:58px;height:84px;object-fit:contain;">
           </div>
-        ` : ''}
+          <div class="tiny" style="font-weight:700;letter-spacing:.08em;">DECK</div>
+        </div>
         <div class="tableViewHeader">
           <div class="sectionTitle">Table View</div>
           <div class="tiny">${claimClusterEnabled ? 'Visual claim cluster active' : (latestPlay ? `Latest: ${seatLabel(latestPlay.playerIndex)} · ${latestPlay.cards?.length || 0} card(s)` : 'Waiting for opening play')}</div>
