@@ -2327,13 +2327,13 @@ import { createLayerManager } from './ui/layerManager.js';
       }
     }
     function humanBetAction(action) {
-      resolveBetAction(0, action);
+      resolveBetAction(state.humanSeat, action);
     }
     function humanOpenTierSelected(tierId) {
-      resolveBetAction(0, { type: 'open-tier', tierId });
+      resolveBetAction(state.humanSeat, { type: 'open-tier', tierId });
     }
     function humanRaiseTierSelected(tierId) {
-      resolveBetAction(0, { type: 'raise-tier', tierId });
+      resolveBetAction(state.humanSeat, { type: 'raise-tier', tierId });
     }
     function transferCardsBetweenHands(fromId, toId, limit) {
       const from = state.players[fromId];
@@ -3989,7 +3989,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return '';
       };
       const renderStakeTierButtons = (mode) => {
-        const allowedTierIds = mode === 'open' ? legalStakeTierIdsForPlayer(0) : humanRaiseTierIds;
+        const allowedTierIds = mode === 'open' ? legalStakeTierIdsForPlayer(hs) : humanRaiseTierIds;
         const locked = !!state.betting?.actionInFlight;
         return `<div class="stakeTierBtnRow" data-proj-id="betting-tier-buttons">${STAKE_TIERS.map((tier) => {
           const enabled = allowedTierIds.includes(tier.id) && !locked;
