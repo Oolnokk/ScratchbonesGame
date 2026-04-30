@@ -2042,6 +2042,17 @@
     .sb-shop-action.equipped { background: rgba(200,153,82,0.28); border-color: #c89952; }
     .sb-shop-action.cant { opacity: 0.38; cursor: not-allowed; }
     .sb-coin { font-style: normal; }
+    /* ── Online lobby screens ───────────────────────────────── */
+    .sb-online-code-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+    .sb-online-label { font-size: 0.78em; color: rgba(242,208,143,0.45); text-transform: uppercase; letter-spacing: .1em; }
+    .sb-online-code { font-size: 1.7em; letter-spacing: .25em; color: #f2d08f; font-family: monospace; }
+    .sb-online-hint { font-size: 0.82em; color: rgba(242,208,143,0.45); margin-top: 4px; }
+    .sb-online-seats { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+    .sb-online-seat { font-size: 0.88em; padding: 4px 8px; background: rgba(242,208,143,0.05); border-radius: 5px; }
+    .sb-muted { font-size: 0.82em; color: rgba(242,208,143,0.35); }
+    .sb-error { color: #e07070; font-size: 0.82em; margin-top: 4px; }
+    .sb-subtitle { font-size: 0.85em; color: rgba(242,208,143,0.5); margin-bottom: 8px; text-align: center; }
+    .sb-field label { font-size: 0.8em; color: rgba(242,208,143,0.55); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .08em; }
 
     /* ── Hot-seat cover screen ──────────────────────────────── */
     #sb-cover {
@@ -2100,8 +2111,9 @@
     </div>
     <div id="_dbgBody"></div>
   </div>
-  <!-- Account, lobby, and shop — loaded before the game module -->
+  <!-- Account, lobby, shop, and online network — loaded before the game module -->
   <script src="docs/js/scratchbones-account.js"></script>
+  <script src="docs/js/scratchbones-network.js"></script>
   <script src="docs/js/scratchbones-lobby.js"></script>
   <script type="module" src="./main/docs/scratchbones/bootstrap.js"></script>
 

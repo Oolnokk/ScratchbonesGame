@@ -696,6 +696,137 @@ import { createLayerManager } from './ui/layerManager.js';
     function isHumanSeat(index) {
       return state.players[index]?.isHuman === true;
     }
+
+    // ── Network serialization / application ─────────────────────────────────
+
+    function serializeNetworkState() {
+      return {
+        players: state.players.map(p => ({
+          id: p.id,
+          name: p.name,
+          hand: (p.hand || []).map(card => ({
+            id: card.id, suit: card.suit, rank: card.rank,
+            wild: card.wild || false, trickType: card.trickType || null,
+          })),
+          chips: p.chips,
+          eliminated: p.eliminated,
+          isHuman: p.isHuman,
+          lastAction: p.lastAction,
+          clears: p.clears,
+          profile: p.profile || null,
+        })),
+        currentTurn: state.currentTurn,
+        leaderIndex: state.leaderIndex,
+        humanSeat: state.humanSeat,
+        declaredRank: state.declaredRank,
+        gameOver: state.gameOver,
+        winnerIndex: state.winnerIndex ?? null,
+        banner: state.banner,
+        logs: state.logs || [],
+        tablePot: state.tablePot ?? 0,
+        ante: state.ante ?? 0,
+        round: state.round ?? 0,
+        betting: state.betting ? { ...state.betting, contributions: { ...state.betting.contributions } } : null,
+        challengeWindow: state.challengeWindow ? { lastPlay: state.challengeWindow.lastPlay } : null,
+        challengeIntro: state.challengeIntro || null,
+        cinematicMode: state.cinematicMode || null,
+        pendingCinematicBetAction: state.pendingCinematicBetAction || null,
+        roundConcessions: [...state.roundConcessions],
+        dealLandingHiddenCardIds: [...state.dealLandingHiddenCardIds],
+        pile: (state.pile || []).map(play => ({ ...play })),
+        selectedCardIds: [],
+      };
+    }
+
+    function applyNetworkState(received) {
+      if (!received) return;
+      const localSelected = state.selectedCardIds;
+      state.players = received.players || [];
+      state.currentTurn = received.currentTurn ?? 0;
+      state.leaderIndex = received.leaderIndex ?? 0;
+      state.humanSeat = received.humanSeat ?? state.humanSeat;
+      state.declaredRank = received.declaredRank ?? null;
+      state.gameOver = received.gameOver || false;
+      state.winnerIndex = received.winnerIndex ?? null;
+      state.banner = received.banner || '';
+      state.logs = received.logs || [];
+      state.tablePot = received.tablePot ?? 0;
+      state.betting = received.betting || null;
+      state.challengeWindow = received.challengeWindow || null;
+      state.challengeIntro = received.challengeIntro || null;
+      state.cinematicMode = received.cinematicMode || null;
+      state.pendingCinematicBetAction = received.pendingCinematicBetAction || null;
+      state.roundConcessions = new Set(received.roundConcessions || []);
+      state.dealLandingHiddenCardIds = new Set(received.dealLandingHiddenCardIds || []);
+      state.pile = received.pile || [];
+      // Preserve card selection only for cards still in the client's own hand
+      const myHand = new Set((state.players.find(p => p.id === state.humanSeat)?.hand || []).map(c => c.id));
+      state.selectedCardIds = new Set([...localSelected].filter(id => myHand.has(id)));
+      render();
+    }
+
+    function handleNetworkAction(msg) {
+      const seat = msg.seatId;
+      switch (msg.type) {
+        case 'play':
+          if (state.currentTurn === seat && !state.gameOver && !state.betting && !state.challengeWindow) {
+            performPlay(seat, msg.cardIds || [], msg.declaredRank);
+          }
+          break;
+        case 'concede-round': {
+          if (state.currentTurn !== seat || state.gameOver || state.betting || state.challengeWindow) break;
+          if (state.declaredRank === null) break;
+          const player = state.players[seat];
+          if (!player || player.eliminated) break;
+          const amount = transferToBank(seat, CONFIG.concedeRoundChipLoss, `${seatLabel(player)} concedes the claim and pays 1 chip to the bank.`);
+          player.lastAction = 'Conceded round';
+          if (amount <= 0) break;
+          state.roundConcessions.add(seat);
+          if (maybeEndRoundFromConcessions()) break;
+          const next = nextRoundEligibleIndex(seat);
+          if (next === null) { openNewRound(currentDeclarerIndex()); break; }
+          state.currentTurn = next;
+          setBanner(`${seatLabel(state.players[next])} is up on ${state.declaredRank}.`);
+          render();
+          scheduleNextTurnOrCover();
+          break;
+        }
+        case 'challenge':
+          if (state.challengeWindow && !state.betting && !state.gameOver) {
+            const target = state.challengeWindow.lastPlay.playerIndex;
+            if (target !== seat) { clearChallengeTimer(); startChallenge(seat, target); }
+          }
+          break;
+        case 'accept-no-challenge':
+          if (state.challengeWindow && !state.betting && state.currentTurn === seat) {
+            clearChallengeTimer();
+            advanceAfterNoChallenge(state.challengeWindow.lastPlay.playerIndex);
+          }
+          break;
+        case 'bet-action':
+          void resolveBetAction(seat, msg.action).catch(e => console.error('[net-action] bet-action', e));
+          break;
+        case 'bet-open-tier':
+          void resolveBetAction(seat, { type: 'open-tier', tierId: msg.tierId }).catch(e => console.error('[net-action] bet-open-tier', e));
+          break;
+        case 'bet-raise-tier':
+          void resolveBetAction(seat, { type: 'raise-tier', tierId: msg.tierId }).catch(e => console.error('[net-action] bet-raise-tier', e));
+          break;
+        case 'punish-toggle':
+          if (state.betting && state.betting.currentActorId === seat) {
+            state.betting.punishArmed = !state.betting.punishArmed;
+            render();
+          }
+          break;
+      }
+    }
+
+    function pushNetworkState() {
+      if (window.ScratchbonesNetwork?.isHost()) {
+        window.ScratchbonesNetwork.sendState(serializeNetworkState());
+      }
+    }
+
     // After any turn transition, schedule AI for AI seats or show a hot-seat cover
     // for human seats that are not the currently active human player.
     function scheduleNextTurnOrCover() {
@@ -4225,10 +4356,7 @@ import { createLayerManager } from './ui/layerManager.js';
         if (select) select.value = String(state.declaredRank);
       }
       document.getElementById('lobbyBtn')?.addEventListener('click', goToLobby);
-      document.getElementById('playBtn')?.addEventListener('click', humanPlay);
-      document.getElementById('concedeBtn')?.addEventListener('click', humanConcedeRound);
-      document.getElementById('challengeBtnFixed')?.addEventListener('click', () => { clearChallengeTimer(); humanChallenge(); });
-      document.getElementById('letPassBtnFixed')?.addEventListener('click', () => { clearChallengeTimer(); humanAcceptNoChallenge(); });
+      // Card selection is always local (included in 'play' action when submitted)
       app.querySelectorAll('.card[data-card-id]').forEach(el => {
         el.addEventListener('click', () => toggleSelect(Number(el.getAttribute('data-card-id'))));
       });
@@ -4236,13 +4364,62 @@ import { createLayerManager } from './ui/layerManager.js';
       resolveChallengeLayoutPressure(app, layoutPolicy?.allowChallengeOverflow !== false);
       renderSeatPortraits();
       mountClaimClusterCinematicStage(app, { cinematicMode, cinematicPhase, cinematicRevealPlay, bettingActorHuman, humanCallAmount });
-      document.getElementById('betCallBtn')?.addEventListener('click', () => humanBetAction('call'));
-      document.getElementById('betFoldBtn')?.addEventListener('click', () => humanBetAction('fold'));
-      document.getElementById('betPunishToggleBtn')?.addEventListener('click', () => {
-        if (!state.betting || !isHumanSeat(state.betting.currentActorId)) return;
-        state.betting.punishArmed = !state.betting.punishArmed;
-        render();
-      });
+      {
+        // Route all player actions through the network when in client mode.
+        const _net = window.ScratchbonesNetwork;
+        const _isClient = !!_net?.isClient();
+        document.getElementById('playBtn')?.addEventListener('click', () => {
+          if (_isClient) {
+            const cards = selectedCards();
+            const rank = Number(document.getElementById('declareRank')?.value);
+            _net.sendAction({ type: 'play', cardIds: cards.map(c => c.id), declaredRank: rank });
+          } else { humanPlay(); }
+        });
+        document.getElementById('concedeBtn')?.addEventListener('click', () => {
+          if (_isClient) _net.sendAction({ type: 'concede-round' });
+          else humanConcedeRound();
+        });
+        document.getElementById('challengeBtnFixed')?.addEventListener('click', () => {
+          if (_isClient) _net.sendAction({ type: 'challenge' });
+          else { clearChallengeTimer(); humanChallenge(); }
+        });
+        document.getElementById('letPassBtnFixed')?.addEventListener('click', () => {
+          if (_isClient) _net.sendAction({ type: 'accept-no-challenge' });
+          else { clearChallengeTimer(); humanAcceptNoChallenge(); }
+        });
+        document.getElementById('betCallBtn')?.addEventListener('click', () => {
+          if (_isClient) _net.sendAction({ type: 'bet-action', action: 'call' });
+          else void humanBetAction('call');
+        });
+        document.getElementById('betFoldBtn')?.addEventListener('click', () => {
+          if (_isClient) _net.sendAction({ type: 'bet-action', action: 'fold' });
+          else void humanBetAction('fold');
+        });
+        document.getElementById('betPunishToggleBtn')?.addEventListener('click', () => {
+          if (_isClient) { _net.sendAction({ type: 'punish-toggle' }); return; }
+          if (!state.betting || !isHumanSeat(state.betting.currentActorId)) return;
+          state.betting.punishArmed = !state.betting.punishArmed;
+          render();
+        });
+        app.querySelectorAll('[data-stake-tier-action="open"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const tierId = btn.getAttribute('data-stake-tier-id');
+            if (_isClient) _net.sendAction({ type: 'bet-open-tier', tierId });
+            else humanOpenTierSelected(tierId);
+          });
+        });
+        app.querySelectorAll('[data-stake-tier-action="raise"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const tierId = btn.getAttribute('data-stake-tier-id');
+            if (_isClient) _net.sendAction({ type: 'bet-raise-tier', tierId });
+            else humanRaiseTierSelected(tierId);
+          });
+        });
+        document.getElementById('cinContinueBtn')?.addEventListener('click', () => {
+          if (_isClient) { state.cinematicMode = null; render(); }
+          else closeCinematic(true);
+        });
+      }
       app.querySelectorAll('[data-smuggle-seat]').forEach((button) => {
         button.addEventListener('click', () => {
           if (!state.smuggleSelection) return;
@@ -4261,13 +4438,6 @@ import { createLayerManager } from './ui/layerManager.js';
         });
       });
       document.getElementById('trapOffloadBtn')?.addEventListener('click', () => { void resolvePendingTrapSelection(); });
-      app.querySelectorAll('[data-stake-tier-action="open"]').forEach((btn) => {
-        btn.addEventListener('click', () => humanOpenTierSelected(btn.getAttribute('data-stake-tier-id')));
-      });
-      app.querySelectorAll('[data-stake-tier-action="raise"]').forEach((btn) => {
-        btn.addEventListener('click', () => humanRaiseTierSelected(btn.getAttribute('data-stake-tier-id')));
-      });
-      document.getElementById('cinContinueBtn')?.addEventListener('click', () => closeCinematic(true));
       const layoutMode = getScratchbonesLayoutMode();
       document.body.classList.toggle('layout-mode-authored', layoutMode === 'authored');
       if (layoutMode === 'authored') {
@@ -4299,6 +4469,7 @@ import { createLayerManager } from './ui/layerManager.js';
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
       cardAnimator.animatePostRender();
       seatAvatarAnim.animatePostRender();
+      pushNetworkState();
     }
     function debugSnapshot() {
       const regionsConfig = getLayoutRegionsConfig();
@@ -5593,12 +5764,33 @@ import { createLayerManager } from './ui/layerManager.js';
     window.addEventListener('orientationchange', scheduleResponsiveFitPass, { passive: true });
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     window.addEventListener('keydown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
-    // Expose startGame so the lobby can launch matches.
-    window.scratchbonesStartGame = startGame;
+    // Client-mode entry point: no game logic runs; just wait for state from the host.
+    async function startClient() {
+      const net = window.ScratchbonesNetwork;
+      if (!net?.isClient()) return;
+      state.humanSeat = net.getSeatId() ?? 0;
+      net.on('state-update', applyNetworkState);
+      net.on('disconnect', () => {
+        console.warn('[net] disconnected from host');
+        if (window.ScratchbonesLobby) window.ScratchbonesLobby.show();
+      });
+    }
+
+    // Host-mode: wire up incoming client actions after game starts.
+    const _origStartGame = startGame;
+    async function startGameWithNetwork() {
+      await _origStartGame();
+      const net = window.ScratchbonesNetwork;
+      if (net?.isHost()) net.on('action', handleNetworkAction);
+    }
+
+    // Expose both entry points so the lobby can call them.
+    window.scratchbonesStartGame = startGameWithNetwork;
+    window.scratchbonesStartClient = startClient;
     window.dispatchEvent(new CustomEvent('scratchbones:ready'));
     // Auto-start only when the lobby system is absent (dev/standalone mode).
     if (!window.ScratchbonesLobby) {
-      void startGame().catch((error) => { console.error('[game] startGame failed', error); });
+      void startGameWithNetwork().catch((error) => { console.error('[game] startGame failed', error); });
     }
     try {
       initCandleLight({ gameConfig: SCRATCHBONES_GAME, debugLog: traceCandlelight });

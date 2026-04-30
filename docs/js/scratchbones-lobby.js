@@ -13,6 +13,12 @@
   let _postGameMessage = '';
   let _scratchbonesReady = false;
 
+  // Online state
+  let _onlinePlayerCount = 2;
+  let _roomCode = '';
+  let _onlineOccupants = []; // [{seatId, name}]
+  let _myOnlineSeat = null;
+
   // ── Helpers ────────────────────────────────────────────────
 
   function esc(str) {
@@ -24,6 +30,11 @@
   function cap(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
 
   function overlay() { return document.getElementById('sb-lobby'); }
+
+  function wsUrl() {
+    return (window.SCRATCHBONES_CONFIG && window.SCRATCHBONES_CONFIG.wsUrl)
+      || 'ws://localhost:8080';
+  }
 
   // ── Screen renderers ───────────────────────────────────────
 
@@ -87,6 +98,7 @@
         ${playerPicker}
         <div class="sb-actions">
           <button class="sb-btn-ghost" id="sb-shop-btn">Shop</button>
+          <button class="sb-btn-ghost" id="sb-online-btn">Play Online</button>
           ${adBtn}
           <button class="sb-btn-primary" id="sb-start-btn">Start Game</button>
         </div>
@@ -141,14 +153,115 @@
       </div>`;
   }
 
+  function renderOnline() {
+    return `
+      <div class="sb-card">
+        <div class="sb-header">
+          <button class="sb-btn-ghost" id="sb-back-btn">← Back</button>
+          <div class="sb-title">Play Online</div>
+        </div>
+        <div class="sb-subtitle">Host a game or join a friend's room</div>
+        <div class="sb-actions" style="flex-direction:column;gap:10px;margin-top:16px;">
+          <button class="sb-btn-primary" id="sb-host-btn">Host a Game</button>
+          <button class="sb-btn-ghost"   id="sb-join-btn">Join a Game</button>
+        </div>
+      </div>`;
+  }
+
+  function renderOnlineHostSetup() {
+    return `
+      <div class="sb-card">
+        <div class="sb-header">
+          <button class="sb-btn-ghost" id="sb-back-btn">← Back</button>
+          <div class="sb-title">Host Game</div>
+        </div>
+        <div class="sb-label">Players at the table</div>
+        <div class="sb-player-row">
+          <div class="sb-count-group">
+            ${[2, 3, 4].map(n =>
+              `<button class="sb-count-btn${_onlinePlayerCount === n ? ' selected' : ''}" data-count="${n}">${n}</button>`
+            ).join('')}
+          </div>
+        </div>
+        <div class="sb-actions" style="margin-top:16px;">
+          <button class="sb-btn-primary" id="sb-create-room-btn">Create Room</button>
+        </div>
+      </div>`;
+  }
+
+  function renderOnlineWaiting() {
+    const needed = _onlinePlayerCount;
+    const have = _onlineOccupants.length;
+    const ready = have >= needed;
+    const seats = _onlineOccupants.map(o =>
+      `<div class="sb-online-seat">Seat ${o.seatId + 1} · ${esc(o.name)}</div>`
+    ).join('');
+    return `
+      <div class="sb-card">
+        <div class="sb-title">Waiting for players…</div>
+        <div class="sb-online-code-row">
+          <span class="sb-online-label">Room Code</span>
+          <strong class="sb-online-code">${esc(_roomCode)}</strong>
+        </div>
+        <div class="sb-online-seats">${seats || '<div class="sb-muted">No one else has joined yet</div>'}</div>
+        <div class="sb-online-hint">${have}/${needed} players connected</div>
+        <div class="sb-actions" style="margin-top:16px;">
+          <button class="sb-btn-ghost" id="sb-cancel-online-btn">Cancel</button>
+          <button class="sb-btn-primary" id="sb-start-online-btn"${ready ? '' : ' disabled'}>
+            Start Game (${have}/${needed})
+          </button>
+        </div>
+      </div>`;
+  }
+
+  function renderOnlineJoin() {
+    return `
+      <div class="sb-card">
+        <div class="sb-header">
+          <button class="sb-btn-ghost" id="sb-back-btn">← Back</button>
+          <div class="sb-title">Join Game</div>
+        </div>
+        <div class="sb-field">
+          <label for="sb-room-code-input">Room Code</label>
+          <input id="sb-room-code-input" type="text" maxlength="4" placeholder="e.g. A1B2"
+                 autocomplete="off" spellcheck="false" style="text-transform:uppercase;letter-spacing:.15em;" />
+        </div>
+        <div id="sb-join-error" class="sb-error" style="display:none;"></div>
+        <div class="sb-actions" style="margin-top:12px;">
+          <button class="sb-btn-primary" id="sb-do-join-btn">Join</button>
+        </div>
+      </div>`;
+  }
+
+  function renderOnlineJoined() {
+    return `
+      <div class="sb-card">
+        <div class="sb-title">Joined!</div>
+        <div class="sb-online-code-row">
+          <span class="sb-online-label">Room</span>
+          <strong class="sb-online-code">${esc(_roomCode)}</strong>
+        </div>
+        <div class="sb-welcome">You are Seat ${(_myOnlineSeat ?? 0) + 1}</div>
+        <div class="sb-muted" style="margin-top:8px;">Waiting for the host to start the game…</div>
+        <div class="sb-actions" style="margin-top:16px;">
+          <button class="sb-btn-ghost" id="sb-cancel-online-btn">Leave</button>
+        </div>
+      </div>`;
+  }
+
   // ── Render & bind ──────────────────────────────────────────
 
   function render() {
     const el = overlay();
     if (!el) return;
-    if (_screen === 'create')     el.innerHTML = renderCreate();
-    else if (_screen === 'shop')  el.innerHTML = renderShop();
-    else                          el.innerHTML = renderMain();
+    if      (_screen === 'create')              el.innerHTML = renderCreate();
+    else if (_screen === 'shop')                el.innerHTML = renderShop();
+    else if (_screen === 'online')              el.innerHTML = renderOnline();
+    else if (_screen === 'online-host-setup')   el.innerHTML = renderOnlineHostSetup();
+    else if (_screen === 'online-waiting')      el.innerHTML = renderOnlineWaiting();
+    else if (_screen === 'online-join')         el.innerHTML = renderOnlineJoin();
+    else if (_screen === 'online-joined')       el.innerHTML = renderOnlineJoined();
+    else                                        el.innerHTML = renderMain();
     bind();
   }
 
@@ -174,6 +287,7 @@
     // Main screen
     document.getElementById('sb-start-btn')?.addEventListener('click', startGame);
     document.getElementById('sb-shop-btn')?.addEventListener('click', () => { _screen = 'shop'; render(); });
+    document.getElementById('sb-online-btn')?.addEventListener('click', () => { _screen = 'online'; render(); });
     document.getElementById('sb-ad-btn')?.addEventListener('click', () => {
       window.ScratchbonesAccount?.watchAd();
       render();
@@ -191,12 +305,23 @@
     });
 
     el.querySelectorAll('.sb-count-btn').forEach(btn => {
-      btn.addEventListener('click', () => { _selectedPlayerCount = parseInt(btn.dataset.count); render(); });
+      btn.addEventListener('click', () => {
+        const n = parseInt(btn.dataset.count);
+        if (_screen === 'online-host-setup') _onlinePlayerCount = n;
+        else _selectedPlayerCount = n;
+        render();
+      });
+    });
+
+    // Back button (shared)
+    document.getElementById('sb-back-btn')?.addEventListener('click', () => {
+      if (_screen === 'shop' || _screen === 'online') _screen = 'main';
+      else if (_screen === 'online-host-setup' || _screen === 'online-join') _screen = 'online';
+      else _screen = 'main';
+      render();
     });
 
     // Shop screen
-    document.getElementById('sb-back-btn')?.addEventListener('click', () => { _screen = 'main'; render(); });
-
     el.querySelectorAll('.sb-shop-action').forEach(btn => {
       btn.addEventListener('click', () => {
         const { action, id } = btn.dataset;
@@ -208,6 +333,90 @@
         render();
       });
     });
+
+    // Online lobby
+    document.getElementById('sb-host-btn')?.addEventListener('click', () => { _screen = 'online-host-setup'; render(); });
+    document.getElementById('sb-join-btn')?.addEventListener('click', () => { _screen = 'online-join'; render(); });
+
+    // Host setup — create room
+    document.getElementById('sb-create-room-btn')?.addEventListener('click', () => {
+      const net = window.ScratchbonesNetwork;
+      if (!net) { alert('Network module not loaded'); return; }
+      const username = window.ScratchbonesAccount?.getUsername() || 'Host';
+      _onlineOccupants = [{ seatId: 0, name: username }];
+      net.createRoom(wsUrl(), username, _onlinePlayerCount)
+        .then(code => {
+          _roomCode = code;
+          _myOnlineSeat = 0;
+          _screen = 'online-waiting';
+          // Listen for players joining
+          net.on('player-joined', msg => {
+            _onlineOccupants = (msg.occupants || []);
+            render();
+          });
+          net.on('player-left', msg => {
+            _onlineOccupants = _onlineOccupants.filter(o => o.seatId !== msg.seatId);
+            render();
+          });
+          render();
+        })
+        .catch(err => {
+          alert('Could not create room: ' + err.message);
+        });
+    });
+
+    // Online waiting — start / cancel
+    document.getElementById('sb-start-online-btn')?.addEventListener('click', () => {
+      if (_onlineOccupants.length < _onlinePlayerCount) return;
+      startOnlineGame();
+    });
+    document.getElementById('sb-cancel-online-btn')?.addEventListener('click', () => {
+      window.ScratchbonesNetwork?.disconnect();
+      _screen = 'online';
+      render();
+    });
+
+    // Join screen
+    const doJoinBtn = document.getElementById('sb-do-join-btn');
+    if (doJoinBtn) {
+      const attemptJoin = () => {
+        const code = (document.getElementById('sb-room-code-input')?.value || '').trim().toUpperCase();
+        if (code.length < 4) { showJoinError('Enter a 4-character room code'); return; }
+        const net = window.ScratchbonesNetwork;
+        if (!net) { showJoinError('Network module not loaded'); return; }
+        const username = window.ScratchbonesAccount?.getUsername() || 'Player';
+        doJoinBtn.disabled = true;
+        net.joinRoom(wsUrl(), code, username)
+          .then(seatId => {
+            _myOnlineSeat = seatId;
+            _roomCode = code;
+            _screen = 'online-joined';
+            // Listen for host starting the game
+            net.on('start-game', () => {
+              startOnlineClient();
+            });
+            net.on('disconnect', () => {
+              alert('Disconnected from room');
+              _screen = 'online';
+              render();
+            });
+            render();
+          })
+          .catch(err => {
+            doJoinBtn.disabled = false;
+            showJoinError(err.message || 'Could not join room');
+          });
+      };
+      doJoinBtn.addEventListener('click', attemptJoin);
+      document.getElementById('sb-room-code-input')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') attemptJoin();
+      });
+    }
+  }
+
+  function showJoinError(msg) {
+    const el = document.getElementById('sb-join-error');
+    if (el) { el.textContent = msg; el.style.display = ''; }
   }
 
   // ── Public API ─────────────────────────────────────────────
@@ -226,6 +435,7 @@
   }
 
   function onGameEnd(chipCount) {
+    window.ScratchbonesNetwork?.disconnect();
     if (window.ScratchbonesAccount) {
       const earned = Math.max(0, Math.floor(chipCount));
       if (earned > 0) {
@@ -256,10 +466,43 @@
     }
   }
 
+  function startOnlineGame() {
+    if (!window.ScratchbonesAccount?.isCreated()) return;
+    const net = window.ScratchbonesNetwork;
+    if (!net?.isHost()) return;
+
+    const humanSeats = _onlineOccupants.map(o => o.seatId);
+    const playerNames = {};
+    _onlineOccupants.forEach(o => { playerNames[o.seatId] = o.name; });
+
+    window.SCRATCHBONES_SESSION = { mode: 'pvp', humanSeats, playerNames };
+    _postGameMessage = '';
+
+    // Tell all clients the game is starting
+    net.broadcastStart();
+    hide();
+
+    if (_scratchbonesReady && window.scratchbonesStartGame) {
+      void window.scratchbonesStartGame().catch(e => console.error('[lobby] startOnlineGame error', e));
+    }
+  }
+
+  function startOnlineClient() {
+    hide();
+    const username = window.ScratchbonesAccount?.getUsername() || 'Player';
+    window.SCRATCHBONES_SESSION = {
+      mode: 'online-client',
+      humanSeats: [_myOnlineSeat],
+      playerNames: { [_myOnlineSeat]: username },
+    };
+    if (_scratchbonesReady && window.scratchbonesStartClient) {
+      void window.scratchbonesStartClient().catch(e => console.error('[lobby] startOnlineClient error', e));
+    }
+  }
+
   function init() {
     window.ScratchbonesAccount?.load();
 
-    // Bootstrap may finish loading before or after this script runs.
     if (window.scratchbonesStartGame) {
       _scratchbonesReady = true;
       show();
@@ -270,7 +513,6 @@
       }, { once: true });
     }
 
-    // Tick passive income every minute while the page is open.
     setInterval(() => window.ScratchbonesAccount?.tickPassiveIncome(), 60_000);
   }
 
