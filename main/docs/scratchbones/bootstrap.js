@@ -3898,7 +3898,7 @@ import { createLayerManager } from './ui/layerManager.js';
         <div id="aiSidebar" class="fit-target fit-0" data-proj-id="sidebar">
           <div class="sectionTitle" style="padding:6px 10px 2px;color:var(--accent-2);">Table</div>
           ${state.players.slice(1).map(p => `
-            <div class="aiSeat ${p.eliminated ? 'eliminated' : ''}" data-proj-id="seat-${p.id}" data-ai-seat-id="${p.id}" style="display:flex;flex-direction:column;align-items:flex-start;gap:var(--layout-seat-stack-gap,4px);${state.smuggleSelection ? `outline:2px solid ${state.smuggleSelection.selectedTargetId === p.id ? 'var(--warning)' : 'var(--text)'};cursor:pointer;` : (state.trapSelection && state.trapSelection.challengerId === p.id ? 'outline:2px solid var(--danger);' : '')}">
+            <div class="aiSeat ${p.eliminated ? 'eliminated' : ''}" data-proj-id="seat-${p.id}" data-ai-seat-id="${p.id}" style="${state.smuggleSelection ? `outline:2px solid ${state.smuggleSelection.selectedTargetId === p.id ? 'var(--warning)' : 'var(--text)'};cursor:pointer;` : (state.trapSelection && state.trapSelection.challengerId === p.id ? 'outline:2px solid var(--danger);' : '')}">
               <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
                 <div class="seatName">${seatLabel(p)}</div>
                 <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
@@ -3908,7 +3908,7 @@ import { createLayerManager } from './ui/layerManager.js';
               <div class="seatAvatarBox" data-proj-id="avatar-${p.id}" style="width:var(--layout-seat-avatar-size,132px);height:var(--layout-seat-avatar-size,132px);aspect-ratio:1/1;">
                 <canvas class="seatPortrait" data-seat-id="${p.id}" width="200" height="200"></canvas>
               </div>
-              ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}" style="display:flex;flex-wrap:nowrap;gap:var(--layout-seat-hand-preview-gap,2px);transform-origin:top left;transform:scale(var(--layout-seat-hand-preview-scale,0.82));max-width:100%;overflow:hidden;">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card" style="width:var(--layout-seat-hand-preview-card-width,34px);height:var(--layout-seat-hand-preview-card-height,48px);"></div>`; }).join('')}</div>` : ''}
+              ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
             </div>
           `).join('')}
         </div>
