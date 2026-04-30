@@ -5211,7 +5211,9 @@ import { createLayerManager } from './ui/layerManager.js';
     window.addEventListener('orientationchange', scheduleResponsiveFitPass, { passive: true });
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     window.addEventListener('keydown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
-    startGame();
+    void startGame().catch((error) => {
+      console.error('[game] startGame failed', error);
+    });
     try {
       initCandleLight({ gameConfig: SCRATCHBONES_GAME, debugLog: traceCandlelight });
     } catch (error) {
