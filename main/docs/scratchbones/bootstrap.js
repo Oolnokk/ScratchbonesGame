@@ -798,14 +798,9 @@ import { createLayerManager } from './ui/layerManager.js';
         player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
       }
     }
-    async function animateDealCardToPlayer({ card, playerIndex }) {
+    async function animateDealCardToPlayer({ card, playerIndex, landingCardIndex }) {
       const player = state.players[playerIndex];
       if (!card || !player || player.eliminated) return;
-      player.hand.push(card);
-      player.hand.sort(sortCards);
-      const landingCardIndex = player.hand.findIndex((handCard) => handCard.id === card.id);
-      state.dealLandingHiddenCardIds.add(card.id);
-      render();
       await animateCardTransferBatch({
         cards: [card],
         fromKind: 'deck',
@@ -820,8 +815,16 @@ import { createLayerManager } from './ui/layerManager.js';
       render();
       if (CONFIG.cards.transferAnimation.deckDealStaggerMs > 0) await sleep(CONFIG.cards.transferAnimation.deckDealStaggerMs);
     }
+    function sortDealQueueRightToLeft(queue) {
+      return [...queue].sort((a, b) => {
+        if (a.playerIndex !== b.playerIndex) return a.playerIndex - b.playerIndex;
+        if (a.passNumber !== b.passNumber) return (a.passNumber || 0) - (b.passNumber || 0);
+        return b.landingCardIndex - a.landingCardIndex;
+      });
+    }
     async function dealFreshHandsAnimated() {
       const deck = createDeck();
+      const dealQueue = [];
       for (const player of state.players) {
         if (player.eliminated) {
           player.hand = [];
@@ -830,15 +833,23 @@ import { createLayerManager } from './ui/layerManager.js';
         player.hand = [];
         player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
       }
-      render();
       for (let cardSlot = 0; cardSlot < START_HAND_SIZE; cardSlot++) {
         for (let playerIndex = 0; playerIndex < state.players.length; playerIndex++) {
           const player = state.players[playerIndex];
           if (!deck.length) break;
           if (!player || player.eliminated || player.hand.length >= START_HAND_SIZE) continue;
           const card = deck.shift();
-          await animateDealCardToPlayer({ card, playerIndex });
+          if (!card) continue;
+          player.hand.push(card);
+          player.hand.sort(sortCards);
+          const landingCardIndex = player.hand.findIndex((handCard) => handCard.id === card.id);
+          state.dealLandingHiddenCardIds.add(card.id);
+          dealQueue.push({ card, playerIndex, landingCardIndex });
         }
+      }
+      render();
+      for (const dealStep of sortDealQueueRightToLeft(dealQueue)) {
+        await animateDealCardToPlayer(dealStep);
       }
     }
     function refillHandsAfterClearInTurnOrder(clearerIndex) {
@@ -873,7 +884,8 @@ import { createLayerManager } from './ui/layerManager.js';
       for (let offset = 0; offset < state.players.length; offset++) {
         drawOrder.push((clearerIndex + offset) % state.players.length);
       }
-      render();
+      const refillQueue = [];
+      let refillPassCount = 0;
       let dealtInPass = true;
       while (deck.length && dealtInPass) {
         dealtInPass = false;
@@ -882,10 +894,23 @@ import { createLayerManager } from './ui/layerManager.js';
           const player = state.players[playerIndex];
           if (!player || player.eliminated || player.hand.length >= START_HAND_SIZE) continue;
           const card = deck.shift();
+          if (!card) continue;
+          player.hand.push(card);
+          player.hand.sort(sortCards);
+          const landingCardIndex = player.hand.findIndex((handCard) => handCard.id === card.id);
+          state.dealLandingHiddenCardIds.add(card.id);
+          refillQueue.push({ card, playerIndex, landingCardIndex, passNumber: refillPassCount });
           dealtInPass = true;
-          await animateDealCardToPlayer({ card, playerIndex });
         }
-        if (dealtInPass && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) await sleep(CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs);
+      }
+      render();
+      let activePassNumber = sortDealQueueRightToLeft(refillQueue)[0]?.passNumber ?? null;
+      for (const refillStep of sortDealQueueRightToLeft(refillQueue)) {
+        if (activePassNumber !== null && refillStep.passNumber !== activePassNumber && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) {
+          await sleep(CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs);
+          activePassNumber = refillStep.passNumber;
+        }
+        await animateDealCardToPlayer(refillStep);
       }
       for (const player of state.players) {
         if (player.eliminated) {
@@ -3968,7 +3993,7 @@ import { createLayerManager } from './ui/layerManager.js';
                 const cardGlyph = card.wild ? 'W' : String(card.rank);
                 const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id);
                 return `
-                <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}" title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}" style="background:transparent;border:0;box-shadow:none;outline:none;padding:0 calc(var(--layout-hand-card-shell-width-offset,4px)) 0 0;width:fit-content;min-width:0;position:relative;">
+                <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}" title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}"${hiddenDealCard ? ' style=\"visibility:hidden;\"' : ' style=\"background:transparent;border:0;box-shadow:none;outline:none;padding:0;width:fit-content;min-width:0;\"'}>
                   <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`}">
                   <span class="cardLabel" aria-hidden="true" style="left:var(--layout-hand-card-label-inset-left,2px);bottom:var(--layout-hand-card-label-inset-bottom,2px);right:auto;top:auto;"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${handCardLabel}</span></span>
                 </button>
