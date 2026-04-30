@@ -36,6 +36,7 @@ export function createInitialState(config) {
       roundConcessions: new Set(),
       ante: 0,
       tablePot: 0,
+      dealLandingHiddenCardIds: new Set(),
     },
     uiDebugState: {
       bettingUiDebugKey: null,
