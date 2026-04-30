@@ -1361,7 +1361,8 @@ window.SCRATCHBONES_CONFIG = {
       "challengeTimerLabel": "Auto: let it stand",
       "challengePromptTemplate": "{seat} declared {count} × {rank}. Challenge before the timer runs out, or let it stand.",
       "challengeBurstText": "LIAR!!!",
-      "letStandButton": "Let it stand"
+      "letStandButton": "Let it stand",
+      "tableLocation": "Wandering Moon Underclub --- Kumapirra,  Yama Riverlands, Tanka"
     },
     "assets": {
       "cards": {

@@ -28,6 +28,9 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     // Most recent config-boundary cleanup: Scratchbones now reads only SCRATCHBONES_CONFIG.game.
     const SCRATCHBONES_GAME = getScratchbonesGameConfig({ rootConfig: scratchbonesRootConfig, reportError: reportScratchbonesConfigError, debugEnabled: DEBUG_ENABLED });
+    const TABLE_LOCATION = String(SCRATCHBONES_GAME.uiText?.tableLocation || '').trim();
+    const GAME_TITLE = `SCRATCHBONES! ${TABLE_LOCATION}`;
+    if (typeof document !== 'undefined') document.title = GAME_TITLE;
     const RENDERED_SCREEN_SPACE_PARITY = SCRATCHBONES_GAME.layout?.diagnostics?.renderedScreenSpaceParity || {};
     const AUTHORED_BOX_KEY_BY_PROJ_ID = {
       'topbar': 'topbar',
@@ -3878,7 +3881,7 @@ import { createLayerManager } from './ui/layerManager.js';
       app.innerHTML = `
         <div class="topbar" data-proj-id="topbar">
           <div class="titleRow">
-            <h1>Madiao Mobile Challenge</h1>
+            <h1>${escapeHtml(GAME_TITLE)}</h1>
             <button class="ghost" id="restartBtn">New Match</button>
           </div>
           <div class="chipRow">
