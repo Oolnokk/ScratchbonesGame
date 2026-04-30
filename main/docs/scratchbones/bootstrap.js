@@ -3902,10 +3902,9 @@ import { createLayerManager } from './ui/layerManager.js';
               <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
                 <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
                 ${renderSeatCoinRow(p)}
-                ${p.seed ? `<div class="seatSeed">${p.seed}</div>` : ''}
                 <div class="seatStatus">${p.lastAction}</div>
               </div>
-              <div class="seatAvatarBox" data-proj-id="avatar-${p.id}">
+              <div class="seatAvatarBox" data-proj-id="avatar-${p.id}" style="width:var(--layout-seat-avatar-size,132px);height:var(--layout-seat-avatar-size,132px);aspect-ratio:1/1;">
                 <canvas class="seatPortrait" data-seat-id="${p.id}" width="200" height="200"></canvas>
               </div>
               ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
@@ -3920,7 +3919,7 @@ import { createLayerManager } from './ui/layerManager.js';
               ${renderSeatCoinRow(player)}
               <div class="seatStatus">${player.lastAction}</div>
             </div>
-            <div class="seatAvatarBox" data-proj-id="avatar-human">
+            <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
               <canvas class="seatPortrait" data-seat-id="0" width="220" height="220"></canvas>
             </div>
           </div>
