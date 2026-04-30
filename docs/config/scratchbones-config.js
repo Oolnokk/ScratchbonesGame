@@ -512,10 +512,10 @@ window.SCRATCHBONES_CONFIG = {
               "turbulence": 1
             },
             {
-              "xPct": 1.04,
+              "xPct": 1.18,
               "yPct": 0.3333333333,
               "intensity": 0.77,
-              "radiusMultiplier": 1.45,
+              "radiusMultiplier": 1,
               "flickerSpeed": 4.17,
               "turbulence": 1
             }
