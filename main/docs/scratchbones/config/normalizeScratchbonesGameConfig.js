@@ -269,6 +269,13 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         raiseOutMs: rawGameConfig.chips?.challengeStake?.animation?.raiseOutMs ?? 190,
         raiseInMs: rawGameConfig.chips?.challengeStake?.animation?.raiseInMs ?? 300,
       },
+      transferAnimation: {
+        clusterMoveMs: Math.max(120, Number(rawGameConfig.chips?.transferAnimation?.clusterMoveMs) || 320),
+        anteMs: Math.max(120, Number(rawGameConfig.chips?.transferAnimation?.anteMs) || 300),
+        clearPayoutMs: Math.max(120, Number(rawGameConfig.chips?.transferAnimation?.clearPayoutMs) || 360),
+        coinSizePx: Math.max(16, Number(rawGameConfig.chips?.transferAnimation?.coinSizePx) || 24),
+        maxIconsPerCluster: Math.max(1, Number(rawGameConfig.chips?.transferAnimation?.maxIconsPerCluster) || 10),
+      },
       clearBonusBase: rawGameConfig.chips?.clearReward?.base ?? 1,
       clearBonusIncrement: rawGameConfig.chips?.clearReward?.increment ?? 1,
       anteStart: rawGameConfig.chips?.ante?.start ?? 1,
