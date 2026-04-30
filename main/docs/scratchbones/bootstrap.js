@@ -779,6 +779,32 @@ import { createLayerManager } from './ui/layerManager.js';
         player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
       }
     }
+    function refillHandsAfterClearInTurnOrder(clearerIndex) {
+      const deck = createDeck();
+      const drawOrder = [];
+      for (let offset = 0; offset < state.players.length; offset++) {
+        drawOrder.push((clearerIndex + offset) % state.players.length);
+      }
+      let dealtInPass = true;
+      while (deck.length && dealtInPass) {
+        dealtInPass = false;
+        for (const playerIndex of drawOrder) {
+          if (!deck.length) break;
+          const player = state.players[playerIndex];
+          if (player.eliminated || player.hand.length >= START_HAND_SIZE) continue;
+          player.hand.push(deck.shift());
+          dealtInPass = true;
+        }
+      }
+      for (const player of state.players) {
+        if (player.eliminated) {
+          player.hand = [];
+          continue;
+        }
+        player.hand.sort(sortCards);
+        player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
+      }
+    }
     function startGame() {
       SCRATCHBONES_AUDIO.startPlaylist();
       clearChallengeTimer();
@@ -1674,7 +1700,7 @@ import { createLayerManager } from './ui/layerManager.js';
         render();
         return true;
       }
-      dealFreshHands();
+      refillHandsAfterClearInTurnOrder(playerIndex);
       state.pile = [];
       state.declaredRank = null;
       state.challengeWindow = null;
@@ -1684,8 +1710,8 @@ import { createLayerManager } from './ui/layerManager.js';
       state.leaderIndex = playerIndex;
       state.currentTurn = playerIndex;
       setBanner(playerIndex === 0
-        ? `You cleared your hand. New hands are dealt, and you lead again.`
-        : `${seatLabel(player)} cleared their hand, new hands are dealt, and they lead again.`, 'good');
+        ? `You cleared your hand. Hands refill up to ${START_HAND_SIZE} cards in turn order, and you lead again.`
+        : `${seatLabel(player)} cleared their hand. Hands refill up to ${START_HAND_SIZE} cards in turn order, and they lead again.`, 'good');
       render();
       if (state.currentTurn !== 0) scheduleAiTurn();
       return true;
