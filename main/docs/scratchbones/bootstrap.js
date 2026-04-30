@@ -2130,12 +2130,29 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return;
+      if (challengedId === 0) {
+        state.trapSelection = { challengerId, maxCount: Math.min(play.cards.length, state.players[0].hand.length) };
+        state.selectedCardIds.clear();
+        render();
+        return;
+      }
       let moved = [];
       const selectedCardIds = humanPickTrapCardIds(challengedId, play.cards.length);
       if (Array.isArray(selectedCardIds)) moved = transferSpecificCardsBetweenHands(challengedId, challengerId, selectedCardIds);
       if (!moved.length) moved = transferCardsBetweenHands(challengedId, challengerId, play.cards.length);
       if (!moved.length) return;
       addLog(`Trap Bone triggers: ${seatLabel(challengedId)} transfers ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
+    }
+    function resolvePendingTrapSelection() {
+      if (!state.trapSelection) return;
+      const { challengerId, maxCount } = state.trapSelection;
+      const selectedIds = [...state.selectedCardIds].slice(0, maxCount);
+      let moved = transferSpecificCardsBetweenHands(0, challengerId, selectedIds);
+      if (!moved.length) moved = transferCardsBetweenHands(0, challengerId, maxCount);
+      if (moved.length) addLog(`Trap Bone triggers: You transfer ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
+      state.selectedCardIds.clear();
+      state.trapSelection = null;
+      render();
     }
     function applyPunishTransferOnSuccessfulChallenge(play, challengerId, challengedId) {
       if (!state.players[challengerId]?.trickPunishActive) return;
@@ -3416,6 +3433,21 @@ import { createLayerManager } from './ui/layerManager.js';
           </div>
         </div>
       `;
+      const renderTrickActionPrompt = () => {
+        if (state.smuggleSelection) return `
+          <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
+            <div class="sectionTitle" style="color:var(--warning);">Smuggle Bone</div>
+            <div class="tiny challengePromptInfo">Choose an AI seat (highlighted white; selected yellow), then confirm.</div>
+            <div class="challengePromptBtns"><button id="smuggleOffloadBtn">Offload Bones</button></div>
+          </div>`;
+        if (state.trapSelection) return `
+          <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
+            <div class="sectionTitle" style="color:var(--danger);">Trap Bone</div>
+            <div class="tiny challengePromptInfo">Select ${state.trapSelection.maxCount} card(s) from your hand, then confirm offload.</div>
+            <div class="challengePromptBtns"><button id="trapOffloadBtn">Offload Bones</button></div>
+          </div>`;
+        return '';
+      };
       const renderStakeTierButtons = (mode) => {
         const allowedTierIds = mode === 'open' ? legalStakeTierIdsForPlayer(0) : humanRaiseTierIds;
         const locked = !!state.betting?.actionInFlight;
@@ -3473,11 +3505,9 @@ import { createLayerManager } from './ui/layerManager.js';
       const clusterCinematicActive = claimClusterEnabled && !!cinematicMode;
       const renderSmuggleTableOverlay = () => {
         if (!state.smuggleSelection) return '';
-        const seatButtons = state.smuggleSelection.candidateIds.map((id) => {
-          const selected = id === state.smuggleSelection.selectedTargetId;
-          return `<button class="${selected ? 'danger' : 'secondary'}" data-smuggle-seat="${id}" style="${selected ? 'border-color:var(--warning);background:var(--warning);color:var(--bg);' : ''}">${escapeHtml(seatLabel(id))}</button>`;
-        }).join('');
-        return `<div class="fit-target fit-0" data-proj-id="table-view" style="z-index:72;display:flex;align-items:flex-start;justify-content:center;pointer-events:auto;"><div style="margin-top:8px;width:min(92%,900px);padding:10px 12px;border:2px solid var(--warning);background:rgba(6,10,16,0.92);border-radius:12px;text-align:center;"><div class="fx-burst-shell"><div class="cin-action-burst burst-liar">SMUGGLE TARGET</div></div><div class="challengeBar" style="margin-top:10px;">${seatButtons}<button id="smuggleOffloadBtn">Offload Bones</button></div></div></div>`;
+        const centerXPct = clampNumber(claimClusterPolicy.geometry.centerXPct, 0, 1) * 100;
+        const centerYPct = (clampNumber(claimClusterPolicy.geometry.centerYPct, 0, 1) * 100) - 18;
+        return `<div class="fit-target fit-0" data-proj-id="table-view" style="z-index:72;pointer-events:none;"><div style="position:absolute;left:${centerXPct.toFixed(2)}%;top:${centerYPct.toFixed(2)}%;transform:translate(-50%,-100%);text-align:center;pointer-events:none;"><div class="fx-burst-shell"><div class="cin-action-burst burst-liar">SMUGGLE TARGET</div></div></div></div>`;
       };
       app.innerHTML = `
         <div class="topbar" data-proj-id="topbar">
@@ -3495,7 +3525,7 @@ import { createLayerManager } from './ui/layerManager.js';
         <div id="aiSidebar" class="fit-target fit-0" data-proj-id="sidebar">
           <div class="sectionTitle" style="padding:6px 10px 2px;color:var(--accent-2);">Table</div>
           ${state.players.slice(1).map(p => `
-            <div class="aiSeat ${p.eliminated ? 'eliminated' : ''}" data-proj-id="seat-${p.id}">
+            <div class="aiSeat ${p.eliminated ? 'eliminated' : ''}" data-proj-id="seat-${p.id}" data-ai-seat-id="${p.id}" style="${state.smuggleSelection ? `outline:2px solid ${state.smuggleSelection.selectedTargetId === p.id ? 'var(--warning)' : 'var(--text)'};cursor:pointer;` : (state.trapSelection && state.trapSelection.challengerId === p.id ? 'outline:2px solid var(--danger);' : '')}">
               <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
                 <div class="seatName">${seatLabel(p)}</div>
                 <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
@@ -3585,6 +3615,8 @@ import { createLayerManager } from './ui/layerManager.js';
           ? (legacyCinematicCompatEnabled ? renderLegacyBoxedCinematic(cinematicPhase) : '')
           : ((clusterCinematicActive && cinematicPhase === 'betting')
             ? ''
+            : (state.smuggleSelection || state.trapSelection)
+            ? renderTrickActionPrompt()
             : state.betting
             ? renderBettingControls()
             : (sharedContextBox && humanCanDecideChallenge
@@ -3650,6 +3682,16 @@ import { createLayerManager } from './ui/layerManager.js';
         });
       });
       document.getElementById('smuggleOffloadBtn')?.addEventListener('click', resolvePendingSmuggleSelection);
+      app.querySelectorAll('[data-ai-seat-id]').forEach((seat) => {
+        seat.addEventListener('click', () => {
+          if (!state.smuggleSelection) return;
+          const id = Number(seat.getAttribute('data-ai-seat-id'));
+          if (!state.smuggleSelection.candidateIds.includes(id)) return;
+          state.smuggleSelection.selectedTargetId = id;
+          render();
+        });
+      });
+      document.getElementById('trapOffloadBtn')?.addEventListener('click', resolvePendingTrapSelection);
       app.querySelectorAll('[data-stake-tier-action="open"]').forEach((btn) => {
         btn.addEventListener('click', () => humanOpenTierSelected(btn.getAttribute('data-stake-tier-id')));
       });
