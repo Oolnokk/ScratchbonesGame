@@ -1433,7 +1433,7 @@ window.SCRATCHBONES_CONFIG = {
           "playlist": [
             "./docs/assets/audio/bgm/tankan_nocturne.mp3"
           ],
-          "challenge": ""
+          "challenge": "./docs/assets/audio/bgm/challengeloop_placeholder.m4a"
         }
       },
       "portrait": {
