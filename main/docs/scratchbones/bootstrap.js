@@ -895,6 +895,7 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     async function startGame() {
       SCRATCHBONES_AUDIO.startPlaylist();
+      await preloadScratchboneCardArt();
       clearChallengeTimer();
       state.seed = Math.floor(Math.random() * 1e9);
       state.poolVisualSeed = Math.floor(Math.random() * 1e9);
@@ -2404,6 +2405,42 @@ import { createLayerManager } from './ui/layerManager.js';
         src: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, rankAssetFromTemplate(SCRATCHBONES_GAME.assets.rankCardTemplateSrc, clampedRank)),
         fallbackSrc: normalizedAssetPath(SCRATCHBONES_GAME.assets.cardHudBasePath, rankAssetFromTemplate(SCRATCHBONES_GAME.assets.rankCardTemplateFallbackSrc, clampedRank)),
       };
+    }
+    let cardAssetPreloadPromise = null;
+    function collectScratchboneCardArtSources() {
+      const srcs = new Set();
+      const addAsset = (asset) => {
+        if (!asset) return;
+        if (asset.src) srcs.add(asset.src);
+        if (asset.fallbackSrc) srcs.add(asset.fallbackSrc);
+      };
+      addAsset(resolveScratchbone2DAsset({ wild: true }));
+      addAsset(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }));
+      for (let rank = 1; rank <= RANK_COUNT; rank++) {
+        addAsset(resolveScratchbone2DAsset({ wild: false, rank }));
+      }
+      Object.keys(SCRATCHBONES_GAME.assets?.trickCardSrc || {}).forEach((trickType) => {
+        addAsset(resolveScratchbone2DAsset({ trickType }));
+      });
+      return [...srcs];
+    }
+    function preloadCardAsset(src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const finish = () => resolve();
+        img.onload = finish;
+        img.onerror = finish;
+        img.src = src;
+        if (img.complete) resolve();
+      });
+    }
+    async function preloadScratchboneCardArt() {
+      if (SCRATCHBONES_GAME.assets?.preloadCards === false) return;
+      if (cardAssetPreloadPromise) return cardAssetPreloadPromise;
+      const assetSrcs = collectScratchboneCardArtSources();
+      cardAssetPreloadPromise = Promise.all(assetSrcs.map(preloadCardAsset))
+        .catch(() => undefined);
+      await cardAssetPreloadPromise;
     }
     function wireScratchboneImageFallbacks(root = document) {
       root.querySelectorAll('img[data-fallback-src]').forEach(img => {

@@ -1358,6 +1358,9 @@ window.SCRATCHBONES_CONFIG = {
     },
     "assets": {
       "cards": {
+        "preload": {
+          "enabled": true
+        },
         "hudBasePath": "./docs/assets/hud/",
         "wild": {
           "src": "2DScratchBoneWild.png",
