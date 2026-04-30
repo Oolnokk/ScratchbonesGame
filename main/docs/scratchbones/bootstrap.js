@@ -1508,7 +1508,7 @@ import { createLayerManager } from './ui/layerManager.js';
       clone.style.margin = '0';
       clone.style.zIndex = '10010';
       clone.style.transition = 'none';
-      document.body.appendChild(clone);
+      clonePlane.app.appendChild(clone);
       await new Promise((resolve) => requestAnimationFrame(resolve));
       clone.style.transition = `transform ${durationMs}ms ${CONFIG.transferAnimation.easing}, opacity ${durationMs}ms ${CONFIG.transferAnimation.easing}`;
       const dx = (targetRect.left + targetRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
@@ -3426,6 +3426,24 @@ import { createLayerManager } from './ui/layerManager.js';
         const cloneZAboveLighting = Number.isFinite(Number(cloneLayerCfg.aboveLightingZIndex)) ? Number(cloneLayerCfg.aboveLightingZIndex) : 9999;
         const cloneBoundarySelector = String(cloneLayerCfg.sidebarBoundarySelector || '#aiSidebar');
 
+
+        function resolveClonePlaneMetrics() {
+          const app = document.getElementById('app');
+          if (!app) return null;
+          const appRect = app.getBoundingClientRect();
+          const scaleX = app.offsetWidth > 0 ? (appRect.width / app.offsetWidth) : 1;
+          const scaleY = app.offsetHeight > 0 ? (appRect.height / app.offsetHeight) : 1;
+          return { app, appRect, scaleX: scaleX || 1, scaleY: scaleY || 1 };
+        }
+        function viewportRectToClonePlaneRect(rect, metrics) {
+          if (!rect || !metrics) return null;
+          return {
+            left: (rect.left - metrics.appRect.left) / metrics.scaleX,
+            top: (rect.top - metrics.appRect.top) / metrics.scaleY,
+            width: rect.width / metrics.scaleX,
+            height: rect.height / metrics.scaleY,
+          };
+        }
         function syncCloneLayeringForSidebarBoundary(cloneEl) {
           if (!(cloneEl instanceof Element)) return;
           const sidebar = document.querySelector(cloneBoundarySelector);
@@ -3476,6 +3494,9 @@ import { createLayerManager } from './ui/layerManager.js';
               || snapshotCandidates.find((entry) => entry.seatId === seatId)
               || snapshotCandidates[0];
             const newRect = img.getBoundingClientRect();
+            const clonePlane = resolveClonePlaneMetrics();
+            const targetRectInPlane = viewportRectToClonePlaneRect(newRect, clonePlane);
+            if (!clonePlane || !targetRectInPlane) return;
 
             if (!snapshot) {
               const isClaimOrTable = containerType === 'claim' || containerType === 'table';
@@ -3483,25 +3504,27 @@ import { createLayerManager } from './ui/layerManager.js';
                 SCRATCHBONES_AUDIO.playMovement('handToTable');
                 const existing = activeClones.get(id);
                 if (existing) existing.remove();
-                const deckCx = deckRect.left + deckRect.width / 2;
-                const deckCy = deckRect.top + deckRect.height / 2;
-                const cardCx = newRect.left + newRect.width / 2;
-                const cardCy = newRect.top + newRect.height / 2;
+                const deckPlane = viewportRectToClonePlaneRect(deckRect, clonePlane);
+                if (!deckPlane) return;
+                const deckCx = deckPlane.left + deckPlane.width / 2;
+                const deckCy = deckPlane.top + deckPlane.height / 2;
+                const cardCx = targetRectInPlane.left + targetRectInPlane.width / 2;
+                const cardCy = targetRectInPlane.top + targetRectInPlane.height / 2;
                 const dx = deckCx - cardCx;
                 const dy = deckCy - cardCy;
                 const clone = document.createElement('img');
                 clone.src = img.src;
                 clone.dataset.candleLerpClone = '1';
                 clone.style.cssText = [
-                  'position:fixed',
-                  `left:${newRect.left}px`, `top:${newRect.top}px`,
-                  `width:${newRect.width}px`, `height:${newRect.height}px`,
+                  'position:absolute',
+                  `left:${targetRectInPlane.left}px`, `top:${targetRectInPlane.top}px`,
+                  `width:${targetRectInPlane.width}px`, `height:${targetRectInPlane.height}px`,
                   'object-fit:contain', 'pointer-events:none',
                   'transform-origin:center center',
                   `transform:translate(${dx}px,${dy}px) scale(0.14)`,
                   'transition:none',
                 ].join(';');
-                document.body.appendChild(clone);
+                clonePlane.app.appendChild(clone);
                 syncCloneLayeringForSidebarBoundary(clone);
                 activeClones.set(id, clone);
                 img.style.opacity = '0';
@@ -3533,25 +3556,27 @@ import { createLayerManager } from './ui/layerManager.js';
                 opponentCardIdx++;
                 const existing = activeClones.get(id);
                 if (existing) existing.remove();
-                const avatarCx = actorRect.left + actorRect.width / 2;
-                const avatarCy = actorRect.top + actorRect.height / 2;
-                const cardCx = newRect.left + newRect.width / 2;
-                const cardCy = newRect.top + newRect.height / 2;
+                const actorPlane = viewportRectToClonePlaneRect(actorRect, clonePlane);
+                if (!actorPlane) return;
+                const avatarCx = actorPlane.left + actorPlane.width / 2;
+                const avatarCy = actorPlane.top + actorPlane.height / 2;
+                const cardCx = targetRectInPlane.left + targetRectInPlane.width / 2;
+                const cardCy = targetRectInPlane.top + targetRectInPlane.height / 2;
                 const dx = avatarCx - cardCx;
                 const dy = avatarCy - cardCy;
                 const clone = document.createElement('img');
                 clone.src = img.src;
                 clone.dataset.candleLerpClone = '1';
                 clone.style.cssText = [
-                  'position:fixed',
-                  `left:${newRect.left}px`, `top:${newRect.top}px`,
-                  `width:${newRect.width}px`, `height:${newRect.height}px`,
+                  'position:absolute',
+                  `left:${targetRectInPlane.left}px`, `top:${targetRectInPlane.top}px`,
+                  `width:${targetRectInPlane.width}px`, `height:${targetRectInPlane.height}px`,
                   'object-fit:contain', 'pointer-events:none',
                   'transform-origin:center center',
                   `transform:translate(${dx}px,${dy}px) scale(0.08)`,
                   'transition:none',
                 ].join(';');
-                document.body.appendChild(clone);
+                clonePlane.app.appendChild(clone);
                 syncCloneLayeringForSidebarBoundary(clone);
                 activeClones.set(id, clone);
                 img.style.opacity = '0';
@@ -3607,31 +3632,39 @@ import { createLayerManager } from './ui/layerManager.js';
             scheduleLerpComplete(id, { durationMs: FLY_MS });
             const existing = activeClones.get(id);
             if (existing) existing.remove();
+            const snapshotRectInPlane = viewportRectToClonePlaneRect(snapshot.rect, clonePlane);
+            const sourceContainerCenterInPlane = snapshot.containerCenter
+              ? {
+                  x: (snapshot.containerCenter.x - clonePlane.appRect.left) / clonePlane.scaleX,
+                  y: (snapshot.containerCenter.y - clonePlane.appRect.top) / clonePlane.scaleY,
+                }
+              : null;
+            if (!snapshotRectInPlane) return;
             const targetCenter = {
-              x: newRect.left + (newRect.width / 2),
-              y: newRect.top + (newRect.height / 2),
+              x: targetRectInPlane.left + (targetRectInPlane.width / 2),
+              y: targetRectInPlane.top + (targetRectInPlane.height / 2),
             };
-            const startPoint = movementType === 'seatPreviewToSeatPreviewArc' && snapshot.containerCenter
-              ? snapshot.containerCenter
-              : { x: snapshot.rect.left + (snapshot.rect.width / 2), y: snapshot.rect.top + (snapshot.rect.height / 2) };
+            const startPoint = movementType === 'seatPreviewToSeatPreviewArc' && sourceContainerCenterInPlane
+              ? sourceContainerCenterInPlane
+              : { x: snapshotRectInPlane.left + (snapshotRectInPlane.width / 2), y: snapshotRectInPlane.top + (snapshotRectInPlane.height / 2) };
             const dx = startPoint.x - targetCenter.x;
             const dy = startPoint.y - targetCenter.y;
-            const scaleX = snapshot.rect.width / (newRect.width || 1);
-            const scaleY = snapshot.rect.height / (newRect.height || 1);
+            const scaleX = snapshotRectInPlane.width / (targetRectInPlane.width || 1);
+            const scaleY = snapshotRectInPlane.height / (targetRectInPlane.height || 1);
             if (Math.abs(dx) < 2 && Math.abs(dy) < 2 && Math.abs(scaleX - 1) < 0.05) return;
             const clone = document.createElement('img');
             clone.src = snapshot.src;
             clone.dataset.candleLerpClone = '1';
             clone.style.cssText = [
-              'position:fixed',
-              `left:${newRect.left}px`, `top:${newRect.top}px`,
-              `width:${newRect.width}px`, `height:${newRect.height}px`,
+              'position:absolute',
+              `left:${targetRectInPlane.left}px`, `top:${targetRectInPlane.top}px`,
+              `width:${targetRectInPlane.width}px`, `height:${targetRectInPlane.height}px`,
               'object-fit:contain', 'pointer-events:none',
               'transform-origin:top left',
               `transform:translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`,
               'transition:none',
             ].join(';');
-            document.body.appendChild(clone);
+            clonePlane.app.appendChild(clone);
             syncCloneLayeringForSidebarBoundary(clone);
             activeClones.set(id, clone);
             img.style.opacity = '0';
@@ -3661,7 +3694,8 @@ import { createLayerManager } from './ui/layerManager.js';
 
     function syncStationaryCardScreenSpace(app) {
       if (!app) return;
-      const stationaryCardConfig = SCRATCHBONES_GAME.layout?.cards?.stationaryScreenSpacePx || {};
+      const layoutCardConfig = SCRATCHBONES_GAME.layout?.cards || {};
+      const stationaryCardConfig = layoutCardConfig.stationaryScreenSpacePx || {};
       const targetWidthPx = Number(stationaryCardConfig.width);
       const targetHeightPx = Number(stationaryCardConfig.height);
       if (!(targetWidthPx > 0) || !(targetHeightPx > 0)) return;
@@ -3677,6 +3711,29 @@ import { createLayerManager } from './ui/layerManager.js';
         cardEl.style.minWidth = `${widthInAppPx.toFixed(3)}px`;
         cardEl.style.minHeight = `${heightInAppPx.toFixed(3)}px`;
       });
+      const deckPlaceholderConfig = layoutCardConfig.deckPlaceholderPx || {};
+      const deckReferenceCardWidthPx = Number(deckPlaceholderConfig.referenceCardWidthPx) || 58;
+      const deckScale = targetWidthPx / Math.max(1, deckReferenceCardWidthPx);
+      const deckStack = app.querySelector('.tableDeckPlaceholder [data-deck-stack]');
+      if (deckStack) {
+        const stackWidth = Number(deckPlaceholderConfig.stackWidth);
+        const stackHeight = Number(deckPlaceholderConfig.stackHeight);
+        if (stackWidth > 0) deckStack.style.width = `${(stackWidth * deckScale).toFixed(3)}px`;
+        if (stackHeight > 0) deckStack.style.height = `${(stackHeight * deckScale).toFixed(3)}px`;
+      }
+      app.querySelectorAll('.tableDeckPlaceholder .tableDeckCard').forEach((cardEl) => {
+        const left = Number(cardEl.dataset.baseLeft || 0);
+        const top = Number(cardEl.dataset.baseTop || 0);
+        const width = Number(cardEl.dataset.baseWidth || 0);
+        const height = Number(cardEl.dataset.baseHeight || 0);
+        cardEl.style.left = `${(left * deckScale).toFixed(3)}px`;
+        cardEl.style.top = `${(top * deckScale).toFixed(3)}px`;
+        cardEl.style.width = `${(width * deckScale).toFixed(3)}px`;
+        cardEl.style.height = `${(height * deckScale).toFixed(3)}px`;
+      });
+      const deckLabelGap = Number(deckPlaceholderConfig.labelGap);
+      const deckLabel = app.querySelector('.tableDeckPlaceholder .tiny');
+      if (deckLabel && deckLabelGap > 0) deckLabel.style.marginTop = `${(deckLabelGap * deckScale).toFixed(3)}px`;
     }
 
     function syncClaimClusterCardSizeFromHand(app) {
@@ -3986,13 +4043,25 @@ import { createLayerManager } from './ui/layerManager.js';
             </div>
           </div>
         </div>
-        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;z-index:0;">
-          <div style="position:relative;width:68px;height:96px;">
-            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:16px;top:12px;width:58px;height:84px;opacity:.55;object-fit:contain;filter:brightness(.82);">
-            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:9px;top:6px;width:58px;height:84px;opacity:.75;object-fit:contain;filter:brightness(.9);">
-            <img class="tableDeckCard" src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).src)}" data-fallback-src="${escapeHtml(resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true }).fallbackSrc)}" alt="Deck placeholder" style="position:absolute;left:2px;top:0;width:58px;height:84px;object-fit:contain;">
+        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:0;">
+          <div data-deck-stack style="position:relative;">
+            ${(() => {
+              const deckCfg = SCRATCHBONES_GAME.layout?.cards?.deckPlaceholderPx || {};
+              const cards = Array.isArray(deckCfg.cards) ? deckCfg.cards : [];
+              const backArt = resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true });
+              return cards.map((deckCard) => {
+                const left = Number(deckCard.left) || 0;
+                const top = Number(deckCard.top) || 0;
+                const width = Number(deckCard.width) || 0;
+                const height = Number(deckCard.height) || 0;
+                const opacity = Number.isFinite(Number(deckCard.opacity)) ? Number(deckCard.opacity) : 1;
+                const brightness = Number.isFinite(Number(deckCard.brightness)) ? Number(deckCard.brightness) : 1;
+                return `<img class="tableDeckCard" src="${escapeHtml(backArt.src)}" data-fallback-src="${escapeHtml(backArt.fallbackSrc)}" alt="Deck placeholder" data-base-left="${left}" data-base-top="${top}" data-base-width="${width}" data-base-height="${height}" style="position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;opacity:${opacity};object-fit:contain;filter:brightness(${brightness});">`;
+              }).join('');
+            })()}
           </div>
           <div class="tiny" style="font-weight:700;letter-spacing:.08em;">DECK</div>
+        </div>
         </div>
         <div class="tableViewHeader">
           <div class="sectionTitle">Table View</div>
