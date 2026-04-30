@@ -2322,7 +2322,12 @@ import { createLayerManager } from './ui/layerManager.js';
     async function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return;
       if (challengedId === 0) {
-        state.trapSelection = { challengerId, maxCount: Math.min(play.cards.length, state.players[0].hand.length) };
+        const maxCount = Math.min(play.cards.length, state.players[0].hand.length);
+        if (maxCount <= 0) {
+          addLog('Trap Bone fizzles: no cards available to offload.');
+          return;
+        }
+        state.trapSelection = { challengerId, maxCount };
         state.selectedCardIds.clear();
         render();
         return;
