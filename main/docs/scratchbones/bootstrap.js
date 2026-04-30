@@ -1549,7 +1549,7 @@ import { createLayerManager } from './ui/layerManager.js';
       clone.style.margin = '0';
       clone.style.zIndex = '10010';
       clone.style.transition = 'none';
-      clonePlane.app.appendChild(clone);
+      (document.getElementById('app') || document.body).appendChild(clone);
       await new Promise((resolve) => requestAnimationFrame(resolve));
       clone.style.transition = `transform ${durationMs}ms ${CONFIG.transferAnimation.easing}, opacity ${durationMs}ms ${CONFIG.transferAnimation.easing}`;
       const dx = (targetRect.left + targetRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
@@ -2327,13 +2327,13 @@ import { createLayerManager } from './ui/layerManager.js';
       }
     }
     function humanBetAction(action) {
-      resolveBetAction(state.humanSeat, action);
+      void resolveBetAction(state.humanSeat, action).catch(e => console.error('[betting] humanBetAction error', e));
     }
     function humanOpenTierSelected(tierId) {
-      resolveBetAction(state.humanSeat, { type: 'open-tier', tierId });
+      void resolveBetAction(state.humanSeat, { type: 'open-tier', tierId }).catch(e => console.error('[betting] humanOpenTierSelected error', e));
     }
     function humanRaiseTierSelected(tierId) {
-      resolveBetAction(state.humanSeat, { type: 'raise-tier', tierId });
+      void resolveBetAction(state.humanSeat, { type: 'raise-tier', tierId }).catch(e => console.error('[betting] humanRaiseTierSelected error', e));
     }
     function transferCardsBetweenHands(fromId, toId, limit) {
       const from = state.players[fromId];
@@ -4229,7 +4229,7 @@ import { createLayerManager } from './ui/layerManager.js';
       document.getElementById('betCallBtn')?.addEventListener('click', () => humanBetAction('call'));
       document.getElementById('betFoldBtn')?.addEventListener('click', () => humanBetAction('fold'));
       document.getElementById('betPunishToggleBtn')?.addEventListener('click', () => {
-        if (!state.betting || state.betting.currentActorId !== 0) return;
+        if (!state.betting || !isHumanSeat(state.betting.currentActorId)) return;
         state.betting.punishArmed = !state.betting.punishArmed;
         render();
       });
