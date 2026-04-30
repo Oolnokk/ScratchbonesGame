@@ -150,7 +150,7 @@ window.SCRATCHBONES_CONFIG = {
         "maxIcons": 28,
         "widthPx": 220,
         "heightPx": 96,
-        "coinSizePx": 30,
+        "coinSizePx": 50,
         "spreadXPx": 84,
         "spreadYPx": 28,
         "offsetYPx": 2
