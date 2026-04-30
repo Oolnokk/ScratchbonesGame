@@ -800,7 +800,7 @@ window.SCRATCHBONES_CONFIG = {
             "id": "ui-avatars-over-lighting",
             "layer": "above-lighting-content",
             "selectors": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar", ".actorAvatarFloat", ".reactorAvatarFloat"],
-            "preserveSpace": false,
+            "preserveSpace": true,
             "keepOriginal": true,
             "promotedOpacity": 0.72
           },
