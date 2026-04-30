@@ -3210,6 +3210,7 @@ import { createLayerManager } from './ui/layerManager.js';
         if (el.closest('.handScroll')) return 'hand';
         if (el.closest('.tableViewCards')) return 'table';
         if (el.closest('.claimHandBar')) return 'claim';
+        if (el.closest('.seatHandPreview')) return 'seat-preview';
         if (el.closest('.tableDeckPlaceholder')) return 'deck';
         return 'other';
       }
@@ -3219,10 +3220,24 @@ import { createLayerManager } from './ui/layerManager.js';
           const id = el.dataset.cardId;
           const img = el.querySelector('img.cardArt') || el.querySelector('img');
           if (!img) return;
-          snapshots.set(id, {
-            rect: img.getBoundingClientRect(),
+          const rect = img.getBoundingClientRect();
+          const seatPreviewHost = el.closest('.seatHandPreview');
+          const seatId = seatPreviewHost ? Number(seatPreviewHost.dataset.seatId) : null;
+          const containerRect = seatPreviewHost
+            ? seatPreviewHost.getBoundingClientRect()
+            : el.getBoundingClientRect();
+          const containerCenter = {
+            x: containerRect.left + (containerRect.width / 2),
+            y: containerRect.top + (containerRect.height / 2),
+          };
+          const sourceKey = `${id}|${getContainerType(el)}|${seatId ?? 'na'}`;
+          snapshots.set(sourceKey, {
+            id,
+            rect,
             src: img.src,
             containerType: getContainerType(el),
+            seatId,
+            containerCenter,
           });
         });
       }
@@ -3247,7 +3262,10 @@ import { createLayerManager } from './ui/layerManager.js';
         document.querySelectorAll('[data-card-id]').forEach(el => {
           const id = el.dataset.cardId;
           const img = el.querySelector('img.cardArt') || el.querySelector('img');
-          if (img) newCards.push({ id, img, containerType: getContainerType(el) });
+          if (!img) return;
+          const seatPreviewHost = el.closest('.seatHandPreview');
+          const seatId = seatPreviewHost ? Number(seatPreviewHost.dataset.seatId) : null;
+          newCards.push({ id, img, containerType: getContainerType(el), seatId });
         });
 
         requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -3259,8 +3277,12 @@ import { createLayerManager } from './ui/layerManager.js';
             SCRATCHBONES_AUDIO.playLerpComplete(opts);
           };
 
-          newCards.forEach(({ id, img, containerType }) => {
-            const snapshot = snapshots.get(id);
+          newCards.forEach(({ id, img, containerType, seatId }) => {
+            const snapshotCandidates = Array.from(snapshots.values()).filter((entry) => entry.id === id);
+            const snapshot = snapshotCandidates.find((entry) => entry.containerType === containerType && entry.seatId === seatId)
+              || snapshotCandidates.find((entry) => entry.containerType === containerType)
+              || snapshotCandidates.find((entry) => entry.seatId === seatId)
+              || snapshotCandidates[0];
             const newRect = img.getBoundingClientRect();
 
             if (!snapshot) {
@@ -3368,13 +3390,28 @@ import { createLayerManager } from './ui/layerManager.js';
                   ? 'tableToClaim'
                   : ((snapshot.containerType === 'claim' || snapshot.containerType === 'table') && containerType === 'hand')
                     ? 'claimToHand'
-                    : 'fadeIn';
+                    : (snapshot.containerType === 'table' && containerType === 'seat-preview')
+                      ? 'tableToSeatPreview'
+                      : (snapshot.containerType === 'seat-preview' && containerType === 'hand')
+                        ? 'seatPreviewToHand'
+                        : (snapshot.containerType === 'hand' && containerType === 'seat-preview')
+                          ? 'handToSeatPreview'
+                          : (snapshot.containerType === 'seat-preview' && containerType === 'seat-preview' && snapshot.seatId !== seatId)
+                            ? 'seatPreviewToSeatPreviewArc'
+                            : 'fadeIn';
             SCRATCHBONES_AUDIO.playMovement(movementType);
             scheduleLerpComplete(id, { durationMs: FLY_MS });
             const existing = activeClones.get(id);
             if (existing) existing.remove();
-            const dx = snapshot.rect.left - newRect.left;
-            const dy = snapshot.rect.top - newRect.top;
+            const targetCenter = {
+              x: newRect.left + (newRect.width / 2),
+              y: newRect.top + (newRect.height / 2),
+            };
+            const startPoint = movementType === 'seatPreviewToSeatPreviewArc' && snapshot.containerCenter
+              ? snapshot.containerCenter
+              : { x: snapshot.rect.left + (snapshot.rect.width / 2), y: snapshot.rect.top + (snapshot.rect.height / 2) };
+            const dx = startPoint.x - targetCenter.x;
+            const dy = startPoint.y - targetCenter.y;
             const scaleX = snapshot.rect.width / (newRect.width || 1);
             const scaleY = snapshot.rect.height / (newRect.height || 1);
             if (Math.abs(dx) < 2 && Math.abs(dy) < 2 && Math.abs(scaleX - 1) < 0.05) return;
@@ -3700,7 +3737,7 @@ import { createLayerManager } from './ui/layerManager.js';
                 ${p.seed ? `<div class="seatSeed">${p.seed}</div>` : ''}
                 ${p.personality ? `<div class="seatTags">${personalityTags(p.personality)}</div>` : ''}
                 <div class="seatStatus">${p.lastAction}</div>
-                ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}"><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
+                ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
               </div>
               <div class="seatAvatarBox" data-proj-id="avatar-${p.id}">
                 <canvas class="seatPortrait" data-seat-id="${p.id}" width="200" height="200"></canvas>
