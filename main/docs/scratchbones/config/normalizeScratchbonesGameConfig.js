@@ -221,6 +221,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       eventLogLimit: Math.max(50, Number(rawGameConfig.debug?.eventLogLimit) || 300),
       trace: {
         gameplayFlow: rawGameConfig.debug?.trace?.gameplayFlow !== false,
+        layerPromotion: rawGameConfig.debug?.trace?.layerPromotion !== false,
         audio: rawGameConfig.debug?.trace?.audio !== false,
         candlelight: rawGameConfig.debug?.trace?.candlelight !== false,
       },

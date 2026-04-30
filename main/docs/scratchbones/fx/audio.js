@@ -21,10 +21,12 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
       function markAudioUnlocked() {
         if (audioUnlocked) return;
         audioUnlocked = true;
+        logAudio('debug', 'audio-unlocked', { pendingSfxCount: pendingSfx.length, hasPendingBgmTrack: Boolean(pendingBgmTrack) });
         autoplayBlockedLogged = false;
         if (pendingBgmTrack) {
           const { url, loop, onTrackError } = pendingBgmTrack;
           pendingBgmTrack = null;
+          logAudio('debug', 'replaying-pending-bgm', { url, loop });
           playTrackNow(url, { loop, onTrackError });
         }
         while (pendingSfx.length) {
@@ -96,7 +98,7 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
         const next = buildAudio(url, 0);
         if (!next) return;
         console.debug('[scratchbones audio] setTrack', { url, loop, fadeMs, targetVolume });
-        logAudio('debug', 'set-track', { url, loop, fadeMs, targetVolume });
+        logAudio('debug', 'set-track', { url, loop, fadeMs, targetVolume, challengeBgmActive, audioUnlocked });
         next.loop = !!loop;
         next.addEventListener('error', () => {
           console.debug('[scratchbones audio] track error', { url, loop, challengeBgmActive });
@@ -106,11 +108,13 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
         attemptAutoplay(next, {
           onBlocked: () => {
             pendingBgmTrack = { url, loop, onTrackError };
+            logAudio('warn', 'bgm-autoplay-blocked', { url, loop, pendingSfxCount: pendingSfx.length });
             attachUnlockListeners();
           },
         }).then((started) => {
           if (!started) return;
           next.muted = false;
+          logAudio('debug', 'bgm-play-started', { url, loop, fadeMs, targetVolume });
           fadeTo(next, targetVolume, fadeMs);
         });
         bgmAudio = next;
@@ -123,7 +127,7 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
       }
       function playSfx(entry) {
         if (!cfg.enabled || !entry || !isUrl(entry.url)) return;
-        logAudio('debug', 'sfx-play-request', { url: entry.url });
+        logAudio('debug', 'sfx-play-request', { url: entry.url, audioUnlocked, queuedSfxCount: pendingSfx.length });
         const playbackRate = clamp((Number(entry.pitch) || 1) * (Number(entry.tempo) || 1), 0.5, 2);
         const baseVolume = clamp(cfg.sfxVolume ?? 1, 0, 1);
         const volume = clamp(baseVolume * (Number(entry.volume) || 1), 0, 1);
@@ -133,7 +137,10 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
         safePlay(audio, {
           onBlocked: () => {
             attachUnlockListeners();
-            if (!audioUnlocked && pendingSfx.length < 8) pendingSfx.push(entry);
+            if (!audioUnlocked && pendingSfx.length < 8) {
+              pendingSfx.push(entry);
+              logAudio('warn', 'sfx-queued-until-unlock', { url: entry.url, queuedSfxCount: pendingSfx.length });
+            }
           },
         });
       }
