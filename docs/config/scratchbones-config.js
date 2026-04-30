@@ -178,6 +178,11 @@ window.SCRATCHBONES_CONFIG = {
         "coinSizePx": 24,
         "maxIconsPerCluster": 10
       },
+      "cards": {
+        "transferAnimation": {
+          "dealSpeedMultiplier": 2.0
+        }
+      },
       "clearReward": {
         "base": 1,
         "increment": 1
@@ -1302,6 +1307,11 @@ window.SCRATCHBONES_CONFIG = {
       "--layout-log-item-padding-x": "10px",
       "--layout-seat-info-padding-y": "8px",
       "--layout-seat-info-padding-x": "10px",
+      "--layout-seat-stack-gap": "4px",
+      "--layout-seat-hand-preview-scale": "0.82",
+      "--layout-seat-hand-preview-gap": "2px",
+      "--layout-seat-hand-preview-card-width": "34px",
+      "--layout-seat-hand-preview-card-height": "48px",
       "--layout-challenge-pane-padding-y": "8px",
       "--layout-challenge-pane-padding-x": "10px",
       "--layout-table-view-min-height": "260px",
