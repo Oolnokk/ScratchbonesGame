@@ -920,6 +920,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return true;
       }
       await dealFreshHandsAnimated();
+      SCRATCHBONES_AUDIO.startPlaylist();
       for (const p of state.players) p.profile = generatePlayerProfile(p);
       applyAiNamesByPortraitCulture();
       for (const p of state.players) logPlayerPortraitXforms(p);
