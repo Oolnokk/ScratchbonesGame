@@ -234,7 +234,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   function clearPromoted() {
     for (const entry of state.promoted) {
       if (state.resizeObserver) {
-        state.resizeObserver.unobserve(entry.placeholder);
+        if (entry.placeholder) state.resizeObserver.unobserve(entry.placeholder);
         state.resizeObserver.unobserve(entry.element);
         if (entry.sourceElement && entry.sourceElement !== entry.element) state.resizeObserver.unobserve(entry.sourceElement);
       }
@@ -254,8 +254,14 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     state.promoted = [];
   }
 
+  function getPortalAnchorElement(entry) {
+    if (entry?.placeholder?.isConnected && entry.placeholder.style.display !== 'none') return entry.placeholder;
+    if (entry?.sourceElement?.isConnected) return entry.sourceElement;
+    return null;
+  }
+
   function updatePortalRect(entry) {
-    if (!entry?.portal || !entry.placeholder?.isConnected || entry.placeholder.style.display === 'none') return;
+    if (!entry?.portal) return;
     const capture = capturePortalPlacementFrame(entry);
     if (!capture) return;
     const { sourceRect, appScaleX, appScaleY } = capture;
@@ -277,8 +283,9 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   }
 
   function capturePortalPlacementFrame(entry) {
-    if (!entry?.placeholder?.isConnected) return null;
-    const sourceRect = entry.placeholder.getBoundingClientRect();
+    const anchorElement = getPortalAnchorElement(entry);
+    if (!anchorElement) return null;
+    const sourceRect = anchorElement.getBoundingClientRect();
     const appRect = state.app?.getBoundingClientRect?.();
     const appLayoutWidth = state.app?.offsetWidth || state.app?.clientWidth || 0;
     const appLayoutHeight = state.app?.offsetHeight || state.app?.clientHeight || 0;
@@ -297,29 +304,33 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     if (layoutWidth < 1 || layoutHeight < 1) return false;
     const computed = window.getComputedStyle(element);
     const originalElementStyle = snapshotManagedElementStyle(element);
-    const placeholder = document.createElement('div');
-    placeholder.dataset.layerPlaceholderFor = assignment.id;
-    if (assignment.preserveSpace ?? defaultPreserveSpace) {
-      placeholder.style.display = computed.display === 'inline' ? 'inline-block' : computed.display;
-      placeholder.style.width = readSizingToken(element.style.width, computed.width, layoutWidth);
-      placeholder.style.height = readSizingToken(element.style.height, computed.height, layoutHeight);
-      placeholder.style.marginTop = computed.marginTop;
-      placeholder.style.marginRight = computed.marginRight;
-      placeholder.style.marginBottom = computed.marginBottom;
-      placeholder.style.marginLeft = computed.marginLeft;
-      placeholder.style.flex = computed.flex;
-      placeholder.style.position = computed.position;
-      placeholder.style.left = computed.left;
-      placeholder.style.top = computed.top;
-      placeholder.style.right = computed.right;
-      placeholder.style.bottom = computed.bottom;
-      placeholder.style.transform = '';
-      placeholder.style.transformOrigin = '';
-      placeholder.style.pointerEvents = 'none';
-    } else {
-      placeholder.style.display = 'none';
+    const usePlaceholder = !assignment.keepOriginal;
+    let placeholder = null;
+    if (usePlaceholder) {
+      placeholder = document.createElement('div');
+      placeholder.dataset.layerPlaceholderFor = assignment.id;
+      if (assignment.preserveSpace ?? defaultPreserveSpace) {
+        placeholder.style.display = computed.display === 'inline' ? 'inline-block' : computed.display;
+        placeholder.style.width = readSizingToken(element.style.width, computed.width, layoutWidth);
+        placeholder.style.height = readSizingToken(element.style.height, computed.height, layoutHeight);
+        placeholder.style.marginTop = computed.marginTop;
+        placeholder.style.marginRight = computed.marginRight;
+        placeholder.style.marginBottom = computed.marginBottom;
+        placeholder.style.marginLeft = computed.marginLeft;
+        placeholder.style.flex = computed.flex;
+        placeholder.style.position = computed.position;
+        placeholder.style.left = computed.left;
+        placeholder.style.top = computed.top;
+        placeholder.style.right = computed.right;
+        placeholder.style.bottom = computed.bottom;
+        placeholder.style.transform = '';
+        placeholder.style.transformOrigin = '';
+        placeholder.style.pointerEvents = 'none';
+      } else {
+        placeholder.style.display = 'none';
+      }
+      element.parentNode?.insertBefore(placeholder, element);
     }
-    element.parentNode?.insertBefore(placeholder, element);
 
     const portal = document.createElement('div');
     portal.className = `ui-layer-portal ui-layer-portal-${assignment.layer}`;
@@ -372,10 +383,10 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       placeholder,
       portal,
       originalElementStyle,
-      placementCapture: capturePortalPlacementFrame({ placeholder }),
+      placementCapture: capturePortalPlacementFrame({ placeholder, sourceElement: element }),
     };
     state.promoted.push(promotedEntry);
-    state.resizeObserver?.observe(placeholder);
+    if (placeholder) state.resizeObserver?.observe(placeholder);
     state.resizeObserver?.observe(promotedNode);
     if (element !== promotedNode) state.resizeObserver?.observe(element);
     updatePortalRect(promotedEntry);
