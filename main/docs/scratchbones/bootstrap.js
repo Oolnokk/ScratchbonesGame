@@ -1508,7 +1508,7 @@ import { createLayerManager } from './ui/layerManager.js';
       clone.style.margin = '0';
       clone.style.zIndex = '10010';
       clone.style.transition = 'none';
-      document.body.appendChild(clone);
+      clonePlane.app.appendChild(clone);
       await new Promise((resolve) => requestAnimationFrame(resolve));
       clone.style.transition = `transform ${durationMs}ms ${CONFIG.transferAnimation.easing}, opacity ${durationMs}ms ${CONFIG.transferAnimation.easing}`;
       const dx = (targetRect.left + targetRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
@@ -3426,6 +3426,24 @@ import { createLayerManager } from './ui/layerManager.js';
         const cloneZAboveLighting = Number.isFinite(Number(cloneLayerCfg.aboveLightingZIndex)) ? Number(cloneLayerCfg.aboveLightingZIndex) : 9999;
         const cloneBoundarySelector = String(cloneLayerCfg.sidebarBoundarySelector || '#aiSidebar');
 
+
+        function resolveClonePlaneMetrics() {
+          const app = document.getElementById('app');
+          if (!app) return null;
+          const appRect = app.getBoundingClientRect();
+          const scaleX = app.offsetWidth > 0 ? (appRect.width / app.offsetWidth) : 1;
+          const scaleY = app.offsetHeight > 0 ? (appRect.height / app.offsetHeight) : 1;
+          return { app, appRect, scaleX: scaleX || 1, scaleY: scaleY || 1 };
+        }
+        function viewportRectToClonePlaneRect(rect, metrics) {
+          if (!rect || !metrics) return null;
+          return {
+            left: (rect.left - metrics.appRect.left) / metrics.scaleX,
+            top: (rect.top - metrics.appRect.top) / metrics.scaleY,
+            width: rect.width / metrics.scaleX,
+            height: rect.height / metrics.scaleY,
+          };
+        }
         function syncCloneLayeringForSidebarBoundary(cloneEl) {
           if (!(cloneEl instanceof Element)) return;
           const sidebar = document.querySelector(cloneBoundarySelector);
@@ -3476,6 +3494,9 @@ import { createLayerManager } from './ui/layerManager.js';
               || snapshotCandidates.find((entry) => entry.seatId === seatId)
               || snapshotCandidates[0];
             const newRect = img.getBoundingClientRect();
+            const clonePlane = resolveClonePlaneMetrics();
+            const targetRectInPlane = viewportRectToClonePlaneRect(newRect, clonePlane);
+            if (!clonePlane || !targetRectInPlane) return;
 
             if (!snapshot) {
               const isClaimOrTable = containerType === 'claim' || containerType === 'table';
@@ -3487,21 +3508,26 @@ import { createLayerManager } from './ui/layerManager.js';
                 const deckCy = deckRect.top + deckRect.height / 2;
                 const cardCx = newRect.left + newRect.width / 2;
                 const cardCy = newRect.top + newRect.height / 2;
+                const deckPlane = viewportRectToClonePlaneRect(deckRect, clonePlane);
+                const deckCx = deckPlane.left + deckPlane.width / 2;
+                const deckCy = deckPlane.top + deckPlane.height / 2;
+                const cardCx = targetRectInPlane.left + targetRectInPlane.width / 2;
+                const cardCy = targetRectInPlane.top + targetRectInPlane.height / 2;
                 const dx = deckCx - cardCx;
                 const dy = deckCy - cardCy;
                 const clone = document.createElement('img');
                 clone.src = img.src;
                 clone.dataset.candleLerpClone = '1';
                 clone.style.cssText = [
-                  'position:fixed',
-                  `left:${newRect.left}px`, `top:${newRect.top}px`,
-                  `width:${newRect.width}px`, `height:${newRect.height}px`,
+                  'position:absolute',
+                  `left:${targetRectInPlane.left}px`, `top:${targetRectInPlane.top}px`,
+                  `width:${targetRectInPlane.width}px`, `height:${targetRectInPlane.height}px`,
                   'object-fit:contain', 'pointer-events:none',
                   'transform-origin:center center',
                   `transform:translate(${dx}px,${dy}px) scale(0.14)`,
                   'transition:none',
                 ].join(';');
-                document.body.appendChild(clone);
+                clonePlane.app.appendChild(clone);
                 syncCloneLayeringForSidebarBoundary(clone);
                 activeClones.set(id, clone);
                 img.style.opacity = '0';
@@ -3533,25 +3559,26 @@ import { createLayerManager } from './ui/layerManager.js';
                 opponentCardIdx++;
                 const existing = activeClones.get(id);
                 if (existing) existing.remove();
-                const avatarCx = actorRect.left + actorRect.width / 2;
-                const avatarCy = actorRect.top + actorRect.height / 2;
-                const cardCx = newRect.left + newRect.width / 2;
-                const cardCy = newRect.top + newRect.height / 2;
+                const actorPlane = viewportRectToClonePlaneRect(actorRect, clonePlane);
+                const avatarCx = actorPlane.left + actorPlane.width / 2;
+                const avatarCy = actorPlane.top + actorPlane.height / 2;
+                const cardCx = targetRectInPlane.left + targetRectInPlane.width / 2;
+                const cardCy = targetRectInPlane.top + targetRectInPlane.height / 2;
                 const dx = avatarCx - cardCx;
                 const dy = avatarCy - cardCy;
                 const clone = document.createElement('img');
                 clone.src = img.src;
                 clone.dataset.candleLerpClone = '1';
                 clone.style.cssText = [
-                  'position:fixed',
-                  `left:${newRect.left}px`, `top:${newRect.top}px`,
-                  `width:${newRect.width}px`, `height:${newRect.height}px`,
+                  'position:absolute',
+                  `left:${targetRectInPlane.left}px`, `top:${targetRectInPlane.top}px`,
+                  `width:${targetRectInPlane.width}px`, `height:${targetRectInPlane.height}px`,
                   'object-fit:contain', 'pointer-events:none',
                   'transform-origin:center center',
                   `transform:translate(${dx}px,${dy}px) scale(0.08)`,
                   'transition:none',
                 ].join(';');
-                document.body.appendChild(clone);
+                clonePlane.app.appendChild(clone);
                 syncCloneLayeringForSidebarBoundary(clone);
                 activeClones.set(id, clone);
                 img.style.opacity = '0';
@@ -3607,31 +3634,39 @@ import { createLayerManager } from './ui/layerManager.js';
             scheduleLerpComplete(id, { durationMs: FLY_MS });
             const existing = activeClones.get(id);
             if (existing) existing.remove();
+            const snapshotRectInPlane = viewportRectToClonePlaneRect(snapshot.rect, clonePlane);
+            const sourceContainerCenterInPlane = snapshot.containerCenter
+              ? {
+                  x: (snapshot.containerCenter.x - clonePlane.appRect.left) / clonePlane.scaleX,
+                  y: (snapshot.containerCenter.y - clonePlane.appRect.top) / clonePlane.scaleY,
+                }
+              : null;
+            if (!snapshotRectInPlane) return;
             const targetCenter = {
-              x: newRect.left + (newRect.width / 2),
-              y: newRect.top + (newRect.height / 2),
+              x: targetRectInPlane.left + (targetRectInPlane.width / 2),
+              y: targetRectInPlane.top + (targetRectInPlane.height / 2),
             };
-            const startPoint = movementType === 'seatPreviewToSeatPreviewArc' && snapshot.containerCenter
-              ? snapshot.containerCenter
-              : { x: snapshot.rect.left + (snapshot.rect.width / 2), y: snapshot.rect.top + (snapshot.rect.height / 2) };
+            const startPoint = movementType === 'seatPreviewToSeatPreviewArc' && sourceContainerCenterInPlane
+              ? sourceContainerCenterInPlane
+              : { x: snapshotRectInPlane.left + (snapshotRectInPlane.width / 2), y: snapshotRectInPlane.top + (snapshotRectInPlane.height / 2) };
             const dx = startPoint.x - targetCenter.x;
             const dy = startPoint.y - targetCenter.y;
-            const scaleX = snapshot.rect.width / (newRect.width || 1);
-            const scaleY = snapshot.rect.height / (newRect.height || 1);
+            const scaleX = snapshotRectInPlane.width / (targetRectInPlane.width || 1);
+            const scaleY = snapshotRectInPlane.height / (targetRectInPlane.height || 1);
             if (Math.abs(dx) < 2 && Math.abs(dy) < 2 && Math.abs(scaleX - 1) < 0.05) return;
             const clone = document.createElement('img');
             clone.src = snapshot.src;
             clone.dataset.candleLerpClone = '1';
             clone.style.cssText = [
-              'position:fixed',
-              `left:${newRect.left}px`, `top:${newRect.top}px`,
-              `width:${newRect.width}px`, `height:${newRect.height}px`,
+              'position:absolute',
+              `left:${targetRectInPlane.left}px`, `top:${targetRectInPlane.top}px`,
+              `width:${targetRectInPlane.width}px`, `height:${targetRectInPlane.height}px`,
               'object-fit:contain', 'pointer-events:none',
               'transform-origin:top left',
               `transform:translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`,
               'transition:none',
             ].join(';');
-            document.body.appendChild(clone);
+            clonePlane.app.appendChild(clone);
             syncCloneLayeringForSidebarBoundary(clone);
             activeClones.set(id, clone);
             img.style.opacity = '0';

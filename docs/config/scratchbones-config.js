@@ -748,6 +748,7 @@ window.SCRATCHBONES_CONFIG = {
         "promoteByRootSelectors": [
           "#aiSidebar",
           ".humanSeatZone",
+          ".claimCluster",
           ".stakeVisualPanel",
           ".challengePromptPane"
         ],
@@ -807,6 +808,7 @@ window.SCRATCHBONES_CONFIG = {
             "selectors": [
               "#aiSidebar",
               ".humanSeatZone",
+          ".claimCluster",
               ".seatHandPreview",
               ".seatHandCard",
               ".seatHandCard img",
@@ -815,6 +817,7 @@ window.SCRATCHBONES_CONFIG = {
               ".seatSeed",
               ".seatTags",
               ".humanSeatChipBadge",
+              ".claimCluster",
                   ".claimClusterBettingLayer",
               ".claimRankBox",
               ".claimTimesBoxLeft",
