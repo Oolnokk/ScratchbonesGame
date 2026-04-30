@@ -17,7 +17,14 @@
       turbulence: Math.max(0, Number(source?.turbulence) || 1),
     }));
     const RADIUS_REF = Math.max(0, Number(candlelightConfig.radiusRefPx) || 1200);
-    const THEVMENU_CANDLELIGHT_OPACITY_DEFAULT = Math.min(1, Math.max(0, Number(candlelightConfig.thevmenuOpacity) || 0.1));
+    const thevmenuOpacityConfigValue = Number(candlelightConfig.thevmenuOpacity);
+    const THEVMENU_CANDLELIGHT_OPACITY_DEFAULT = Number.isFinite(thevmenuOpacityConfigValue)
+      ? clamp(thevmenuOpacityConfigValue, 0, 1)
+      : 0.1;
+    const thevmenuLayerZIndexConfig = Number(candlelightConfig.thevmenuLayerZIndex);
+    const THEVMENU_CANDLELIGHT_LAYER_Z_INDEX = Number.isFinite(thevmenuLayerZIndexConfig)
+      ? Math.round(thevmenuLayerZIndexConfig)
+      : 2147483646;
 
     // Shadow height parameters (demo occluder convention)
     const CARD_SHADOW_HEIGHT = 36;
@@ -63,7 +70,7 @@
     thevmenuCandlelightCanvas.style.opacity = String(THEVMENU_CANDLELIGHT_OPACITY_DEFAULT);
     thevmenuCandlelightCanvas.style.position = 'absolute';
     thevmenuCandlelightCanvas.style.inset = '0';
-    thevmenuCandlelightCanvas.style.zIndex = '100000';
+    thevmenuCandlelightCanvas.style.zIndex = String(THEVMENU_CANDLELIGHT_LAYER_Z_INDEX);
     thevmenuCandlelightCanvas.style.pointerEvents = 'none';
     thevmenuCandlelightCanvas.style.mixBlendMode = 'screen';
 
