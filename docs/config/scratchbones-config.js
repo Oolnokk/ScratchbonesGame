@@ -243,7 +243,7 @@ window.SCRATCHBONES_CONFIG = {
         "scaleMode": "contain",
         "boxes": {
           "topbar":         { "x": -2,   "y": 11,  "width": 1123, "height": 106 },
-          "sidebar":        { "x": 1354, "y": 14,  "width": 251,  "height": 681 },
+        "sidebar":        { "x": 1354, "y": 14,  "width": 251,  "height": 681 },
           "humanSeat":      { "x": 1260, "y": 701, "width": 373,  "height": 187 },
           "hand":           { "x": 109,  "y": 698, "width": 853,  "height": 144 },
           "log":            { "x": 20,   "y": 850, "width": 1240, "height": 40  },
@@ -271,7 +271,7 @@ window.SCRATCHBONES_CONFIG = {
         "sidebarWidthPx": 280,
         "appGapPx": 8,
         "appPaddingPx": 8,
-        "seatAvatarPx": 132,
+        "seatAvatarPx": 108,
         "humanSeatAvatarPx": 204,
         "cinematicAvatarPx": 132,
         "handCardMinWidthPx": 86,
@@ -295,8 +295,8 @@ window.SCRATCHBONES_CONFIG = {
         "eventLogGapPx": 6,
         "logItemPaddingYpx": 9,
         "logItemPaddingXpx": 10,
-        "seatInfoPaddingYpx": 8,
-        "seatInfoPaddingXpx": 10,
+        "seatInfoPaddingYpx": 6,
+        "seatInfoPaddingXpx": 8,
         "challengePanePaddingYpx": 8,
         "challengePanePaddingXpx": 10
       },
@@ -500,6 +500,25 @@ window.SCRATCHBONES_CONFIG = {
           "contactAlpha": 0.2
         },
         "candlelight": {
+          "radiusRefPx": 1200,
+          "sources": [
+            {
+              "xPct": 0.0317708333,
+              "yPct": 0.3333333333,
+              "intensity": 0.77,
+              "radiusMultiplier": 1,
+              "flickerSpeed": 4.17,
+              "turbulence": 1
+            },
+            {
+              "xPct": 1.04,
+              "yPct": 0.3333333333,
+              "intensity": 0.77,
+              "radiusMultiplier": 1.45,
+              "flickerSpeed": 4.17,
+              "turbulence": 1
+            }
+          ],
           "backlitAlphaDefault": 0.14,
           "backlitBlurDefault": 0,
           "masking": {
