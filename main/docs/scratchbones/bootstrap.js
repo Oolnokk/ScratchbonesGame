@@ -3506,8 +3506,14 @@ import { createLayerManager } from './ui/layerManager.js';
       const renderSmuggleTableOverlay = () => {
         if (!state.smuggleSelection) return '';
         const centerXPct = clampNumber(claimClusterPolicy.geometry.centerXPct, 0, 1) * 100;
-        const centerYPct = (clampNumber(claimClusterPolicy.geometry.centerYPct, 0, 1) * 100) - 18;
+        const clusterTopPct = (clampNumber(claimClusterPolicy.geometry.centerYPct, 0, 1) - (clampNumber(claimClusterPolicy.geometry.heightPctOfTableView, 0.05, 1) / 2)) * 100;
+        const centerYPct = clusterTopPct - 2;
         return `<div class="fit-target fit-0" data-proj-id="table-view" style="z-index:72;pointer-events:none;"><div style="position:absolute;left:${centerXPct.toFixed(2)}%;top:${centerYPct.toFixed(2)}%;transform:translate(-50%,-100%);text-align:center;pointer-events:none;"><div class="fx-burst-shell"><div class="cin-action-burst burst-liar">SMUGGLE TARGET</div></div></div></div>`;
+      };
+      const renderCinematicPunishCenterButton = () => {
+        if (!clusterCinematicActive || cinematicPhase !== 'betting' || !bettingActorHuman || !state.betting?.punishAvailable) return '';
+        const punishArt = resolveScratchbone2DAsset({ trickType: 'punish', rank: null, wild: false }, { flipped: false });
+        return `<div class="fit-target fit-0" data-proj-id="challenge-prompt" style="z-index:78;display:flex;align-items:center;justify-content:center;pointer-events:none;"><button class="secondary" id="betPunishToggleBtn" ${state.betting.actionInFlight ? 'disabled' : ''} style="pointer-events:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:190px;min-height:210px;border-width:3px;border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};"><img src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:96px;height:136px;object-fit:contain;border-radius:6px;"><span style="font-weight:700;">${state.betting.punishArmed ? 'Punish Armed' : 'Arm Punish Bone'}</span></button></div>`;
       };
       app.innerHTML = `
         <div class="topbar" data-proj-id="topbar">
@@ -3602,6 +3608,7 @@ import { createLayerManager } from './ui/layerManager.js';
             </div>
         ` : ''}
         ${claimClusterEnabled ? renderTablePoolPile(state.tablePot, state.poolVisualSeed, tablePoolAnchorXPct, tablePoolAnchorYPct) : ''}
+        ${renderCinematicPunishCenterButton()}
         ${showLegacyActionFocus ? `
           <div class="actionFocus fit-target fit-0">
             <div class="tiny">Legacy action focus mode enabled.</div>
@@ -4067,10 +4074,7 @@ import { createLayerManager } from './ui/layerManager.js';
           const coinSrc = stakeCoinSrcForTier(tier.id);
           return `<button class="stakeTierBtn" data-stake-tier-btn="${tier.id}" data-stake-tier-action="${mode}" data-stake-tier-id="${tier.id}" ${!enabled ? 'disabled' : ''}><img src="${escapeHtml(coinSrc)}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tier.id)} coin"><span>${tier.value}</span></button>`;
         }).join('')}</div>`;
-        const punishArt = resolveScratchbone2DAsset({ trickType: 'punish', rank: null, wild: false }, { flipped: false });
-        const punishToggleHtml = (state.betting.punishAvailable && bettingActorId === state.betting.challengerId)
-          ? `<button class="secondary" id="betPunishToggleBtn" ${bettingLocked ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:8px;border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};"><img src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:34px;height:48px;object-fit:contain;border-radius:4px;">${state.betting.punishArmed ? 'Punish Armed' : 'Arm Punish'}</button>`
-          : '';
+        const punishToggleHtml = '';
         const bettingActionsHtml = actorCanAct
           ? (openingMode
             ? `${renderTierButtons('open')}${punishToggleHtml}<div class="duelChoiceControls"><button class="danger" id="betFoldBtn" ${bettingLocked ? 'disabled' : ''}>Fold</button></div>`
