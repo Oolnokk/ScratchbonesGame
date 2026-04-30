@@ -323,8 +323,14 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
     const portal = document.createElement('div');
     portal.className = `ui-layer-portal ui-layer-portal-${assignment.layer}`;
-    portal.style.cssText = 'position:fixed;pointer-events:auto;';
+    const shouldMirrorSourceInteractions = Boolean(assignment.keepOriginal);
+    portal.style.cssText = `position:fixed;pointer-events:${shouldMirrorSourceInteractions ? 'none' : 'auto'};`;
     portal.style.opacity = `${assignment.promotedOpacity}`;
+    if (shouldMirrorSourceInteractions) {
+      portal.setAttribute('aria-hidden', 'true');
+    } else {
+      portal.removeAttribute('aria-hidden');
+    }
     layerRoot.appendChild(portal);
     const promotedNode = assignment.keepOriginal ? element.cloneNode(true) : element;
     portal.appendChild(promotedNode);
