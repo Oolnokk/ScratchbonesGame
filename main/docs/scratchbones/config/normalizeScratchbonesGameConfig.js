@@ -170,6 +170,8 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
         '.reactorAvatarFloat',
       ],
       preserveSpace: true,
+      keepOriginal: true,
+      promotedOpacity: 0.72,
     },
     {
       id: 'ui-shell-over-lighting',
@@ -200,6 +202,8 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
         '.bettingChoiceAnchor',
       ],
       preserveSpace: true,
+      keepOriginal: true,
+      promotedOpacity: 0.25,
     },
   ],
 };
