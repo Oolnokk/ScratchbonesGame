@@ -323,11 +323,16 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
     const portal = document.createElement('div');
     portal.className = `ui-layer-portal ui-layer-portal-${assignment.layer}`;
-    portal.style.cssText = 'position:fixed;pointer-events:auto;';
+    const shouldCloneSource = Boolean(assignment.keepOriginal);
+    portal.style.cssText = `position:fixed;pointer-events:${shouldCloneSource ? 'none' : 'auto'};`;
     portal.style.opacity = `${assignment.promotedOpacity}`;
     layerRoot.appendChild(portal);
-    const promotedNode = assignment.keepOriginal ? element.cloneNode(true) : element;
+    const promotedNode = shouldCloneSource ? element.cloneNode(true) : element;
     portal.appendChild(promotedNode);
+    if (shouldCloneSource) {
+      promotedNode.style.pointerEvents = 'none';
+      promotedNode.setAttribute('aria-hidden', 'true');
+    }
 
     const isTransformSensitive = isTransformSensitivePromotionTarget(promotedNode);
     const isNormalizeBoxDenied = selectorMatchesElement(element, normalizeBoxDenylistSelectors);
