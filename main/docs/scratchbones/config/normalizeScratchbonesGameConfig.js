@@ -285,7 +285,11 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
           aiToAiArcLiftPx: Math.max(0, Number(rawGameConfig.chips?.cards?.transferAnimation?.aiToAiArcLiftPx) || 48),
           aiToAiArcPerPx: Math.max(0, Number(rawGameConfig.chips?.cards?.transferAnimation?.aiToAiArcPerPx) || 0.12),
           deckDealMs: Math.max(80, Number(rawGameConfig.chips?.cards?.transferAnimation?.deckDealMs) || Number(rawGameConfig.chips?.dealAnimation?.perCardFlightMs) || 260),
-          deckDealStaggerMs: Math.max(0, Number(rawGameConfig.chips?.cards?.transferAnimation?.deckDealStaggerMs) || Number(rawGameConfig.chips?.dealAnimation?.perCardStaggerMs) || 50),
+          deckDealStaggerMs: Math.max(0, Number.isFinite(Number(rawGameConfig.chips?.cards?.transferAnimation?.deckDealStaggerMs))
+            ? Number(rawGameConfig.chips?.cards?.transferAnimation?.deckDealStaggerMs)
+            : Number.isFinite(Number(rawGameConfig.chips?.dealAnimation?.perCardStaggerMs))
+              ? Number(rawGameConfig.chips?.dealAnimation?.perCardStaggerMs)
+              : 50),
           deckDealInterPlayerDelayMs: Math.max(0, Number(rawGameConfig.chips?.cards?.transferAnimation?.deckDealInterPlayerDelayMs) || Number(rawGameConfig.chips?.dealAnimation?.interPlayerDelayMs) || 0),
           transferEasing: String(rawGameConfig.chips?.cards?.transferAnimation?.transferEasing || rawGameConfig.chips?.cardTransferAnimation?.easing || 'cubic-bezier(0.22, 0.61, 0.36, 1)'),
           deckDealEasing: String(rawGameConfig.chips?.cards?.transferAnimation?.deckDealEasing || 'cubic-bezier(0.4,0,0.2,1)'),
