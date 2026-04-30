@@ -217,7 +217,12 @@ window.SCRATCHBONES_CONFIG = {
       "animation": {
         "baseDurationMs": 160,
         "fadeInSpeed": 3.4,
-        "fadeOutSpeed": 3.0
+        "fadeOutSpeed": 3.0,
+        "cardCloneLayering": {
+          "belowLightingZIndex": 44,
+          "aboveLightingZIndex": 9999,
+          "sidebarBoundarySelector": "#aiSidebar"
+        }
       },
       "viewport": {
         "widthPx": 1920,

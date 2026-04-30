@@ -3421,6 +3421,28 @@ import { createLayerManager } from './ui/layerManager.js';
         const base = animCfg.baseDurationMs;
         const FLY_MS = base;
         const FADE_MS = Math.round(base / animCfg.fadeInSpeed);
+        const cloneLayerCfg = animCfg.cardCloneLayering || {};
+        const cloneZBelowLighting = Number.isFinite(Number(cloneLayerCfg.belowLightingZIndex)) ? Number(cloneLayerCfg.belowLightingZIndex) : 44;
+        const cloneZAboveLighting = Number.isFinite(Number(cloneLayerCfg.aboveLightingZIndex)) ? Number(cloneLayerCfg.aboveLightingZIndex) : 9999;
+        const cloneBoundarySelector = String(cloneLayerCfg.sidebarBoundarySelector || '#aiSidebar');
+
+        function syncCloneLayeringForSidebarBoundary(cloneEl) {
+          if (!(cloneEl instanceof Element)) return;
+          const sidebar = document.querySelector(cloneBoundarySelector);
+          if (!sidebar) {
+            cloneEl.style.zIndex = String(cloneZBelowLighting);
+            return;
+          }
+          const cloneRect = cloneEl.getBoundingClientRect();
+          const sidebarRect = sidebar.getBoundingClientRect();
+          const intersectsSidebar = !(
+            cloneRect.right <= sidebarRect.left
+            || cloneRect.left >= sidebarRect.right
+            || cloneRect.bottom <= sidebarRect.top
+            || cloneRect.top >= sidebarRect.bottom
+          );
+          cloneEl.style.zIndex = String(intersectsSidebar ? cloneZAboveLighting : cloneZBelowLighting);
+        }
 
         // Determine if an opponent just played (for avatar-origin card flights)
         const latestPlay = state.betting?.play || state.challengeWindow?.lastPlay || state.pile.at(-1) || null;
@@ -3474,17 +3496,23 @@ import { createLayerManager } from './ui/layerManager.js';
                   'position:fixed',
                   `left:${newRect.left}px`, `top:${newRect.top}px`,
                   `width:${newRect.width}px`, `height:${newRect.height}px`,
-                  'object-fit:contain', 'pointer-events:none', 'z-index:9999',
+                  'object-fit:contain', 'pointer-events:none',
                   'transform-origin:center center',
                   `transform:translate(${dx}px,${dy}px) scale(0.14)`,
                   'transition:none',
                 ].join(';');
                 document.body.appendChild(clone);
+                syncCloneLayeringForSidebarBoundary(clone);
                 activeClones.set(id, clone);
                 img.style.opacity = '0';
                 requestAnimationFrame(() => {
                   clone.style.transition = `transform ${FLY_MS}ms cubic-bezier(0.4,0,0.2,1)`;
                   clone.style.transform = 'none';
+                  requestAnimationFrame(function trackCloneLayering(){
+                    if (!clone.isConnected) return;
+                    syncCloneLayeringForSidebarBoundary(clone);
+                    requestAnimationFrame(trackCloneLayering);
+                  });
                   const done = () => {
                     clone.remove();
                     if (activeClones.get(id) === clone) activeClones.delete(id);
@@ -3518,18 +3546,24 @@ import { createLayerManager } from './ui/layerManager.js';
                   'position:fixed',
                   `left:${newRect.left}px`, `top:${newRect.top}px`,
                   `width:${newRect.width}px`, `height:${newRect.height}px`,
-                  'object-fit:contain', 'pointer-events:none', 'z-index:9999',
+                  'object-fit:contain', 'pointer-events:none',
                   'transform-origin:center center',
                   `transform:translate(${dx}px,${dy}px) scale(0.08)`,
                   'transition:none',
                 ].join(';');
                 document.body.appendChild(clone);
+                syncCloneLayeringForSidebarBoundary(clone);
                 activeClones.set(id, clone);
                 img.style.opacity = '0';
                 setTimeout(() => {
                   requestAnimationFrame(() => {
                     clone.style.transition = `transform ${FLY_MS}ms cubic-bezier(0.4,0,0.2,1)`;
                     clone.style.transform = 'none';
+                    requestAnimationFrame(function trackCloneLayering(){
+                      if (!clone.isConnected) return;
+                      syncCloneLayeringForSidebarBoundary(clone);
+                      requestAnimationFrame(trackCloneLayering);
+                    });
                     const done = () => {
                       clone.remove();
                       if (activeClones.get(id) === clone) activeClones.delete(id);
@@ -3592,17 +3626,23 @@ import { createLayerManager } from './ui/layerManager.js';
               'position:fixed',
               `left:${newRect.left}px`, `top:${newRect.top}px`,
               `width:${newRect.width}px`, `height:${newRect.height}px`,
-              'object-fit:contain', 'pointer-events:none', 'z-index:9999',
+              'object-fit:contain', 'pointer-events:none',
               'transform-origin:top left',
               `transform:translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`,
               'transition:none',
             ].join(';');
             document.body.appendChild(clone);
+            syncCloneLayeringForSidebarBoundary(clone);
             activeClones.set(id, clone);
             img.style.opacity = '0';
             requestAnimationFrame(() => {
               clone.style.transition = `transform ${FLY_MS}ms cubic-bezier(0.4,0,0.2,1)`;
               clone.style.transform = 'none';
+              requestAnimationFrame(function trackCloneLayering(){
+                if (!clone.isConnected) return;
+                syncCloneLayeringForSidebarBoundary(clone);
+                requestAnimationFrame(trackCloneLayering);
+              });
               const done = () => {
                 clone.remove();
                 if (activeClones.get(id) === clone) activeClones.delete(id);
