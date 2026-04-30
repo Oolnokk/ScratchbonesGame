@@ -492,7 +492,11 @@ import { createLayerManager } from './ui/layerManager.js';
       challengeStakeAnimation: SCRATCHBONES_GAME.chips.challengeStakeAnimation,
       transferAnimation: SCRATCHBONES_GAME.chips.transferAnimation,
       cardTransferAnimation: SCRATCHBONES_GAME.chips.cardTransferAnimation,
-      dealAnimation: SCRATCHBONES_GAME.chips.dealAnimation,
+      dealAnimation: {
+        perCardFlightMs: Math.max(80, Number(SCRATCHBONES_GAME.chips?.dealAnimation?.perCardFlightMs) || 260),
+        perCardStaggerMs: Math.max(0, Number(SCRATCHBONES_GAME.chips?.dealAnimation?.perCardStaggerMs) || 50),
+        interPlayerDelayMs: Math.max(0, Number(SCRATCHBONES_GAME.chips?.dealAnimation?.interPlayerDelayMs) || 0),
+      },
       clearBonusBase: SCRATCHBONES_GAME.chips.clearBonusBase,
       clearBonusIncrement: SCRATCHBONES_GAME.chips.clearBonusIncrement,
       anteStart: SCRATCHBONES_GAME.chips.anteStart,
