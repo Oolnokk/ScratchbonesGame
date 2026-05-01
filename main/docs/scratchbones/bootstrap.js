@@ -751,6 +751,8 @@ import { createLayerManager } from './ui/layerManager.js';
       state.banner = received.banner || '';
       state.logs = received.logs || [];
       state.tablePot = received.tablePot ?? 0;
+      state.ante = received.ante ?? state.ante;
+      state.round = received.round ?? state.round;
       state.betting = received.betting || null;
       state.challengeWindow = received.challengeWindow || null;
       state.challengeIntro = received.challengeIntro || null;
@@ -5769,7 +5771,8 @@ import { createLayerManager } from './ui/layerManager.js';
       const net = window.ScratchbonesNetwork;
       if (!net?.isClient()) return;
       state.humanSeat = net.getSeatId() ?? 0;
-      net.on('state-update', applyNetworkState);
+      SCRATCHBONES_AUDIO.startPlaylist();
+      net.on('state-update', (msg) => applyNetworkState(msg.state));
       net.on('disconnect', () => {
         console.warn('[net] disconnected from host');
         if (window.ScratchbonesLobby) window.ScratchbonesLobby.show();
