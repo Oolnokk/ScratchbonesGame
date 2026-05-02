@@ -1462,7 +1462,7 @@ import { createLayerManager } from './ui/layerManager.js';
       if (!state.challengeWindow || state.betting || state.gameOver) return;
       const lastPlay = state.challengeWindow.lastPlay;
       if (!lastPlay || lastPlay.playerIndex !== playerIndex) return;
-      const possibleChallengers = state.challengeWindow.challengerOptions.filter(idx => idx !== 0 && !state.players[idx].eliminated);
+      const possibleChallengers = state.challengeWindow.challengerOptions.filter(idx => !isHumanSeat(idx) && !state.players[idx].eliminated);
       const challengeSessionId = ++state.challengeDecisionSession;
       const staggerMs = Number(AI_DECISION_DELAYS.challengeStaggerMs) || 220;
       let maxDecisionDelay = 0;
@@ -1487,7 +1487,11 @@ import { createLayerManager } from './ui/layerManager.js';
       });
       if (isHumanSeat(playerIndex)) {
         const baseChallengeDurationMs = CHALLENGE_TIMER_SECS * 1000;
-        const countdownDurationMs = Math.min(baseChallengeDurationMs, maxDecisionDelay + 30);
+        // Only short-circuit to maxDecisionDelay when there are AI challengers to wait for.
+        // With no AI challengers (all-human or online mode), use the full countdown.
+        const countdownDurationMs = possibleChallengers.length > 0
+          ? Math.min(baseChallengeDurationMs, maxDecisionDelay + 30)
+          : baseChallengeDurationMs;
         startChallengeTimer({
           durationMs: countdownDurationMs,
           onExpire: () => {
