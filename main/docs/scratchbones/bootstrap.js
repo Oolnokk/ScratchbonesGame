@@ -778,7 +778,7 @@ import { createLayerManager } from './ui/layerManager.js';
       switch (msg.type) {
         case 'play':
           if (state.currentTurn === seat && !state.gameOver && !state.betting && !state.challengeWindow) {
-            traceAction('net.play', { seat, cardIds: msg.cardIds, declaredRank: msg.declaredRank });
+            traceAction('net.play', { seat, cardIds: msg.cardIds, declaredRank: msg.declaredRank, handIds: (state.players[seat]?.hand || []).map(c => c.id) });
             performPlay(seat, msg.cardIds || [], msg.declaredRank);
           } else {
             traceAction('net.play-rejected', { seat, currentTurn: state.currentTurn, gameOver: state.gameOver, hasBet: !!state.betting, hasChallenge: !!state.challengeWindow });
@@ -1237,7 +1237,10 @@ import { createLayerManager } from './ui/layerManager.js';
     function performPlay(playerIndex, cardIds, declaredRank) {
       const player = state.players[playerIndex];
       const cards = player.hand.filter(c => cardIds.includes(c.id));
-      if (!cards.length) return;
+      if (!cards.length) {
+        traceAction('perform-play.no-cards-matched', { playerIndex, cardIds, handIds: (player?.hand || []).map(c => c.id), handSize: (player?.hand || []).length });
+        return;
+      }
       player.hand = player.hand.filter(c => !cardIds.includes(c.id));
       player.hand.sort(sortCards);
       const truthful = cards.every(c => c.wild || c.rank === declaredRank);
@@ -2098,10 +2101,12 @@ import { createLayerManager } from './ui/layerManager.js';
         if (maybeEndRoundFromConcessions()) return;
         const nextPlayer = nextRoundEligibleIndex(lastPlayerIndex);
         if (nextPlayer === null) {
+          traceAction('continue-no-challenge.open-new-round', { lastPlayerIndex, reason: 'no-eligible-next-player' });
           openNewRound(currentDeclarerIndex());
           return;
         }
         state.currentTurn = nextPlayer;
+        traceAction('continue-no-challenge.turn-advance', { from: lastPlayerIndex, to: nextPlayer, handIds: (state.players[nextPlayer]?.hand || []).map(c => c.id) });
         traceGameplay('turn.advance', { from: lastPlayerIndex, to: nextPlayer, reason: 'claim-stood' });
         setBanner(state.currentTurn === state.humanSeat
           ? `Your turn. Match ${state.declaredRank}, bluff, or concede the round.`
@@ -2154,6 +2159,7 @@ import { createLayerManager } from './ui/layerManager.js';
     function openNewRound(leaderIndex) {
       if (state.gameOver) return;
       if (checkGameOverBySurvivors()) return;
+      traceAction('open-new-round', { leaderIndex, hands: state.players.map(p => ({ id: p.id, handIds: (p.hand || []).map(c => c.id) })) });
       state.leaderIndex = leaderIndex;
       state.currentTurn = leaderIndex;
       state.declaredRank = null;
