@@ -835,7 +835,10 @@ import { createLayerManager } from './ui/layerManager.js';
       if (!isHumanSeat(state.currentTurn)) {
         scheduleAiTurn();
       } else if (state.currentTurn !== state.humanSeat) {
-        showHotSeatCover(state.currentTurn);
+        // Online host: each player has their own browser; no device hand-off needed.
+        if (!window.ScratchbonesNetwork?.isHost()) {
+          showHotSeatCover(state.currentTurn);
+        }
       }
       // If state.currentTurn === state.humanSeat: UI is visible; wait for input.
     }
@@ -943,7 +946,7 @@ import { createLayerManager } from './ui/layerManager.js';
     function seatFirstName(playerOrIndex) {
       const player = typeof playerOrIndex === 'number' ? state.players[playerOrIndex] : playerOrIndex;
       if (!player) return 'Seat ?';
-      if (player.isHuman) return 'You';
+      if (player.id === state.humanSeat) return 'You';
       return String(player.name || '').trim().split(/\s+/)[0] || `Seat ${Number(player.id) + 1}`;
     }
     function setBanner(text) {
