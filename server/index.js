@@ -124,7 +124,8 @@ wss.on('connection', ws => {
     if (msg.type === 'action' && role === 'client') {
       const room = rooms.get(roomCode);
       if (!room) return;
-      send(room.host, { type: 'action', seatId, ...msg.payload });
+      const { type: actionType, ...actionData } = msg.payload || {};
+      send(room.host, { type: 'action', seatId, actionType, ...actionData });
       return;
     }
 

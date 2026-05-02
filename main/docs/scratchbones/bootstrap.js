@@ -774,8 +774,8 @@ import { createLayerManager } from './ui/layerManager.js';
 
     function handleNetworkAction(msg) {
       const seat = msg.seatId;
-      traceAction('net.action-received', { seat, type: msg.type, currentTurn: state.currentTurn, humanSeat: state.humanSeat, hasChallenge: !!state.challengeWindow, hasBet: !!state.betting });
-      switch (msg.type) {
+      traceAction('net.action-received', { seat, type: msg.actionType, currentTurn: state.currentTurn, humanSeat: state.humanSeat, hasChallenge: !!state.challengeWindow, hasBet: !!state.betting });
+      switch (msg.actionType) {
         case 'play':
           if (state.currentTurn === seat && !state.gameOver && !state.betting && !state.challengeWindow) {
             traceAction('net.play', { seat, cardIds: msg.cardIds, declaredRank: msg.declaredRank, handIds: (state.players[seat]?.hand || []).map(c => c.id) });
