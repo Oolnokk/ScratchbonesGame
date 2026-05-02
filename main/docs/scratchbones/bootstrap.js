@@ -384,6 +384,10 @@ import { createLayerManager } from './ui/layerManager.js';
       if (DEBUG_TRACE.candlelight === false) return;
       traceEvent(level, channel, payload);
     };
+    const traceAction = (channel, payload = {}) => {
+      if (DEBUG_TRACE.actions === false) return;
+      traceEvent('debug', channel, payload);
+    };
     const SCRATCHBONES_LAYER_MANAGER = createLayerManager({ gameConfig: SCRATCHBONES_GAME, debugLog: traceEvent });
     const SCRATCHBONES_AUDIO = createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog: traceAudio });
     function hashStringToSeed(text) {
@@ -740,6 +744,7 @@ import { createLayerManager } from './ui/layerManager.js';
 
     function applyNetworkState(received) {
       if (!received) return;
+      traceAction('net.state-received', { currentTurn: received.currentTurn, humanSeat: received.humanSeat, hasChallenge: !!received.challengeWindow, hasBet: !!received.betting, gameOver: received.gameOver, myHandSize: (received.players?.find(p => p.id === received.humanSeat)?.hand || []).length });
       const localSelected = state.selectedCardIds;
       state.players = received.players || [];
       state.currentTurn = received.currentTurn ?? 0;
@@ -769,17 +774,25 @@ import { createLayerManager } from './ui/layerManager.js';
 
     function handleNetworkAction(msg) {
       const seat = msg.seatId;
+      traceAction('net.action-received', { seat, type: msg.type, currentTurn: state.currentTurn, humanSeat: state.humanSeat, hasChallenge: !!state.challengeWindow, hasBet: !!state.betting });
       switch (msg.type) {
         case 'play':
           if (state.currentTurn === seat && !state.gameOver && !state.betting && !state.challengeWindow) {
+            traceAction('net.play', { seat, cardIds: msg.cardIds, declaredRank: msg.declaredRank });
             performPlay(seat, msg.cardIds || [], msg.declaredRank);
+          } else {
+            traceAction('net.play-rejected', { seat, currentTurn: state.currentTurn, gameOver: state.gameOver, hasBet: !!state.betting, hasChallenge: !!state.challengeWindow });
           }
           break;
         case 'concede-round': {
-          if (state.currentTurn !== seat || state.gameOver || state.betting || state.challengeWindow) break;
+          if (state.currentTurn !== seat || state.gameOver || state.betting || state.challengeWindow) {
+            traceAction('net.concede-rejected', { seat, currentTurn: state.currentTurn });
+            break;
+          }
           if (state.declaredRank === null) break;
           const player = state.players[seat];
           if (!player || player.eliminated) break;
+          traceAction('net.concede', { seat });
           const amount = transferToBank(seat, CONFIG.concedeRoundChipLoss, `${seatLabel(player)} concedes the claim and pays 1 chip to the bank.`);
           player.lastAction = 'Conceded round';
           if (amount <= 0) break;
@@ -796,26 +809,44 @@ import { createLayerManager } from './ui/layerManager.js';
         case 'challenge':
           if (state.challengeWindow && !state.betting && !state.gameOver) {
             const target = state.challengeWindow.lastPlay.playerIndex;
-            if (target !== seat) { clearChallengeTimer(); startChallenge(seat, target); }
+            if (target !== seat) {
+              traceAction('net.challenge', { seat, target });
+              clearChallengeTimer(); startChallenge(seat, target);
+            } else {
+              traceAction('net.challenge-rejected', { seat, reason: 'cannot-challenge-self' });
+            }
+          } else {
+            traceAction('net.challenge-rejected', { seat, hasChallenge: !!state.challengeWindow, hasBet: !!state.betting, gameOver: state.gameOver });
           }
           break;
-        case 'accept-no-challenge':
-          if (state.challengeWindow && !state.betting && state.currentTurn === seat) {
+        case 'accept-no-challenge': {
+          // Check the seat is a valid challenger — NOT currentTurn, which points to whoever
+          // last had the play turn (may differ from the challenger deciding to let it stand).
+          const challengers = state.challengeWindow?.challengerOptions || [];
+          if (state.challengeWindow && !state.betting && !state.gameOver && challengers.includes(seat)) {
+            traceAction('net.accept-no-challenge', { seat });
             clearChallengeTimer();
             advanceAfterNoChallenge(state.challengeWindow.lastPlay.playerIndex);
+          } else {
+            traceAction('net.accept-no-challenge-rejected', { seat, challengers, hasChallenge: !!state.challengeWindow, hasBet: !!state.betting, gameOver: state.gameOver });
           }
           break;
+        }
         case 'bet-action':
+          traceAction('net.bet-action', { seat, action: msg.action });
           void resolveBetAction(seat, msg.action).catch(e => console.error('[net-action] bet-action', e));
           break;
         case 'bet-open-tier':
+          traceAction('net.bet-open-tier', { seat, tierId: msg.tierId });
           void resolveBetAction(seat, { type: 'open-tier', tierId: msg.tierId }).catch(e => console.error('[net-action] bet-open-tier', e));
           break;
         case 'bet-raise-tier':
+          traceAction('net.bet-raise-tier', { seat, tierId: msg.tierId });
           void resolveBetAction(seat, { type: 'raise-tier', tierId: msg.tierId }).catch(e => console.error('[net-action] bet-raise-tier', e));
           break;
         case 'punish-toggle':
           if (state.betting && state.betting.currentActorId === seat) {
+            traceAction('net.punish-toggle', { seat });
             state.betting.punishArmed = !state.betting.punishArmed;
             render();
           }
@@ -1177,6 +1208,7 @@ import { createLayerManager } from './ui/layerManager.js';
         render();
         return;
       }
+      traceAction('local.play', { seat: state.humanSeat, cardCount: cards.length, declaredRank });
       performPlay(state.humanSeat, cards.map(c => c.id), declaredRank);
     }
     function humanConcedeRound() {
@@ -1471,13 +1503,15 @@ import { createLayerManager } from './ui/layerManager.js';
       if (!state.challengeWindow || state.gameOver || state.betting) return;
       const target = state.challengeWindow.lastPlay.playerIndex;
       if (target === state.humanSeat) return;
+      traceAction('local.challenge', { seat: state.humanSeat, target });
       clearChallengeTimer();
       startChallenge(state.humanSeat, target);
     }
     function humanAcceptNoChallenge() {
       if (!state.challengeWindow || state.gameOver || state.betting) return;
-      clearChallengeTimer();
       const target = state.challengeWindow.lastPlay.playerIndex;
+      traceAction('local.accept-no-challenge', { seat: state.humanSeat, target });
+      clearChallengeTimer();
       advanceAfterNoChallenge(target);
     }
     function clearChallengeIntro() {
@@ -4377,19 +4411,20 @@ import { createLayerManager } from './ui/layerManager.js';
           if (_isClient) {
             const cards = selectedCards();
             const rank = Number(document.getElementById('declareRank')?.value);
+            traceAction('client.send-play', { cardCount: cards.length, rank, humanSeat: state.humanSeat, currentTurn: state.currentTurn });
             _net.sendAction({ type: 'play', cardIds: cards.map(c => c.id), declaredRank: rank });
           } else { humanPlay(); }
         });
         document.getElementById('concedeBtn')?.addEventListener('click', () => {
-          if (_isClient) _net.sendAction({ type: 'concede-round' });
+          if (_isClient) { traceAction('client.send-concede', { humanSeat: state.humanSeat }); _net.sendAction({ type: 'concede-round' }); }
           else humanConcedeRound();
         });
         document.getElementById('challengeBtnFixed')?.addEventListener('click', () => {
-          if (_isClient) _net.sendAction({ type: 'challenge' });
+          if (_isClient) { traceAction('client.send-challenge', { humanSeat: state.humanSeat }); _net.sendAction({ type: 'challenge' }); }
           else { clearChallengeTimer(); humanChallenge(); }
         });
         document.getElementById('letPassBtnFixed')?.addEventListener('click', () => {
-          if (_isClient) _net.sendAction({ type: 'accept-no-challenge' });
+          if (_isClient) { traceAction('client.send-accept-no-challenge', { humanSeat: state.humanSeat, currentTurn: state.currentTurn, challengers: state.challengeWindow?.challengerOptions }); _net.sendAction({ type: 'accept-no-challenge' }); }
           else { clearChallengeTimer(); humanAcceptNoChallenge(); }
         });
         document.getElementById('betCallBtn')?.addEventListener('click', () => {

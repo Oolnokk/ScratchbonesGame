@@ -226,6 +226,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         layerPromotion: rawGameConfig.debug?.trace?.layerPromotion !== false,
         audio: rawGameConfig.debug?.trace?.audio !== false,
         candlelight: rawGameConfig.debug?.trace?.candlelight !== false,
+        actions: rawGameConfig.debug?.trace?.actions !== false,
       },
     },
     deck: {

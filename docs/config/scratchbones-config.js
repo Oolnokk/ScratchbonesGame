@@ -7,8 +7,9 @@ window.SCRATCHBONES_CONFIG = {
       "trace": {
         "gameplayFlow": true,
         "layerPromotion": false,
-        "audio": true,
-        "candlelight": true
+        "audio": false,
+        "candlelight": false,
+        "actions": true
       }
     },
     "deck": {
