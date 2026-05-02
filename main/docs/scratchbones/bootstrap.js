@@ -672,6 +672,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const session = window.SCRATCHBONES_SESSION || {};
       const humanSeats = Array.isArray(session.humanSeats) ? new Set(session.humanSeats) : new Set([0]);
       const playerNames = session.playerNames || {};
+      const playerAppearances = session.playerAppearances || {};
       const mode = session.mode || 'pve';
       // PvP: all seats are human — total equals human count, no AI fills.
       // PvE / PvPvE: full configured table; AI occupies remaining seats.
@@ -681,6 +682,7 @@ import { createLayerManager } from './ui/layerManager.js';
         const aiIdentity = generateAiIdentity(index);
         const sessionName = playerNames[index];
         const name = isHuman && sessionName ? sessionName : resolveSeatName(index, aiIdentity.name);
+        const appearance = isHuman ? (playerAppearances[index] ?? null) : null;
         return {
           id: index,
           name,
@@ -691,9 +693,10 @@ import { createLayerManager } from './ui/layerManager.js';
           lastAction: 'Ready',
           clears: 0,
           seed: aiIdentity.seed,
-          gender: aiIdentity.gender,
+          gender: appearance ? appearance.gender : aiIdentity.gender,
           personality: isHuman ? null : aiIdentity.personality,
           reads: {},
+          appearance,
         };
       });
     }
@@ -860,18 +863,11 @@ import { createLayerManager } from './ui/layerManager.js';
       }
     }
 
-    // After any turn transition, schedule AI for AI seats or show a hot-seat cover
-    // for human seats that are not the currently active human player.
     function scheduleNextTurnOrCover() {
       if (!isHumanSeat(state.currentTurn)) {
         scheduleAiTurn();
-      } else if (state.currentTurn !== state.humanSeat) {
-        // Online host: each player has their own browser; no device hand-off needed.
-        if (!window.ScratchbonesNetwork?.isHost()) {
-          showHotSeatCover(state.currentTurn);
-        }
       }
-      // If state.currentTurn === state.humanSeat: UI is visible; wait for input.
+      // Human seat: UI is visible; wait for input.
     }
     function showHotSeatCover(targetSeat) {
       const coverEl = document.getElementById('sb-cover');
@@ -2223,14 +2219,8 @@ import { createLayerManager } from './ui/layerManager.js';
             aiTakeBettingAction(actorId, intent);
           }
         }, thinkMs);
-      } else if (actorId !== state.humanSeat) {
-        // Hot-seat PvP: betting switched to a different human — show cover before they see their hand.
-        // In online mode the other human is on a different browser, so skip the cover.
-        if (!window.ScratchbonesNetwork?.isHost()) {
-          showHotSeatCover(actorId);
-        }
       }
-      // If actorId === state.humanSeat the UI is already visible; wait for input.
+      // Human seat: UI is already visible; wait for input.
     }
     function aiTakeTurn(playerIndex) {
       const player = state.players[playerIndex];
@@ -4629,10 +4619,38 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     function generatePlayerProfile(player) {
       if (!_portraitCosmetics) return null;
-      const { hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, hatOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter, conditionalCosmeticsByFighter } = _portraitCosmetics;
+      const { optionCache, hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, hatOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter, conditionalCosmeticsByFighter } = _portraitCosmetics;
       const seedStr = player.seed || `player-${player.id}`;
       const rng = mulberry32(hashStringToSeed(seedStr));
       const fighterGender = f => f.gender ?? (f.id === 'M' ? 'male' : f.id === 'F' ? 'female' : null);
+
+      if (player.isHuman && player.appearance) {
+        const { speciesId, gender, cosmetics, bodyColors } = player.appearance;
+        // Find fighter matching species+gender (mao-ao uses legacy 'M'/'F' ids)
+        const normalizedSpecies = speciesId ? speciesId.replace(/-/g, '_') : null;
+        const fighter = FIGHTERS.find(f =>
+          (f.speciesId === speciesId || f.speciesId === normalizedSpecies) &&
+          fighterGender(f) === gender
+        ) || FIGHTERS[0];
+        const fighterPool = [fighter];
+        // Generate base profile for this fighter (provides hat, torso, arm cosmetics randomly)
+        const profile = randomProfileSeeded(rng, fighterPool, hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
+        if (!profile) return null;
+        // Override with saved cosmetics
+        const lookupOption = id => id ? (optionCache?.get(id) ?? null) : null;
+        if (cosmetics) {
+          if (cosmetics.hairFront !== undefined) profile.hairFront = lookupOption(cosmetics.hairFront);
+          if (cosmetics.hairBack  !== undefined) profile.hairBack  = lookupOption(cosmetics.hairBack);
+          if (cosmetics.hairSide  !== undefined) profile.hairSide  = lookupOption(cosmetics.hairSide);
+          if (cosmetics.eyes      !== undefined) profile.eyes      = lookupOption(cosmetics.eyes);
+          if (cosmetics.facialHair!== undefined) profile.facialHair= lookupOption(cosmetics.facialHair);
+        }
+        if (bodyColors) {
+          profile.bodyColors = { ...(profile.bodyColors || {}), ...bodyColors };
+        }
+        return profile;
+      }
+
       const fighterPool = player.gender === 'male'   ? FIGHTERS.filter(f => fighterGender(f) === 'male')
                         : player.gender === 'female' ? FIGHTERS.filter(f => fighterGender(f) === 'female')
                         : FIGHTERS;
@@ -4644,10 +4662,14 @@ import { createLayerManager } from './ui/layerManager.js';
       if (!acc) return;
       for (const player of state.players) {
         if (!player.isHuman || !player.profile) continue;
-        const equippedHatId = acc.getEquippedForCategory('hat');
-        if (equippedHatId && _portraitCosmetics.optionCache?.has(equippedHatId)) {
-          player.profile.hat = _portraitCosmetics.optionCache.get(equippedHatId);
-        }
+        const oc = _portraitCosmetics.optionCache;
+        const applySlot = (category, profileKey) => {
+          const id = acc.getEquippedForCategory(category);
+          if (id && oc?.has(id)) player.profile[profileKey] = oc.get(id);
+        };
+        applySlot('hat', 'hat');
+        applySlot('torso', 'torsoCosmetic');
+        applySlot('overwear', 'armCosmetic');
       }
     }
     function logPlayerPortraitXforms(player) {

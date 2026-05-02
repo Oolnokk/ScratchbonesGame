@@ -5,20 +5,49 @@
   const BRONZE_PASSIVE_MAX = 30;
   const BRONZE_PASSIVE_RATE_MS = 5 * 60 * 1000; // 1 bronze per 5 minutes
 
-  // Cosmetics available in the shop. IDs match the cosmetics/index.json entries.
+  // NPC-usable cosmetics available for purchase.
+  // Items tagged species/gender are only shown when the player matches.
   const SHOP_CATALOG = [
-    { id: 'appearance::hat::basic_headband',      label: 'Basic Headband',          price: 5,  category: 'hat',        description: 'A simple cloth headband.' },
-    { id: 'appearance::hat::riverlandskasa_low',  label: 'Riverland Kasa (Low)',    price: 10, category: 'hat',        description: 'Traditional riverland hat, worn low.' },
-    { id: 'appearance::hat::riverlandskasa_tight',label: 'Riverland Kasa (Tight)',  price: 10, category: 'hat',        description: 'Traditional riverland hat, tight fit.' },
-    { id: 'appearance::hat::riverlandskasa_wide', label: 'Riverland Kasa (Wide)',   price: 10, category: 'hat',        description: 'Traditional riverland hat, wide brim.' },
-    { id: 'citywatch_helmet',                     label: 'City Watch Helmet',        price: 25, category: 'hat',        description: 'Official helmet of the city watch.' },
-    { id: 'simple_poncho',                        label: 'Simple Poncho',            price: 8,  category: 'overwear',   description: 'A plain woven poncho.' },
-    { id: 'anuri_poncho',                         label: 'Anuri Poncho',             price: 15, category: 'overwear',   description: 'Colorful poncho from Anuri traders.' },
-    { id: 'anuri_hood',                           label: 'Anuri Hood',               price: 15, category: 'overwear',   description: 'Hooded cloak from Anuri traders.' },
-    { id: 'layered_travel_cloak',                 label: 'Travel Cloak',             price: 20, category: 'overwear',   description: 'Layered cloak for long journeys.' },
-    { id: 'bronze_armbands',                      label: 'Bronze Armbands',          price: 12, category: 'accessory',  description: 'Polished bronze armbands.' },
-    { id: 'bronze_footbands',                     label: 'Bronze Footbands',         price: 12, category: 'accessory',  description: 'Polished bronze footbands.' },
+    // Hats — universal (all species can wear)
+    { id: 'appearance::hat::basic_headband',      label: 'Basic Headband',       price: 5,  category: 'hat',     description: 'A simple cloth headband.' },
+    { id: 'appearance::hat::riverlandskasa_low',  label: 'Riverland Kasa (Low)', price: 10, category: 'hat',     description: 'Traditional riverland hat, worn low.' },
+    { id: 'appearance::hat::riverlandskasa_wide', label: 'Riverland Kasa (Wide)',price: 10, category: 'hat',     description: 'Traditional riverland hat, wide brim.' },
+    // Torso — species+gender specific
+    { id: 'tankantunic_mao-ao_m',  label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'mao-ao',    gender: 'male',   description: 'A fitted tankan-style tunic.' },
+    { id: 'tankantunic_mao-ao_f',  label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'mao-ao',    gender: 'female', description: 'A fitted tankan-style tunic.' },
+    { id: 'tankantunic_tl_m',      label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'tletingan', gender: 'male',   description: 'A fitted tankan-style tunic.' },
+    { id: 'tankantunic_kenk_m',    label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'kenkari',   gender: 'male',   description: 'A fitted tankan-style tunic.' },
+    { id: 'tankantunic_kenk_f',    label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'kenkari',   gender: 'female', description: 'A fitted tankan-style tunic.' },
+    { id: 'bandolier1_mao-ao_m',   label: 'Bandolier',     price: 8,  category: 'torso',   species: 'mao-ao',    gender: 'male',   description: 'A rugged leather bandolier.' },
+    { id: 'bandolier1_mao-ao_f',   label: 'Bandolier',     price: 8,  category: 'torso',   species: 'mao-ao',    gender: 'female', description: 'A rugged leather bandolier.' },
+    { id: 'bandolier1_tl_m',       label: 'Bandolier',     price: 8,  category: 'torso',   species: 'tletingan', gender: 'male',   description: 'A rugged leather bandolier.' },
+    { id: 'bandolier1_kenk_m',     label: 'Bandolier',     price: 8,  category: 'torso',   species: 'kenkari',   gender: 'male',   description: 'A rugged leather bandolier.' },
+    { id: 'bandolier1_kenk_f',     label: 'Bandolier',     price: 8,  category: 'torso',   species: 'kenkari',   gender: 'female', description: 'A rugged leather bandolier.' },
+    // Overwear — species+gender specific
+    { id: 'tankanbodywrap_mao-ao', label: 'Tankan Bodywrap',price: 15, category: 'overwear', species: 'mao-ao',   gender: null,     description: 'A wrapped ceremonial bodywrap.' },
+    { id: 'tankanbodywrap_tl_m',   label: 'Tankan Bodywrap',price: 15, category: 'overwear', species: 'tletingan',gender: 'male',   description: 'A wrapped ceremonial bodywrap.' },
+    { id: 'tankanbodywrap_kenk_m', label: 'Tankan Bodywrap',price: 15, category: 'overwear', species: 'kenkari',  gender: 'male',   description: 'A wrapped ceremonial bodywrap.' },
+    { id: 'tankanwrap_kenk_f',     label: 'Tankan Wrap',    price: 15, category: 'overwear', species: 'kenkari',  gender: 'female', description: 'A wrapped ceremonial garment.' },
   ];
+
+  function defaultAppearance() {
+    return {
+      speciesId: 'mao-ao',
+      gender: 'male',
+      cosmetics: {
+        hairFront: null,
+        hairBack: null,
+        hairSide: null,
+        eyes: null,
+        facialHair: null,
+      },
+      bodyColors: {
+        A: { h: 0,   s: -0.7, v: -0.3 },
+        B: { h: 0,   s: -0.7, v: -0.5 },
+        C: { h: 0,   s: -0.8, v: -0.2 },
+      },
+    };
+  }
 
   function defaultAccount() {
     return {
@@ -27,6 +56,7 @@
       bronzePassiveLastMs: Date.now(),
       unlockedCosmetics: [],
       equippedCosmetics: [],
+      appearance: defaultAppearance(),
       createdAt: Date.now(),
     };
   }
@@ -36,7 +66,17 @@
   function load() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
-      _account = raw ? { ...defaultAccount(), ...JSON.parse(raw) } : defaultAccount();
+      const base = defaultAccount();
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        _account = { ...base, ...parsed };
+        // Merge nested appearance so missing sub-fields get defaults
+        _account.appearance = { ...base.appearance, ...(parsed.appearance || {}) };
+        _account.appearance.cosmetics = { ...base.appearance.cosmetics, ...(parsed.appearance?.cosmetics || {}) };
+        _account.appearance.bodyColors = { ...base.appearance.bodyColors, ...(parsed.appearance?.bodyColors || {}) };
+      } else {
+        _account = base;
+      }
     } catch (_) {
       _account = defaultAccount();
     }
@@ -118,6 +158,18 @@
     return null;
   }
 
+  function getAppearance() {
+    return getAccount().appearance || defaultAppearance();
+  }
+
+  function setAppearance(appearance) {
+    const acc = getAccount();
+    acc.appearance = { ...defaultAppearance(), ...appearance };
+    acc.appearance.cosmetics = { ...defaultAppearance().cosmetics, ...(appearance.cosmetics || {}) };
+    acc.appearance.bodyColors = { ...defaultAppearance().bodyColors, ...(appearance.bodyColors || {}) };
+    save();
+  }
+
   function buyCosmetic(cosmeticId) {
     const item = SHOP_CATALOG.find(c => c.id === cosmeticId);
     if (!item) return { ok: false, error: 'Unknown cosmetic' };
@@ -153,6 +205,17 @@
 
   function getShopCatalog() { return SHOP_CATALOG; }
 
+  // Returns catalog items relevant to the given species+gender.
+  // Universal items (no species tag) are always included.
+  function getShopCatalogForAppearance(speciesId, gender) {
+    return SHOP_CATALOG.filter(item => {
+      if (!item.species) return true;
+      if (item.species !== speciesId) return false;
+      if (item.gender && item.gender !== gender) return false;
+      return true;
+    });
+  }
+
   window.ScratchbonesAccount = {
     load,
     save,
@@ -167,12 +230,15 @@
     getUnlockedCosmetics,
     getEquippedCosmetics,
     getEquippedForCategory,
+    getAppearance,
+    setAppearance,
     isUnlocked,
     isEquipped,
     buyCosmetic,
     equipCosmetic,
     unequipCosmetic,
     getShopCatalog,
+    getShopCatalogForAppearance,
     BRONZE_PASSIVE_MAX,
     BRONZE_PASSIVE_RATE_MS,
   };
