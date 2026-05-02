@@ -1990,6 +1990,13 @@
     #candleDarknessCanvas { mix-blend-mode: multiply; }
     #candleGlowCanvas     { mix-blend-mode: screen; }
   </style>
+  <!-- Post effect: trapezoid table perspective — isolated, touches no existing code -->
+  <style id="trapezoid-table-effect">
+    #app {
+      transform: perspective(900px) rotateX(-10deg);
+      transform-origin: 50% 50%;
+    }
+  </style>
 </head>
 <body>
   <div id="authoredRoot">
