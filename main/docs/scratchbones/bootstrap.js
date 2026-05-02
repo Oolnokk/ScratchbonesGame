@@ -2225,7 +2225,10 @@ import { createLayerManager } from './ui/layerManager.js';
         }, thinkMs);
       } else if (actorId !== state.humanSeat) {
         // Hot-seat PvP: betting switched to a different human — show cover before they see their hand.
-        showHotSeatCover(actorId);
+        // In online mode the other human is on a different browser, so skip the cover.
+        if (!window.ScratchbonesNetwork?.isHost()) {
+          showHotSeatCover(actorId);
+        }
       }
       // If actorId === state.humanSeat the UI is already visible; wait for input.
     }
