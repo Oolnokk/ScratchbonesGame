@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mesh Deformation Author — ScratchbonesGame</title>
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Design tokens ── */
+    :root {
+      --bg:         #12151e;
+      --panel:      #1a1f2e;
+      --border:     #2a3050;
+      --accent:     #e05a72;
+      --accent2:    #4e9af1;
+      --text:       #e0e6f0;
+      --text-dim:   #7a8399;
+      --btn-pri:    #e05a72;
+      --btn-pri-h:  #c7435d;
+      --btn-sec:    #253060;
+      --btn-sec-h:  #354080;
+      --btn-ok:     #27ae60;
+      --btn-ok-h:   #1e8449;
+      --btn-warn:   #e67e22;
+      --btn-warn-h: #ca6f1e;
+      --pt-normal:  #4e9af1;
+      --pt-locked:  #e74c3c;
+      --pt-sel:     #f5c518;
+      --pt-hover:   #2ecc71;
+    }
+
+    /* ── Base ── */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+    }
+
+    /* ── Header ── */
+    #header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 7px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #header h1 { font-size: 1rem; color: var(--accent); letter-spacing: 0.02em; }
+    #header .sub { font-size: 0.72rem; color: var(--text-dim); }
+
+    /* ── Main layout ── */
+    #main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 268px;
+      min-width: 268px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    /* ── Panel sections ── */
+    .ps {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ps-title {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    /* ── Form fields ── */
+    .field { margin-bottom: 6px; }
+    .field:last-child { margin-bottom: 0; }
+    .field > label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+    .field select,
+    .field input[type="number"],
+    .field input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 7px;
+      font-size: 0.8rem;
+    }
+    .field select:focus,
+    .field input:focus { outline: none; border-color: var(--accent); }
+    .field-row { display: flex; gap: 8px; }
+    .field-row .field { flex: 1; }
+
+    /* ── Buttons ── */
+    button {
+      display: block;
+      width: 100%;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-top: 5px;
+      transition: opacity 0.12s;
+    }
+    button:disabled { opacity: 0.38; cursor: not-allowed; }
+    .btn-pri  { background: var(--btn-pri);  color: #fff; }
+    .btn-pri:not(:disabled):hover  { background: var(--btn-pri-h); }
+    .btn-sec  { background: var(--btn-sec);  color: var(--text); }
+    .btn-sec:not(:disabled):hover  { background: var(--btn-sec-h); }
+    .btn-ok   { background: var(--btn-ok);   color: #fff; }
+    .btn-ok:not(:disabled):hover   { background: var(--btn-ok-h); }
+    .btn-warn { background: var(--btn-warn); color: #fff; }
+    .btn-warn:not(:disabled):hover { background: var(--btn-warn-h); }
+
+    /* ── Pose list ── */
+    #pose-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-bottom: 6px;
+    }
+    .pose-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 7px;
+      background: var(--bg);
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .pose-row:hover:not(.active) { border-color: var(--border); }
+    .pose-row.active { border-color: var(--accent); }
+    .pose-num {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      width: 14px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .pose-lbl {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 0.78rem;
+      padding: 0;
+      cursor: pointer;
+    }
+    .pose-lbl:focus { outline: 1px solid var(--accent2); border-radius: 2px; cursor: text; }
+
+    /* ── Status bar ── */
+    #status {
+      padding: 7px 12px;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+      flex-shrink: 0;
+    }
+
+    /* ── Canvas area ── */
+    #canvas-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    #canvas-wrap {
+      position: relative;
+      line-height: 0;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.55);
+    }
+
+    canvas#mc {
+      display: block;
+      cursor: crosshair;
+      /* responsive: scale down if needed */
+      max-width: min(512px, calc(100vw - 300px));
+      max-height: min(512px, calc(100vh - 110px));
+    }
+
+    /* ── Legend ── */
+    #legend {
+      display: flex;
+      gap: 14px;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+    .li { display: flex; align-items: center; gap: 5px; }
+    .ld {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      flex-shrink: 0;
+    }
+    .ld-n { background: var(--pt-normal); }
+    .ld-l { background: var(--pt-locked); }
+    .ld-s { background: var(--pt-sel); }
+
+    #hint {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      opacity: 0.65;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div id="header">
+  <h1>⬡ Mesh Deformation Author</h1>
+  <span class="sub">ScratchbonesGame Portrait Animation Tool</span>
+</div>
+
+<!-- ── MAIN ── -->
+<div id="main">
+
+  <!-- ─── SIDEBAR ─── -->
+  <aside id="sidebar">
+
+    <!-- Setup -->
+    <div class="ps">
+      <div class="ps-title">Setup</div>
+      <div class="field">
+        <label>Species</label>
+        <select id="sel-species"><option value="">— loading… —</option></select>
+      </div>
+      <div class="field">
+        <label>Gender</label>
+        <select id="sel-gender"><option value="">— select species first —</option></select>
+      </div>
+      <div class="field">
+        <label>Reference body layer</label>
+        <select id="sel-layer"><option value="">— select species/gender —</option></select>
+      </div>
+    </div>
+
+    <!-- Animation type -->
+    <div class="ps">
+      <div class="ps-title">Animation Type</div>
+      <div class="field">
+        <label>Type</label>
+        <select id="sel-anim">
+          <!-- Options populated from ANIM_DEFS at init -->
+        </select>
+      </div>
+      <div class="field">
+        <label>Preview speed (seconds per transition)</label>
+        <input type="number" id="inp-speed" value="0.8" min="0.1" max="10" step="0.1" style="width:72px;" />
+      </div>
+    </div>
+
+    <!-- Poses -->
+    <div class="ps">
+      <div class="ps-title">Keyframe Poses</div>
+      <div id="pose-list"></div>
+      <button id="btn-preview" class="btn-pri" disabled>▶ Preview Animation</button>
+    </div>
+
+    <!-- Mesh grid -->
+    <div class="ps">
+      <div class="ps-title">Mesh Grid</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Columns</label>
+          <input type="number" id="inp-cols" value="4" min="2" max="16" />
+        </div>
+        <div class="field">
+          <label>Rows</label>
+          <input type="number" id="inp-rows" value="4" min="2" max="16" />
+        </div>
+      </div>
+      <button id="btn-rebuild" class="btn-sec">↺ Rebuild Grid (resets poses)</button>
+      <button id="btn-reset-pose" class="btn-sec">Reset current pose to neutral</button>
+      <button id="btn-copy-prev" class="btn-sec">Copy from previous pose</button>
+      <button id="btn-clear-locks" class="btn-sec">Clear all locks</button>
+    </div>
+
+    <!-- File -->
+    <div class="ps">
+      <div class="ps-title">File</div>
+      <button id="btn-export" class="btn-ok" disabled>↓ Export JSON</button>
+      <button id="btn-import" class="btn-sec">↑ Import JSON</button>
+    </div>
+
+    <div id="status">Ready. Select a species and gender to begin.</div>
+  </aside>
+
+  <!-- ─── CANVAS AREA ─── -->
+  <main id="canvas-area">
+    <div id="canvas-wrap">
+      <canvas id="mc" width="512" height="512"></canvas>
+    </div>
+
+    <div id="legend">
+      <div class="li"><span class="ld ld-n"></span>Normal point</div>
+      <div class="li"><span class="ld ld-l"></span>Locked (right-click to toggle)</div>
+      <div class="li"><span class="ld ld-s"></span>Selected / dragging</div>
+    </div>
+
+    <div id="hint">
+      Drag points to deform mesh &nbsp;·&nbsp;
+      Right-click a point to lock/unlock it &nbsp;·&nbsp;
+      Switch keyframes in the sidebar
+    </div>
+  </main>
+
+</div><!-- #main -->
+
+<script>
+/* =================================================================
+   MESH DEFORMATION AUTHOR
+   ScratchbonesGame portrait animation tool
+   ================================================================= */
+
+'use strict';
+
+// ── Paths (relative to docs/tools/mesh-deformation-author/) ──────
+const SPECIES_INDEX_URL = '../../config/species/index.json';
+const CONFIG_BASE       = '../../config/species/';
+const ASSETS_BASE       = '../../assets/';
+
+// ── Animation type definitions ───────────────────────────────────
+const ANIM_DEFS = {
+  breathing: {
+    label:  'Breathing',
+    count:  2,
+    labels: ['breath-in', 'breath-out']
+  },
+  wriggle: {
+    label:  'Wriggle',
+    count:  5,
+    labels: ['wriggle-1', 'wriggle-2', 'wriggle-3', 'wriggle-4', 'wriggle-5']
+  },
+  rollshoulders: {
+    label:  'Roll Shoulders',
+    count:  3,
+    labels: ['roll-1', 'roll-2', 'roll-3']
+  }
+};
+
+// ── Canvas size (internal, logical pixels) ───────────────────────
+const CS = 512;
+
+// ── Interaction constants ────────────────────────────────────────
+// Maximum pixel distance from a mesh point that counts as a hit
+const POINT_CLICK_THRESHOLD = 18;
+
+// ── State ────────────────────────────────────────────────────────
+let speciesList = [];   // [{ speciesId, label, path }]
+let speciesData = null; // parsed species JSON for selected species
+
+let selSpeciesId = '';
+let selGender    = '';
+let selAnimType  = 'breathing';
+let gridCols     = 4;
+let gridRows     = 4;
+
+// poses[i] = { label: string, points: [[nx, ny], ...] }
+// points are normalized [0..1] coordinates
+let poses      = [];
+let curPoseIdx = 0;
+
+// Global locks (shared across all poses) – locked[i] = true/false
+let locked = [];
+
+// Reference background image
+let bgImg = null;
+
+// ── Preview state ────────────────────────────────────────────────
+let previewOn = false;
+let rafId     = null;
+let animT     = 0;
+let animSpeed = 0.8;  // seconds per transition
+let lastTime  = 0;
+
+// ── Pointer interaction ──────────────────────────────────────────
+let isDragging = false;
+let dragIdx    = -1;
+let hoverIdx   = -1;
+let selIdx     = -1;
+
+// ── DOM refs ─────────────────────────────────────────────────────
+const canvas     = document.getElementById('mc');
+const ctx        = canvas.getContext('2d');
+const selSpecies = document.getElementById('sel-species');
+const selGenderEl = document.getElementById('sel-gender');
+const selLayerEl  = document.getElementById('sel-layer');
+const selAnimEl   = document.getElementById('sel-anim');
+const inpSpeed    = document.getElementById('inp-speed');
+const inpCols     = document.getElementById('inp-cols');
+const inpRows     = document.getElementById('inp-rows');
+const poseListEl  = document.getElementById('pose-list');
+const statusEl    = document.getElementById('status');
+const btnPreview  = document.getElementById('btn-preview');
+const btnRebuild  = document.getElementById('btn-rebuild');
+const btnResetPose   = document.getElementById('btn-reset-pose');
+const btnCopyPrev    = document.getElementById('btn-copy-prev');
+const btnClearLocks  = document.getElementById('btn-clear-locks');
+const btnExport   = document.getElementById('btn-export');
+const btnImport   = document.getElementById('btn-import');
+
+// =================================================================
+// INITIALISATION
+// =================================================================
+async function init() {
+  // Populate animation type dropdown from ANIM_DEFS (single source of truth)
+  selAnimEl.innerHTML = '';
+  Object.entries(ANIM_DEFS).forEach(([key, def]) => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = def.label + ' (' + def.count + ' poses)';
+    selAnimEl.appendChild(opt);
+  });
+  selAnimEl.value = selAnimType;
+
+  try {
+    const resp = await fetch(SPECIES_INDEX_URL);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    speciesList = data.entries;
+
+    selSpecies.innerHTML = '';
+    speciesList.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.speciesId;
+      opt.textContent = e.label;
+      selSpecies.appendChild(opt);
+    });
+
+    if (speciesList.length > 0) {
+      selSpeciesId = speciesList[0].speciesId;
+      await loadSpecies(selSpeciesId);
+    }
+    setStatus('Ready. Select a species and gender to begin.');
+  } catch (err) {
+    setStatus('⚠ Could not load species config (' + err.message +
+      '). Serve via HTTP or use Import JSON.');
+    selSpecies.innerHTML = '<option value="">Error loading species</option>';
+  }
+
+  initMesh();
+  initPoses();
+  buildPoseList();
+  render();
+}
+
+// =================================================================
+// SPECIES / GENDER / LAYER LOADING
+// =================================================================
+async function loadSpecies(speciesId) {
+  const entry = speciesList.find(e => e.speciesId === speciesId);
+  if (!entry) return;
+
+  try {
+    // entry.path is like './kenkari.json' — strip leading './'
+    const jsonPath = CONFIG_BASE + entry.path.replace(/^\.\//, '');
+    const resp = await fetch(jsonPath);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    speciesData = await resp.json();
+
+    // Available genders = keys that are plain objects (not 'speciesId' / 'label')
+    const genders = Object.keys(speciesData).filter(k =>
+      k !== 'speciesId' && k !== 'label' && typeof speciesData[k] === 'object'
+    );
+
+    selGenderEl.innerHTML = '';
+    genders.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g;
+      opt.textContent = g.charAt(0).toUpperCase() + g.slice(1);
+      selGenderEl.appendChild(opt);
+    });
+    selGender = genders[0] || '';
+
+    refreshLayerOptions();
+    await loadDefaultBgImage();
+
+    btnExport.disabled = !(selSpeciesId && selGender);
+  } catch (err) {
+    setStatus('⚠ Failed to load species data: ' + err.message);
+    speciesData = null;
+    selGenderEl.innerHTML = '<option value="">Error</option>';
+    selLayerEl.innerHTML  = '<option value="">Error</option>';
+  }
+}
+
+function refreshLayerOptions() {
+  if (!speciesData || !selGender || !speciesData[selGender]) {
+    selLayerEl.innerHTML = '<option value="">No data</option>';
+    return;
+  }
+  const layers = speciesData[selGender].portraitBodyLayers || [];
+  selLayerEl.innerHTML = '';
+  layers.forEach(layer => {
+    const opt = document.createElement('option');
+    opt.value       = layer.url;
+    opt.textContent = layer.id;
+    selLayerEl.appendChild(opt);
+  });
+  // Prefer the torso layer as default reference
+  const torsoOpt = Array.from(selLayerEl.options).find(o => o.textContent === 'torso');
+  if (torsoOpt) selLayerEl.value = torsoOpt.value;
+}
+
+async function loadDefaultBgImage() {
+  if (selLayerEl.value) await loadBgImage(selLayerEl.value);
+}
+
+function loadBgImage(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      bgImg = img;
+      render();
+      resolve();
+    };
+    img.onerror = () => {
+      bgImg = null;
+      setStatus('⚠ Could not load image: ' + url);
+      render();
+      resolve();
+    };
+    img.src = ASSETS_BASE + url;
+  });
+}
+
+// =================================================================
+// MESH HELPERS
+// =================================================================
+function initMesh() {
+  locked = new Array(gridCols * gridRows).fill(false);
+}
+
+/** Returns evenly-spaced neutral points for the current grid size. */
+function getNeutralPoints() {
+  const pts = [];
+  for (let row = 0; row < gridRows; row++) {
+    for (let col = 0; col < gridCols; col++) {
+      const nx = gridCols > 1 ? col / (gridCols - 1) : 0.5;
+      const ny = gridRows > 1 ? row / (gridRows - 1) : 0.5;
+      pts.push([nx, ny]);
+    }
+  }
+  return pts;
+}
+
+/** Create fresh poses for the selected animation type. */
+function initPoses() {
+  const def     = ANIM_DEFS[selAnimType];
+  const neutral = getNeutralPoints();
+  poses = def.labels.map(lbl => ({
+    label:  lbl,
+    points: neutral.map(p => [p[0], p[1]])
+  }));
+  curPoseIdx = 0;
+}
+
+// =================================================================
+// POSE LIST UI
+// =================================================================
+function buildPoseList() {
+  poseListEl.innerHTML = '';
+  poses.forEach((pose, i) => {
+    const row = document.createElement('div');
+    row.className  = 'pose-row' + (i === curPoseIdx ? ' active' : '');
+    row.dataset.idx = String(i);
+
+    const num = document.createElement('span');
+    num.className   = 'pose-num';
+    num.textContent = String(i + 1);
+
+    const inp = document.createElement('input');
+    inp.className = 'pose-lbl';
+    inp.type  = 'text';
+    inp.value = pose.label;
+    inp.addEventListener('change', e => {
+      poses[i].label = e.target.value.trim() || poses[i].label;
+    });
+    inp.addEventListener('click', e => e.stopPropagation());
+
+    row.appendChild(num);
+    row.appendChild(inp);
+    row.addEventListener('click', () => selectPose(i));
+    poseListEl.appendChild(row);
+  });
+
+  btnPreview.disabled = poses.length < 2;
+  btnExport.disabled  = !(selSpeciesId && selGender);
+}
+
+function selectPose(i) {
+  if (previewOn) stopPreview();
+  curPoseIdx = i;
+  selIdx     = -1;
+  buildPoseList();
+  render();
+  setStatus('Pose ' + (i + 1) + ': ' + poses[i].label);
+}
+
+// =================================================================
+// CANVAS RENDERING
+// =================================================================
+function render(interpPts) {
+  ctx.clearRect(0, 0, CS, CS);
+
+  // Background image (dimmed to 55% so mesh is legible)
+  if (bgImg) {
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    const iw = bgImg.naturalWidth  || bgImg.width;
+    const ih = bgImg.naturalHeight || bgImg.height;
+    const scale = Math.min(CS / iw, CS / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    const dx = (CS - dw) / 2;
+    const dy = (CS - dh) / 2;
+    ctx.drawImage(bgImg, dx, dy, dw, dh);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#0e1120';
+    ctx.fillRect(0, 0, CS, CS);
+    ctx.fillStyle   = '#3a4060';
+    ctx.font        = '14px sans-serif';
+    ctx.textAlign   = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No image loaded — select species & gender', CS / 2, CS / 2);
+  }
+
+  const pts = interpPts || poses[curPoseIdx]?.points;
+  if (!pts || pts.length === 0) return;
+
+  drawMeshLines(pts);
+  drawMeshPoints(pts, !!interpPts);
+}
+
+/** Convert normalised [0..1] coord to canvas pixel. */
+function toCan(nx, ny) {
+  return [nx * CS, ny * CS];
+}
+
+/** Convert canvas pixels to normalised [0..1]. */
+function toNorm(px, py) {
+  return [
+    Math.max(0, Math.min(1, px / CS)),
+    Math.max(0, Math.min(1, py / CS))
+  ];
+}
+
+function drawMeshLines(pts) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(110, 180, 255, 0.55)';
+  ctx.lineWidth   = 1;
+
+  // Horizontal rows
+  for (let r = 0; r < gridRows; r++) {
+    ctx.beginPath();
+    for (let c = 0; c < gridCols; c++) {
+      const [px, py] = toCan(...pts[r * gridCols + c]);
+      if (c === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  // Vertical columns
+  for (let c = 0; c < gridCols; c++) {
+    ctx.beginPath();
+    for (let r = 0; r < gridRows; r++) {
+      const [px, py] = toCan(...pts[r * gridCols + c]);
+      if (r === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawMeshPoints(pts, isPreview) {
+  pts.forEach(([nx, ny], i) => {
+    const [px, py] = toCan(nx, ny);
+    const isLocked   = locked[i];
+    const isSelected = !isPreview && i === selIdx;
+    const isHovered  = !isPreview && i === hoverIdx && !isDragging;
+
+    const radius = isSelected ? 8 : (isHovered ? 7 : 6);
+
+    // Drop shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur  = 5;
+
+    ctx.beginPath();
+    ctx.arc(px, py, radius, 0, Math.PI * 2);
+
+    if (isLocked)        ctx.fillStyle = '#e74c3c';
+    else if (isSelected) ctx.fillStyle = '#f5c518';
+    else if (isHovered)  ctx.fillStyle = '#2ecc71';
+    else                 ctx.fillStyle = '#4e9af1';
+
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+
+    // Lock X indicator
+    if (isLocked) {
+      const r = 4;
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth   = 1;
+      ctx.beginPath();
+      ctx.moveTo(px - r, py - r); ctx.lineTo(px + r, py + r);
+      ctx.moveTo(px + r, py - r); ctx.lineTo(px - r, py + r);
+      ctx.stroke();
+    }
+  });
+}
+
+// =================================================================
+// POINTER INTERACTION
+// =================================================================
+function getCanvasXY(e) {
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = CS / rect.width;
+  const scaleY = CS / rect.height;
+  return [
+    (e.clientX - rect.left) * scaleX,
+    (e.clientY - rect.top)  * scaleY
+  ];
+}
+
+function findNearest(px, py, maxDist = POINT_CLICK_THRESHOLD) {
+  const pts = poses[curPoseIdx]?.points;
+  if (!pts) return -1;
+  let best = -1, bestD = maxDist;
+  pts.forEach(([nx, ny], i) => {
+    const [cpx, cpy] = toCan(nx, ny);
+    const d = Math.hypot(cpx - px, cpy - py);
+    if (d < bestD) { bestD = d; best = i; }
+  });
+  return best;
+}
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  if (previewOn) { stopPreview(); return; }
+
+  const [px, py] = getCanvasXY(e);
+  const i = findNearest(px, py);
+  if (i >= 0) {
+    selIdx = i;
+    if (!locked[i]) {
+      isDragging = true;
+      dragIdx    = i;
+    }
+  } else {
+    selIdx = -1;
+  }
+  render();
+});
+
+canvas.addEventListener('mousemove', e => {
+  const [px, py] = getCanvasXY(e);
+
+  if (isDragging && dragIdx >= 0) {
+    poses[curPoseIdx].points[dragIdx] = toNorm(px, py);
+    render();
+  } else {
+    const prev = hoverIdx;
+    hoverIdx = findNearest(px, py);
+    if (hoverIdx !== prev) render();
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  isDragging = false;
+  dragIdx    = -1;
+});
+
+canvas.addEventListener('mouseleave', () => {
+  isDragging = false;
+  dragIdx    = -1;
+  hoverIdx   = -1;
+  render();
+});
+
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (previewOn) return;
+
+  const [px, py] = getCanvasXY(e);
+  const i = findNearest(px, py);
+  if (i >= 0) {
+    locked[i] = !locked[i];
+    selIdx    = i;
+    render();
+    setStatus('Point ' + (i + 1) + (locked[i] ? ' locked.' : ' unlocked.'));
+  }
+});
+
+// =================================================================
+// ANIMATION PREVIEW
+// =================================================================
+function togglePreview() {
+  if (previewOn) stopPreview(); else startPreview();
+}
+
+function startPreview() {
+  if (poses.length < 2) return;
+  previewOn  = true;
+  animT      = 0;
+  lastTime   = performance.now();
+  animSpeed  = Math.max(0.1, parseFloat(inpSpeed.value) || 0.8);
+  btnPreview.textContent = '■ Stop Preview';
+  btnPreview.classList.replace('btn-pri', 'btn-warn');
+  rafId = requestAnimationFrame(animLoop);
+  setStatus('Previewing animation…');
+}
+
+function stopPreview() {
+  previewOn = false;
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  btnPreview.textContent = '▶ Preview Animation';
+  btnPreview.classList.replace('btn-warn', 'btn-pri');
+  render();
+  setStatus('Preview stopped.');
+}
+
+function animLoop(now) {
+  if (!previewOn) return;
+
+  const dt  = (now - lastTime) / 1000;
+  lastTime  = now;
+  animT     = (animT + dt / animSpeed) % poses.length;
+
+  const fromI = Math.floor(animT) % poses.length;
+  const toI   = (fromI + 1) % poses.length;
+  const t     = animT - Math.floor(animT);
+  // Ken Perlin's smoothstep (3t² − 2t³) — ease-in/ease-out between keyframes
+  const st = t * t * (3 - 2 * t);
+
+  const fromPts = poses[fromI].points;
+  const toPts   = poses[toI].points;
+  const interp  = fromPts.map(([fx, fy], i) => {
+    const [tx, ty] = toPts[i];
+    return [fx + (tx - fx) * st, fy + (ty - fy) * st];
+  });
+
+  render(interp);
+  rafId = requestAnimationFrame(animLoop);
+}
+
+// =================================================================
+// EXPORT / IMPORT
+// =================================================================
+function exportJSON() {
+  if (!selSpeciesId || !selGender) {
+    alert('Please select a species and gender before exporting.');
+    return;
+  }
+
+  const data = {
+    speciesId:     selSpeciesId,
+    gender:        selGender,
+    animationType: selAnimType,
+    gridCols:      gridCols,
+    gridRows:      gridRows,
+    locked:        locked.slice(),
+    poses:         poses.map(p => ({
+      label:  p.label,
+      points: p.points.map(([x, y]) => [
+        parseFloat(x.toFixed(6)),
+        parseFloat(y.toFixed(6))
+      ])
+    }))
+  };
+
+  const filename = selSpeciesId + '_' + selGender + '_' + selAnimType + '.json';
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  setStatus('Exported: ' + filename);
+}
+
+function importJSON() {
+  const inp   = document.createElement('input');
+  inp.type    = 'file';
+  inp.accept  = '.json,application/json';
+  inp.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const data = JSON.parse(evt.target.result);
+        loadData(data);
+      } catch (err) {
+        alert('Failed to parse JSON: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
+
+function loadData(data) {
+  if (!data.speciesId || !data.gender || !data.animationType ||
+      !Array.isArray(data.poses)) {
+    alert('Invalid mesh deformation JSON — missing required fields.');
+    return;
+  }
+
+  selSpeciesId = data.speciesId;
+  selGender    = data.gender;
+  selAnimType  = data.animationType;
+  gridCols     = data.gridCols || 4;
+  gridRows     = data.gridRows || 4;
+
+  const ptCount = gridCols * gridRows;
+  locked = Array.isArray(data.locked)
+    ? data.locked.slice(0, ptCount)
+    : new Array(ptCount).fill(false);
+  // Pad if locked array was shorter
+  while (locked.length < ptCount) locked.push(false);
+
+  poses = data.poses.map(p => ({
+    label:  p.label,
+    points: p.points.map(pt => [pt[0], pt[1]])
+  }));
+  curPoseIdx = 0;
+
+  // Sync UI controls
+  selSpecies.value  = selSpeciesId;
+  selAnimEl.value   = selAnimType;
+  inpCols.value     = gridCols;
+  inpRows.value     = gridRows;
+
+  buildPoseList();
+  render();
+
+  // Attempt to load species data and image in background
+  loadSpecies(selSpeciesId).catch(() => {});
+
+  setStatus('Imported: ' + selSpeciesId + '_' + selGender + '_' + selAnimType + '.json');
+}
+
+// =================================================================
+// CONTROL EVENT LISTENERS
+// =================================================================
+selSpecies.addEventListener('change', async () => {
+  if (previewOn) stopPreview();
+  selSpeciesId = selSpecies.value;
+  await loadSpecies(selSpeciesId);
+  initMesh();
+  initPoses();
+  buildPoseList();
+  render();
+});
+
+selGenderEl.addEventListener('change', async () => {
+  selGender = selGenderEl.value;
+  refreshLayerOptions();
+  await loadDefaultBgImage();
+  render();
+  btnExport.disabled = !(selSpeciesId && selGender);
+});
+
+selLayerEl.addEventListener('change', async () => {
+  if (selLayerEl.value) await loadBgImage(selLayerEl.value);
+});
+
+selAnimEl.addEventListener('change', () => {
+  if (previewOn) stopPreview();
+  selAnimType = selAnimEl.value;
+  initPoses();
+  buildPoseList();
+  render();
+  setStatus('Switched to ' + ANIM_DEFS[selAnimType].label + ' animation.');
+});
+
+btnPreview.addEventListener('click', togglePreview);
+
+btnRebuild.addEventListener('click', () => {
+  const newCols = Math.max(2, Math.min(16, parseInt(inpCols.value) || 4));
+  const newRows = Math.max(2, Math.min(16, parseInt(inpRows.value) || 4));
+  if (!confirm(
+    'Rebuild the grid to ' + newCols + 'x' + newRows + '?\n' +
+    'This will reset ALL poses to neutral positions.'
+  )) return;
+
+  if (previewOn) stopPreview();
+  gridCols = newCols;
+  gridRows = newRows;
+  initMesh();
+  initPoses();
+  buildPoseList();
+  render();
+  setStatus('Grid rebuilt: ' + gridCols + '×' + gridRows);
+});
+
+btnResetPose.addEventListener('click', () => {
+  if (!confirm('Reset current pose to neutral (evenly-spaced) positions?')) return;
+  poses[curPoseIdx].points = getNeutralPoints();
+  render();
+  setStatus('Pose ' + (curPoseIdx + 1) + ' reset to neutral.');
+});
+
+btnCopyPrev.addEventListener('click', () => {
+  if (curPoseIdx === 0) {
+    setStatus('No previous pose to copy from.');
+    return;
+  }
+  poses[curPoseIdx].points = poses[curPoseIdx - 1].points.map(p => [p[0], p[1]]);
+  render();
+  setStatus('Pose ' + (curPoseIdx + 1) + ' copied from pose ' + curPoseIdx + '.');
+});
+
+btnClearLocks.addEventListener('click', () => {
+  locked.fill(false);
+  render();
+  setStatus('All locks cleared.');
+});
+
+btnExport.addEventListener('click', exportJSON);
+btnImport.addEventListener('click', importJSON);
+
+// =================================================================
+// UTILITIES
+// =================================================================
+function setStatus(msg) {
+  statusEl.textContent = msg;
+}
+
+// =================================================================
+// BOOT
+// =================================================================
+init();
+</script>
+</body>
+</html>
