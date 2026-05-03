@@ -28,6 +28,13 @@
             }
           }
         },
+        "front_exposed": {
+          "layerRole": "base",
+          "image": {
+            "exposedPart": "ear",
+            "colors": ["A"]
+          }
+        },
         "front_trim": {
           "layerRole": "trim",
           "image": {

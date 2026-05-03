@@ -34,9 +34,15 @@
             { id: 'appearance::Mao-ao_M::mao-ao_splayedknot_medium',     label: 'Splayed Knot' },
             { id: 'appearance::Mao-ao_M::mao-ao_long_ponytail',          label: 'Long Ponytail' },
           ]},
-          { slot: 'hairSide', label: 'Side Hair', options: [
+          { slot: 'hairSide', label: 'Side Hair (R)', options: [
             { id: null,                                                     label: 'None' },
             { id: 'appearance::Mao-ao_M::mao-ao_shoulder_length_drape',    label: 'Shoulder Drape' },
+            { id: 'appearance::Mao-ao_M::mao-ao_braid-R',                  label: 'Braid (Right)' },
+            { id: 'appearance::Mao-ao_M::mao-ao_braidcluster-R',           label: 'Braid Cluster (Right)' },
+          ]},
+          { slot: 'hairSideL', label: 'Side Hair (L)', options: [
+            { id: null,                                                     label: 'None' },
+            { id: 'appearance::Mao-ao_M::mao-ao_braid-L',                  label: 'Braid (Left)' },
           ]},
           { slot: 'eyes', label: 'Eyes', options: [
             { id: null,                                              label: 'Default' },
@@ -77,9 +83,15 @@
             { id: 'appearance::Mao-ao_F::mao-ao_splayedknot_medium',     label: 'Splayed Knot' },
             { id: 'appearance::Mao-ao_F::mao-ao_long_ponytail',          label: 'Long Ponytail' },
           ]},
-          { slot: 'hairSide', label: 'Side Hair', options: [
+          { slot: 'hairSide', label: 'Side Hair (R)', options: [
             { id: null,                                                     label: 'None' },
             { id: 'appearance::Mao-ao_F::mao-ao_shoulder_length_drape',    label: 'Shoulder Drape' },
+            { id: 'appearance::Mao-ao_F::mao-ao_braid-R',                  label: 'Braid (Right)' },
+            { id: 'appearance::Mao-ao_F::mao-ao_braidcluster-R',           label: 'Braid Cluster (Right)' },
+          ]},
+          { slot: 'hairSideL', label: 'Side Hair (L)', options: [
+            { id: null,                                                     label: 'None' },
+            { id: 'appearance::Mao-ao_F::mao-ao_braid-L',                  label: 'Braid (Left)' },
           ]},
           { slot: 'eyes', label: 'Eyes', options: [
             { id: null,                                              label: 'Default' },
@@ -118,8 +130,14 @@
             { id: 'appearance::Tletingan_M::tl_longponytail',         label: 'Long Ponytail' },
             { id: 'appearance::Tletingan_M::tl_splayedknot',          label: 'Splayed Knot' },
           ]},
-          { slot: 'hairSide', label: 'Side Hair', options: [
+          { slot: 'hairSide', label: 'Side Hair (R)', options: [
             { id: null, label: 'None' },
+            { id: 'appearance::Tletingan_M::tl_braid-R',              label: 'Braid (Right)' },
+            { id: 'appearance::Tletingan_M::tl_braidcluster-R',       label: 'Braid Cluster (Right)' },
+          ]},
+          { slot: 'hairSideL', label: 'Side Hair (L)', options: [
+            { id: null, label: 'None' },
+            { id: 'appearance::Tletingan_M::tl_braid-L',              label: 'Braid (Left)' },
           ]},
           { slot: 'facialHair', label: 'Facial Hair', options: [
             { id: null,                                                label: 'None' },
@@ -157,8 +175,14 @@
             { id: 'appearance::Kenkari_M::kenk_splayedknot_high_m',     label: 'Splayed Knot (High)' },
             { id: 'appearance::Kenkari_M::kenk_splayedknot_low_m',      label: 'Splayed Knot (Low)' },
           ]},
-          { slot: 'hairSide', label: 'Side Hair', options: [
+          { slot: 'hairSide', label: 'Side Hair (R)', options: [
             { id: null, label: 'None' },
+            { id: 'appearance::Kenkari_M::kenk_braid-R_m',            label: 'Braid (Right)' },
+            { id: 'appearance::Kenkari_M::kenk_braidcluster-R_m',     label: 'Braid Cluster (Right)' },
+          ]},
+          { slot: 'hairSideL', label: 'Side Hair (L)', options: [
+            { id: null, label: 'None' },
+            { id: 'appearance::Kenkari_M::kenk_braid-L_m',            label: 'Braid (Left)' },
           ]},
           { slot: 'facialHair', label: 'Facial Hair', options: [
             { id: null,                                                  label: 'None' },
@@ -191,8 +215,14 @@
             { id: 'appearance::Kenkari_F::kenk_splayedknot_high_f',      label: 'Splayed Knot (High)' },
             { id: 'appearance::Kenkari_F::kenk_splayedknot_low_f',       label: 'Splayed Knot (Low)' },
           ]},
-          { slot: 'hairSide', label: 'Side Hair', options: [
+          { slot: 'hairSide', label: 'Side Hair (R)', options: [
             { id: null, label: 'None' },
+            { id: 'appearance::Kenkari_F::kenk_braid-R_f',            label: 'Braid (Right)' },
+            { id: 'appearance::Kenkari_F::kenk_braidcluster-R_f',     label: 'Braid Cluster (Right)' },
+          ]},
+          { slot: 'hairSideL', label: 'Side Hair (L)', options: [
+            { id: null, label: 'None' },
+            { id: 'appearance::Kenkari_F::kenk_braid-L_f',            label: 'Braid (Left)' },
           ]},
         ],
         colorOptions: [
@@ -565,6 +595,7 @@
     // tintKeys: A = primary clothing tintSlot, B/C = future sub-channels
     const CLOTHING_SLOTS = [
       { key: 'hat',      label: 'Hat',      category: 'hat',      tintKeys: ['HAT',   'HAT_B',   'HAT_C'] },
+      { key: 'hood',     label: 'Hood',     category: 'hood',     tintKeys: ['HOOD',  'HOOD_B',  'HOOD_C'] },
       { key: 'torso',    label: 'Torso',    category: 'torso',    tintKeys: ['TORSO', 'TORSO_B', 'TORSO_C'] },
       { key: 'overwear', label: 'Overwear', category: 'overwear', tintKeys: ['CLOTH', 'CLOTH_B', 'CLOTH_C'] },
     ];
