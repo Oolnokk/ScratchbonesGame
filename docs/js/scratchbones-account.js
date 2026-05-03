@@ -29,6 +29,12 @@
     { id: 'tankanbodywrap_tl_m',   label: 'Tankan Bodywrap',price: 15, category: 'overwear', species: 'tletingan',gender: 'male',   description: 'A wrapped ceremonial bodywrap.' },
     { id: 'tankanbodywrap_kenk_m', label: 'Tankan Bodywrap',price: 15, category: 'overwear', species: 'kenkari',  gender: 'male',   description: 'A wrapped ceremonial bodywrap.' },
     { id: 'tankanwrap_kenk_f',     label: 'Tankan Wrap',    price: 15, category: 'overwear', species: 'kenkari',  gender: 'female', description: 'A wrapped ceremonial garment.' },
+    // Hoods — species+gender specific
+    { id: 'fine_hood_mao-ao_m', label: 'Fine Hood', price: 15, category: 'hood', species: 'mao-ao',    gender: 'male',   description: 'A finely crafted hood with trim.' },
+    { id: 'fine_hood_mao-ao_f', label: 'Fine Hood', price: 15, category: 'hood', species: 'mao-ao',    gender: 'female', description: 'A finely crafted hood with trim.' },
+    { id: 'fine_hood_kenk_m',   label: 'Fine Hood', price: 15, category: 'hood', species: 'kenkari',   gender: 'male',   description: 'A finely crafted hood with trim.' },
+    { id: 'fine_hood_kenk_f',   label: 'Fine Hood', price: 15, category: 'hood', species: 'kenkari',   gender: 'female', description: 'A finely crafted hood with trim.' },
+    { id: 'fine_hood_tl',       label: 'Fine Hood', price: 15, category: 'hood', species: 'tletingan', gender: 'male',   description: 'A finely crafted hood with trim.' },
   ];
 
   // Dyes set a bodyColor slot (CLOTH, HAT, TORSO, …) to a specific tint.
