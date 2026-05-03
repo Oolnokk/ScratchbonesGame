@@ -201,7 +201,7 @@ window.SCRATCHBONES_CONFIG = {
       }
     },
     "timers": {
-      "challengeSeconds": 15,
+      "challengeSeconds": 7,
       "challengeIntroMs": 2200,
       "aiThinkMs": 650,
       "aiDecisionDelays": {
