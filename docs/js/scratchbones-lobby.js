@@ -1204,9 +1204,11 @@
     // In PvE (NPC fill) mode, fill any remaining seats with AI players
     if (_fillWithNpcs) {
       const npcNames = ['Rook', 'Sable', 'Grim', 'Vex'];
+      let npcIndex = 0;
       for (let seat = 0; seat < _onlinePlayerCount; seat++) {
         if (!humanSeats.includes(seat)) {
-          playerNames[seat] = npcNames[(seat - humanSeats.length) % npcNames.length] || `NPC ${seat + 1}`;
+          playerNames[seat] = npcNames[npcIndex % npcNames.length] || `NPC ${seat + 1}`;
+          npcIndex++;
         }
       }
     }

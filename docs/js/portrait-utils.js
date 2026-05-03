@@ -151,8 +151,8 @@ function shouldRenderBlink(headUrl, nowMs) {
       state.flurryBlinksLeft--;
       state.nextBlinkAtMs = state.closeUntilMs + cfg.flurryIntervalMs;
     } else if (Math.random() < cfg.flurryChance) {
-      const extra = cfg.flurryCountMin + Math.floor(Math.random() * (cfg.flurryCountMax - cfg.flurryCountMin + 1));
-      state.flurryBlinksLeft = extra;
+      const flurryCount = cfg.flurryCountMin + Math.floor(Math.random() * (cfg.flurryCountMax - cfg.flurryCountMin + 1));
+      state.flurryBlinksLeft = flurryCount;
       state.nextBlinkAtMs = state.closeUntilMs + cfg.flurryIntervalMs;
     } else {
       state.nextBlinkAtMs = state.closeUntilMs + minGap + Math.random() * (maxGap - minGap);
