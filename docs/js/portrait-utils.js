@@ -213,10 +213,12 @@ function loadImg(relPath) {
 // ── CSS filter helpers ─────────────────────────────────────
 
 function buildCSSFilter(h, s, v) {
+  const hueOffset = (window.SCRATCHBONES_CONFIG?.clothingHueOffset) ?? 0;
   const sat = Math.max(0, 1 + (Number(s) || 0));
   const bri = Math.max(0, 1 + (Number(v) || 0));
-  if ((Number(h) || 0) === 0 && sat === 1 && bri === 1) return 'none';
-  return `hue-rotate(${(Number(h) || 0).toFixed(1)}deg) saturate(${sat.toFixed(3)}) brightness(${bri.toFixed(3)})`;
+  const finalH = (Number(h) || 0) + hueOffset;
+  if (finalH === 0 && sat === 1 && bri === 1) return 'none';
+  return `hue-rotate(${finalH.toFixed(1)}deg) saturate(${sat.toFixed(3)}) brightness(${bri.toFixed(3)})`;
 }
 
 function makeCSSFilter(color) {

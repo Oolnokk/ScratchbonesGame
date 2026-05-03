@@ -194,6 +194,9 @@
   let _lobbyPortraitCosmetics = null;
   let _lobbyPortraitLoading = false;
 
+  // Collections: which slot's dye panel is open (null | 'hat' | 'torso' | 'overwear')
+  let _activeDyeSlot = null;
+
   // ── Helpers ────────────────────────────────────────────────
 
   function esc(str) {
@@ -322,9 +325,15 @@
       applyEquip('hat', 'hat');
       applyEquip('torso', 'torsoCosmetic');
       applyEquip('overwear', 'armCosmetic');
-      const dyes = acc.getAppliedDyes ? acc.getAppliedDyes() : {};
-      if (dyes.CLOTH) profile.bodyColors = { ...(profile.bodyColors || {}), CLOTH: dyes.CLOTH };
-      if (dyes.HAT)   profile.bodyColors = { ...(profile.bodyColors || {}), HAT: dyes.HAT };
+      const dyeIds = acc.getAppliedDyes ? acc.getAppliedDyes() : {};
+      const catalog = acc.getDyeCatalog ? acc.getDyeCatalog() : [];
+      for (const ch of ['A', 'B', 'C']) {
+        const id = dyeIds[ch];
+        if (id) {
+          const dye = catalog.find(d => d.id === id);
+          if (dye) profile.bodyColors = { ...(profile.bodyColors || {}), [ch]: { ...dye.color } };
+        }
+      }
     }
     return profile;
   }
@@ -437,17 +446,7 @@
       return `<button class="sb-sel-btn${gender === g ? ' selected' : ''}${!avail ? ' disabled' : ''}" data-gender="${g}"${!avail ? ' disabled' : ''}>${cap(g)}</button>`;
     }).join('');
 
-    // Hat selector
-    const hatVal = cosmetics.hat || '';
-    const hatOpts = HAT_OPTS.map(o =>
-      `<option value="${esc(o.id || '')}"${hatVal === (o.id || '') ? ' selected' : ''}>${esc(o.label)}</option>`
-    ).join('');
-    let slotsHtml = `
-      <div class="sb-cosmetic-row">
-        <label class="sb-cosmetic-label">Hat</label>
-        <select class="sb-cosmetic-select" data-slot="hat">${hatOpts}</select>
-      </div>`;
-
+    let slotsHtml = '';
     if (genderData && genderData.slots) {
       for (const slotDef of genderData.slots) {
         const cur = cosmetics[slotDef.slot] || '';
@@ -507,47 +506,59 @@
 
   function renderCollections() {
     const acc = window.ScratchbonesAccount;
-    const ap = acc ? acc.getAppearance() : { speciesId: 'mao-ao', gender: 'male' };
-    const catalog = acc ? acc.getShopCatalogForAppearance(ap.speciesId, ap.gender) : [];
-    const ownedItems = catalog.filter(item => acc && acc.isUnlocked(item.id));
+    const fullCatalog = acc ? acc.getShopCatalog() : [];
     const dyes = acc ? acc.getDyeCatalog() : [];
     const appliedDyes = acc ? acc.getAppliedDyes() : {};
 
-    // Owned clothing
-    let itemsHtml = '';
-    if (ownedItems.length) {
-      const cats = [...new Set(ownedItems.map(c => c.category))];
-      for (const cat of cats) {
-        itemsHtml += `<div class="sb-shop-cat">${cap(cat)}</div>`;
-        for (const item of ownedItems.filter(c => c.category === cat)) {
-          const equipped = acc && acc.isEquipped(item.id);
-          const btn = equipped
-            ? `<button class="sb-shop-action equipped" data-action="unequip" data-id="${esc(item.id)}">Equipped ✓</button>`
-            : `<button class="sb-shop-action" data-action="equip" data-id="${esc(item.id)}">Equip</button>`;
-          itemsHtml += `
-            <div class="sb-shop-item">
-              <div class="sb-shop-info">
-                <div class="sb-shop-name">${esc(item.label)}</div>
-                <div class="sb-shop-desc">${esc(item.description)}</div>
-              </div>
-              ${btn}
-            </div>`;
-        }
-      }
-    } else {
-      itemsHtml = '<div class="sb-muted" style="font-size:0.82em;">No clothing owned yet — visit the Shop!</div>';
-    }
+    const CLOTHING_SLOTS = [
+      { key: 'hat',      label: 'Hat',      category: 'hat' },
+      { key: 'torso',    label: 'Torso',    category: 'torso' },
+      { key: 'overwear', label: 'Overwear', category: 'overwear' },
+    ];
 
-    // Dyes
-    const appliedCloth = appliedDyes.CLOTH;
-    const dyeSwatches = dyes.filter(d => acc && acc.isDyeOwned(d.id)).map(d => {
-      const isApplied = appliedCloth && Math.abs(appliedCloth.h - d.color.h) < 1 && Math.abs(appliedCloth.v - d.color.v) < 0.05;
-      const style = swatchStyle('#c0a060', d.color.h, d.color.s, d.color.v);
-      return `<button class="sb-dye-btn${isApplied ? ' applied' : ''}" data-dye-id="${esc(d.id)}"
-        style="${style}" title="${esc(d.label)} ${isApplied ? '(applied)' : ''}"></button>`;
-    }).join('');
-    const clearBtn = appliedCloth
-      ? `<button class="sb-btn-ghost sb-dye-clear" data-dye-slot="CLOTH" style="font-size:0.78em;padding:4px 10px;">Clear</button>` : '';
+    const ownedDyes = dyes.filter(d => acc && acc.isDyeOwned(d.id));
+
+    let slotsHtml = '';
+    for (const slot of CLOTHING_SLOTS) {
+      const ownedItems = fullCatalog.filter(item => item.category === slot.category && acc && acc.isUnlocked(item.id));
+      const equippedId = acc ? acc.getEquippedForCategory(slot.category) : null;
+      const opts = [
+        `<option value="">None</option>`,
+        ...ownedItems.map(item =>
+          `<option value="${esc(item.id)}"${item.id === equippedId ? ' selected' : ''}>${esc(item.label)}</option>`
+        ),
+      ].join('');
+      const isDyeOpen = _activeDyeSlot === slot.key;
+      slotsHtml += `
+        <div class="sb-slot-row">
+          <span class="sb-slot-label">${esc(slot.label)}</span>
+          <select class="sb-cosmetic-select sb-slot-select" data-slot-cat="${slot.category}"${!ownedItems.length && !equippedId ? ' disabled' : ''}>${opts}</select>
+          <button class="sb-btn-ghost sb-dye-toggle${isDyeOpen ? ' active' : ''}" data-toggle-dye="${slot.key}">Dye ▾</button>
+        </div>`;
+      if (isDyeOpen) {
+        let dyeRows = ownedDyes.map(d => {
+          const style = swatchStyle('#c0a060', d.color.h, d.color.s, d.color.v);
+          return `
+            <div class="sb-dye-row">
+              <span class="sb-dye-dot" style="${style}"></span>
+              <span class="sb-dye-name">${esc(d.label)}</span>
+              <button class="sb-apply-btn${appliedDyes.A === d.id ? ' applied' : ''}" data-apply-dye="${esc(d.id)}" data-channel="A">A</button>
+              <button class="sb-apply-btn${appliedDyes.B === d.id ? ' applied' : ''}" data-apply-dye="${esc(d.id)}" data-channel="B">B</button>
+              <button class="sb-apply-btn${appliedDyes.C === d.id ? ' applied' : ''}" data-apply-dye="${esc(d.id)}" data-channel="C">C</button>
+            </div>`;
+        }).join('');
+        if (!dyeRows) dyeRows = '<div class="sb-muted" style="font-size:0.8em;">No dyes owned.</div>';
+        const clearBtns = ['A', 'B', 'C'].filter(ch => appliedDyes[ch]).map(ch =>
+          `<button class="sb-btn-ghost sb-apply-btn" data-clear-channel="${ch}">Clear ${ch}</button>`
+        ).join('');
+        slotsHtml += `
+          <div class="sb-dye-panel">
+            <div class="sb-muted" style="font-size:0.74em;margin-bottom:5px;">Apply dye to body color — A: primary · B: secondary · C: highlight</div>
+            ${dyeRows}
+            ${clearBtns ? `<div class="sb-dye-clears">${clearBtns}</div>` : ''}
+          </div>`;
+      }
+    }
 
     return `
       <div class="sb-card sb-wide-card">
@@ -560,14 +571,8 @@
             <canvas id="sb-col-canvas" width="160" height="160" class="sb-portrait-canvas"></canvas>
           </div>
           <div class="sb-col-content">
-            <div class="sb-label">Owned Items
-              <span class="sb-muted" style="font-size:0.78em;margin-left:4px;">
-                (${esc(SPECIES_DATA[ap.speciesId]?.label || ap.speciesId)}, ${esc(cap(ap.gender))})
-              </span>
-            </div>
-            <div class="sb-col-items">${itemsHtml}</div>
-            <div class="sb-label" style="margin-top:10px;">Clothing Dye ${clearBtn}</div>
-            <div class="sb-dye-strip">${dyeSwatches || '<div class="sb-muted">No dyes owned</div>'}</div>
+            <div class="sb-label">Clothing</div>
+            <div class="sb-slot-rows">${slotsHtml}</div>
           </div>
         </div>
       </div>`;
@@ -827,6 +832,7 @@
 
     // Back button
     document.getElementById('sb-back-btn')?.addEventListener('click', () => {
+      if (_screen === 'collections') _activeDyeSlot = null;
       if (['appearance', 'collections', 'shop', 'online'].includes(_screen)) _screen = 'main';
       else if (['online-host-setup', 'online-join'].includes(_screen)) _screen = 'online';
       else _screen = 'main';
@@ -920,16 +926,40 @@
 
     // ── Collections ────────────────────────────────────────────
 
-    el.querySelectorAll('[data-dye-id]').forEach(btn => {
+    el.querySelectorAll('[data-slot-cat]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const acc = window.ScratchbonesAccount;
+        if (!acc) return;
+        const cat = sel.dataset.slotCat;
+        const id = sel.value;
+        if (!id) {
+          const equipped = acc.getEquippedForCategory(cat);
+          if (equipped) acc.unequipCosmetic(equipped);
+        } else {
+          acc.equipCosmetic(id);
+        }
+        renderPreviewCanvas('sb-col-canvas', acc.getAppearance());
+      });
+    });
+
+    el.querySelectorAll('[data-toggle-dye]').forEach(btn => {
       btn.addEventListener('click', () => {
-        window.ScratchbonesAccount?.applyDye(btn.dataset.dyeId);
+        const key = btn.dataset.toggleDye;
+        _activeDyeSlot = (_activeDyeSlot === key) ? null : key;
         render();
       });
     });
 
-    el.querySelectorAll('[data-dye-slot]').forEach(btn => {
+    el.querySelectorAll('[data-apply-dye]').forEach(btn => {
       btn.addEventListener('click', () => {
-        window.ScratchbonesAccount?.removeDye(btn.dataset.dyeSlot);
+        window.ScratchbonesAccount?.applyDye(btn.dataset.applyDye, btn.dataset.channel);
+        render();
+      });
+    });
+
+    el.querySelectorAll('[data-clear-channel]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window.ScratchbonesAccount?.removeDye(btn.dataset.clearChannel);
         render();
       });
     });

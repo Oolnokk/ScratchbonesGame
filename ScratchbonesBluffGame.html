@@ -2134,7 +2134,7 @@
     .sb-swatch-btn:hover { border-color: rgba(242,208,143,0.45); transform: scale(1.08); }
     .sb-swatch-btn.selected { border-color: #f2d08f; transform: scale(1.08); }
 
-    /* ── Dye strip ──────────────────────────────────────────── */
+    /* ── Dye strip (legacy, kept for compat) ───────────────── */
     .sb-dye-strip { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
     .sb-dye-btn {
       width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent;
@@ -2142,6 +2142,38 @@
     }
     .sb-dye-btn:hover { border-color: rgba(242,208,143,0.55); transform: scale(1.1); }
     .sb-dye-btn.applied { border-color: #f2d08f; box-shadow: 0 0 6px rgba(242,208,143,0.55); }
+
+    /* ── Collections: per-slot clothing rows ────────────────── */
+    .sb-slot-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+    .sb-slot-row { display: flex; align-items: center; gap: 8px; }
+    .sb-slot-label { font-size: 0.8em; color: rgba(242,208,143,0.55); min-width: 64px; flex-shrink: 0; }
+    .sb-slot-select { flex: 1; min-width: 0; }
+    .sb-dye-toggle {
+      flex-shrink: 0; font-size: 0.78em; padding: 4px 10px;
+      border-radius: 5px; transition: background .12s, border-color .12s;
+    }
+    .sb-dye-toggle.active { background: rgba(200,153,82,0.18); border-color: rgba(200,153,82,0.6); color: #f2d08f; }
+
+    /* ── Dye panel ──────────────────────────────────────────── */
+    .sb-dye-panel {
+      margin: 4px 0 6px 72px; padding: 8px 10px;
+      background: rgba(242,208,143,0.04); border: 1px solid rgba(242,208,143,0.12);
+      border-radius: 6px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .sb-dye-row { display: flex; align-items: center; gap: 7px; }
+    .sb-dye-dot {
+      width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+      border: 1px solid rgba(242,208,143,0.18);
+    }
+    .sb-dye-name { flex: 1; font-size: 0.82em; color: rgba(242,208,143,0.75); }
+    .sb-apply-btn {
+      background: rgba(242,208,143,0.06); border: 1px solid rgba(242,208,143,0.22);
+      border-radius: 4px; color: rgba(242,208,143,0.65); font-family: inherit;
+      font-size: 0.75em; padding: 2px 8px; cursor: pointer; transition: background .1s;
+    }
+    .sb-apply-btn:hover { background: rgba(242,208,143,0.14); color: #f2d08f; }
+    .sb-apply-btn.applied { background: rgba(200,153,82,0.22); border-color: rgba(200,153,82,0.65); color: #f2d08f; }
+    .sb-dye-clears { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
 
     /* ── Hot-seat cover screen ──────────────────────────────── */
     #sb-cover {

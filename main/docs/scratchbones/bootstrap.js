@@ -4672,11 +4672,17 @@ import { createLayerManager } from './ui/layerManager.js';
         applySlot('hat', 'hat');
         applySlot('torso', 'torsoCosmetic');
         applySlot('overwear', 'armCosmetic');
-        // Apply clothing dyes
-        if (acc.getAppliedDyes) {
-          const dyes = acc.getAppliedDyes();
-          if (dyes.CLOTH) player.profile.bodyColors = { ...(player.profile.bodyColors || {}), CLOTH: dyes.CLOTH };
-          if (dyes.HAT)   player.profile.bodyColors = { ...(player.profile.bodyColors || {}), HAT: dyes.HAT };
+        // Apply dyes to body color channels A/B/C
+        if (acc.getAppliedDyes && acc.getDyeCatalog) {
+          const dyeIds = acc.getAppliedDyes();
+          const catalog = acc.getDyeCatalog();
+          for (const ch of ['A', 'B', 'C']) {
+            const id = dyeIds[ch];
+            if (id) {
+              const dye = catalog.find(d => d.id === id);
+              if (dye) player.profile.bodyColors = { ...(player.profile.bodyColors || {}), [ch]: { ...dye.color } };
+            }
+          }
         }
       }
     }

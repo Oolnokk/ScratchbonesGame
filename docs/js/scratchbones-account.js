@@ -86,7 +86,9 @@
         _account.appearance = { ...base.appearance, ...(parsed.appearance || {}) };
         _account.appearance.cosmetics = { ...(parsed.appearance?.cosmetics || {}) };
         _account.appearance.bodyColors = { ...base.appearance.bodyColors, ...(parsed.appearance?.bodyColors || {}) };
-        _account.appliedDyes = { ...(parsed.appliedDyes || {}) };
+        // Migrate old CLOTH/HAT color-object format to new A/B/C dye-ID format
+        const rawDyes = parsed.appliedDyes || {};
+        _account.appliedDyes = ('CLOTH' in rawDyes || 'HAT' in rawDyes) ? {} : { ...rawDyes };
         // Grant starter dyes to existing accounts that don't have them yet
         if (!_account.ownedDyes || !_account.ownedDyes.length) {
           _account.ownedDyes = [...STARTER_DYE_IDS];
@@ -236,12 +238,12 @@
     return getAccount().appliedDyes || {};
   }
 
-  function applyDye(dyeId) {
+  function applyDye(dyeId, channel) {
+    if (!['A', 'B', 'C'].includes(channel)) return false;
     const acc = getAccount();
     if (!(acc.ownedDyes || []).includes(dyeId)) return false;
-    const dye = DYE_CATALOG.find(d => d.id === dyeId);
-    if (!dye) return false;
-    acc.appliedDyes = { ...(acc.appliedDyes || {}), [dye.dyeSlot]: { ...dye.color } };
+    if (!DYE_CATALOG.find(d => d.id === dyeId)) return false;
+    acc.appliedDyes = { ...(acc.appliedDyes || {}), [channel]: dyeId };
     save();
     return true;
   }
