@@ -318,20 +318,21 @@
     // Apply equipped shop items and dyes
     const acc = window.ScratchbonesAccount;
     if (acc) {
-      const applyEquip = (cat, key) => {
+      const none = { id: 'none', tintSlot: null, layers: [] };
+      const applyEquip = (cat, key, noneOpt) => {
         const id = acc.getEquippedForCategory(cat);
-        if (id && optionCache?.has(id)) profile[key] = optionCache.get(id);
+        profile[key] = (id && optionCache?.has(id)) ? optionCache.get(id) : (noneOpt ?? none);
       };
-      applyEquip('hat', 'hat');
-      applyEquip('torso', 'torsoCosmetic');
-      applyEquip('overwear', 'armCosmetic');
+      applyEquip('hat', 'hat', hatOptions[0]);
+      applyEquip('torso', 'torsoCosmetic', torsoPortraitOptions[0]);
+      applyEquip('overwear', 'armCosmetic', armPortraitOptions[0]);
+      // Apply clothing dyes (keys are tintSlot names: HAT, TORSO, CLOTH, ...)
       const dyeIds = acc.getAppliedDyes ? acc.getAppliedDyes() : {};
       const catalog = acc.getDyeCatalog ? acc.getDyeCatalog() : [];
-      for (const ch of ['A', 'B', 'C']) {
-        const id = dyeIds[ch];
-        if (id) {
-          const dye = catalog.find(d => d.id === id);
-          if (dye) profile.bodyColors = { ...(profile.bodyColors || {}), [ch]: { ...dye.color } };
+      for (const [tintKey, dyeId] of Object.entries(dyeIds)) {
+        if (dyeId) {
+          const dye = catalog.find(d => d.id === dyeId);
+          if (dye) profile.bodyColors = { ...(profile.bodyColors || {}), [tintKey]: { ...dye.color } };
         }
       }
     }
@@ -510,11 +511,13 @@
     const dyes = acc ? acc.getDyeCatalog() : [];
     const appliedDyes = acc ? acc.getAppliedDyes() : {};
 
+    // tintKeys: A = primary clothing tintSlot, B/C = future sub-channels
     const CLOTHING_SLOTS = [
-      { key: 'hat',      label: 'Hat',      category: 'hat' },
-      { key: 'torso',    label: 'Torso',    category: 'torso' },
-      { key: 'overwear', label: 'Overwear', category: 'overwear' },
+      { key: 'hat',      label: 'Hat',      category: 'hat',      tintKeys: ['HAT',   'HAT_B',   'HAT_C'] },
+      { key: 'torso',    label: 'Torso',    category: 'torso',    tintKeys: ['TORSO', 'TORSO_B', 'TORSO_C'] },
+      { key: 'overwear', label: 'Overwear', category: 'overwear', tintKeys: ['CLOTH', 'CLOTH_B', 'CLOTH_C'] },
     ];
+    const DYE_SWATCH_BASE = '#7dc89a'; // mint — matches the authored asset base color
 
     const ownedDyes = dyes.filter(d => acc && acc.isDyeOwned(d.id));
 
@@ -536,24 +539,25 @@
           <button class="sb-btn-ghost sb-dye-toggle${isDyeOpen ? ' active' : ''}" data-toggle-dye="${slot.key}">Dye ▾</button>
         </div>`;
       if (isDyeOpen) {
+        const [keyA, keyB, keyC] = slot.tintKeys;
         let dyeRows = ownedDyes.map(d => {
-          const style = swatchStyle('#c0a060', d.color.h, d.color.s, d.color.v);
+          const style = swatchStyle(DYE_SWATCH_BASE, d.color.h, d.color.s, d.color.v);
           return `
             <div class="sb-dye-row">
               <span class="sb-dye-dot" style="${style}"></span>
               <span class="sb-dye-name">${esc(d.label)}</span>
-              <button class="sb-apply-btn${appliedDyes.A === d.id ? ' applied' : ''}" data-apply-dye="${esc(d.id)}" data-channel="A">A</button>
-              <button class="sb-apply-btn${appliedDyes.B === d.id ? ' applied' : ''}" data-apply-dye="${esc(d.id)}" data-channel="B">B</button>
-              <button class="sb-apply-btn${appliedDyes.C === d.id ? ' applied' : ''}" data-apply-dye="${esc(d.id)}" data-channel="C">C</button>
+              <button class="sb-apply-btn${appliedDyes[keyA] === d.id ? ' applied' : ''}" data-apply-dye="${esc(d.id)}" data-tint-key="${keyA}">A</button>
+              <button class="sb-apply-btn${appliedDyes[keyB] === d.id ? ' applied' : ''}" data-apply-dye="${esc(d.id)}" data-tint-key="${keyB}">B</button>
+              <button class="sb-apply-btn${appliedDyes[keyC] === d.id ? ' applied' : ''}" data-apply-dye="${esc(d.id)}" data-tint-key="${keyC}">C</button>
             </div>`;
         }).join('');
         if (!dyeRows) dyeRows = '<div class="sb-muted" style="font-size:0.8em;">No dyes owned.</div>';
-        const clearBtns = ['A', 'B', 'C'].filter(ch => appliedDyes[ch]).map(ch =>
-          `<button class="sb-btn-ghost sb-apply-btn" data-clear-channel="${ch}">Clear ${ch}</button>`
+        const clearBtns = slot.tintKeys.filter(k => appliedDyes[k]).map((k, i) =>
+          `<button class="sb-btn-ghost sb-apply-btn" data-clear-channel="${k}">Clear ${['A','B','C'][i]}</button>`
         ).join('');
         slotsHtml += `
           <div class="sb-dye-panel">
-            <div class="sb-muted" style="font-size:0.74em;margin-bottom:5px;">Apply dye to body color — A: primary · B: secondary · C: highlight</div>
+            <div class="sb-muted" style="font-size:0.74em;margin-bottom:5px;">Dye this item — A: primary color · B/C: sub-channels (future)</div>
             ${dyeRows}
             ${clearBtns ? `<div class="sb-dye-clears">${clearBtns}</div>` : ''}
           </div>`;
@@ -952,7 +956,7 @@
 
     el.querySelectorAll('[data-apply-dye]').forEach(btn => {
       btn.addEventListener('click', () => {
-        window.ScratchbonesAccount?.applyDye(btn.dataset.applyDye, btn.dataset.channel);
+        window.ScratchbonesAccount?.applyDye(btn.dataset.applyDye, btn.dataset.tintKey);
         render();
       });
     });

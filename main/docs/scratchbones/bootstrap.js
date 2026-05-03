@@ -4665,22 +4665,22 @@ import { createLayerManager } from './ui/layerManager.js';
       for (const player of state.players) {
         if (!player.isHuman || !player.profile) continue;
         const oc = _portraitCosmetics.optionCache;
+        const none = { id: 'none', tintSlot: null, layers: [] };
         const applySlot = (category, profileKey) => {
           const id = acc.getEquippedForCategory(category);
-          if (id && oc?.has(id)) player.profile[profileKey] = oc.get(id);
+          player.profile[profileKey] = (id && oc?.has(id)) ? oc.get(id) : none;
         };
         applySlot('hat', 'hat');
         applySlot('torso', 'torsoCosmetic');
         applySlot('overwear', 'armCosmetic');
-        // Apply dyes to body color channels A/B/C
+        // Apply clothing dyes (keys are tintSlot names: HAT, TORSO, CLOTH, ...)
         if (acc.getAppliedDyes && acc.getDyeCatalog) {
           const dyeIds = acc.getAppliedDyes();
           const catalog = acc.getDyeCatalog();
-          for (const ch of ['A', 'B', 'C']) {
-            const id = dyeIds[ch];
-            if (id) {
-              const dye = catalog.find(d => d.id === id);
-              if (dye) player.profile.bodyColors = { ...(player.profile.bodyColors || {}), [ch]: { ...dye.color } };
+          for (const [tintKey, dyeId] of Object.entries(dyeIds)) {
+            if (dyeId) {
+              const dye = catalog.find(d => d.id === dyeId);
+              if (dye) player.profile.bodyColors = { ...(player.profile.bodyColors || {}), [tintKey]: { ...dye.color } };
             }
           }
         }
@@ -5556,7 +5556,14 @@ import { createLayerManager } from './ui/layerManager.js';
           ? `${basePanelTitle} · ${projectionUiState.lastSelectedProjId}`
           : basePanelTitle;
         if (!projectionUiState.lastSelectedProjId) {
-          varsPanelBody.innerHTML = '<div class="projVarHint">Select an outlined element in map mode, then open Vars.</div>';
+          const hueOff = (window.SCRATCHBONES_CONFIG?.clothingHueOffset) ?? 0;
+          varsPanelBody.innerHTML = `
+            <div class="projVarHint">Global settings — select an outlined element to edit its vars.</div>
+            <label class="projVarRow">
+              <span class="projVarLabel">clothing hue offset</span>
+              <input class="projVarInput" data-global-setting="clothingHueOffset" data-kind="number" type="number" step="1" value="${hueOff}">
+              <input class="projVarInput" data-global-setting="clothingHueOffset" data-kind="range"  type="range"  min="-180" max="180" step="1" value="${hueOff}">
+            </label>`;
           return;
         }
         const relatedVars = resolveRelatedVars(projectionUiState.lastSelectedProjId, projectionUiState.lastSelectedSourceEl);
@@ -5767,6 +5774,17 @@ import { createLayerManager } from './ui/layerManager.js';
           if (!Number.isFinite(numeric)) return;
           updateAuthoredBox(getSelectedAuthoredBox(), { [authoredField]: numeric });
           updateEditorStatus(`Inspector updated ${getSelectedAuthoredBox()}.${authoredField}=${Math.round(numeric)}.`);
+          return;
+        }
+        const globalInput = event.target.closest('[data-global-setting]');
+        if (globalInput) {
+          const setting = globalInput.dataset.globalSetting;
+          const val = parseFloat(globalInput.value);
+          if (!Number.isFinite(val)) return;
+          window.SCRATCHBONES_CONFIG = { ...(window.SCRATCHBONES_CONFIG || {}), [setting]: val };
+          varsPanelBody.querySelectorAll(`[data-global-setting="${setting}"]`).forEach(el => {
+            if (el !== globalInput) el.value = val;
+          });
           return;
         }
         const input = event.target.closest('.projVarInput');
