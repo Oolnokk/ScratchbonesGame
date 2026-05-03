@@ -217,9 +217,13 @@ window.SCRATCHBONES_CONFIG = {
     "portrait": {
       "blink": {
         "enabled": true,
-        "minIntervalMs": 1800,
-        "maxIntervalMs": 7000,
-        "durationMs": 140
+        "minIntervalMs": 2500,
+        "maxIntervalMs": 6000,
+        "durationMs": 140,
+        "flurryChance": 0.18,
+        "flurryCountMin": 1,
+        "flurryCountMax": 2,
+        "flurryIntervalMs": 280
       }
     },
     "ai": {
@@ -397,6 +401,7 @@ window.SCRATCHBONES_CONFIG = {
           "liarBurstFontRem": 3.2,
           "liarBurstDurationSec": 3.2,
           "liarBurstEndYPct": -180,
+          "liarBurstOffsetXPx": -232,
           "betActionBurstClampInsetPx": 24,
           "revealDurationMs": 4200,
           "foldDurationMs": 2600

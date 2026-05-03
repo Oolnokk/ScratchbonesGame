@@ -1183,6 +1183,7 @@ import { createLayerManager } from './ui/layerManager.js';
       applyEquippedCosmeticsToHumanPlayers();
       applyAiNamesByPortraitCulture();
       for (const p of state.players) logPlayerPortraitXforms(p);
+      startPortraitLoop();
       state.leaderIndex = rngInt(0, state.players.length - 1);
       state.currentTurn = state.leaderIndex;
       setBanner(isHumanSeat(state.currentTurn) ? SCRATCHBONES_GAME.uiText.yourLeadBanner : `${seatLabel(state.currentTurn)} opens the round.`);
@@ -3177,6 +3178,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const liarBurstFontRem = clampNumber(Number(cinematicLayout.liarBurstFontRem) || 3.2, 1, 7);
       const liarBurstDurationSec = clampNumber(Number(cinematicLayout.liarBurstDurationSec) || 3.2, 0.6, 8);
       const liarBurstEndYPct = clampNumber(Number(cinematicLayout.liarBurstEndYPct) || -180, -320, -110);
+      const liarBurstOffsetXPx = Number.isFinite(Number(cinematicLayout.liarBurstOffsetXPx)) ? Number(cinematicLayout.liarBurstOffsetXPx) : -232;
       const bettingTitleOffsetY = cssLengthOrDefault(bettingLayout.titleOffsetY, '-80%');
       const bettingChoiceOffsetY = cssLengthOrDefault(bettingLayout.choiceOffsetY, '115%');
       const bettingLeftSlotOffsetX = cssLengthOrDefault(bettingLayout.leftSlotOffsetX, '260px');
@@ -3272,6 +3274,7 @@ import { createLayerManager } from './ui/layerManager.js';
       setCssVar('--layout-liar-burst-font', `${liarBurstFontRem.toFixed(3)}rem`);
       setCssVar('--layout-liar-burst-duration', `${liarBurstDurationSec.toFixed(3)}s`);
       setCssVar('--layout-liar-burst-end-y', `${liarBurstEndYPct.toFixed(2)}%`);
+      setCssVar('--layout-liar-burst-offset-x', `${liarBurstOffsetXPx.toFixed(2)}px`);
       setCssVar('--layout-ui-tabletop-url', tabletopImageSrc ? `url("${tabletopImageSrc}")` : 'none');
       setCssVar('--layout-flame-x', `${(flameXPct * 100).toFixed(2)}%`);
       setCssVar('--layout-flame-y', `${(flameYPct * 100).toFixed(2)}%`);
@@ -4259,10 +4262,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const clusterCinematicActive = claimClusterEnabled && !!cinematicMode;
       const renderSmuggleTableOverlay = () => {
         if (!state.smuggleSelection) return '';
-        const centerXPct = clampNumber(claimClusterPolicy.geometry.centerXPct, 0, 1) * 100;
-        const clusterTopPct = (clampNumber(claimClusterPolicy.geometry.centerYPct, 0, 1) - (clampNumber(claimClusterPolicy.geometry.heightPctOfTableView, 0.05, 1) / 2)) * 100;
-        const centerYPct = clusterTopPct - 2;
-        return `<div class="fit-target fit-0" data-proj-id="table-view" style="z-index:72;pointer-events:none;"><div style="position:absolute;left:${centerXPct.toFixed(2)}%;top:${centerYPct.toFixed(2)}%;transform:translate(-50%,-100%);text-align:center;pointer-events:none;"><div class="fx-burst-shell"><div class="cin-action-burst burst-liar">SMUGGLE TARGET</div></div></div></div>`;
+        return '';
       };
       const renderCinematicPunishCenterButton = () => {
         if (!clusterCinematicActive || cinematicPhase !== 'betting' || !bettingActorHuman || !state.betting?.punishAvailable) return '';
@@ -4758,6 +4758,28 @@ import { createLayerManager } from './ui/layerManager.js';
           if (window.renderProfile) renderProfile(canvas, p.profile);
         }
       }
+    }
+    // Continuous portrait animation loop — needed so blinks appear at the correct
+    // duration (≈140 ms) even when game state is idle between renders.
+    // Runs at ~20 fps (every 50 ms) to keep CPU cost low while still being fast
+    // enough to capture a 140 ms blink window reliably.
+    let _portraitLoopActive = false;
+    function startPortraitLoop() {
+      if (_portraitLoopActive) return;
+      _portraitLoopActive = true;
+      let _lastPortraitMs = 0;
+      const PORTRAIT_FRAME_MS = 50;
+      function tick(nowMs) {
+        if (!_portraitLoopActive) return;
+        requestAnimationFrame(tick);
+        if (nowMs - _lastPortraitMs < PORTRAIT_FRAME_MS) return;
+        _lastPortraitMs = nowMs;
+        renderSeatPortraits();
+      }
+      requestAnimationFrame(tick);
+    }
+    function stopPortraitLoop() {
+      _portraitLoopActive = false;
     }
     // ===== CHALLENGE CINEMATIC MODE =====
     function clearCinematicTimeout() {
