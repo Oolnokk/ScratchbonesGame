@@ -562,7 +562,7 @@ window.SCRATCHBONES_CONFIG = {
             }
           ],
           "backlitAlphaDefault": 0.14,
-          "thevmenuOpacity": 0.2,
+          "thevmenuOpacity": 0.35,
           "thevmenuLayerZIndex": 2147483646,
           "thevmenuOccluderSelectors": ["#aiSidebar", ".humanSeatZone", ".turnSpotlight", ".claimCluster"],
           "backlitBlurDefault": 0,
@@ -845,11 +845,6 @@ window.SCRATCHBONES_CONFIG = {
               ".challengePromptPane",
               ".eventLog",
               ".stakeVisualPanel",
-              ".challengeBar",
-              ".bettingStatusAnchor",
-              ".leftContributionAnchor",
-              ".rightContributionAnchor",
-              ".bettingChoiceAnchor"
             ],
             "preserveSpace": true
           }

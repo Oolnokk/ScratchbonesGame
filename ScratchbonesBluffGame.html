@@ -1998,11 +1998,13 @@
       height: 100% !important;
       pointer-events: none !important;
       z-index: 2 !important;
+      opacity: 0.5;
       border-radius: inherit;
     }
     #candleShadowCanvas   { mix-blend-mode: multiply; }
     #candleDarknessCanvas { mix-blend-mode: multiply; }
     #candleGlowCanvas     { mix-blend-mode: screen; }
+    #app.challenge-visuals-active .claimCluster { z-index: 3; }
 
     /* ── Lobby overlay ──────────────────────────────────────── */
     #sb-lobby {
