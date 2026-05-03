@@ -109,9 +109,13 @@ function getBlinkConfig() {
   const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.blink || {};
   return {
     enabled: cfg.enabled !== false,
-    minIntervalMs: Number(cfg.minIntervalMs) || 1800,
-    maxIntervalMs: Number(cfg.maxIntervalMs) || 7000,
+    minIntervalMs: Number(cfg.minIntervalMs) || 2500,
+    maxIntervalMs: Number(cfg.maxIntervalMs) || 6000,
     durationMs: Number(cfg.durationMs) || 140,
+    flurryChance: Number.isFinite(Number(cfg.flurryChance)) ? Number(cfg.flurryChance) : 0.18,
+    flurryCountMin: Math.max(1, Number(cfg.flurryCountMin) || 1),
+    flurryCountMax: Math.max(1, Number(cfg.flurryCountMax) || 2),
+    flurryIntervalMs: Number(cfg.flurryIntervalMs) || 280,
   };
 }
 
@@ -124,7 +128,7 @@ function getBlinkState(headUrl) {
   if (!headUrl) return null;
   let state = BLINK_STATE_BY_HEAD_URL.get(headUrl);
   if (!state) {
-    state = { supported: null, nextBlinkAtMs: 0, closeUntilMs: 0 };
+    state = { supported: null, nextBlinkAtMs: 0, closeUntilMs: 0, flurryBlinksLeft: 0 };
     BLINK_STATE_BY_HEAD_URL.set(headUrl, state);
   }
   return state;
@@ -143,7 +147,16 @@ function shouldRenderBlink(headUrl, nowMs) {
   }
   if (nowMs >= state.closeUntilMs && nowMs >= state.nextBlinkAtMs) {
     state.closeUntilMs = nowMs + cfg.durationMs;
-    state.nextBlinkAtMs = state.closeUntilMs + minGap + Math.random() * (maxGap - minGap);
+    if (state.flurryBlinksLeft > 0) {
+      state.flurryBlinksLeft--;
+      state.nextBlinkAtMs = state.closeUntilMs + cfg.flurryIntervalMs;
+    } else if (Math.random() < cfg.flurryChance) {
+      const flurryCount = cfg.flurryCountMin + Math.floor(Math.random() * (cfg.flurryCountMax - cfg.flurryCountMin + 1));
+      state.flurryBlinksLeft = flurryCount;
+      state.nextBlinkAtMs = state.closeUntilMs + cfg.flurryIntervalMs;
+    } else {
+      state.nextBlinkAtMs = state.closeUntilMs + minGap + Math.random() * (maxGap - minGap);
+    }
   }
   return nowMs < state.closeUntilMs;
 }

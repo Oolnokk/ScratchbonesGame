@@ -233,6 +233,7 @@
   let _onlineOccupants = [];        // [{seatId, name}]
   let _onlineOccupantAppearances = {}; // { seatId: appearance }
   let _myOnlineSeat = null;
+  let _fillWithNpcs = false;        // true when PvE mode routes through online flow
 
   // Portrait preview
   let _lobbyPortraitCosmetics = null;
@@ -727,10 +728,14 @@
   function renderOnlineWaiting() {
     const needed = _onlinePlayerCount;
     const have = _onlineOccupants.length;
-    const ready = have >= needed;
+    const ready = _fillWithNpcs ? have >= 1 : have >= needed;
+    const npcSlots = _fillWithNpcs ? needed - have : 0;
     const seats = _onlineOccupants.map(o =>
       `<div class="sb-online-seat">Seat ${o.seatId + 1} · ${esc(o.name)}</div>`
     ).join('');
+    const npcNote = npcSlots > 0
+      ? `<div class="sb-muted" style="margin-top:4px;">${npcSlots} empty seat${npcSlots > 1 ? 's' : ''} will be filled with NPCs</div>`
+      : '';
     return `
       <div class="sb-card">
         <div class="sb-title">Waiting for players…</div>
@@ -740,6 +745,7 @@
         </div>
         <div class="sb-online-seats">${seats || '<div class="sb-muted">No one else has joined yet</div>'}</div>
         <div class="sb-online-hint">${have}/${needed} players connected</div>
+        ${npcNote}
         <div class="sb-actions" style="margin-top:16px;">
           <button class="sb-btn-ghost" id="sb-cancel-online-btn">Cancel</button>
           <button class="sb-btn-primary" id="sb-start-online-btn"${ready ? '' : ' disabled'}>
@@ -860,7 +866,7 @@
     document.getElementById('sb-appearance-btn')?.addEventListener('click', openAppearanceEditor);
     document.getElementById('sb-collections-btn')?.addEventListener('click', () => { _screen = 'collections'; render(); });
     document.getElementById('sb-shop-btn')?.addEventListener('click', () => { _screen = 'shop'; render(); });
-    document.getElementById('sb-online-btn')?.addEventListener('click', () => { _screen = 'online'; render(); });
+    document.getElementById('sb-online-btn')?.addEventListener('click', () => { _fillWithNpcs = false; _screen = 'online'; render(); });
     document.getElementById('sb-ad-btn')?.addEventListener('click', () => {
       window.ScratchbonesAccount?.watchAd(); render();
     });
@@ -1075,7 +1081,8 @@
     });
 
     document.getElementById('sb-start-online-btn')?.addEventListener('click', () => {
-      if (_onlineOccupants.length < _onlinePlayerCount) return;
+      if (!_fillWithNpcs && _onlineOccupants.length < _onlinePlayerCount) return;
+      if (_fillWithNpcs && _onlineOccupants.length < 1) return;
       startOnlineGame();
     });
     document.getElementById('sb-cancel-online-btn')?.addEventListener('click', () => {
@@ -1175,31 +1182,11 @@
 
   function startGame() {
     if (!window.ScratchbonesAccount?.isCreated()) return;
-    const acc = window.ScratchbonesAccount;
-    const MIN_BRONZE = acc.BRONZE_PASSIVE_MAX ?? 30;
-    if (acc.getBronze() < MIN_BRONZE) {
-      _postGameMessage = `You need at least ${MIN_BRONZE} Bronze to play. Watch an ad or wait for it to refill!`;
-      render();
-      return;
-    }
-    const mode = _selectedMode;
-    const humanCount = mode === 'pve' ? 1 : _selectedPlayerCount;
-    const humanSeats = Array.from({ length: humanCount }, (_, i) => i);
-    const playerNames = {};
-    playerNames[0] = window.ScratchbonesAccount.getUsername();
-    for (let i = 1; i < humanCount; i++) playerNames[i] = `Player ${i + 1}`;
-
-    // All human seats share the local player's appearance in local/hot-seat modes
-    const ap = getLocalAppearance();
-    const playerAppearances = {};
-    for (const seat of humanSeats) playerAppearances[seat] = ap;
-
-    window.SCRATCHBONES_SESSION = { mode, humanSeats, playerNames, playerAppearances };
-    _postGameMessage = '';
-    hide();
-    if (_scratchbonesReady && window.scratchbonesStartGame) {
-      void window.scratchbonesStartGame().catch(e => console.error('[lobby] startGame error', e));
-    }
+    // PvP and PvE both use the online lobby flow (no hot-seat local play).
+    // PvE sets _fillWithNpcs so empty seats are filled with AI when the host starts.
+    _fillWithNpcs = (_selectedMode === 'pve');
+    _screen = 'online';
+    render();
   }
 
   function startOnlineGame() {
@@ -1214,7 +1201,20 @@
     // Use per-seat appearances collected from player-joined events
     const playerAppearances = { ..._onlineOccupantAppearances };
 
-    window.SCRATCHBONES_SESSION = { mode: 'pvp', humanSeats, playerNames, playerAppearances };
+    // In PvE (NPC fill) mode, fill any remaining seats with AI players
+    if (_fillWithNpcs) {
+      const npcNames = ['Rook', 'Sable', 'Grim', 'Vex'];
+      let npcIndex = 0;
+      for (let seat = 0; seat < _onlinePlayerCount; seat++) {
+        if (!humanSeats.includes(seat)) {
+          playerNames[seat] = npcNames[npcIndex % npcNames.length] || `NPC ${seat + 1}`;
+          npcIndex++;
+        }
+      }
+    }
+
+    const mode = _fillWithNpcs ? 'pve' : 'pvp';
+    window.SCRATCHBONES_SESSION = { mode, humanSeats, playerNames, playerAppearances };
     _postGameMessage = '';
     net.broadcastStart();
     hide();

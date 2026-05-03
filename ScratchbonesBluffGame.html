@@ -185,7 +185,7 @@
       transform: translate(-50%, -50%) scale(var(--layout-claim-cluster-scale));
       transform-origin: center center;
       pointer-events: none;
-      z-index: 3;
+      z-index: 1;
       overflow: visible;
     }
     .claimCluster > * {
@@ -1457,13 +1457,13 @@
       100% { transform: translate(-50%, -105%) scale(2.28); opacity: 0; }
     }
     @keyframes cinBurstLiar {
-      0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 1;
+      0%   { transform: translate(calc(-50% + var(--layout-liar-burst-offset-x, -232px)), -50%) scale(0.3); opacity: 1;
              animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
-      20%  { transform: translate(-50%, -50%) scale(2.2); opacity: 1;
+      20%  { transform: translate(calc(-50% + var(--layout-liar-burst-offset-x, -232px)), -50%) scale(2.2); opacity: 1;
              animation-timing-function: linear; }
-      82%  { transform: translate(-50%, -50%) scale(2.2); opacity: 1;
+      82%  { transform: translate(calc(-50% + var(--layout-liar-burst-offset-x, -232px)), -50%) scale(2.2); opacity: 1;
              animation-timing-function: ease-in; }
-      100% { transform: translate(-50%, var(--layout-liar-burst-end-y)) scale(2.95); opacity: 0; }
+      100% { transform: translate(calc(-50% + var(--layout-liar-burst-offset-x, -232px)), var(--layout-liar-burst-end-y)) scale(2.95); opacity: 0; }
     }
     .cin-reveal-label {
       position: absolute;
