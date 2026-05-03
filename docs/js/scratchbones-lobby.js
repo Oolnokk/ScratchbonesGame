@@ -2,13 +2,14 @@
   'use strict';
 
   const MODES = [
-    { id: 'pve',   label: 'PvE',   desc: '1 Human + AI opponents',    humanRange: null },
+    { id: 'pve',   label: 'PvE',   desc: '1 Human + AI opponents',   humanRange: null },
     { id: 'pvp',   label: 'PvP',   desc: 'All Human players',        humanRange: [2, 4] },
-    { id: 'pvpve', label: 'PvPvE', desc: 'Human + AI mix',            humanRange: [2, 3] },
+    { id: 'pvpve', label: 'PvPvE', desc: 'Human + AI mix',           humanRange: [2, 3] },
   ];
 
-  // ── Species/cosmetics data for character creation ──────────
-  // Each slot option stores the full cosmetic ID (for optionCache lookup) or null for 'none'.
+  // ── Species UI data ────────────────────────────────────────
+  // colorOptions: shared preset list for both A and B selectors.
+  // C is auto-derived from A (slightly lighter).
   const HAT_OPTS = [
     { id: null,                                       label: 'None' },
     { id: 'appearance::hat::basic_headband',          label: 'Headband' },
@@ -18,111 +19,105 @@
 
   const SPECIES_DATA = {
     'mao-ao': {
-      label: 'Mao-ao',
-      genders: ['male', 'female'],
-      swatchBase: '#7dc89a',
+      label: 'Mao-ao', genders: ['male', 'female'], swatchBase: '#7dc89a',
       male: {
         slots: [
           { slot: 'hairFront', label: 'Front Hair', options: [
-            { id: null,                                                label: 'None' },
-            { id: 'appearance::Mao-ao_M::mao-ao_smooth_striped',      label: 'Smooth Striped' },
-            { id: 'appearance::Mao-ao_M::mao-ao_tuft',                label: 'Tuft' },
-            { id: 'appearance::Mao-ao_M::mao-ao_forwardtuft_short',   label: 'Forward Tuft (Short)' },
-            { id: 'appearance::Mao-ao_M::mao-ao_forwardtuft_long',    label: 'Forward Tuft (Long)' },
+            { id: null,                                              label: 'None' },
+            { id: 'appearance::Mao-ao_M::mao-ao_smooth_striped',    label: 'Smooth Striped' },
+            { id: 'appearance::Mao-ao_M::mao-ao_tuft',              label: 'Tuft' },
+            { id: 'appearance::Mao-ao_M::mao-ao_forwardtuft_short', label: 'Forward Tuft (Short)' },
+            { id: 'appearance::Mao-ao_M::mao-ao_forwardtuft_long',  label: 'Forward Tuft (Long)' },
           ]},
           { slot: 'hairSide', label: 'Side Hair', options: [
-            { id: null,                                                label: 'None' },
-            { id: 'appearance::Mao-ao_M::mao-ao_shoulder_length_drape', label: 'Shoulder Drape' },
+            { id: null,                                                     label: 'None' },
+            { id: 'appearance::Mao-ao_M::mao-ao_shoulder_length_drape',    label: 'Shoulder Drape' },
           ]},
           { slot: 'eyes', label: 'Eyes', options: [
-            { id: null,                                                label: 'Default' },
-            { id: 'appearance::Mao-ao_M::mao-ao_circled_eyes',        label: 'Circled Eyes' },
-            { id: 'appearance::Mao-ao_M::mao-ao_circled_eye_L',       label: 'Circled Eye (L)' },
+            { id: null,                                              label: 'Default' },
+            { id: 'appearance::Mao-ao_M::mao-ao_circled_eyes',      label: 'Circled Eyes' },
+            { id: 'appearance::Mao-ao_M::mao-ao_circled_eye_L',     label: 'Circled Eye (L)' },
           ]},
           { slot: 'facialHair', label: 'Facial Hair', options: [
-            { id: null,                                                label: 'None' },
-            { id: 'appearance::Mao-ao_M::mao-ao_wildbeard',           label: 'Wild Beard' },
+            { id: null,                                              label: 'None' },
+            { id: 'appearance::Mao-ao_M::mao-ao_wildbeard',         label: 'Wild Beard' },
           ]},
         ],
-        colorPresets: [
-          { label: 'Storm Gray',  A:{h:-70,s:-0.80,v:-0.70}, B:{h:-70,s:-0.80,v:-0.85}, C:{h:-70,s:-0.90,v:-0.60} },
-          { label: 'Dusk Brown',  A:{h:-40,s:-0.70,v:-0.50}, B:{h:-40,s:-0.70,v:-0.65}, C:{h:-40,s:-0.80,v:-0.40} },
-          { label: 'Stone',       A:{h:  0,s:-0.70,v:-0.30}, B:{h:  0,s:-0.70,v:-0.50}, C:{h:  0,s:-0.80,v:-0.20} },
-          { label: 'Warm Sand',   A:{h: 30,s:-0.60,v:-0.10}, B:{h: 30,s:-0.65,v:-0.30}, C:{h: 30,s:-0.70,v: 0.00} },
-          { label: 'Pale',        A:{h: 10,s:-0.90,v: 0.30}, B:{h: 10,s:-0.90,v: 0.10}, C:{h: 10,s:-0.95,v: 0.40} },
-          { label: 'Obsidian',    A:{h:  0,s:-0.90,v:-0.85}, B:{h:  0,s:-0.95,v:-0.90}, C:{h:  0,s:-0.90,v:-0.80} },
+        colorOptions: [
+          { label: 'Cool',   h:-70, s:-0.80, v:-0.55 },
+          { label: 'Dusk',   h:-40, s:-0.70, v:-0.45 },
+          { label: 'Stone',  h:  0, s:-0.70, v:-0.30 },
+          { label: 'Sand',   h: 30, s:-0.60, v:-0.15 },
+          { label: 'Pale',   h: 10, s:-0.90, v: 0.25 },
+          { label: 'Raven',  h:  0, s:-0.90, v:-0.85 },
         ],
       },
       female: {
         slots: [
           { slot: 'hairFront', label: 'Front Hair', options: [
-            { id: null,                                                label: 'None' },
-            { id: 'appearance::Mao-ao_F::mao-ao_smooth_striped',      label: 'Smooth Striped' },
-            { id: 'appearance::Mao-ao_F::mao-ao_tuft',                label: 'Tuft' },
-            { id: 'appearance::Mao-ao_F::mao-ao_forwardtuft_short',   label: 'Forward Tuft (Short)' },
-            { id: 'appearance::Mao-ao_F::mao-ao_forwardtuft_long',    label: 'Forward Tuft (Long)' },
+            { id: null,                                              label: 'None' },
+            { id: 'appearance::Mao-ao_F::mao-ao_smooth_striped',    label: 'Smooth Striped' },
+            { id: 'appearance::Mao-ao_F::mao-ao_tuft',              label: 'Tuft' },
+            { id: 'appearance::Mao-ao_F::mao-ao_forwardtuft_short', label: 'Forward Tuft (Short)' },
+            { id: 'appearance::Mao-ao_F::mao-ao_forwardtuft_long',  label: 'Forward Tuft (Long)' },
           ]},
           { slot: 'hairBack', label: 'Back Hair', options: [
-            { id: null,                                                label: 'None' },
-            { id: 'appearance::Mao-ao_F::mao-ao_splayedknot_medium',  label: 'Splayed Knot' },
-            { id: 'appearance::Mao-ao_F::mao-ao_long_ponytail',       label: 'Long Ponytail' },
+            { id: null,                                                   label: 'None' },
+            { id: 'appearance::Mao-ao_F::mao-ao_splayedknot_medium',     label: 'Splayed Knot' },
+            { id: 'appearance::Mao-ao_F::mao-ao_long_ponytail',          label: 'Long Ponytail' },
           ]},
           { slot: 'hairSide', label: 'Side Hair', options: [
-            { id: null,                                                label: 'None' },
-            { id: 'appearance::Mao-ao_F::mao-ao_shoulder_length_drape', label: 'Shoulder Drape' },
+            { id: null,                                                     label: 'None' },
+            { id: 'appearance::Mao-ao_F::mao-ao_shoulder_length_drape',    label: 'Shoulder Drape' },
           ]},
           { slot: 'eyes', label: 'Eyes', options: [
-            { id: null,                                                label: 'Default' },
-            { id: 'appearance::Mao-ao_F::mao-ao_circled_eyes',        label: 'Circled Eyes' },
-            { id: 'appearance::Mao-ao_F::mao-ao_circled_eyes_f',      label: 'Circled Eyes F' },
-            { id: 'appearance::Mao-ao_F::mao-ao_circled_eye_L',       label: 'Circled Eye (L)' },
+            { id: null,                                              label: 'Default' },
+            { id: 'appearance::Mao-ao_F::mao-ao_circled_eyes',      label: 'Circled Eyes' },
+            { id: 'appearance::Mao-ao_F::mao-ao_circled_eyes_f',    label: 'Circled Eyes F' },
+            { id: 'appearance::Mao-ao_F::mao-ao_circled_eye_L',     label: 'Circled Eye (L)' },
           ]},
         ],
-        colorPresets: [
-          { label: 'Storm Gray',  A:{h:-70,s:-0.80,v:-0.70}, B:{h:-70,s:-0.80,v:-0.85}, C:{h:-70,s:-0.90,v:-0.60} },
-          { label: 'Dusk Brown',  A:{h:-40,s:-0.70,v:-0.50}, B:{h:-40,s:-0.70,v:-0.65}, C:{h:-40,s:-0.80,v:-0.40} },
-          { label: 'Stone',       A:{h:  0,s:-0.70,v:-0.30}, B:{h:  0,s:-0.70,v:-0.50}, C:{h:  0,s:-0.80,v:-0.20} },
-          { label: 'Warm Sand',   A:{h: 30,s:-0.60,v:-0.10}, B:{h: 30,s:-0.65,v:-0.30}, C:{h: 30,s:-0.70,v: 0.00} },
-          { label: 'Pale',        A:{h: 10,s:-0.90,v: 0.30}, B:{h: 10,s:-0.90,v: 0.10}, C:{h: 10,s:-0.95,v: 0.40} },
-          { label: 'Obsidian',    A:{h:  0,s:-0.90,v:-0.85}, B:{h:  0,s:-0.95,v:-0.90}, C:{h:  0,s:-0.90,v:-0.80} },
+        colorOptions: [
+          { label: 'Cool',   h:-70, s:-0.80, v:-0.55 },
+          { label: 'Dusk',   h:-40, s:-0.70, v:-0.45 },
+          { label: 'Stone',  h:  0, s:-0.70, v:-0.30 },
+          { label: 'Sand',   h: 30, s:-0.60, v:-0.15 },
+          { label: 'Pale',   h: 10, s:-0.90, v: 0.25 },
+          { label: 'Raven',  h:  0, s:-0.90, v:-0.85 },
         ],
       },
     },
     'tletingan': {
-      label: 'Tletingan',
-      genders: ['male'],
-      swatchBase: '#80a060',
+      label: 'Tletingan', genders: ['male'], swatchBase: '#80a060',
       male: {
         slots: [
           { slot: 'hairFront', label: 'Front Hair', options: [
-            { id: null,                                                  label: 'None' },
-            { id: 'appearance::Tletingan_M::tl_forwardtuft_short',      label: 'Forward Tuft (Short)' },
-            { id: 'appearance::Tletingan_M::tl_forwardtuft_long',       label: 'Forward Tuft (Long)' },
+            { id: null,                                                label: 'None' },
+            { id: 'appearance::Tletingan_M::tl_forwardtuft_short',    label: 'Forward Tuft (Short)' },
+            { id: 'appearance::Tletingan_M::tl_forwardtuft_long',     label: 'Forward Tuft (Long)' },
           ]},
           { slot: 'hairBack', label: 'Back Hair', options: [
-            { id: null,                                                  label: 'None' },
-            { id: 'appearance::Tletingan_M::tl_longponytail',           label: 'Long Ponytail' },
-            { id: 'appearance::Tletingan_M::tl_splayedknot',            label: 'Splayed Knot' },
+            { id: null,                                                label: 'None' },
+            { id: 'appearance::Tletingan_M::tl_longponytail',         label: 'Long Ponytail' },
+            { id: 'appearance::Tletingan_M::tl_splayedknot',          label: 'Splayed Knot' },
           ]},
           { slot: 'facialHair', label: 'Facial Hair', options: [
-            { id: null,                                                  label: 'None' },
-            { id: 'appearance::Tletingan_M::tl_wildbeard',              label: 'Wild Beard' },
+            { id: null,                                                label: 'None' },
+            { id: 'appearance::Tletingan_M::tl_wildbeard',            label: 'Wild Beard' },
           ]},
         ],
-        colorPresets: [
-          { label: 'Night Forest', A:{h:-85,s:-0.30,v:-0.40}, B:{h:-85,s:-0.30,v:-0.50}, C:{h:-85,s:-0.40,v:-0.35} },
-          { label: 'Dark Fern',    A:{h:-60,s:-0.20,v:-0.35}, B:{h:-60,s:-0.20,v:-0.45}, C:{h:-60,s:-0.30,v:-0.30} },
-          { label: 'Swamp Olive',  A:{h:-40,s:-0.10,v:-0.30}, B:{h:-40,s:-0.10,v:-0.40}, C:{h:-40,s:-0.20,v:-0.25} },
-          { label: 'Dark Earth',   A:{h:-20,s: 0.00,v:-0.20}, B:{h:-20,s: 0.00,v:-0.35}, C:{h:-20,s:-0.10,v:-0.15} },
-          { label: 'Rust',         A:{h:  0,s: 0.10,v:-0.15}, B:{h:  0,s: 0.10,v:-0.30}, C:{h:  0,s: 0.05,v:-0.10} },
-          { label: 'Ash Black',    A:{h:-80,s:-0.40,v:-0.45}, B:{h:-80,s:-0.40,v:-0.50}, C:{h:-80,s:-0.40,v:-0.40} },
+        colorOptions: [
+          { label: 'Forest', h:-85, s:-0.30, v:-0.40 },
+          { label: 'Fern',   h:-60, s:-0.20, v:-0.35 },
+          { label: 'Olive',  h:-40, s:-0.10, v:-0.30 },
+          { label: 'Earth',  h:-20, s: 0.00, v:-0.20 },
+          { label: 'Rust',   h:  0, s: 0.10, v:-0.15 },
+          { label: 'Ash',    h:-80, s:-0.40, v:-0.45 },
         ],
       },
     },
     'kenkari': {
-      label: 'Kenkari',
-      genders: ['male', 'female'],
-      swatchBase: '#d0b060',
+      label: 'Kenkari', genders: ['male', 'female'], swatchBase: '#d0b060',
       male: {
         forcedCosmetics: { eyes: 'kenk_eyedisks' },
         slots: [
@@ -141,15 +136,15 @@
             { id: 'appearance::Kenkari_M::kenk_wildbeard',              label: 'Wild Beard' },
           ]},
         ],
-        colorPresets: [
-          { label: 'Crimson',  A:{h: -20,s:0.80,v: 0.00}, B:{h: -20,s:0.80,v:-0.15}, C:{h: -20,s:0.90,v: 0.10} },
-          { label: 'Indigo',   A:{h: -80,s:0.90,v: 0.00}, B:{h: -80,s:0.90,v:-0.15}, C:{h: -80,s:1.00,v: 0.10} },
-          { label: 'Amber',    A:{h:  40,s:1.00,v: 0.10}, B:{h:  40,s:1.00,v:-0.10}, C:{h:  40,s:1.10,v: 0.15} },
-          { label: 'Forest',   A:{h: 120,s:0.90,v: 0.00}, B:{h: 120,s:0.90,v:-0.15}, C:{h: 120,s:1.00,v: 0.10} },
-          { label: 'Azure',    A:{h: 160,s:0.80,v:-0.10}, B:{h: 160,s:0.80,v:-0.20}, C:{h: 160,s:0.90,v: 0.00} },
-          { label: 'Violet',   A:{h:-120,s:0.80,v:-0.10}, B:{h:-120,s:0.80,v:-0.20}, C:{h:-120,s:0.90,v: 0.00} },
-          { label: 'Rose',     A:{h: -40,s:0.70,v: 0.10}, B:{h: -40,s:0.70,v:-0.05}, C:{h: -40,s:0.80,v: 0.15} },
-          { label: 'Gold',     A:{h:  60,s:0.90,v: 0.10}, B:{h:  60,s:0.90,v:-0.10}, C:{h:  60,s:1.00,v: 0.15} },
+        colorOptions: [
+          { label: 'Crimson', h: -20, s:0.80, v: 0.00 },
+          { label: 'Indigo',  h: -80, s:0.90, v: 0.00 },
+          { label: 'Amber',   h:  40, s:1.00, v: 0.10 },
+          { label: 'Forest',  h: 120, s:0.90, v: 0.00 },
+          { label: 'Azure',   h: 160, s:0.80, v:-0.10 },
+          { label: 'Violet',  h:-120, s:0.80, v:-0.10 },
+          { label: 'Rose',    h: -40, s:0.70, v: 0.10 },
+          { label: 'Gold',    h:  60, s:0.90, v: 0.10 },
         ],
       },
       female: {
@@ -162,36 +157,42 @@
             { id: 'appearance::Kenkari_F::kenk_splayedknot_low_f',       label: 'Splayed Knot (Low)' },
           ]},
         ],
-        colorPresets: [
-          { label: 'Crimson',  A:{h: -20,s:0.80,v: 0.00}, B:{h: -20,s:0.80,v:-0.15}, C:{h: -20,s:0.90,v: 0.10} },
-          { label: 'Indigo',   A:{h: -80,s:0.90,v: 0.00}, B:{h: -80,s:0.90,v:-0.15}, C:{h: -80,s:1.00,v: 0.10} },
-          { label: 'Amber',    A:{h:  40,s:1.00,v: 0.10}, B:{h:  40,s:1.00,v:-0.10}, C:{h:  40,s:1.10,v: 0.15} },
-          { label: 'Forest',   A:{h: 120,s:0.90,v: 0.00}, B:{h: 120,s:0.90,v:-0.15}, C:{h: 120,s:1.00,v: 0.10} },
-          { label: 'Azure',    A:{h: 160,s:0.80,v:-0.10}, B:{h: 160,s:0.80,v:-0.20}, C:{h: 160,s:0.90,v: 0.00} },
-          { label: 'Violet',   A:{h:-120,s:0.80,v:-0.10}, B:{h:-120,s:0.80,v:-0.20}, C:{h:-120,s:0.90,v: 0.00} },
-          { label: 'Rose',     A:{h: -40,s:0.70,v: 0.10}, B:{h: -40,s:0.70,v:-0.05}, C:{h: -40,s:0.80,v: 0.15} },
-          { label: 'Gold',     A:{h:  60,s:0.90,v: 0.10}, B:{h:  60,s:0.90,v:-0.10}, C:{h:  60,s:1.00,v: 0.15} },
+        colorOptions: [
+          { label: 'Crimson', h: -20, s:0.80, v: 0.00 },
+          { label: 'Indigo',  h: -80, s:0.90, v: 0.00 },
+          { label: 'Amber',   h:  40, s:1.00, v: 0.10 },
+          { label: 'Forest',  h: 120, s:0.90, v: 0.00 },
+          { label: 'Azure',   h: 160, s:0.80, v:-0.10 },
+          { label: 'Violet',  h:-120, s:0.80, v:-0.10 },
+          { label: 'Rose',    h: -40, s:0.70, v: 0.10 },
+          { label: 'Gold',    h:  60, s:0.90, v: 0.10 },
         ],
       },
     },
   };
 
-  // ── State ──────────────────────────────────────────────────
+  // ── Lobby state ────────────────────────────────────────────
   let _screen = 'create';
   let _selectedMode = 'pve';
   let _selectedPlayerCount = 2;
   let _postGameMessage = '';
   let _scratchbonesReady = false;
 
-  // Appearance editor working state (mutated before save)
-  let _editAppearance = null;
-  let _editColorPresetIdx = 0;
+  // Appearance editor working state
+  let _editAppearance = null;   // { speciesId, gender, cosmetics, bodyColors }
+  let _editAIdx = 0;            // index into current species/gender colorOptions for A
+  let _editBIdx = 0;            // index into current species/gender colorOptions for B
 
   // Online state
   let _onlinePlayerCount = 2;
   let _roomCode = '';
-  let _onlineOccupants = []; // [{seatId, name}]
+  let _onlineOccupants = [];        // [{seatId, name}]
+  let _onlineOccupantAppearances = {}; // { seatId: appearance }
   let _myOnlineSeat = null;
+
+  // Portrait preview
+  let _lobbyPortraitCosmetics = null;
+  let _lobbyPortraitLoading = false;
 
   // ── Helpers ────────────────────────────────────────────────
 
@@ -201,7 +202,7 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function cap(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
+  function cap(str) { return String(str).charAt(0).toUpperCase() + String(str).slice(1); }
 
   function overlay() { return document.getElementById('sb-lobby'); }
 
@@ -216,16 +217,132 @@
     return `background:${base};filter:hue-rotate(${h}deg) saturate(${sat}) brightness(${bri})`;
   }
 
-  // Find closest color preset index by comparing A channel hue
-  function findClosestPresetIdx(presets, bodyColors) {
-    if (!bodyColors || !bodyColors.A) return 0;
-    const h = bodyColors.A.h;
+  // Derive C from A: slightly lighter and less saturated (highlight/marking)
+  function deriveCFromA(a) {
+    return {
+      h: a.h,
+      s: Math.max(-1, Math.min(1, a.s + 0.05)),
+      v: Math.max(-1, Math.min(1, a.v + 0.18)),
+    };
+  }
+
+  // Find closest index in colorOptions by comparing h and v distance
+  function closestColorIdx(options, target) {
+    if (!options || !options.length || !target) return 0;
     let best = 0, bestDist = Infinity;
-    presets.forEach((p, i) => {
-      const d = Math.abs(p.A.h - h);
+    options.forEach((o, i) => {
+      const dh = Math.abs(o.h - target.h);
+      const dv = Math.abs(o.v - target.v);
+      const d = dh * 0.5 + dv * 100;
       if (d < bestDist) { bestDist = d; best = i; }
     });
     return best;
+  }
+
+  function currentSpeciesGenderData() {
+    if (!_editAppearance) return null;
+    const specData = SPECIES_DATA[_editAppearance.speciesId];
+    return specData ? specData[_editAppearance.gender] : null;
+  }
+
+  // ── Portrait preview ───────────────────────────────────────
+
+  function _previewRng() {
+    let s = 0x9e3779b9;
+    return function() {
+      s = (Math.imul(s ^ (s >>> 16), 0x45d9f3b) >>> 0);
+      s = (Math.imul(s ^ (s >>> 16), 0x45d9f3b) >>> 0);
+      return (s >>> 0) / 0x100000000;
+    };
+  }
+
+  async function ensurePortraitCosmetics() {
+    if (_lobbyPortraitCosmetics) return _lobbyPortraitCosmetics;
+    if (_lobbyPortraitLoading) return null;
+    _lobbyPortraitLoading = true;
+    try {
+      if (window.setPortraitAssetBase) window.setPortraitAssetBase('./docs/assets/');
+      if (window.loadPortraitCosmetics) {
+        _lobbyPortraitCosmetics = await window.loadPortraitCosmetics('./docs/config/');
+      }
+    } catch (e) {
+      console.warn('[lobby] portrait load failed', e);
+    }
+    _lobbyPortraitLoading = false;
+    return _lobbyPortraitCosmetics;
+  }
+
+  function buildPreviewProfile(appearance) {
+    const cosmetics = _lobbyPortraitCosmetics;
+    if (!cosmetics || !window.getPortraitFighters || !window.randomProfileSeeded) return null;
+    const { optionCache, hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions,
+            hatOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender,
+            allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter,
+            conditionalCosmeticsByFighter } = cosmetics;
+    const fighters = window.getPortraitFighters();
+    if (!fighters || !fighters.length) return null;
+
+    const { speciesId, gender, cosmetics: savedCosmetics, bodyColors } = appearance;
+    const normalize = s => s.replace(/-/g, '_');
+    const fighterGender = f => f.gender ?? (f.id === 'M' ? 'male' : f.id === 'F' ? 'female' : null);
+    const fighter = fighters.find(f =>
+      (f.speciesId === speciesId || f.speciesId === normalize(speciesId)) &&
+      fighterGender(f) === gender
+    ) || fighters[0];
+    if (!fighter) return null;
+
+    const rng = _previewRng();
+    const forced = forcedCosmeticsByFighter?.[fighter.id] ?? {};
+    const forcedSlots = new Set(Object.keys(forced));
+
+    const profile = window.randomProfileSeeded(rng, [fighter], hairFrontOptions, hairBackOptions,
+      hairSideOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender,
+      allowedCosmeticsByFighter, hatOptions, cosmeticWeightsByFighter, torsoPortraitOptions,
+      armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
+    if (!profile) return null;
+
+    // Apply saved cosmetics (skip forced slots)
+    const lookup = id => id ? (optionCache?.get(id) ?? null) : null;
+    if (savedCosmetics) {
+      if (savedCosmetics.hairFront  !== undefined && !forcedSlots.has('hairFront'))  profile.hairFront  = lookup(savedCosmetics.hairFront);
+      if (savedCosmetics.hairBack   !== undefined && !forcedSlots.has('hairBack'))   profile.hairBack   = lookup(savedCosmetics.hairBack);
+      if (savedCosmetics.hairSide   !== undefined && !forcedSlots.has('hairSide'))   profile.hairSide   = lookup(savedCosmetics.hairSide);
+      if (savedCosmetics.eyes       !== undefined && !forcedSlots.has('eyes'))       profile.eyes       = lookup(savedCosmetics.eyes);
+      if (savedCosmetics.facialHair !== undefined && !forcedSlots.has('facialHair')) profile.facialHair = lookup(savedCosmetics.facialHair);
+    }
+    if (bodyColors) profile.bodyColors = { ...(profile.bodyColors || {}), ...bodyColors };
+
+    // Apply equipped shop items and dyes
+    const acc = window.ScratchbonesAccount;
+    if (acc) {
+      const applyEquip = (cat, key) => {
+        const id = acc.getEquippedForCategory(cat);
+        if (id && optionCache?.has(id)) profile[key] = optionCache.get(id);
+      };
+      applyEquip('hat', 'hat');
+      applyEquip('torso', 'torsoCosmetic');
+      applyEquip('overwear', 'armCosmetic');
+      const dyes = acc.getAppliedDyes ? acc.getAppliedDyes() : {};
+      if (dyes.CLOTH) profile.bodyColors = { ...(profile.bodyColors || {}), CLOTH: dyes.CLOTH };
+      if (dyes.HAT)   profile.bodyColors = { ...(profile.bodyColors || {}), HAT: dyes.HAT };
+    }
+    return profile;
+  }
+
+  function renderPreviewCanvas(canvasId, appearance) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    if (!_lobbyPortraitCosmetics) {
+      ensurePortraitCosmetics().then(() => {
+        const c2 = document.getElementById(canvasId);
+        if (!c2) return;
+        const profile = buildPreviewProfile(appearance);
+        if (profile && window.renderProfile) window.renderProfile(c2, profile);
+      });
+      return;
+    }
+    const profile = buildPreviewProfile(appearance);
+    if (profile && window.renderProfile) window.renderProfile(canvas, profile);
   }
 
   // ── Screen renderers ───────────────────────────────────────
@@ -278,10 +395,7 @@
       <div class="sb-card">
         <div class="sb-header">
           <div class="sb-title">SCRATCHBONES!</div>
-          <div class="sb-bronze">
-            <span class="sb-coin">🪙</span>
-            <span id="sb-bronze-val">${bronze}</span>&nbsp;Bronze
-          </div>
+          <div class="sb-bronze"><span class="sb-coin">🪙</span><span id="sb-bronze-val">${bronze}</span>&nbsp;Bronze</div>
         </div>
         ${postMsg}
         <div class="sb-welcome">Welcome back, ${esc(username)}!</div>
@@ -290,6 +404,7 @@
         ${playerPicker}
         <div class="sb-actions">
           <button class="sb-btn-ghost" id="sb-appearance-btn">Edit Appearance</button>
+          <button class="sb-btn-ghost" id="sb-collections-btn">Collections</button>
           <button class="sb-btn-ghost" id="sb-shop-btn">Shop</button>
           <button class="sb-btn-ghost" id="sb-online-btn">Play Online</button>
           ${adBtn}
@@ -307,23 +422,22 @@
     const specData = SPECIES_DATA[speciesId];
     const genderData = specData && specData[gender];
     const cosmetics = ap.cosmetics || {};
-    const bodyColors = ap.bodyColors || {};
+    const base = specData ? specData.swatchBase : '#a09070';
+    const colorOpts = genderData ? genderData.colorOptions : [];
 
     // Species picker
-    const speciesBtns = Object.entries(SPECIES_DATA).map(([sid, sd]) => `
-      <button class="sb-species-btn${speciesId === sid ? ' selected' : ''}" data-species="${sid}">
-        ${esc(sd.label)}
-      </button>`).join('');
+    const speciesBtns = Object.entries(SPECIES_DATA).map(([sid, sd]) =>
+      `<button class="sb-sel-btn${speciesId === sid ? ' selected' : ''}" data-species="${sid}">${esc(sd.label)}</button>`
+    ).join('');
 
     // Gender picker
-    const availableGenders = specData ? specData.genders : ['male'];
+    const availGenders = specData ? specData.genders : ['male'];
     const genderBtns = ['male', 'female'].map(g => {
-      const available = availableGenders.includes(g);
-      return `<button class="sb-gender-btn${gender === g ? ' selected' : ''}${!available ? ' disabled' : ''}"
-        data-gender="${g}"${!available ? ' disabled' : ''}>${cap(g)}</button>`;
+      const avail = availGenders.includes(g);
+      return `<button class="sb-sel-btn${gender === g ? ' selected' : ''}${!avail ? ' disabled' : ''}" data-gender="${g}"${!avail ? ' disabled' : ''}>${cap(g)}</button>`;
     }).join('');
 
-    // Hat selector (always shown)
+    // Hat selector
     const hatVal = cosmetics.hat || '';
     const hatOpts = HAT_OPTS.map(o =>
       `<option value="${esc(o.id || '')}"${hatVal === (o.id || '') ? ' selected' : ''}>${esc(o.label)}</option>`
@@ -334,12 +448,11 @@
         <select class="sb-cosmetic-select" data-slot="hat">${hatOpts}</select>
       </div>`;
 
-    // Species+gender specific slots
     if (genderData && genderData.slots) {
       for (const slotDef of genderData.slots) {
-        const currentVal = cosmetics[slotDef.slot] || '';
+        const cur = cosmetics[slotDef.slot] || '';
         const opts = slotDef.options.map(o =>
-          `<option value="${esc(o.id || '')}"${currentVal === (o.id || '') ? ' selected' : ''}>${esc(o.label)}</option>`
+          `<option value="${esc(o.id || '')}"${cur === (o.id || '') ? ' selected' : ''}>${esc(o.label)}</option>`
         ).join('');
         slotsHtml += `
           <div class="sb-cosmetic-row">
@@ -349,42 +462,113 @@
       }
     }
 
-    // Color presets
-    const base = specData ? specData.swatchBase : '#a09070';
-    const presets = genderData ? genderData.colorPresets : [];
-    const presetIdx = _editColorPresetIdx;
-    const colorSwatches = presets.map((p, i) => {
-      const sel = i === presetIdx ? ' selected' : '';
-      const triStyle = [
-        `background:${base};filter:hue-rotate(${p.A.h}deg) saturate(${Math.max(0,1+p.A.s).toFixed(3)}) brightness(${Math.max(0,1+p.A.v).toFixed(3)})`,
-        `background:${base};filter:hue-rotate(${p.B.h}deg) saturate(${Math.max(0,1+p.B.s).toFixed(3)}) brightness(${Math.max(0,1+p.B.v).toFixed(3)})`,
-        `background:${base};filter:hue-rotate(${p.C.h}deg) saturate(${Math.max(0,1+p.C.s).toFixed(3)}) brightness(${Math.max(0,1+p.C.v).toFixed(3)})`,
-      ];
-      return `<button class="sb-color-preset${sel}" data-preset="${i}" title="${esc(p.label)}">
-        <span class="sb-swatch-a" style="${triStyle[0]}"></span>
-        <span class="sb-swatch-b" style="${triStyle[1]}"></span>
-        <span class="sb-swatch-c" style="${triStyle[2]}"></span>
-        <span class="sb-swatch-lbl">${esc(p.label)}</span>
-      </button>`;
-    }).join('');
+    // Color rows (A and B separate, C hidden)
+    function colorRow(label, selectedIdx, dataAttr) {
+      const swatches = colorOpts.map((o, i) =>
+        `<button class="sb-swatch-btn${i === selectedIdx ? ' selected' : ''}" ${dataAttr}="${i}"
+           style="${swatchStyle(base, o.h, o.s, o.v)}" title="${esc(o.label)}"></button>`
+      ).join('');
+      return `
+        <div class="sb-color-row">
+          <span class="sb-color-row-lbl">${label}</span>
+          <div class="sb-swatch-strip">${swatches}</div>
+        </div>`;
+    }
 
     return `
-      <div class="sb-card sb-appearance-card">
+      <div class="sb-card sb-wide-card">
         <div class="sb-header">
           <button class="sb-btn-ghost" id="sb-back-btn">← Back</button>
           <div class="sb-title">Appearance</div>
           <div class="sb-bronze"><span class="sb-coin">🪙</span>${bronze}&nbsp;Bronze</div>
         </div>
-        <div class="sb-label">Species</div>
-        <div class="sb-species-picker">${speciesBtns}</div>
-        <div class="sb-label" style="margin-top:10px;">Gender</div>
-        <div class="sb-gender-picker">${genderBtns}</div>
-        <div class="sb-label" style="margin-top:10px;">Cosmetics</div>
-        <div class="sb-cosmetics-list">${slotsHtml}</div>
-        <div class="sb-label" style="margin-top:10px;">Body Color</div>
-        <div class="sb-color-presets">${colorSwatches || '<div class="sb-muted">No presets available</div>'}</div>
-        <div class="sb-actions" style="margin-top:14px;">
+        <div class="sb-ap-layout">
+          <div class="sb-ap-preview">
+            <canvas id="sb-ap-canvas" width="160" height="160" class="sb-portrait-canvas"></canvas>
+          </div>
+          <div class="sb-ap-controls">
+            <div class="sb-label">Species</div>
+            <div class="sb-sel-group">${speciesBtns}</div>
+            <div class="sb-label" style="margin-top:8px;">Gender</div>
+            <div class="sb-sel-group">${genderBtns}</div>
+            <div class="sb-label" style="margin-top:8px;">Cosmetics</div>
+            <div class="sb-cosmetics-list">${slotsHtml}</div>
+            <div class="sb-label" style="margin-top:8px;">Primary Color</div>
+            ${colorRow('A', _editAIdx, 'data-a-idx')}
+            <div class="sb-label" style="margin-top:4px;">Secondary Color</div>
+            ${colorRow('B', _editBIdx, 'data-b-idx')}
+          </div>
+        </div>
+        <div class="sb-actions" style="margin-top:12px;">
           <button class="sb-btn-primary" id="sb-save-appearance-btn">Save</button>
+        </div>
+      </div>`;
+  }
+
+  function renderCollections() {
+    const acc = window.ScratchbonesAccount;
+    const ap = acc ? acc.getAppearance() : { speciesId: 'mao-ao', gender: 'male' };
+    const catalog = acc ? acc.getShopCatalogForAppearance(ap.speciesId, ap.gender) : [];
+    const ownedItems = catalog.filter(item => acc && acc.isUnlocked(item.id));
+    const dyes = acc ? acc.getDyeCatalog() : [];
+    const appliedDyes = acc ? acc.getAppliedDyes() : {};
+
+    // Owned clothing
+    let itemsHtml = '';
+    if (ownedItems.length) {
+      const cats = [...new Set(ownedItems.map(c => c.category))];
+      for (const cat of cats) {
+        itemsHtml += `<div class="sb-shop-cat">${cap(cat)}</div>`;
+        for (const item of ownedItems.filter(c => c.category === cat)) {
+          const equipped = acc && acc.isEquipped(item.id);
+          const btn = equipped
+            ? `<button class="sb-shop-action equipped" data-action="unequip" data-id="${esc(item.id)}">Equipped ✓</button>`
+            : `<button class="sb-shop-action" data-action="equip" data-id="${esc(item.id)}">Equip</button>`;
+          itemsHtml += `
+            <div class="sb-shop-item">
+              <div class="sb-shop-info">
+                <div class="sb-shop-name">${esc(item.label)}</div>
+                <div class="sb-shop-desc">${esc(item.description)}</div>
+              </div>
+              ${btn}
+            </div>`;
+        }
+      }
+    } else {
+      itemsHtml = '<div class="sb-muted" style="font-size:0.82em;">No clothing owned yet — visit the Shop!</div>';
+    }
+
+    // Dyes
+    const appliedCloth = appliedDyes.CLOTH;
+    const dyeSwatches = dyes.filter(d => acc && acc.isDyeOwned(d.id)).map(d => {
+      const isApplied = appliedCloth && Math.abs(appliedCloth.h - d.color.h) < 1 && Math.abs(appliedCloth.v - d.color.v) < 0.05;
+      const style = swatchStyle('#c0a060', d.color.h, d.color.s, d.color.v);
+      return `<button class="sb-dye-btn${isApplied ? ' applied' : ''}" data-dye-id="${esc(d.id)}"
+        style="${style}" title="${esc(d.label)} ${isApplied ? '(applied)' : ''}"></button>`;
+    }).join('');
+    const clearBtn = appliedCloth
+      ? `<button class="sb-btn-ghost sb-dye-clear" data-dye-slot="CLOTH" style="font-size:0.78em;padding:4px 10px;">Clear</button>` : '';
+
+    return `
+      <div class="sb-card sb-wide-card">
+        <div class="sb-header">
+          <button class="sb-btn-ghost" id="sb-back-btn">← Back</button>
+          <div class="sb-title">Collections</div>
+        </div>
+        <div class="sb-col-layout">
+          <div class="sb-col-preview">
+            <canvas id="sb-col-canvas" width="160" height="160" class="sb-portrait-canvas"></canvas>
+          </div>
+          <div class="sb-col-content">
+            <div class="sb-label">Owned Items
+              <span class="sb-muted" style="font-size:0.78em;margin-left:4px;">
+                (${esc(SPECIES_DATA[ap.speciesId]?.label || ap.speciesId)}, ${esc(cap(ap.gender))})
+              </span>
+            </div>
+            <div class="sb-col-items">${itemsHtml}</div>
+            <div class="sb-label" style="margin-top:10px;">Clothing Dye ${clearBtn}</div>
+            <div class="sb-dye-strip">${dyeSwatches || '<div class="sb-muted">No dyes owned</div>'}</div>
+          </div>
         </div>
       </div>`;
   }
@@ -410,8 +594,7 @@
         } else {
           const can = bronze >= item.price;
           btn = `<button class="sb-shop-action buy${can ? '' : ' cant'}" data-action="buy" data-id="${esc(item.id)}"${can ? '' : ' disabled'}>
-            <span class="sb-coin">🪙</span>${item.price}
-          </button>`;
+            <span class="sb-coin">🪙</span>${item.price}</button>`;
         }
         rows += `
           <div class="sb-shop-item">
@@ -425,19 +608,23 @@
     }
 
     return `
-      <div class="sb-card sb-shop-card">
+      <div class="sb-card sb-wide-card">
         <div class="sb-header">
           <button class="sb-btn-ghost" id="sb-back-btn">← Back</button>
           <div class="sb-title">Shop</div>
-          <div class="sb-bronze">
-            <span class="sb-coin">🪙</span>
-            <span id="sb-bronze-val">${bronze}</span>&nbsp;Bronze
+          <div class="sb-bronze"><span class="sb-coin">🪙</span><span id="sb-bronze-val">${bronze}</span>&nbsp;Bronze</div>
+        </div>
+        <div class="sb-ap-layout">
+          <div class="sb-ap-preview">
+            <canvas id="sb-shop-canvas" width="160" height="160" class="sb-portrait-canvas"></canvas>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div class="sb-shop-note sb-muted" style="font-size:0.8em;padding-bottom:6px;">
+              Showing items for ${esc(SPECIES_DATA[appearance.speciesId]?.label || appearance.speciesId)} (${esc(cap(appearance.gender))})
+            </div>
+            <div class="sb-shop-list" style="max-height:52dvh;">${rows || '<div class="sb-muted">No items available.</div>'}</div>
           </div>
         </div>
-        <div class="sb-shop-note sb-muted" style="padding:4px 0 8px;font-size:0.82em;">
-          Showing items for ${esc(SPECIES_DATA[appearance.speciesId]?.label || appearance.speciesId)} (${esc(cap(appearance.gender))})
-        </div>
-        <div class="sb-shop-list">${rows || '<div class="sb-muted">No items available for your species.</div>'}</div>
       </div>`;
   }
 
@@ -542,44 +729,58 @@
   function render() {
     const el = overlay();
     if (!el) return;
-    if      (_screen === 'create')              el.innerHTML = renderCreate();
-    else if (_screen === 'appearance')          el.innerHTML = renderAppearance();
-    else if (_screen === 'shop')                el.innerHTML = renderShop();
-    else if (_screen === 'online')              el.innerHTML = renderOnline();
-    else if (_screen === 'online-host-setup')   el.innerHTML = renderOnlineHostSetup();
-    else if (_screen === 'online-waiting')      el.innerHTML = renderOnlineWaiting();
-    else if (_screen === 'online-join')         el.innerHTML = renderOnlineJoin();
-    else if (_screen === 'online-joined')       el.innerHTML = renderOnlineJoined();
-    else                                        el.innerHTML = renderMain();
+    if      (_screen === 'create')            el.innerHTML = renderCreate();
+    else if (_screen === 'appearance')        el.innerHTML = renderAppearance();
+    else if (_screen === 'collections')       el.innerHTML = renderCollections();
+    else if (_screen === 'shop')              el.innerHTML = renderShop();
+    else if (_screen === 'online')            el.innerHTML = renderOnline();
+    else if (_screen === 'online-host-setup') el.innerHTML = renderOnlineHostSetup();
+    else if (_screen === 'online-waiting')    el.innerHTML = renderOnlineWaiting();
+    else if (_screen === 'online-join')       el.innerHTML = renderOnlineJoin();
+    else if (_screen === 'online-joined')     el.innerHTML = renderOnlineJoined();
+    else                                      el.innerHTML = renderMain();
     bind();
+
+    // Kick off portrait preview after DOM is ready
+    if (_screen === 'appearance' && _editAppearance) {
+      renderPreviewCanvas('sb-ap-canvas', _editAppearance);
+    } else if (_screen === 'collections' || _screen === 'shop') {
+      const acc = window.ScratchbonesAccount;
+      const ap = acc ? acc.getAppearance() : { speciesId: 'mao-ao', gender: 'male', cosmetics: {}, bodyColors: {} };
+      renderPreviewCanvas(_screen === 'collections' ? 'sb-col-canvas' : 'sb-shop-canvas', ap);
+    }
   }
+
+  // ── Open appearance editor ─────────────────────────────────
 
   function openAppearanceEditor() {
     const acc = window.ScratchbonesAccount;
     const saved = acc ? acc.getAppearance() : null;
-    // Deep-copy for editing
     _editAppearance = {
       speciesId: saved?.speciesId || 'mao-ao',
       gender:    saved?.gender    || 'male',
       cosmetics: { ...(saved?.cosmetics || {}) },
       bodyColors: {
-        A: { ...(saved?.bodyColors?.A || { h:0,s:-0.7,v:-0.3 }) },
-        B: { ...(saved?.bodyColors?.B || { h:0,s:-0.7,v:-0.5 }) },
-        C: { ...(saved?.bodyColors?.C || { h:0,s:-0.8,v:-0.2 }) },
+        A: { ...(saved?.bodyColors?.A || { h:0, s:-0.70, v:-0.30 }) },
+        B: { ...(saved?.bodyColors?.B || { h:0, s:-0.70, v:-0.50 }) },
+        C: { ...(saved?.bodyColors?.C || { h:0, s:-0.65, v:-0.15 }) },
       },
     };
-    const specData = SPECIES_DATA[_editAppearance.speciesId];
-    const gData = specData && specData[_editAppearance.gender];
-    _editColorPresetIdx = gData ? findClosestPresetIdx(gData.colorPresets, _editAppearance.bodyColors) : 0;
+    const gData = currentSpeciesGenderData();
+    const opts = gData ? gData.colorOptions : [];
+    _editAIdx = closestColorIdx(opts, _editAppearance.bodyColors.A);
+    _editBIdx = closestColorIdx(opts, _editAppearance.bodyColors.B);
     _screen = 'appearance';
     render();
   }
+
+  // ── Bind event handlers ────────────────────────────────────
 
   function bind() {
     const el = overlay();
     if (!el) return;
 
-    // ── Create screen ──
+    // Create screen
     const createBtn = document.getElementById('sb-create-btn');
     if (createBtn) {
       createBtn.addEventListener('click', () => {
@@ -594,14 +795,14 @@
       });
     }
 
-    // ── Main screen ──
+    // Main screen
     document.getElementById('sb-start-btn')?.addEventListener('click', startGame);
     document.getElementById('sb-appearance-btn')?.addEventListener('click', openAppearanceEditor);
+    document.getElementById('sb-collections-btn')?.addEventListener('click', () => { _screen = 'collections'; render(); });
     document.getElementById('sb-shop-btn')?.addEventListener('click', () => { _screen = 'shop'; render(); });
     document.getElementById('sb-online-btn')?.addEventListener('click', () => { _screen = 'online'; render(); });
     document.getElementById('sb-ad-btn')?.addEventListener('click', () => {
-      window.ScratchbonesAccount?.watchAd();
-      render();
+      window.ScratchbonesAccount?.watchAd(); render();
     });
 
     el.querySelectorAll('.sb-mode-btn').forEach(btn => {
@@ -624,47 +825,50 @@
       });
     });
 
-    // ── Back button (shared) ──
+    // Back button
     document.getElementById('sb-back-btn')?.addEventListener('click', () => {
-      if (_screen === 'appearance' || _screen === 'shop' || _screen === 'online') _screen = 'main';
-      else if (_screen === 'online-host-setup' || _screen === 'online-join') _screen = 'online';
+      if (['appearance', 'collections', 'shop', 'online'].includes(_screen)) _screen = 'main';
+      else if (['online-host-setup', 'online-join'].includes(_screen)) _screen = 'online';
       else _screen = 'main';
       render();
     });
 
-    // ── Appearance editor ──
-    el.querySelectorAll('.sb-species-btn').forEach(btn => {
+    // ── Appearance editor ──────────────────────────────────────
+
+    el.querySelectorAll('[data-species]').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (!_editAppearance) return;
         const sid = btn.dataset.species;
         _editAppearance.speciesId = sid;
         const specData = SPECIES_DATA[sid];
-        // If current gender not available for new species, switch to first available
         if (specData && !specData.genders.includes(_editAppearance.gender)) {
           _editAppearance.gender = specData.genders[0];
         }
-        // Reset cosmetics when species changes
         _editAppearance.cosmetics = {};
         const gData = specData && specData[_editAppearance.gender];
-        _editColorPresetIdx = 0;
-        if (gData && gData.colorPresets.length) {
-          const p = gData.colorPresets[0];
-          _editAppearance.bodyColors = { A:{...p.A}, B:{...p.B}, C:{...p.C} };
+        const opts = gData ? gData.colorOptions : [];
+        _editAIdx = 0; _editBIdx = 0;
+        if (opts[0]) {
+          _editAppearance.bodyColors.A = { h: opts[0].h, s: opts[0].s, v: opts[0].v };
+          _editAppearance.bodyColors.B = { h: opts[0].h, s: opts[0].s, v: opts[0].v };
+          _editAppearance.bodyColors.C = deriveCFromA(opts[0]);
         }
         render();
       });
     });
 
-    el.querySelectorAll('.sb-gender-btn:not([disabled])').forEach(btn => {
+    el.querySelectorAll('[data-gender]:not([disabled])').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (!_editAppearance) return;
         _editAppearance.gender = btn.dataset.gender;
-        // Reset cosmetics when gender changes
         _editAppearance.cosmetics = {};
-        const specData = SPECIES_DATA[_editAppearance.speciesId];
-        const gData = specData && specData[_editAppearance.gender];
-        _editColorPresetIdx = 0;
-        if (gData && gData.colorPresets.length) {
-          const p = gData.colorPresets[0];
-          _editAppearance.bodyColors = { A:{...p.A}, B:{...p.B}, C:{...p.C} };
+        const gData = currentSpeciesGenderData();
+        const opts = gData ? gData.colorOptions : [];
+        _editAIdx = 0; _editBIdx = 0;
+        if (opts[0]) {
+          _editAppearance.bodyColors.A = { h: opts[0].h, s: opts[0].s, v: opts[0].v };
+          _editAppearance.bodyColors.B = { h: opts[0].h, s: opts[0].s, v: opts[0].v };
+          _editAppearance.bodyColors.C = deriveCFromA(opts[0]);
         }
         render();
       });
@@ -672,29 +876,39 @@
 
     el.querySelectorAll('.sb-cosmetic-select').forEach(sel => {
       sel.addEventListener('change', () => {
-        const slot = sel.dataset.slot;
-        const val = sel.value || null;
-        _editAppearance.cosmetics[slot] = val || null;
+        if (!_editAppearance) return;
+        _editAppearance.cosmetics[sel.dataset.slot] = sel.value || null;
+        renderPreviewCanvas('sb-ap-canvas', _editAppearance);
       });
     });
 
-    el.querySelectorAll('.sb-color-preset').forEach(btn => {
+    el.querySelectorAll('[data-a-idx]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.preset);
-        const specData = SPECIES_DATA[_editAppearance.speciesId];
-        const gData = specData && specData[_editAppearance.gender];
-        if (gData && gData.colorPresets[idx]) {
-          _editColorPresetIdx = idx;
-          const p = gData.colorPresets[idx];
-          _editAppearance.bodyColors = { A:{...p.A}, B:{...p.B}, C:{...p.C} };
-          // Re-render just the presets area to show selection change
-          const presetsEl = el.querySelector('.sb-color-presets');
-          if (presetsEl) {
-            presetsEl.querySelectorAll('.sb-color-preset').forEach((b, i) => {
-              b.classList.toggle('selected', i === idx);
-            });
-          }
-        }
+        if (!_editAppearance) return;
+        const idx = parseInt(btn.dataset.aIdx);
+        const gData = currentSpeciesGenderData();
+        const o = gData && gData.colorOptions[idx];
+        if (!o) return;
+        _editAIdx = idx;
+        _editAppearance.bodyColors.A = { h: o.h, s: o.s, v: o.v };
+        _editAppearance.bodyColors.C = deriveCFromA(o);
+        // Update selected state without full re-render
+        el.querySelectorAll('[data-a-idx]').forEach((b, i) => b.classList.toggle('selected', i === idx));
+        renderPreviewCanvas('sb-ap-canvas', _editAppearance);
+      });
+    });
+
+    el.querySelectorAll('[data-b-idx]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!_editAppearance) return;
+        const idx = parseInt(btn.dataset.bIdx);
+        const gData = currentSpeciesGenderData();
+        const o = gData && gData.colorOptions[idx];
+        if (!o) return;
+        _editBIdx = idx;
+        _editAppearance.bodyColors.B = { h: o.h, s: o.s, v: o.v };
+        el.querySelectorAll('[data-b-idx]').forEach((b, i) => b.classList.toggle('selected', i === idx));
+        renderPreviewCanvas('sb-ap-canvas', _editAppearance);
       });
     });
 
@@ -704,7 +918,24 @@
       render();
     });
 
-    // ── Shop screen ──
+    // ── Collections ────────────────────────────────────────────
+
+    el.querySelectorAll('[data-dye-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window.ScratchbonesAccount?.applyDye(btn.dataset.dyeId);
+        render();
+      });
+    });
+
+    el.querySelectorAll('[data-dye-slot]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window.ScratchbonesAccount?.removeDye(btn.dataset.dyeSlot);
+        render();
+      });
+    });
+
+    // ── Shop ───────────────────────────────────────────────────
+
     el.querySelectorAll('.sb-shop-action').forEach(btn => {
       btn.addEventListener('click', () => {
         const { action, id } = btn.dataset;
@@ -717,37 +948,42 @@
       });
     });
 
-    // ── Online lobby ──
+    // ── Online lobby ───────────────────────────────────────────
+
     document.getElementById('sb-host-btn')?.addEventListener('click', () => { _screen = 'online-host-setup'; render(); });
     document.getElementById('sb-join-btn')?.addEventListener('click', () => { _screen = 'online-join'; render(); });
 
-    // Host setup — create room
     document.getElementById('sb-create-room-btn')?.addEventListener('click', () => {
       const net = window.ScratchbonesNetwork;
       if (!net) { alert('Network module not loaded'); return; }
-      const username = window.ScratchbonesAccount?.getUsername() || 'Host';
+      const acc = window.ScratchbonesAccount;
+      const username = acc?.getUsername() || 'Host';
+      const appearance = acc?.getAppearance() ?? null;
       _onlineOccupants = [{ seatId: 0, name: username }];
-      net.createRoom(wsUrl(), username, _onlinePlayerCount)
+      _onlineOccupantAppearances = { 0: appearance };
+      net.createRoom(wsUrl(), username, _onlinePlayerCount, appearance)
         .then(code => {
           _roomCode = code;
           _myOnlineSeat = 0;
           _screen = 'online-waiting';
           net.on('player-joined', msg => {
-            _onlineOccupants = (msg.occupants || []);
+            _onlineOccupants = (msg.occupants || []).map(o => ({ seatId: o.seatId, name: o.name }));
+            // Store per-seat appearances from the relay
+            for (const o of (msg.occupants || [])) {
+              if (o.appearance) _onlineOccupantAppearances[o.seatId] = o.appearance;
+            }
             render();
           });
           net.on('player-left', msg => {
             _onlineOccupants = _onlineOccupants.filter(o => o.seatId !== msg.seatId);
+            delete _onlineOccupantAppearances[msg.seatId];
             render();
           });
           render();
         })
-        .catch(err => {
-          alert('Could not create room: ' + err.message);
-        });
+        .catch(err => { alert('Could not create room: ' + err.message); });
     });
 
-    // Online waiting — start / cancel
     document.getElementById('sb-start-online-btn')?.addEventListener('click', () => {
       if (_onlineOccupants.length < _onlinePlayerCount) return;
       startOnlineGame();
@@ -758,7 +994,6 @@
       render();
     });
 
-    // Join screen
     const doJoinBtn = document.getElementById('sb-do-join-btn');
     if (doJoinBtn) {
       const attemptJoin = () => {
@@ -766,9 +1001,11 @@
         if (code.length < 4) { showJoinError('Enter a 4-character room code'); return; }
         const net = window.ScratchbonesNetwork;
         if (!net) { showJoinError('Network module not loaded'); return; }
-        const username = window.ScratchbonesAccount?.getUsername() || 'Player';
+        const acc = window.ScratchbonesAccount;
+        const username = acc?.getUsername() || 'Player';
+        const appearance = acc?.getAppearance() ?? null;
         doJoinBtn.disabled = true;
-        net.joinRoom(wsUrl(), code, username)
+        net.joinRoom(wsUrl(), code, username, appearance)
           .then(seatId => {
             _myOnlineSeat = seatId;
             _roomCode = code;
@@ -798,21 +1035,11 @@
     if (el) { el.textContent = msg; el.style.display = ''; }
   }
 
-  // ── Build playerAppearances for session ────────────────────
+  // ── Session helpers ────────────────────────────────────────
 
-  function buildPlayerAppearances(humanSeats) {
-    const acc = window.ScratchbonesAccount;
-    const appearance = acc ? acc.getAppearance() : null;
-    if (!appearance) return {};
-    const result = {};
-    // Seat 0 is always the local player; other human seats in hot-seat use same appearance
-    for (const seat of humanSeats) {
-      result[seat] = appearance;
-    }
-    return result;
+  function getLocalAppearance() {
+    return window.ScratchbonesAccount?.getAppearance() ?? null;
   }
-
-  // ── Public API ─────────────────────────────────────────────
 
   function show(screen) {
     window.ScratchbonesAccount?.tickPassiveIncome();
@@ -850,15 +1077,14 @@
     playerNames[0] = window.ScratchbonesAccount.getUsername();
     for (let i = 1; i < humanCount; i++) playerNames[i] = `Player ${i + 1}`;
 
-    window.SCRATCHBONES_SESSION = {
-      mode,
-      humanSeats,
-      playerNames,
-      playerAppearances: buildPlayerAppearances(humanSeats),
-    };
+    // All human seats share the local player's appearance in local/hot-seat modes
+    const ap = getLocalAppearance();
+    const playerAppearances = {};
+    for (const seat of humanSeats) playerAppearances[seat] = ap;
+
+    window.SCRATCHBONES_SESSION = { mode, humanSeats, playerNames, playerAppearances };
     _postGameMessage = '';
     hide();
-
     if (_scratchbonesReady && window.scratchbonesStartGame) {
       void window.scratchbonesStartGame().catch(e => console.error('[lobby] startGame error', e));
     }
@@ -873,17 +1099,13 @@
     const playerNames = {};
     _onlineOccupants.forEach(o => { playerNames[o.seatId] = o.name; });
 
-    window.SCRATCHBONES_SESSION = {
-      mode: 'pvp',
-      humanSeats,
-      playerNames,
-      playerAppearances: buildPlayerAppearances([0]),
-    };
-    _postGameMessage = '';
+    // Use per-seat appearances collected from player-joined events
+    const playerAppearances = { ..._onlineOccupantAppearances };
 
+    window.SCRATCHBONES_SESSION = { mode: 'pvp', humanSeats, playerNames, playerAppearances };
+    _postGameMessage = '';
     net.broadcastStart();
     hide();
-
     if (_scratchbonesReady && window.scratchbonesStartGame) {
       void window.scratchbonesStartGame().catch(e => console.error('[lobby] startOnlineGame error', e));
     }
@@ -891,12 +1113,14 @@
 
   function startOnlineClient() {
     hide();
-    const username = window.ScratchbonesAccount?.getUsername() || 'Player';
+    const acc = window.ScratchbonesAccount;
+    const username = acc?.getUsername() || 'Player';
+    const ap = getLocalAppearance();
     window.SCRATCHBONES_SESSION = {
       mode: 'online-client',
       humanSeats: [_myOnlineSeat],
       playerNames: { [_myOnlineSeat]: username },
-      playerAppearances: buildPlayerAppearances([_myOnlineSeat]),
+      playerAppearances: { [_myOnlineSeat]: ap },
     };
     if (_scratchbonesReady && window.scratchbonesStartClient) {
       void window.scratchbonesStartClient().catch(e => console.error('[lobby] startOnlineClient error', e));
@@ -905,6 +1129,8 @@
 
   function init() {
     window.ScratchbonesAccount?.load();
+    // Pre-load portrait cosmetics for preview
+    ensurePortraitCosmetics();
 
     if (window.scratchbonesStartGame) {
       _scratchbonesReady = true;
@@ -915,7 +1141,6 @@
         show();
       }, { once: true });
     }
-
     setInterval(() => window.ScratchbonesAccount?.tickPassiveIncome(), 60_000);
   }
 

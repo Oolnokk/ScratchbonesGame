@@ -4636,14 +4636,16 @@ import { createLayerManager } from './ui/layerManager.js';
         // Generate base profile for this fighter (provides hat, torso, arm cosmetics randomly)
         const profile = randomProfileSeeded(rng, fighterPool, hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
         if (!profile) return null;
-        // Override with saved cosmetics
+        // Override with saved cosmetics, but never override forced slots
         const lookupOption = id => id ? (optionCache?.get(id) ?? null) : null;
+        const forced = forcedCosmeticsByFighter?.[fighter.id] ?? {};
+        const forcedSlots = new Set(Object.keys(forced));
         if (cosmetics) {
-          if (cosmetics.hairFront !== undefined) profile.hairFront = lookupOption(cosmetics.hairFront);
-          if (cosmetics.hairBack  !== undefined) profile.hairBack  = lookupOption(cosmetics.hairBack);
-          if (cosmetics.hairSide  !== undefined) profile.hairSide  = lookupOption(cosmetics.hairSide);
-          if (cosmetics.eyes      !== undefined) profile.eyes      = lookupOption(cosmetics.eyes);
-          if (cosmetics.facialHair!== undefined) profile.facialHair= lookupOption(cosmetics.facialHair);
+          if (cosmetics.hairFront !== undefined && !forcedSlots.has('hairFront')) profile.hairFront = lookupOption(cosmetics.hairFront);
+          if (cosmetics.hairBack  !== undefined && !forcedSlots.has('hairBack'))  profile.hairBack  = lookupOption(cosmetics.hairBack);
+          if (cosmetics.hairSide  !== undefined && !forcedSlots.has('hairSide'))  profile.hairSide  = lookupOption(cosmetics.hairSide);
+          if (cosmetics.eyes      !== undefined && !forcedSlots.has('eyes'))      profile.eyes      = lookupOption(cosmetics.eyes);
+          if (cosmetics.facialHair!== undefined && !forcedSlots.has('facialHair'))profile.facialHair= lookupOption(cosmetics.facialHair);
         }
         if (bodyColors) {
           profile.bodyColors = { ...(profile.bodyColors || {}), ...bodyColors };
@@ -4670,6 +4672,12 @@ import { createLayerManager } from './ui/layerManager.js';
         applySlot('hat', 'hat');
         applySlot('torso', 'torsoCosmetic');
         applySlot('overwear', 'armCosmetic');
+        // Apply clothing dyes
+        if (acc.getAppliedDyes) {
+          const dyes = acc.getAppliedDyes();
+          if (dyes.CLOTH) player.profile.bodyColors = { ...(player.profile.bodyColors || {}), CLOTH: dyes.CLOTH };
+          if (dyes.HAT)   player.profile.bodyColors = { ...(player.profile.bodyColors || {}), HAT: dyes.HAT };
+        }
       }
     }
     function logPlayerPortraitXforms(player) {

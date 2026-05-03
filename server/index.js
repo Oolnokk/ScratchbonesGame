@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 8080;
 const wss = new WebSocket.Server({ port: PORT });
 
-// rooms: Map<code, { host, hostSeatId, clients: Map<seatId, {ws, name}>, lastState }>
+// rooms: Map<code, { host, hostSeatId, hostName, hostAppearance, clients: Map<seatId, {ws, name, appearance}>, lastState }>
 const rooms = new Map();
 
 function makeCode() {
@@ -62,6 +62,7 @@ wss.on('connection', ws => {
         host: ws,
         hostSeatId: 0,
         hostName,
+        hostAppearance: msg.playerAppearance ?? null,
         clients: new Map(),
         lastState: null,
         totalSeats: Math.max(2, Math.min(4, Number(msg.totalSeats) || 2)),
@@ -88,7 +89,8 @@ wss.on('connection', ws => {
       if (seat === null) { send(ws, { type: 'error', reason: 'No seats available' }); return; }
 
       const playerName = String(msg.playerName || `Player ${seat + 1}`).slice(0, 32);
-      room.clients.set(seat, { ws, name: playerName });
+      const playerAppearance = msg.playerAppearance ?? null;
+      room.clients.set(seat, { ws, name: playerName, appearance: playerAppearance });
       roomCode = code;
       role = 'client';
       seatId = seat;
@@ -100,10 +102,10 @@ wss.on('connection', ws => {
         send(ws, { type: 'state-update', state: filterStateForSeat(room.lastState, seatId) });
       }
 
-      // Notify host
+      // Notify host — include per-seat appearances so host can pass them into the session
       const occupants = [
-        { seatId: room.hostSeatId, name: room.hostName },
-        ...[...room.clients.entries()].map(([s, { name }]) => ({ seatId: s, name })),
+        { seatId: room.hostSeatId, name: room.hostName, appearance: room.hostAppearance ?? null },
+        ...[...room.clients.entries()].map(([s, { name, appearance }]) => ({ seatId: s, name, appearance })),
       ];
       send(room.host, { type: 'player-joined', seatId, playerName, occupants });
       return;

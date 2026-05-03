@@ -8,7 +8,7 @@
   // NPC-usable cosmetics available for purchase.
   // Items tagged species/gender are only shown when the player matches.
   const SHOP_CATALOG = [
-    // Hats — universal (all species can wear)
+    // Hats — universal
     { id: 'appearance::hat::basic_headband',      label: 'Basic Headband',       price: 5,  category: 'hat',     description: 'A simple cloth headband.' },
     { id: 'appearance::hat::riverlandskasa_low',  label: 'Riverland Kasa (Low)', price: 10, category: 'hat',     description: 'Traditional riverland hat, worn low.' },
     { id: 'appearance::hat::riverlandskasa_wide', label: 'Riverland Kasa (Wide)',price: 10, category: 'hat',     description: 'Traditional riverland hat, wide brim.' },
@@ -30,21 +30,32 @@
     { id: 'tankanwrap_kenk_f',     label: 'Tankan Wrap',    price: 15, category: 'overwear', species: 'kenkari',  gender: 'female', description: 'A wrapped ceremonial garment.' },
   ];
 
+  // Dyes set a bodyColor slot (CLOTH or HAT) to a specific tint.
+  const DYE_CATALOG = [
+    { id: 'dye:CLOTH:red',    label: 'Red',     dyeSlot: 'CLOTH', color: { h: -20, s:  0.50, v: -0.30 } },
+    { id: 'dye:CLOTH:orange', label: 'Orange',  dyeSlot: 'CLOTH', color: { h:  20, s:  0.80, v: -0.20 } },
+    { id: 'dye:CLOTH:yellow', label: 'Yellow',  dyeSlot: 'CLOTH', color: { h:  55, s:  0.70, v:  0.00 } },
+    { id: 'dye:CLOTH:green',  label: 'Green',   dyeSlot: 'CLOTH', color: { h: 120, s:  0.60, v: -0.30 } },
+    { id: 'dye:CLOTH:blue',   label: 'Blue',    dyeSlot: 'CLOTH', color: { h:-160, s:  0.70, v: -0.25 } },
+    { id: 'dye:CLOTH:purple', label: 'Purple',  dyeSlot: 'CLOTH', color: { h:-100, s:  0.60, v: -0.25 } },
+    { id: 'dye:CLOTH:brown',  label: 'Brown',   dyeSlot: 'CLOTH', color: { h: -30, s:  0.10, v: -0.50 } },
+    { id: 'dye:CLOTH:black',  label: 'Black',   dyeSlot: 'CLOTH', color: { h:   0, s: -0.50, v: -0.80 } },
+    { id: 'dye:CLOTH:white',  label: 'White',   dyeSlot: 'CLOTH', color: { h:   0, s: -0.80, v:  0.50 } },
+    { id: 'dye:CLOTH:grey',   label: 'Grey',    dyeSlot: 'CLOTH', color: { h:   0, s: -0.70, v: -0.10 } },
+  ];
+
+  // Starter dyes given to every new account
+  const STARTER_DYE_IDS = DYE_CATALOG.map(d => d.id);
+
   function defaultAppearance() {
     return {
       speciesId: 'mao-ao',
       gender: 'male',
-      cosmetics: {
-        hairFront: null,
-        hairBack: null,
-        hairSide: null,
-        eyes: null,
-        facialHair: null,
-      },
+      cosmetics: {},
       bodyColors: {
-        A: { h: 0,   s: -0.7, v: -0.3 },
-        B: { h: 0,   s: -0.7, v: -0.5 },
-        C: { h: 0,   s: -0.8, v: -0.2 },
+        A: { h: 0,   s: -0.70, v: -0.30 },
+        B: { h: 0,   s: -0.70, v: -0.50 },
+        C: { h: 0,   s: -0.65, v: -0.15 },
       },
     };
   }
@@ -56,6 +67,8 @@
       bronzePassiveLastMs: Date.now(),
       unlockedCosmetics: [],
       equippedCosmetics: [],
+      ownedDyes: [...STARTER_DYE_IDS],
+      appliedDyes: {},
       appearance: defaultAppearance(),
       createdAt: Date.now(),
     };
@@ -70,10 +83,14 @@
       if (raw) {
         const parsed = JSON.parse(raw);
         _account = { ...base, ...parsed };
-        // Merge nested appearance so missing sub-fields get defaults
         _account.appearance = { ...base.appearance, ...(parsed.appearance || {}) };
-        _account.appearance.cosmetics = { ...base.appearance.cosmetics, ...(parsed.appearance?.cosmetics || {}) };
+        _account.appearance.cosmetics = { ...(parsed.appearance?.cosmetics || {}) };
         _account.appearance.bodyColors = { ...base.appearance.bodyColors, ...(parsed.appearance?.bodyColors || {}) };
+        _account.appliedDyes = { ...(parsed.appliedDyes || {}) };
+        // Grant starter dyes to existing accounts that don't have them yet
+        if (!_account.ownedDyes || !_account.ownedDyes.length) {
+          _account.ownedDyes = [...STARTER_DYE_IDS];
+        }
       } else {
         _account = base;
       }
@@ -137,7 +154,6 @@
     return toAdd;
   }
 
-  // Placeholder: instantly fill Bronze up to passive max.
   function watchAd() {
     const acc = getAccount();
     acc.bronze = Math.max(acc.bronze, BRONZE_PASSIVE_MAX);
@@ -159,14 +175,21 @@
   }
 
   function getAppearance() {
-    return getAccount().appearance || defaultAppearance();
+    const acc = getAccount();
+    return acc.appearance || defaultAppearance();
   }
 
   function setAppearance(appearance) {
     const acc = getAccount();
-    acc.appearance = { ...defaultAppearance(), ...appearance };
-    acc.appearance.cosmetics = { ...defaultAppearance().cosmetics, ...(appearance.cosmetics || {}) };
-    acc.appearance.bodyColors = { ...defaultAppearance().bodyColors, ...(appearance.bodyColors || {}) };
+    acc.appearance = {
+      speciesId: appearance.speciesId || 'mao-ao',
+      gender:    appearance.gender    || 'male',
+      cosmetics: { ...(appearance.cosmetics || {}) },
+      bodyColors: {
+        ...defaultAppearance().bodyColors,
+        ...(appearance.bodyColors || {}),
+      },
+    };
     save();
   }
 
@@ -203,10 +226,37 @@
     return true;
   }
 
+  // ── Dye API ────────────────────────────────────────────────
+
+  function getDyeCatalog() { return DYE_CATALOG; }
+  function getOwnedDyes()  { return [...(getAccount().ownedDyes || [])]; }
+  function isDyeOwned(id)  { return (getAccount().ownedDyes || []).includes(id); }
+
+  function getAppliedDyes() {
+    return getAccount().appliedDyes || {};
+  }
+
+  function applyDye(dyeId) {
+    const acc = getAccount();
+    if (!(acc.ownedDyes || []).includes(dyeId)) return false;
+    const dye = DYE_CATALOG.find(d => d.id === dyeId);
+    if (!dye) return false;
+    acc.appliedDyes = { ...(acc.appliedDyes || {}), [dye.dyeSlot]: { ...dye.color } };
+    save();
+    return true;
+  }
+
+  function removeDye(dyeSlot) {
+    const acc = getAccount();
+    acc.appliedDyes = { ...(acc.appliedDyes || {}) };
+    delete acc.appliedDyes[dyeSlot];
+    save();
+  }
+
+  // ── Shop helpers ───────────────────────────────────────────
+
   function getShopCatalog() { return SHOP_CATALOG; }
 
-  // Returns catalog items relevant to the given species+gender.
-  // Universal items (no species tag) are always included.
   function getShopCatalogForAppearance(speciesId, gender) {
     return SHOP_CATALOG.filter(item => {
       if (!item.species) return true;
@@ -237,6 +287,12 @@
     buyCosmetic,
     equipCosmetic,
     unequipCosmetic,
+    getDyeCatalog,
+    getOwnedDyes,
+    isDyeOwned,
+    getAppliedDyes,
+    applyDye,
+    removeDye,
     getShopCatalog,
     getShopCatalogForAppearance,
     BRONZE_PASSIVE_MAX,

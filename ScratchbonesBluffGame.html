@@ -2090,6 +2090,59 @@
     .sb-swatch-lbl { font-size: 0.65em; letter-spacing: 0.05em; margin-top: 2px; white-space: nowrap; }
     .sb-shop-note { padding: 2px 0 6px; }
 
+    /* ── Wide card (shop / collections / appearance with preview) ── */
+    .sb-wide-card { width: min(660px, 96vw); }
+
+    /* ── Two-column layout: preview + controls ──────────────── */
+    .sb-ap-layout, .sb-col-layout {
+      display: flex; gap: 18px; align-items: flex-start; margin-top: 12px;
+    }
+    .sb-ap-preview, .sb-col-preview {
+      flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .sb-ap-controls, .sb-col-content { flex: 1; min-width: 0; }
+
+    /* ── Portrait canvas ────────────────────────────────────── */
+    .sb-portrait-canvas {
+      width: 160px; height: 160px; border-radius: 8px;
+      background: rgba(242,208,143,0.05); border: 1px solid rgba(242,208,143,0.14);
+      image-rendering: pixelated;
+    }
+
+    /* ── Collections item list ──────────────────────────────── */
+    .sb-col-items { display: flex; flex-direction: column; gap: 3px; max-height: 26dvh; overflow-y: auto; }
+
+    /* ── Selection button group (species / gender) ──────────── */
+    .sb-sel-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .sb-sel-btn {
+      padding: 6px 14px; background: rgba(242,208,143,0.05); border: 1px solid rgba(242,208,143,0.18);
+      border-radius: 6px; color: #f2d08f; cursor: pointer; font-family: inherit;
+      letter-spacing: inherit; font-size: 0.88em; transition: background .12s;
+    }
+    .sb-sel-btn:hover { background: rgba(242,208,143,0.10); }
+    .sb-sel-btn.selected { background: rgba(200,153,82,0.22); border-color: rgba(200,153,82,0.65); }
+    .sb-sel-btn.disabled, .sb-sel-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+    /* ── Color swatch row ───────────────────────────────────── */
+    .sb-color-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .sb-color-row-lbl { font-size: 0.75em; color: rgba(242,208,143,0.45); min-width: 14px; }
+    .sb-swatch-strip { display: flex; gap: 5px; flex-wrap: wrap; }
+    .sb-swatch-btn {
+      width: 28px; height: 28px; border-radius: 5px; border: 2px solid transparent;
+      cursor: pointer; transition: border-color .1s, transform .1s;
+    }
+    .sb-swatch-btn:hover { border-color: rgba(242,208,143,0.45); transform: scale(1.08); }
+    .sb-swatch-btn.selected { border-color: #f2d08f; transform: scale(1.08); }
+
+    /* ── Dye strip ──────────────────────────────────────────── */
+    .sb-dye-strip { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+    .sb-dye-btn {
+      width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent;
+      cursor: pointer; transition: border-color .1s, transform .1s;
+    }
+    .sb-dye-btn:hover { border-color: rgba(242,208,143,0.55); transform: scale(1.1); }
+    .sb-dye-btn.applied { border-color: #f2d08f; box-shadow: 0 0 6px rgba(242,208,143,0.55); }
+
     /* ── Hot-seat cover screen ──────────────────────────────── */
     #sb-cover {
       position: fixed; inset: 0; z-index: 800;
