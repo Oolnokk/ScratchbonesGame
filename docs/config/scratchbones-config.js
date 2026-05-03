@@ -1,4 +1,10 @@
 window.SCRATCHBONES_CONFIG = {
+  // WebSocket relay URL for online multiplayer.
+  // Set this to your ngrok (or other public) address when running remotely,
+  // or remove / comment it out to fall back to ws://localhost:8080 for local dev.
+  // Example: wsUrl: 'wss://mustang-walk-schematic.ngrok-free.dev',
+  wsUrl: 'wss://mustang-walk-schematic.ngrok-free.dev',
+
   game: {
     "debug": {
       "enabled": true,
