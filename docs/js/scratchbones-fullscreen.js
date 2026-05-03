@@ -27,12 +27,10 @@
 
   // ── Fullscreen target element ───────────────────────────────────────────────
   function getGameElement() {
-    // Use the authored root container; fall back to the app div or documentElement.
-    return (
-      document.getElementById('authoredRoot') ||
-      document.getElementById('app') ||
-      document.documentElement
-    );
+    // Fullscreen the whole document so body-fixed overlays (layer manager host,
+    // fly cards, chip clusters) remain visible, and the existing #app letterbox
+    // CSS handles the "black bars + scaled content" framing.
+    return document.documentElement;
   }
 
   // ── Fullscreen state helpers ────────────────────────────────────────────────

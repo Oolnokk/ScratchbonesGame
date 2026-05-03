@@ -1074,10 +1074,16 @@ import { createLayerManager } from './ui/layerManager.js';
         }
       }
       const dealQueueWithResolvedIndexes = queueWithResolvedLandingIndexes(dealQueue);
-      render();
+      render(); // initial render — all deal cards hidden so the deck placeholder is visible
+      // Reveal every card in one batch so each triggers a single deck→hand LERP
+      // animation. Calling render() once per card destroyed the previous clones
+      // (app.innerHTML replacement) leaving only the last card animated.
       for (const dealStep of sortDealQueueRightToLeft(dealQueueWithResolvedIndexes)) {
-        await animateDealCardToPlayer(dealStep);
+        state.dealRevealNowIds.add(dealStep.card.id);
       }
+      render(); // batch reveal — all cards fly from deck simultaneously
+      const flyWaitMs = (Number(SCRATCHBONES_GAME.layout?.animation?.baseDurationMs) || 280) + 80;
+      await sleep(flyWaitMs);
     }
     function refillHandsAfterClearInTurnOrder(clearerIndex) {
       const deck = createDeck();
@@ -1132,15 +1138,15 @@ import { createLayerManager } from './ui/layerManager.js';
       }
       const refillQueueWithResolvedIndexes = queueWithResolvedLandingIndexes(refillQueue);
       const sortedRefillQueue = sortDealQueueRightToLeft(refillQueueWithResolvedIndexes);
-      render();
-      let activePassNumber = sortedRefillQueue[0]?.passNumber ?? null;
+      render(); // initial render — all refill cards hidden
+      // Batch-reveal all refill cards at once so each triggers a deck→hand LERP
+      // animation rather than the last card only (per-card renders destroy clones).
       for (const refillStep of sortedRefillQueue) {
-        if (activePassNumber !== null && refillStep.passNumber !== activePassNumber && CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs > 0) {
-          await sleep(scaledDealAnimationMs(CONFIG.cards.transferAnimation.deckDealInterPlayerDelayMs));
-          activePassNumber = refillStep.passNumber;
-        }
-        await animateDealCardToPlayer(refillStep);
+        state.dealRevealNowIds.add(refillStep.card.id);
       }
+      render(); // batch reveal
+      const flyWaitMs = (Number(SCRATCHBONES_GAME.layout?.animation?.baseDurationMs) || 280) + 80;
+      await sleep(flyWaitMs);
       for (const player of state.players) {
         if (player.eliminated) {
           player.hand = [];

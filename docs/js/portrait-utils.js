@@ -329,7 +329,6 @@ async function renderProfile(canvas, profile) {
   const headUrl = resolvedFighter?.headUrl || fighter?.headUrl;
   const bodyLayerSource = resolvedFighter?.bodyLayers || fighter?.bodyLayers || [];
   const urLayerSource = resolvedFighter?.urLayers || fighter?.urLayers || [];
-  const nowMs = Date.now();
   const blinkOverlayUrlsByBase = new Map();
   for (const layer of urLayerSource) {
     const blinkUrl = blinkUrlFor(layer?.url);
@@ -403,6 +402,8 @@ async function renderProfile(canvas, profile) {
     ctx.fillText('Load error', PORTRAIT_CW / 2, PORTRAIT_CH / 2);
     return;
   }
+  // Capture current time after image loading so blink-state timing is accurate.
+  const nowMs = Date.now();
   const headBlinkState = getBlinkState(headUrl);
   if (headBlinkState) {
     headBlinkState.supported = false;

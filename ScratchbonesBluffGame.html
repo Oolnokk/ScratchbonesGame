@@ -701,6 +701,20 @@
     }
     .claimHandBar.glow-green .tableViewCard { animation: claimGlowGreen 1.5s ease-in-out 1 both; }
     .claimHandBar.glow-red .tableViewCard   { animation: claimGlowRed   0.8s ease-in-out 3 both; }
+
+    /* ── Trick bone glow — verdigris fire effect ──────────────────────────────
+       Mirrors the card-glow pattern (drop-shadow filter animation) but uses the
+       verdigris palette with a fire-like flicker rhythm.  Applied via the
+       data-trick-glow attribute set by bootstrap.js on face-up trick bone cards. */
+    @keyframes trickBoneFlameGlow {
+      0%, 100% { filter: drop-shadow(0 0 5px rgba(39,206,140,0.80)) drop-shadow(0 0 10px rgba(67,180,140,0.50)); }
+      18%      { filter: drop-shadow(0 0 18px rgba(190,255,245,1.00)) drop-shadow(0 0 28px rgba(67,206,162,0.80)) drop-shadow(0 0 8px rgba(255,255,255,0.45)); }
+      35%      { filter: drop-shadow(0 0 8px rgba(67,206,162,0.90)) drop-shadow(0 0 16px rgba(20,140,100,0.60)); }
+      52%      { filter: drop-shadow(0 0 22px rgba(67,180,140,1.00)) drop-shadow(0 0 34px rgba(39,206,140,0.70)) drop-shadow(0 0 10px rgba(140,255,220,0.50)); }
+      72%      { filter: drop-shadow(0 0 10px rgba(39,206,140,0.85)) drop-shadow(0 0 18px rgba(67,180,140,0.55)); }
+      88%      { filter: drop-shadow(0 0 20px rgba(140,255,220,0.95)) drop-shadow(0 0 30px rgba(67,206,162,0.60)) drop-shadow(0 0 7px rgba(255,255,255,0.30)); }
+    }
+    [data-trick-glow] { animation: trickBoneFlameGlow 2.1s ease-in-out infinite; }
     .eliminated { opacity: 0.55; filter: grayscale(0.4); }
     .seatPortrait {
       display: block;
@@ -2247,6 +2261,35 @@
       align-items: center;
       justify-content: center;
       font-family: inherit;
+    }
+    /* ── Fullscreen mode ──────────────────────────────────────────────────────
+       Fullscreen targets document.documentElement so body-fixed overlays
+       (uiLayerManagerHost, chip/card fly elements) remain inside the fullscreen
+       context.  The existing #app letterbox CSS handles scaling; we just ensure
+       the background outside #app is pure black and dev buttons are hidden. */
+    :fullscreen body,
+    :-webkit-full-screen body,
+    :-moz-full-screen body {
+      background: black !important;
+    }
+    :fullscreen body::before,
+    :-webkit-full-screen body::before,
+    :-moz-full-screen body::before {
+      opacity: 0 !important;
+    }
+    :fullscreen #projMapBtn,
+    :fullscreen #projVarBtn,
+    :fullscreen #projSubBtn,
+    :fullscreen #projExportBtn,
+    :fullscreen #projMapTip,
+    :fullscreen #editorStatus,
+    :-webkit-full-screen #projMapBtn,
+    :-webkit-full-screen #projVarBtn,
+    :-webkit-full-screen #projSubBtn,
+    :-webkit-full-screen #projExportBtn,
+    :-webkit-full-screen #projMapTip,
+    :-webkit-full-screen #editorStatus {
+      display: none !important;
     }
   </style>
 </head>
