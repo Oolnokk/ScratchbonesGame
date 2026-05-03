@@ -37,6 +37,7 @@ export function createInitialState(config) {
       ante: 0,
       tablePot: 0,
       dealLandingHiddenCardIds: new Set(),
+      dealRevealNowIds: new Set(),
     },
     uiDebugState: {
       bettingUiDebugKey: null,

@@ -767,7 +767,17 @@ import { createLayerManager } from './ui/layerManager.js';
       state.cinematicMode = received.cinematicMode || null;
       state.pendingCinematicBetAction = received.pendingCinematicBetAction || null;
       state.roundConcessions = new Set(received.roundConcessions || []);
-      state.dealLandingHiddenCardIds = new Set(received.dealLandingHiddenCardIds || []);
+      const prevHidden = state.dealLandingHiddenCardIds;
+      const newHidden = new Set(received.dealLandingHiddenCardIds || []);
+      // Cards that were hidden but are now revealed should animate; keep them in the hidden
+      // set temporarily so capturePreRender skips them and animatePostRender treats them as new.
+      for (const id of prevHidden) {
+        if (!newHidden.has(id)) {
+          state.dealRevealNowIds.add(id);
+          newHidden.add(id); // keep temporarily in hidden set so capturePreRender skips it; render() removes it after taking the snapshot
+        }
+      }
+      state.dealLandingHiddenCardIds = newHidden;
       state.pile = received.pile || [];
       // Preserve card selection only for cards still in the client's own hand
       const myHand = new Set((state.players.find(p => p.id === state.humanSeat)?.hand || []).map(c => c.id));
@@ -1011,22 +1021,18 @@ import { createLayerManager } from './ui/layerManager.js';
       const speedMultiplier = Math.max(0.1, Number(CONFIG.cards.transferAnimation.dealSpeedMultiplier) || 1);
       return Math.max(1, Math.round(Number(durationMs || 0) / speedMultiplier));
     }
-    async function animateDealCardToPlayer({ card, playerIndex, landingCardIndex }) {
+    async function animateDealCardToPlayer({ card, playerIndex, landingCardIndex: _landingCardIndex }) {
       const player = state.players[playerIndex];
       if (!card || !player || player.eliminated) return;
-      await animateCardTransferBatch({
-        cards: [card],
-        fromKind: 'deck',
-        toKind: player.isHuman ? 'hand' : 'seatHand',
-        toPlayerId: playerIndex,
-        toCardIndex: landingCardIndex,
-        durationMs: scaledDealAnimationMs(CONFIG.cards.transferAnimation.deckDealMs),
-        easing: CONFIG.cards.transferAnimation.deckDealEasing,
-        staggerMs: 0,
-      });
-      state.dealLandingHiddenCardIds.delete(card.id);
+      // Queue the card for reveal: render() will flush dealRevealNowIds after capturePreRender
+      // so the lerp system sees it as a new card and plays the deck→hand animation with sound.
+      state.dealRevealNowIds.add(card.id);
       render();
-      if (CONFIG.cards.transferAnimation.deckDealStaggerMs > 0) await sleep(scaledDealAnimationMs(CONFIG.cards.transferAnimation.deckDealStaggerMs));
+      const delayMs = scaledDealAnimationMs(
+        (CONFIG.cards.transferAnimation.deckDealMs || 0) +
+        (CONFIG.cards.transferAnimation.deckDealStaggerMs || 0)
+      );
+      if (delayMs > 0) await sleep(delayMs);
     }
     function sortDealQueueRightToLeft(queue) {
       return [...queue].sort((a, b) => {
@@ -3624,6 +3630,9 @@ import { createLayerManager } from './ui/layerManager.js';
         snapshots.clear();
         document.querySelectorAll('[data-card-id]').forEach(el => {
           const id = el.dataset.cardId;
+          // Skip hidden deal cards so they have no snapshot and trigger the deck→hand
+          // animation when they are revealed via dealRevealNowIds.
+          if (state.dealLandingHiddenCardIds.has(id)) return;
           const img = el.querySelector('img.cardArt') || el.querySelector('img');
           if (!img) return;
           const rect = img.getBoundingClientRect();
@@ -3735,6 +3744,9 @@ import { createLayerManager } from './ui/layerManager.js';
             if (!clonePlane || !targetRectInPlane) return;
 
             if (!snapshot) {
+              // If the card is still in the hidden-deal queue, skip animation; it will
+              // animate properly when revealed via dealRevealNowIds in the next render.
+              if (state.dealLandingHiddenCardIds.has(id)) return;
               const isClaimOrTable = containerType === 'claim' || containerType === 'table';
               if (deckRect && containerType === 'hand') {
                 SCRATCHBONES_AUDIO.playMovement('handToTable');
@@ -3997,6 +4009,14 @@ import { createLayerManager } from './ui/layerManager.js';
       SCRATCHBONES_LAYER_MANAGER.clear();
       seatAvatarAnim.capturePreRender();
       cardAnimator.capturePreRender();
+      // Flush pending deal reveals: capturePreRender has already skipped these cards
+      // (they were in dealLandingHiddenCardIds), so they have no snapshot.  Removing
+      // them now makes the DOM update render them visible, and animatePostRender will
+      // treat them as new cards → deck→hand animation + sound fire correctly.
+      if (state.dealRevealNowIds.size) {
+        for (const id of state.dealRevealNowIds) state.dealLandingHiddenCardIds.delete(id);
+        state.dealRevealNowIds.clear();
+      }
       const app = document.getElementById('app');
       const layoutPolicy = applyLayoutContract(app);
       const hs = state.humanSeat;
