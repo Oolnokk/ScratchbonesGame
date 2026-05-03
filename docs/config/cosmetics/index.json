@@ -265,6 +265,102 @@
     {
       "id": "tankanwrap_kenk_f",
       "path": "./clothes/overwear/tankanwrap_kenk_f.json"
+    },
+    {
+      "id": "appearance::Mao-ao_M::mao-ao_braid-L",
+      "path": "./appearance/mao-ao/braid-L.json"
+    },
+    {
+      "id": "appearance::Mao-ao_M::mao-ao_braid-R",
+      "path": "./appearance/mao-ao/braid-R.json"
+    },
+    {
+      "id": "appearance::Mao-ao_M::mao-ao_braidcluster-R",
+      "path": "./appearance/mao-ao/braidcluster-R.json"
+    },
+    {
+      "id": "appearance::Mao-ao_F::mao-ao_braid-L",
+      "path": "./appearance/mao-ao/braid-L.json"
+    },
+    {
+      "id": "appearance::Mao-ao_F::mao-ao_braid-R",
+      "path": "./appearance/mao-ao/braid-R.json"
+    },
+    {
+      "id": "appearance::Mao-ao_F::mao-ao_braidcluster-R",
+      "path": "./appearance/mao-ao/braidcluster-R.json"
+    },
+    {
+      "id": "appearance::Tletingan_M::tl_braid-L",
+      "path": "./appearance/tletingan/braid-L.json"
+    },
+    {
+      "id": "appearance::Tletingan_M::tl_braid-R",
+      "path": "./appearance/tletingan/braid-R.json"
+    },
+    {
+      "id": "appearance::Tletingan_M::tl_braidcluster-R",
+      "path": "./appearance/tletingan/braidcluster-R.json"
+    },
+    {
+      "id": "appearance::Kenkari_M::kenk_braid-L_m",
+      "path": "./appearance/kenkari/braid-L_m.json"
+    },
+    {
+      "id": "appearance::Kenkari_M::kenk_braid-R_m",
+      "path": "./appearance/kenkari/braid-R_m.json"
+    },
+    {
+      "id": "appearance::Kenkari_M::kenk_braidcluster-R_m",
+      "path": "./appearance/kenkari/braidcluster-R_m.json"
+    },
+    {
+      "id": "appearance::Kenkari_F::kenk_braid-L_f",
+      "path": "./appearance/kenkari/braid-L_f.json"
+    },
+    {
+      "id": "appearance::Kenkari_F::kenk_braid-R_f",
+      "path": "./appearance/kenkari/braid-R_f.json"
+    },
+    {
+      "id": "appearance::Kenkari_F::kenk_braidcluster-R_f",
+      "path": "./appearance/kenkari/braidcluster-R_f.json"
+    },
+    {
+      "id": "appearance::Kenkari_M::kenk_riverlandskasa_low",
+      "path": "./kenk_riverlandskasa_low.json"
+    },
+    {
+      "id": "appearance::Kenkari_F::kenk_riverlandskasa_low",
+      "path": "./kenk_riverlandskasa_low.json"
+    },
+    {
+      "id": "appearance::Kenkari_M::kenk_riverlandskasa_wide",
+      "path": "./kenk_riverlandskasa_wide.json"
+    },
+    {
+      "id": "appearance::Kenkari_F::kenk_riverlandskasa_wide",
+      "path": "./kenk_riverlandskasa_wide.json"
+    },
+    {
+      "id": "fine_hood_mao-ao_m",
+      "path": "./fine_hood_mao-ao_m.json"
+    },
+    {
+      "id": "fine_hood_mao-ao_f",
+      "path": "./fine_hood_mao-ao_f.json"
+    },
+    {
+      "id": "fine_hood_kenk_m",
+      "path": "./fine_hood_kenk_m.json"
+    },
+    {
+      "id": "fine_hood_kenk_f",
+      "path": "./fine_hood_kenk_f.json"
+    },
+    {
+      "id": "fine_hood_tl",
+      "path": "./fine_hood_tl.json"
     }
   ]
 }

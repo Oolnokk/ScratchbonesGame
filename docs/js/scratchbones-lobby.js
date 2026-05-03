@@ -327,8 +327,8 @@
   function buildPreviewProfile(appearance) {
     const cosmetics = _lobbyPortraitCosmetics;
     if (!cosmetics || !window.getPortraitFighters || !window.randomProfileSeeded) return null;
-    const { optionCache, hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions,
-            hatOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender,
+    const { optionCache, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions,
+            hatOptions, hoodOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender,
             allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter,
             conditionalCosmeticsByFighter } = cosmetics;
     const fighters = window.getPortraitFighters();
@@ -348,8 +348,8 @@
     const forcedSlots = new Set(Object.keys(forced));
 
     const profile = window.randomProfileSeeded(rng, [fighter], hairFrontOptions, hairBackOptions,
-      hairSideOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender,
-      allowedCosmeticsByFighter, hatOptions, cosmeticWeightsByFighter, torsoPortraitOptions,
+      hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender,
+      allowedCosmeticsByFighter, hatOptions, hoodOptions, cosmeticWeightsByFighter, torsoPortraitOptions,
       armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
     if (!profile) return null;
 
@@ -359,6 +359,7 @@
       if (savedCosmetics.hairFront  !== undefined && !forcedSlots.has('hairFront'))  profile.hairFront  = lookup(savedCosmetics.hairFront);
       if (savedCosmetics.hairBack   !== undefined && !forcedSlots.has('hairBack'))   profile.hairBack   = lookup(savedCosmetics.hairBack);
       if (savedCosmetics.hairSide   !== undefined && !forcedSlots.has('hairSide'))   profile.hairSide   = lookup(savedCosmetics.hairSide);
+      if (savedCosmetics.hairSideL  !== undefined && !forcedSlots.has('hairSideL'))  profile.hairSideL  = lookup(savedCosmetics.hairSideL);
       if (savedCosmetics.eyes       !== undefined && !forcedSlots.has('eyes'))       profile.eyes       = lookup(savedCosmetics.eyes);
       if (savedCosmetics.facialHair !== undefined && !forcedSlots.has('facialHair')) profile.facialHair = lookup(savedCosmetics.facialHair);
     }
@@ -373,6 +374,7 @@
         profile[key] = (id && optionCache?.has(id)) ? optionCache.get(id) : (noneOpt ?? none);
       };
       applyEquip('hat', 'hat', hatOptions[0]);
+      applyEquip('hood', 'hood', hoodOptions[0]);
       applyEquip('torso', 'torsoCosmetic', torsoPortraitOptions[0]);
       applyEquip('overwear', 'armCosmetic', armPortraitOptions[0]);
       // Apply clothing dyes (keys are tintSlot names: HAT, TORSO, CLOTH, ...)

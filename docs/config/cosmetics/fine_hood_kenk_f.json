@@ -1,0 +1,48 @@
+{
+  "slot": "hood",
+  "meta": { "name": "Fine Hood" },
+  "palette": {
+    "colors": {
+      "A": { "h": 150, "s": 0.5, "l": 0.3 },
+      "B": { "h": 30, "s": 0.5, "l": 0.35 }
+    },
+    "layers": {
+      "base": "A",
+      "trim": "B"
+    }
+  },
+  "parts": {
+    "head": {
+      "layers": {
+        "front": {
+          "layerRole": "base",
+          "image": {
+            "url": "./assets/cosmetics/clothes/hood/kenk_finehood-base_f.png",
+            "colors": ["A"]
+          },
+          "spriteStyle": {
+            "base": {
+              "xform": {
+                "head": { "ax": -0.0983, "ay": -0.0809, "scaleX": 2.49, "scaleY": 2.49, "rotDeg": 0 }
+              }
+            }
+          }
+        },
+        "front_trim": {
+          "layerRole": "trim",
+          "image": {
+            "url": "./assets/cosmetics/clothes/hood/kenk_finehood-trim_f.png",
+            "colors": ["B"]
+          },
+          "spriteStyle": {
+            "base": {
+              "xform": {
+                "head": { "ax": -0.0983, "ay": -0.0809, "scaleX": 2.49, "scaleY": 2.49, "rotDeg": 0 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

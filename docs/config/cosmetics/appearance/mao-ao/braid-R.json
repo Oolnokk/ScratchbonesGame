@@ -1,0 +1,34 @@
+{
+  "meta": { "name": "Braid (Right)" },
+  "type": "appearance",
+  "hairSlot": "side",
+  "appearance": {
+    "inheritSprite": "head",
+    "bodyColors": ["A"],
+    "originalId": "mao-ao_braid-R"
+  },
+  "parts": {
+    "head": {
+      "layers": {
+        "back": {
+          "image": {
+            "url": "./assets/cosmetics/appearance/mao-ao/headhair/braid-R.png"
+          },
+          "spriteStyle": {
+            "base": {
+              "xform": {
+                "head": {
+                  "ax": -0.1,
+                  "ay": -0.1,
+                  "scaleX": 2,
+                  "scaleY": 2,
+                  "rotDeg": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
