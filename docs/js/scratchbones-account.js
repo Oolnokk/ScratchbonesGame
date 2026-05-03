@@ -9,10 +9,16 @@
   // Items tagged species/gender are only shown when the player matches.
   const SHOP_CATALOG = [
     // Hats — universal
-    { id: 'appearance::hat::basic_headband',      label: 'Basic Headband',       price: 5,  category: 'hat',     description: 'A simple cloth headband.' },
-    { id: 'appearance::hat::leather_headband',    label: 'Leather Headband',     price: 8,  category: 'hat',     description: 'A sturdy leather headband.', material: 'leather' },
-    { id: 'appearance::hat::riverlandskasa_low',  label: 'Riverland Kasa (Low)', price: 10, category: 'hat',     description: 'Traditional riverland hat, worn low.', material: 'rigid_fiber' },
-    { id: 'appearance::hat::riverlandskasa_wide', label: 'Riverland Kasa (Wide)',price: 10, category: 'hat',     description: 'Traditional riverland hat, wide brim.', material: 'rigid_fiber' },
+    { id: 'appearance::hat::basic_headband',       label: 'Basic Headband',        price: 5,  category: 'hat', description: 'A simple cloth headband.' },
+    { id: 'appearance::hat::leather_headband',     label: 'Leather Headband',      price: 8,  category: 'hat', description: 'A sturdy leather headband.', material: 'leather' },
+    { id: 'appearance::hat::riverlandskasa_low',   label: 'Riverland Kasa (Low)',  price: 10, category: 'hat', description: 'Traditional riverland hat, worn low.', material: 'rigid_fiber' },
+    { id: 'appearance::hat::riverlandskasa_tight', label: 'Riverland Kasa (Tight)', price: 10, category: 'hat', description: 'Traditional riverland hat, tight fit.', material: 'rigid_fiber' },
+    { id: 'appearance::hat::riverlandskasa_wide',  label: 'Riverland Kasa (Wide)', price: 10, category: 'hat', description: 'Traditional riverland hat, wide brim.', material: 'rigid_fiber' },
+    // Hats — Kenkari specific
+    { id: 'appearance::Kenkari_M::kenk_riverlandskasa_low',  label: 'Kenkari Kasa (Low)',  price: 10, category: 'hat', species: 'kenkari', gender: 'male',   description: 'Kenkari riverland hat, worn low.', material: 'rigid_fiber' },
+    { id: 'appearance::Kenkari_F::kenk_riverlandskasa_low',  label: 'Kenkari Kasa (Low)',  price: 10, category: 'hat', species: 'kenkari', gender: 'female', description: 'Kenkari riverland hat, worn low.', material: 'rigid_fiber' },
+    { id: 'appearance::Kenkari_M::kenk_riverlandskasa_wide', label: 'Kenkari Kasa (Wide)', price: 10, category: 'hat', species: 'kenkari', gender: 'male',   description: 'Kenkari riverland hat, wide brim.', material: 'rigid_fiber' },
+    { id: 'appearance::Kenkari_F::kenk_riverlandskasa_wide', label: 'Kenkari Kasa (Wide)', price: 10, category: 'hat', species: 'kenkari', gender: 'female', description: 'Kenkari riverland hat, wide brim.', material: 'rigid_fiber' },
     // Torso — species+gender specific
     { id: 'tankantunic_mao-ao_m',  label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'mao-ao',    gender: 'male',   description: 'A fitted tankan-style tunic.' },
     { id: 'tankantunic_mao-ao_f',  label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'mao-ao',    gender: 'female', description: 'A fitted tankan-style tunic.' },
@@ -29,6 +35,12 @@
     { id: 'tankanbodywrap_tl_m',   label: 'Tankan Bodywrap',price: 15, category: 'overwear', species: 'tletingan',gender: 'male',   description: 'A wrapped ceremonial bodywrap.' },
     { id: 'tankanbodywrap_kenk_m', label: 'Tankan Bodywrap',price: 15, category: 'overwear', species: 'kenkari',  gender: 'male',   description: 'A wrapped ceremonial bodywrap.' },
     { id: 'tankanwrap_kenk_f',     label: 'Tankan Wrap',    price: 15, category: 'overwear', species: 'kenkari',  gender: 'female', description: 'A wrapped ceremonial garment.' },
+    // Hoods — species+gender specific
+    { id: 'fine_hood_mao-ao_m', label: 'Fine Hood', price: 15, category: 'hood', species: 'mao-ao',    gender: 'male',   description: 'A finely crafted hood with trim.' },
+    { id: 'fine_hood_mao-ao_f', label: 'Fine Hood', price: 15, category: 'hood', species: 'mao-ao',    gender: 'female', description: 'A finely crafted hood with trim.' },
+    { id: 'fine_hood_kenk_m',   label: 'Fine Hood', price: 15, category: 'hood', species: 'kenkari',   gender: 'male',   description: 'A finely crafted hood with trim.' },
+    { id: 'fine_hood_kenk_f',   label: 'Fine Hood', price: 15, category: 'hood', species: 'kenkari',   gender: 'female', description: 'A finely crafted hood with trim.' },
+    { id: 'fine_hood_tl',       label: 'Fine Hood', price: 15, category: 'hood', species: 'tletingan', gender: 'male',   description: 'A finely crafted hood with trim.' },
   ];
 
   // Dyes set a bodyColor slot (CLOTH, HAT, TORSO, …) to a specific tint.

@@ -198,7 +198,7 @@
         "id": "armR",
         "url": "portraitsprites/arm-R_kenk_m.png",
         "tintSlot": "A",
-        "pos": "back",
+        "pos": "front",
         "xform": {
           "ax": -0.0983,
           "ay": -0.0809,
@@ -478,7 +478,7 @@
         "id": "armR",
         "url": "portraitsprites/arm-R_kenk_f.png",
         "tintSlot": "A",
-        "pos": "back",
+        "pos": "front",
         "xform": {
           "ax": -0.0983,
           "ay": -0.0809,
