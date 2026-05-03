@@ -7,6 +7,10 @@
       "path": "./basic_headband.json"
     },
     {
+      "id": "appearance::hat::leather_headband",
+      "path": "./leather_headband.json"
+    },
+    {
       "id": "citywatch_helmet",
       "path": "./citywatch_helmet.json"
     },

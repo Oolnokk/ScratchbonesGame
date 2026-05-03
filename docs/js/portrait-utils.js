@@ -213,9 +213,11 @@ function loadImg(relPath) {
 // ── CSS filter helpers ─────────────────────────────────────
 
 function buildCSSFilter(h, s, v) {
-  const hueOffset = (window.SCRATCHBONES_CONFIG?.clothingHueOffset) ?? 0;
-  const sat = Math.max(0, 1 + (Number(s) || 0));
-  const bri = Math.max(0, 1 + (Number(v) || 0));
+  const hueOffset  = (window.SCRATCHBONES_CONFIG?.clothingHueOffset)   ?? 0;
+  const satOffset  = (window.SCRATCHBONES_CONFIG?.clothingSatOffset)   ?? 0;
+  const lightOffset = (window.SCRATCHBONES_CONFIG?.clothingLightOffset) ?? 0;
+  const sat = Math.max(0, 1 + (Number(s) || 0) + satOffset);
+  const bri = Math.max(0, 1 + (Number(v) || 0) + lightOffset);
   const finalH = (Number(h) || 0) + hueOffset;
   if (finalH === 0 && sat === 1 && bri === 1) return 'none';
   return `hue-rotate(${finalH.toFixed(1)}deg) saturate(${sat.toFixed(3)}) brightness(${bri.toFixed(3)})`;
@@ -763,7 +765,8 @@ function randomInRange(rng, lo, hi) {
 function materialColorRangeFor(option) {
   const materialTag = option?.materialTag;
   if (!materialTag) return null;
-  const materialPalettes = window.CONFIG?.cosmeticMaterialPalettes;
+  const materialPalettes = window.SCRATCHBONES_CONFIG?.cosmeticMaterialPalettes
+    || window.CONFIG?.cosmeticMaterialPalettes;
   if (!materialPalettes || typeof materialPalettes !== 'object') return null;
   return materialPalettes[materialTag] || null;
 }
