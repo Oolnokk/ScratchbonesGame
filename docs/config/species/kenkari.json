@@ -64,6 +64,9 @@
         "none": 60,
         "kenk_splayedknot_high_m": 20,
         "kenk_splayedknot_low_m": 20
+      },
+      "hairSide": {
+        "none": 100
       }
     },
     "bodyColorRanges": {
@@ -219,19 +222,22 @@
         "riverlandskasa_low": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         },
         "riverlandskasa_tight": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         },
         "riverlandskasa_wide": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         }
       },
@@ -321,6 +327,9 @@
         "kenk_longponytail_f": 30,
         "kenk_splayedknot_high_f": 17.5,
         "kenk_splayedknot_low_f": 17.5
+      },
+      "hairSide": {
+        "none": 100
       },
       "facialHair": {
         "none": 100,
@@ -470,19 +479,22 @@
         "riverlandskasa_low": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         },
         "riverlandskasa_tight": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         },
         "riverlandskasa_wide": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         }
       },

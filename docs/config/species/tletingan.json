@@ -43,6 +43,9 @@
         "none": 50,
         "longponytail": 25,
         "splayedknot": 25
+      },
+      "hairSide": {
+        "none": 100
       }
     },
     "bodyColorRanges": {
@@ -209,19 +212,22 @@
         "riverlandskasa_low": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         },
         "riverlandskasa_tight": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         },
         "riverlandskasa_wide": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         }
       },

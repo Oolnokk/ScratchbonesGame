@@ -31,17 +31,28 @@
   ];
 
   // Dyes set a bodyColor slot (CLOTH or HAT) to a specific tint.
+  // Colors are offsets applied to the mint base (#7dc89a) via hue-rotate/saturate/brightness filters.
   const DYE_CATALOG = [
-    { id: 'dye:CLOTH:red',    label: 'Jade',      dyeSlot: 'CLOTH', color: { h: -20, s:  0.50, v: -0.30 } },
-    { id: 'dye:CLOTH:orange', label: 'Teal',      dyeSlot: 'CLOTH', color: { h:  20, s:  0.80, v: -0.20 } },
-    { id: 'dye:CLOTH:yellow', label: 'Azure',     dyeSlot: 'CLOTH', color: { h:  55, s:  0.70, v:  0.00 } },
-    { id: 'dye:CLOTH:green',  label: 'Amethyst',  dyeSlot: 'CLOTH', color: { h: 120, s:  0.60, v: -0.30 } },
-    { id: 'dye:CLOTH:blue',   label: 'Crimson',   dyeSlot: 'CLOTH', color: { h:-160, s:  0.70, v: -0.25 } },
-    { id: 'dye:CLOTH:purple', label: 'Amber',     dyeSlot: 'CLOTH', color: { h:-100, s:  0.60, v: -0.25 } },
-    { id: 'dye:CLOTH:brown',  label: 'Moss',      dyeSlot: 'CLOTH', color: { h: -30, s:  0.10, v: -0.50 } },
-    { id: 'dye:CLOTH:black',  label: 'Onyx',      dyeSlot: 'CLOTH', color: { h:   0, s: -0.50, v: -0.80 } },
-    { id: 'dye:CLOTH:white',  label: 'Mist',      dyeSlot: 'CLOTH', color: { h:   0, s: -0.80, v:  0.50 } },
-    { id: 'dye:CLOTH:grey',   label: 'Sage',      dyeSlot: 'CLOTH', color: { h:   0, s: -0.70, v: -0.10 } },
+    // Existing dyes — saturation boosted (+0.20) and brightness darkened (-0.10) for truer color names
+    { id: 'dye:CLOTH:red',    label: 'Jade',      dyeSlot: 'CLOTH', color: { h: -20, s:  0.70, v: -0.40 } },
+    { id: 'dye:CLOTH:orange', label: 'Teal',      dyeSlot: 'CLOTH', color: { h:  20, s:  1.00, v: -0.30 } },
+    { id: 'dye:CLOTH:yellow', label: 'Azure',     dyeSlot: 'CLOTH', color: { h:  55, s:  0.90, v: -0.10 } },
+    { id: 'dye:CLOTH:green',  label: 'Amethyst',  dyeSlot: 'CLOTH', color: { h: 120, s:  0.80, v: -0.40 } },
+    { id: 'dye:CLOTH:blue',   label: 'Crimson',   dyeSlot: 'CLOTH', color: { h:-160, s:  0.90, v: -0.35 } },
+    { id: 'dye:CLOTH:purple', label: 'Amber',     dyeSlot: 'CLOTH', color: { h:-100, s:  0.80, v: -0.35 } },
+    { id: 'dye:CLOTH:brown',  label: 'Moss',      dyeSlot: 'CLOTH', color: { h: -30, s:  0.30, v: -0.60 } },
+    { id: 'dye:CLOTH:black',  label: 'Onyx',      dyeSlot: 'CLOTH', color: { h:   0, s: -0.30, v: -0.90 } },
+    { id: 'dye:CLOTH:white',  label: 'Mist',      dyeSlot: 'CLOTH', color: { h:   0, s: -0.60, v:  0.40 } },
+    { id: 'dye:CLOTH:grey',   label: 'Sage',      dyeSlot: 'CLOTH', color: { h:   0, s: -0.50, v: -0.20 } },
+    // Additional dyes
+    { id: 'dye:CLOTH:navy',   label: 'Navy',      dyeSlot: 'CLOTH', color: { h:  85, s:  1.00, v: -0.45 } },
+    { id: 'dye:CLOTH:scarlet',label: 'Scarlet',   dyeSlot: 'CLOTH', color: { h:-145, s:  1.10, v: -0.10 } },
+    { id: 'dye:CLOTH:gold',   label: 'Gold',      dyeSlot: 'CLOTH', color: { h: -95, s:  1.10, v:  0.15 } },
+    { id: 'dye:CLOTH:violet', label: 'Violet',    dyeSlot: 'CLOTH', color: { h: 135, s:  1.00, v: -0.35 } },
+    { id: 'dye:CLOTH:forest', label: 'Forest',    dyeSlot: 'CLOTH', color: { h: -25, s:  0.60, v: -0.55 } },
+    { id: 'dye:CLOTH:ivory',  label: 'Ivory',     dyeSlot: 'CLOTH', color: { h: -10, s: -0.30, v:  0.30 } },
+    { id: 'dye:CLOTH:wine',   label: 'Wine',      dyeSlot: 'CLOTH', color: { h:-175, s:  0.90, v: -0.50 } },
+    { id: 'dye:CLOTH:cobalt', label: 'Cobalt',    dyeSlot: 'CLOTH', color: { h:  75, s:  0.95, v: -0.25 } },
   ];
 
   // Starter dyes given to every new account
@@ -94,6 +105,11 @@
         // Grant starter dyes to existing accounts that don't have them yet
         if (!_account.ownedDyes || !_account.ownedDyes.length) {
           _account.ownedDyes = [...STARTER_DYE_IDS];
+        } else {
+          // Grant any newly-added dyes to existing accounts
+          const currentOwned = new Set(_account.ownedDyes);
+          const newDyes = STARTER_DYE_IDS.filter(id => !currentOwned.has(id));
+          if (newDyes.length) _account.ownedDyes = [..._account.ownedDyes, ...newDyes];
         }
       } else {
         _account = base;

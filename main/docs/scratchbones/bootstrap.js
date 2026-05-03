@@ -1992,7 +1992,18 @@ import { createLayerManager } from './ui/layerManager.js';
       const winner = state.players[winnerId];
       const loser = state.players[loserId];
       let award = challengePotTotal();
-      if (award < CONFIG.challengeBaseTransfer) award = CONFIG.challengeBaseTransfer;
+      // If the pot doesn't cover the minimum transfer, the folder surrenders the shortfall
+      // from their remaining chips — folding always costs at least the base transfer.
+      if (award < CONFIG.challengeBaseTransfer) {
+        const shortfall = CONFIG.challengeBaseTransfer - award;
+        const extraPaid = Math.min(loser.chips, shortfall);
+        if (extraPaid > 0) {
+          loser.chips -= extraPaid;
+          award += extraPaid;
+          eliminateIfNeeded(loserId, `${seatLabel(loser)} ran out of chips.`);
+          if (state.gameOver) return;
+        }
+      }
       const netGain = netChallengeGainFor(winnerId, award);
       winner.chips += award;
       state.stats.chipsMovedByChallenges += award;

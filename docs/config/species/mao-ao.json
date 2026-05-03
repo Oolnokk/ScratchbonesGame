@@ -22,6 +22,8 @@
       "appearance::Mao-ao_M::mao-ao_forwardtuft_long",
       "appearance::Mao-ao_M::mao-ao_tuft",
       "appearance::Mao-ao_M::mao-ao_shoulder_length_drape",
+      "appearance::Mao-ao_M::mao-ao_long_ponytail",
+      "appearance::Mao-ao_M::mao-ao_splayedknot_medium",
       "appearance::Mao-ao_M::mao-ao_wildbeard",
       "appearance::hat::basic_headband",
       "appearance::hat::riverlandskasa_low",
@@ -43,6 +45,11 @@
         "tuft": 30,
         "forwardtuft_long": 30,
         "forwardtuft_short": 30
+      },
+      "hairBack": {
+        "none": 50,
+        "long_ponytail": 25,
+        "splayedknot_medium": 25
       },
       "hairSide": {
         "none": 90,
@@ -213,19 +220,22 @@
         "riverlandskasa_low": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         },
         "riverlandskasa_tight": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         },
         "riverlandskasa_wide": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         }
       },
@@ -498,19 +508,22 @@
         "riverlandskasa_low": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         },
         "riverlandskasa_tight": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         },
         "riverlandskasa_wide": {
           "hideSlots": [
             "hairFront",
-            "hairBack"
+            "hairBack",
+            "hairSide"
           ]
         }
       },

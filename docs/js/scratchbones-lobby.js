@@ -29,6 +29,11 @@
             { id: 'appearance::Mao-ao_M::mao-ao_forwardtuft_short', label: 'Forward Tuft (Short)' },
             { id: 'appearance::Mao-ao_M::mao-ao_forwardtuft_long',  label: 'Forward Tuft (Long)' },
           ]},
+          { slot: 'hairBack', label: 'Back Hair', options: [
+            { id: null,                                                   label: 'None' },
+            { id: 'appearance::Mao-ao_M::mao-ao_splayedknot_medium',     label: 'Splayed Knot' },
+            { id: 'appearance::Mao-ao_M::mao-ao_long_ponytail',          label: 'Long Ponytail' },
+          ]},
           { slot: 'hairSide', label: 'Side Hair', options: [
             { id: null,                                                     label: 'None' },
             { id: 'appearance::Mao-ao_M::mao-ao_shoulder_length_drape',    label: 'Shoulder Drape' },
@@ -113,6 +118,9 @@
             { id: 'appearance::Tletingan_M::tl_longponytail',         label: 'Long Ponytail' },
             { id: 'appearance::Tletingan_M::tl_splayedknot',          label: 'Splayed Knot' },
           ]},
+          { slot: 'hairSide', label: 'Side Hair', options: [
+            { id: null, label: 'None' },
+          ]},
           { slot: 'facialHair', label: 'Facial Hair', options: [
             { id: null,                                                label: 'None' },
             { id: 'appearance::Tletingan_M::tl_wildbeard',            label: 'Wild Beard' },
@@ -149,6 +157,9 @@
             { id: 'appearance::Kenkari_M::kenk_splayedknot_high_m',     label: 'Splayed Knot (High)' },
             { id: 'appearance::Kenkari_M::kenk_splayedknot_low_m',      label: 'Splayed Knot (Low)' },
           ]},
+          { slot: 'hairSide', label: 'Side Hair', options: [
+            { id: null, label: 'None' },
+          ]},
           { slot: 'facialHair', label: 'Facial Hair', options: [
             { id: null,                                                  label: 'None' },
             { id: 'appearance::Kenkari_M::kenk_wildbeard',              label: 'Wild Beard' },
@@ -179,6 +190,9 @@
             { id: 'appearance::Kenkari_F::kenk_longponytail_f',          label: 'Long Ponytail' },
             { id: 'appearance::Kenkari_F::kenk_splayedknot_high_f',      label: 'Splayed Knot (High)' },
             { id: 'appearance::Kenkari_F::kenk_splayedknot_low_f',       label: 'Splayed Knot (Low)' },
+          ]},
+          { slot: 'hairSide', label: 'Side Hair', options: [
+            { id: null, label: 'None' },
           ]},
         ],
         colorOptions: [
@@ -1023,7 +1037,12 @@
       const net = window.ScratchbonesNetwork;
       if (!net) { alert('Network module not loaded'); return; }
       const acc = window.ScratchbonesAccount;
-      const username = acc?.getUsername() || 'Host';
+      const MIN_BRONZE = acc?.BRONZE_PASSIVE_MAX ?? 30;
+      if (!acc || acc.getBronze() < MIN_BRONZE) {
+        alert(`You need at least ${MIN_BRONZE} Bronze to host a game.`);
+        return;
+      }
+      const username = acc.getUsername() || 'Host';
       const appearance = getFullAppearance();
       _onlineOccupants = [{ seatId: 0, name: username }];
       _onlineOccupantAppearances = { 0: appearance };
@@ -1068,7 +1087,12 @@
         const net = window.ScratchbonesNetwork;
         if (!net) { showJoinError('Network module not loaded'); return; }
         const acc = window.ScratchbonesAccount;
-        const username = acc?.getUsername() || 'Player';
+        const MIN_BRONZE = acc?.BRONZE_PASSIVE_MAX ?? 30;
+        if (!acc || acc.getBronze() < MIN_BRONZE) {
+          showJoinError(`You need at least ${MIN_BRONZE} Bronze to join a game.`);
+          return;
+        }
+        const username = acc.getUsername() || 'Player';
         const appearance = getFullAppearance();
         doJoinBtn.disabled = true;
         net.joinRoom(wsUrl(), code, username, appearance)
@@ -1146,6 +1170,13 @@
 
   function startGame() {
     if (!window.ScratchbonesAccount?.isCreated()) return;
+    const acc = window.ScratchbonesAccount;
+    const MIN_BRONZE = acc.BRONZE_PASSIVE_MAX ?? 30;
+    if (acc.getBronze() < MIN_BRONZE) {
+      _postGameMessage = `You need at least ${MIN_BRONZE} Bronze to play. Watch an ad or wait for it to refill!`;
+      render();
+      return;
+    }
     const mode = _selectedMode;
     const humanCount = mode === 'pve' ? 1 : _selectedPlayerCount;
     const humanSeats = Array.from({ length: humanCount }, (_, i) => i);
