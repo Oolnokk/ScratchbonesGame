@@ -7,8 +7,9 @@ window.SCRATCHBONES_CONFIG = {
       "trace": {
         "gameplayFlow": true,
         "layerPromotion": false,
-        "audio": true,
-        "candlelight": true
+        "audio": false,
+        "candlelight": false,
+        "actions": true
       }
     },
     "deck": {
@@ -194,7 +195,7 @@ window.SCRATCHBONES_CONFIG = {
       }
     },
     "timers": {
-      "challengeSeconds": 3,
+      "challengeSeconds": 15,
       "challengeIntroMs": 2200,
       "aiThinkMs": 650,
       "aiDecisionDelays": {

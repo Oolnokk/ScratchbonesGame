@@ -32,6 +32,12 @@
     // Shadow height parameters (demo occluder convention)
     const CARD_SHADOW_HEIGHT = 36;
     const COIN_SHADOW_HEIGHT = 11;
+    // Per-tier shadow heights — default all tiers to COIN_SHADOW_HEIGHT.
+    const walletTiersCfg = Array.isArray(SCRATCHBONES_GAME.chips?.walletDisplay?.tiers)
+      ? SCRATCHBONES_GAME.chips.walletDisplay.tiers : [];
+    const coinByTierShadowHeight = Object.fromEntries(
+      walletTiersCfg.filter(t => t.id).map(t => [t.id, COIN_SHADOW_HEIGHT])
+    );
 
     // CSS selectors that identify card and coin <img> elements
     const CARD_IMG_SEL = '.handScroll .cardArt, .tableViewCard img, .seatHandCard img';

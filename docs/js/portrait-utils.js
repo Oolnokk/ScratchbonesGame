@@ -213,10 +213,12 @@ function loadImg(relPath) {
 // ── CSS filter helpers ─────────────────────────────────────
 
 function buildCSSFilter(h, s, v) {
+  const hueOffset = (window.SCRATCHBONES_CONFIG?.clothingHueOffset) ?? 0;
   const sat = Math.max(0, 1 + (Number(s) || 0));
   const bri = Math.max(0, 1 + (Number(v) || 0));
-  if ((Number(h) || 0) === 0 && sat === 1 && bri === 1) return 'none';
-  return `hue-rotate(${(Number(h) || 0).toFixed(1)}deg) saturate(${sat.toFixed(3)}) brightness(${bri.toFixed(3)})`;
+  const finalH = (Number(h) || 0) + hueOffset;
+  if (finalH === 0 && sat === 1 && bri === 1) return 'none';
+  return `hue-rotate(${finalH.toFixed(1)}deg) saturate(${sat.toFixed(3)}) brightness(${bri.toFixed(3)})`;
 }
 
 function makeCSSFilter(color) {
@@ -527,6 +529,7 @@ function portraitOptionFromJson(entry, json) {
   const resolvedTintSlot = json.slot === 'hat' && colorRange ? 'HAT'
                          : !json.appearance && colorRange ? 'CLOTH'
                          : !json.appearance && json.tintSlot != null ? json.tintSlot
+                         : json.slot === 'torso' && !json.appearance ? 'TORSO'
                          : tintSlot;
   const hairSlot = json.hairSlot || null; // 'front' | 'back' | 'side'
   return { id: shortId, label, tintSlot: resolvedTintSlot, layers, slot: json.slot || null, colorRange, hairSlot, tags, materialTag };
@@ -1045,3 +1048,4 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
 }
 
 window.setPortraitConfig = setPortraitConfig;
+window.getPortraitFighters = () => FIGHTERS;

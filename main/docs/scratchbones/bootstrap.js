@@ -384,6 +384,10 @@ import { createLayerManager } from './ui/layerManager.js';
       if (DEBUG_TRACE.candlelight === false) return;
       traceEvent(level, channel, payload);
     };
+    const traceAction = (channel, payload = {}) => {
+      if (DEBUG_TRACE.actions === false) return;
+      traceEvent('debug', channel, payload);
+    };
     const SCRATCHBONES_LAYER_MANAGER = createLayerManager({ gameConfig: SCRATCHBONES_GAME, debugLog: traceEvent });
     const SCRATCHBONES_AUDIO = createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog: traceAudio });
     function hashStringToSeed(text) {
@@ -594,6 +598,7 @@ import { createLayerManager } from './ui/layerManager.js';
       return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" data-pot-pile-anchor style="position:absolute;left:${(anchorXPct * 100).toFixed(3)}%;top:calc(${(anchorYPct * 100).toFixed(3)}% + ${offsetYPx.toFixed(1)}px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
+    state.humanSeat = 0; // index of the currently active human player (hot-seat support)
     const layoutDiagnostics = createLayoutDiagnosticsState();
    function mulberry32(a) {
       return function() {
@@ -664,23 +669,223 @@ import { createLayerManager } from './ui/layerManager.js';
       return generatedName;
     }
     function makePlayers() {
-      return Array.from({ length: SCRATCHBONES_GAME.deck.playerCount }, (_, index) => {
+      const session = window.SCRATCHBONES_SESSION || {};
+      const humanSeats = Array.isArray(session.humanSeats) ? new Set(session.humanSeats) : new Set([0]);
+      const playerNames = session.playerNames || {};
+      const playerAppearances = session.playerAppearances || {};
+      const mode = session.mode || 'pve';
+      // PvP: all seats are human — total equals human count, no AI fills.
+      // PvE / PvPvE: full configured table; AI occupies remaining seats.
+      const totalPlayers = mode === 'pvp' ? humanSeats.size : SCRATCHBONES_GAME.deck.playerCount;
+      return Array.from({ length: totalPlayers }, (_, index) => {
+        const isHuman = humanSeats.has(index);
         const aiIdentity = generateAiIdentity(index);
+        const sessionName = playerNames[index];
+        const name = isHuman && sessionName ? sessionName : resolveSeatName(index, aiIdentity.name);
+        const appearance = isHuman ? (playerAppearances[index] ?? null) : null;
         return {
           id: index,
-          name: resolveSeatName(index, aiIdentity.name),
+          name,
           hand: [],
           chips: CONFIG.startingChips,
           eliminated: false,
-          isHuman: index === 0,
+          isHuman,
           lastAction: 'Ready',
           clears: 0,
           seed: aiIdentity.seed,
-          gender: aiIdentity.gender,
-          personality: index === 0 ? null : aiIdentity.personality,
+          gender: appearance ? appearance.gender : aiIdentity.gender,
+          personality: isHuman ? null : aiIdentity.personality,
           reads: {},
+          appearance,
         };
       });
+    }
+    function isHumanSeat(index) {
+      return state.players[index]?.isHuman === true;
+    }
+
+    // ── Network serialization / application ─────────────────────────────────
+
+    function serializeNetworkState() {
+      return {
+        players: state.players.map(p => ({
+          id: p.id,
+          name: p.name,
+          hand: (p.hand || []).map(card => ({
+            id: card.id, suit: card.suit, rank: card.rank,
+            wild: card.wild || false, trickType: card.trickType || null,
+          })),
+          chips: p.chips,
+          eliminated: p.eliminated,
+          isHuman: p.isHuman,
+          lastAction: p.lastAction,
+          clears: p.clears,
+          profile: p.profile || null,
+        })),
+        currentTurn: state.currentTurn,
+        leaderIndex: state.leaderIndex,
+        humanSeat: state.humanSeat,
+        declaredRank: state.declaredRank,
+        gameOver: state.gameOver,
+        winnerIndex: state.winnerIndex ?? null,
+        banner: state.banner,
+        logs: state.logs || [],
+        tablePot: state.tablePot ?? 0,
+        ante: state.ante ?? 0,
+        round: state.round ?? 0,
+        betting: state.betting ? { ...state.betting, contributions: { ...state.betting.contributions } } : null,
+        challengeWindow: state.challengeWindow ? { lastPlay: state.challengeWindow.lastPlay } : null,
+        challengeIntro: state.challengeIntro || null,
+        cinematicMode: state.cinematicMode || null,
+        pendingCinematicBetAction: state.pendingCinematicBetAction || null,
+        roundConcessions: [...state.roundConcessions],
+        dealLandingHiddenCardIds: [...state.dealLandingHiddenCardIds],
+        pile: (state.pile || []).map(play => ({ ...play })),
+        selectedCardIds: [],
+      };
+    }
+
+    function applyNetworkState(received) {
+      if (!received) return;
+      traceAction('net.state-received', { currentTurn: received.currentTurn, humanSeat: received.humanSeat, hasChallenge: !!received.challengeWindow, hasBet: !!received.betting, gameOver: received.gameOver, myHandSize: (received.players?.find(p => p.id === received.humanSeat)?.hand || []).length });
+      const localSelected = state.selectedCardIds;
+      state.players = received.players || [];
+      state.currentTurn = received.currentTurn ?? 0;
+      state.leaderIndex = received.leaderIndex ?? 0;
+      state.humanSeat = received.humanSeat ?? state.humanSeat;
+      state.declaredRank = received.declaredRank ?? null;
+      state.gameOver = received.gameOver || false;
+      state.winnerIndex = received.winnerIndex ?? null;
+      state.banner = received.banner || '';
+      state.logs = received.logs || [];
+      state.tablePot = received.tablePot ?? 0;
+      state.ante = received.ante ?? state.ante;
+      state.round = received.round ?? state.round;
+      state.betting = received.betting || null;
+      state.challengeWindow = received.challengeWindow || null;
+      state.challengeIntro = received.challengeIntro || null;
+      state.cinematicMode = received.cinematicMode || null;
+      state.pendingCinematicBetAction = received.pendingCinematicBetAction || null;
+      state.roundConcessions = new Set(received.roundConcessions || []);
+      state.dealLandingHiddenCardIds = new Set(received.dealLandingHiddenCardIds || []);
+      state.pile = received.pile || [];
+      // Preserve card selection only for cards still in the client's own hand
+      const myHand = new Set((state.players.find(p => p.id === state.humanSeat)?.hand || []).map(c => c.id));
+      state.selectedCardIds = new Set([...localSelected].filter(id => myHand.has(id)));
+      render();
+    }
+
+    function handleNetworkAction(msg) {
+      const seat = msg.seatId;
+      traceAction('net.action-received', { seat, type: msg.actionType, currentTurn: state.currentTurn, humanSeat: state.humanSeat, hasChallenge: !!state.challengeWindow, hasBet: !!state.betting });
+      switch (msg.actionType) {
+        case 'play':
+          if (state.currentTurn === seat && !state.gameOver && !state.betting && !state.challengeWindow) {
+            traceAction('net.play', { seat, cardIds: msg.cardIds, declaredRank: msg.declaredRank, handIds: (state.players[seat]?.hand || []).map(c => c.id) });
+            performPlay(seat, msg.cardIds || [], msg.declaredRank);
+          } else {
+            traceAction('net.play-rejected', { seat, currentTurn: state.currentTurn, gameOver: state.gameOver, hasBet: !!state.betting, hasChallenge: !!state.challengeWindow });
+          }
+          break;
+        case 'concede-round': {
+          if (state.currentTurn !== seat || state.gameOver || state.betting || state.challengeWindow) {
+            traceAction('net.concede-rejected', { seat, currentTurn: state.currentTurn });
+            break;
+          }
+          if (state.declaredRank === null) break;
+          const player = state.players[seat];
+          if (!player || player.eliminated) break;
+          traceAction('net.concede', { seat });
+          const amount = transferToBank(seat, CONFIG.concedeRoundChipLoss, `${seatLabel(player)} concedes the claim and pays 1 chip to the bank.`);
+          player.lastAction = 'Conceded round';
+          if (amount <= 0) break;
+          state.roundConcessions.add(seat);
+          if (maybeEndRoundFromConcessions()) break;
+          const next = nextRoundEligibleIndex(seat);
+          if (next === null) { openNewRound(currentDeclarerIndex()); break; }
+          state.currentTurn = next;
+          setBanner(`${seatLabel(state.players[next])} is up on ${state.declaredRank}.`);
+          render();
+          scheduleNextTurnOrCover();
+          break;
+        }
+        case 'challenge':
+          if (state.challengeWindow && !state.betting && !state.gameOver) {
+            const target = state.challengeWindow.lastPlay.playerIndex;
+            if (target !== seat) {
+              traceAction('net.challenge', { seat, target });
+              clearChallengeTimer(); startChallenge(seat, target);
+            } else {
+              traceAction('net.challenge-rejected', { seat, reason: 'cannot-challenge-self' });
+            }
+          } else {
+            traceAction('net.challenge-rejected', { seat, hasChallenge: !!state.challengeWindow, hasBet: !!state.betting, gameOver: state.gameOver });
+          }
+          break;
+        case 'accept-no-challenge': {
+          // Check the seat is a valid challenger — NOT currentTurn, which points to whoever
+          // last had the play turn (may differ from the challenger deciding to let it stand).
+          const challengers = state.challengeWindow?.challengerOptions || [];
+          if (state.challengeWindow && !state.betting && !state.gameOver && challengers.includes(seat)) {
+            traceAction('net.accept-no-challenge', { seat });
+            clearChallengeTimer();
+            advanceAfterNoChallenge(state.challengeWindow.lastPlay.playerIndex);
+          } else {
+            traceAction('net.accept-no-challenge-rejected', { seat, challengers, hasChallenge: !!state.challengeWindow, hasBet: !!state.betting, gameOver: state.gameOver });
+          }
+          break;
+        }
+        case 'bet-action':
+          traceAction('net.bet-action', { seat, action: msg.action });
+          void resolveBetAction(seat, msg.action).catch(e => console.error('[net-action] bet-action', e));
+          break;
+        case 'bet-open-tier':
+          traceAction('net.bet-open-tier', { seat, tierId: msg.tierId });
+          void resolveBetAction(seat, { type: 'open-tier', tierId: msg.tierId }).catch(e => console.error('[net-action] bet-open-tier', e));
+          break;
+        case 'bet-raise-tier':
+          traceAction('net.bet-raise-tier', { seat, tierId: msg.tierId });
+          void resolveBetAction(seat, { type: 'raise-tier', tierId: msg.tierId }).catch(e => console.error('[net-action] bet-raise-tier', e));
+          break;
+        case 'punish-toggle':
+          if (state.betting && state.betting.currentActorId === seat) {
+            traceAction('net.punish-toggle', { seat });
+            state.betting.punishArmed = !state.betting.punishArmed;
+            render();
+          }
+          break;
+      }
+    }
+
+    function pushNetworkState() {
+      if (window.ScratchbonesNetwork?.isHost()) {
+        window.ScratchbonesNetwork.sendState(serializeNetworkState());
+      }
+    }
+
+    function scheduleNextTurnOrCover() {
+      if (!isHumanSeat(state.currentTurn)) {
+        scheduleAiTurn();
+      }
+      // Human seat: UI is visible; wait for input.
+    }
+    function showHotSeatCover(targetSeat) {
+      const coverEl = document.getElementById('sb-cover');
+      if (!coverEl) { state.humanSeat = targetSeat; render(); return; }
+      const name = state.players[targetSeat]?.name || `Player ${targetSeat + 1}`;
+      coverEl.innerHTML = `
+        <div class="sb-cover-card">
+          <div class="sb-cover-label">Pass the device</div>
+          <div class="sb-cover-name">${escapeHtml(name)}</div>
+          <div class="sb-cover-hint">Your turn — tap when ready</div>
+          <button class="sb-btn-primary" id="sb-cover-ready" style="margin-top:8px;">I'm ready</button>
+        </div>`;
+      coverEl.style.display = 'flex';
+      document.getElementById('sb-cover-ready')?.addEventListener('click', () => {
+        coverEl.style.display = 'none';
+        state.humanSeat = targetSeat;
+        render();
+      }, { once: true });
     }
     function inferPlayerCultureFromProfile(player) {
       const cultureCfg = SCRATCHBONES_GAME.nameGeneration?.aiCultureSelection || {};
@@ -753,7 +958,7 @@ import { createLayerManager } from './ui/layerManager.js';
       return true;
     }
     function selectedCards() {
-      return state.players[0].hand.filter(c => state.selectedCardIds.has(c.id));
+      return state.players[state.humanSeat].hand.filter(c => state.selectedCardIds.has(c.id));
     }
     function addLog(text) {
       state.logs.unshift({ text, ts: Date.now() });
@@ -768,7 +973,7 @@ import { createLayerManager } from './ui/layerManager.js';
     function seatFirstName(playerOrIndex) {
       const player = typeof playerOrIndex === 'number' ? state.players[playerOrIndex] : playerOrIndex;
       if (!player) return 'Seat ?';
-      if (player.isHuman) return 'You';
+      if (player.id === state.humanSeat) return 'You';
       return String(player.name || '').trim().split(/\s+/)[0] || `Seat ${Number(player.id) + 1}`;
     }
     function setBanner(text) {
@@ -942,6 +1147,7 @@ import { createLayerManager } from './ui/layerManager.js';
     async function startGame() {
       await preloadScratchboneCardArt();
       clearChallengeTimer();
+      state.humanSeat = 0;
       state.seed = Math.floor(Math.random() * 1e9);
       state.poolVisualSeed = Math.floor(Math.random() * 1e9);
       rand = mulberry32(state.seed);
@@ -968,17 +1174,18 @@ import { createLayerManager } from './ui/layerManager.js';
       await dealFreshHandsAnimated();
       SCRATCHBONES_AUDIO.startPlaylist();
       for (const p of state.players) p.profile = generatePlayerProfile(p);
+      applyEquippedCosmeticsToHumanPlayers();
       applyAiNamesByPortraitCulture();
       for (const p of state.players) logPlayerPortraitXforms(p);
       state.leaderIndex = rngInt(0, state.players.length - 1);
       state.currentTurn = state.leaderIndex;
-      setBanner(state.currentTurn === 0 ? SCRATCHBONES_GAME.uiText.yourLeadBanner : `${seatLabel(state.currentTurn)} opens the round.`);
+      setBanner(isHumanSeat(state.currentTurn) ? SCRATCHBONES_GAME.uiText.yourLeadBanner : `${seatLabel(state.currentTurn)} opens the round.`);
       addLog(`A new match begins. ${seatLabel(state.leaderIndex)} leads the first round.`);
       render();
-      if (state.currentTurn !== 0) scheduleAiTurn();
+      scheduleNextTurnOrCover();
     }
     function toggleSelect(cardId) {
-      if (state.gameOver || state.currentTurn !== 0 || state.challengeWindow || state.betting) return;
+      if (state.gameOver || state.currentTurn !== state.humanSeat || state.challengeWindow || state.betting) return;
       if (state.selectedCardIds.has(cardId)) state.selectedCardIds.delete(cardId);
       else state.selectedCardIds.add(cardId);
       render();
@@ -997,21 +1204,23 @@ import { createLayerManager } from './ui/layerManager.js';
         render();
         return;
       }
-      performPlay(0, cards.map(c => c.id), declaredRank);
+      traceAction('local.play', { seat: state.humanSeat, cardCount: cards.length, declaredRank });
+      performPlay(state.humanSeat, cards.map(c => c.id), declaredRank);
     }
     function humanConcedeRound() {
-      if (state.gameOver || state.currentTurn !== 0 || state.challengeWindow || state.betting) return;
+      if (state.gameOver || state.currentTurn !== state.humanSeat || state.challengeWindow || state.betting) return;
       if (state.declaredRank === null) {
         setBanner('You can only concede after a declaration exists.', 'warn');
         render();
         return;
       }
-      const amount = transferToBank(0, CONFIG.concedeRoundChipLoss, 'You concede the claim and pay 1 chip to the bank.');
-      state.players[0].lastAction = 'Conceded round';
+      const hs = state.humanSeat;
+      const amount = transferToBank(hs, CONFIG.concedeRoundChipLoss, 'You concede the claim and pay 1 chip to the bank.');
+      state.players[hs].lastAction = 'Conceded round';
       if (amount <= 0) return;
-      state.roundConcessions.add(0);
+      state.roundConcessions.add(hs);
       if (maybeEndRoundFromConcessions()) return;
-      const nextPlayer = nextRoundEligibleIndex(0);
+      const nextPlayer = nextRoundEligibleIndex(hs);
       if (nextPlayer === null) {
         openNewRound(currentDeclarerIndex());
         return;
@@ -1019,12 +1228,15 @@ import { createLayerManager } from './ui/layerManager.js';
       state.currentTurn = nextPlayer;
       setBanner(`${seatLabel(state.players[nextPlayer])} is up on ${state.declaredRank}.`);
       render();
-      if (nextPlayer !== 0) scheduleAiTurn();
+      scheduleNextTurnOrCover();
     }
     function performPlay(playerIndex, cardIds, declaredRank) {
       const player = state.players[playerIndex];
       const cards = player.hand.filter(c => cardIds.includes(c.id));
-      if (!cards.length) return;
+      if (!cards.length) {
+        traceAction('perform-play.no-cards-matched', { playerIndex, cardIds, handIds: (player?.hand || []).map(c => c.id), handSize: (player?.hand || []).length });
+        return;
+      }
       player.hand = player.hand.filter(c => !cardIds.includes(c.id));
       player.hand.sort(sortCards);
       const truthful = cards.every(c => c.wild || c.rank === declaredRank);
@@ -1059,7 +1271,7 @@ import { createLayerManager } from './ui/layerManager.js';
         challengerOptions: backups,
       });
       render();
-      if (playerIndex !== 0) {
+      if (!isHumanSeat(playerIndex)) {
         startChallengeTimer();
       }
       scheduleAiChallengeWindowDecisions(playerIndex);
@@ -1179,7 +1391,7 @@ import { createLayerManager } from './ui/layerManager.js';
       suspicion += play.cards.length >= 5 ? 0.08 : 0;
       suspicion += challenger.chips <= 2 ? -0.18 : 0;
       suspicion += challenger.chips >= 8 ? 0.05 : 0;
-      suspicion += play.playerIndex === 0 ? 0.1 : 0;
+      suspicion += isHumanSeat(play.playerIndex) ? 0.1 : 0;
       suspicion += suspicionFromReadProfile(read, pers);
       if (includeRandom) suspicion += rand() * CONFIG.aiChallengeRandomNudgeMax;
       if (pers) {
@@ -1249,7 +1461,7 @@ import { createLayerManager } from './ui/layerManager.js';
       if (!state.challengeWindow || state.betting || state.gameOver) return;
       const lastPlay = state.challengeWindow.lastPlay;
       if (!lastPlay || lastPlay.playerIndex !== playerIndex) return;
-      const possibleChallengers = state.challengeWindow.challengerOptions.filter(idx => idx !== 0 && !state.players[idx].eliminated);
+      const possibleChallengers = state.challengeWindow.challengerOptions.filter(idx => !isHumanSeat(idx) && !state.players[idx].eliminated);
       const challengeSessionId = ++state.challengeDecisionSession;
       const staggerMs = Number(AI_DECISION_DELAYS.challengeStaggerMs) || 220;
       let maxDecisionDelay = 0;
@@ -1272,9 +1484,13 @@ import { createLayerManager } from './ui/layerManager.js';
           }
         }, delayMs);
       });
-      if (playerIndex === 0) {
+      if (isHumanSeat(playerIndex)) {
         const baseChallengeDurationMs = CHALLENGE_TIMER_SECS * 1000;
-        const countdownDurationMs = Math.min(baseChallengeDurationMs, maxDecisionDelay + 30);
+        // Only short-circuit to maxDecisionDelay when there are AI challengers to wait for.
+        // With no AI challengers (all-human or online mode), use the full countdown.
+        const countdownDurationMs = possibleChallengers.length > 0
+          ? Math.min(baseChallengeDurationMs, maxDecisionDelay + 30)
+          : baseChallengeDurationMs;
         startChallengeTimer({
           durationMs: countdownDurationMs,
           onExpire: () => {
@@ -1289,14 +1505,16 @@ import { createLayerManager } from './ui/layerManager.js';
     function humanChallenge() {
       if (!state.challengeWindow || state.gameOver || state.betting) return;
       const target = state.challengeWindow.lastPlay.playerIndex;
-      if (target === 0) return;
+      if (target === state.humanSeat) return;
+      traceAction('local.challenge', { seat: state.humanSeat, target });
       clearChallengeTimer();
-      startChallenge(0, target);
+      startChallenge(state.humanSeat, target);
     }
     function humanAcceptNoChallenge() {
       if (!state.challengeWindow || state.gameOver || state.betting) return;
-      clearChallengeTimer();
       const target = state.challengeWindow.lastPlay.playerIndex;
+      traceAction('local.accept-no-challenge', { seat: state.humanSeat, target });
+      clearChallengeTimer();
       advanceAfterNoChallenge(target);
     }
     function clearChallengeIntro() {
@@ -1508,7 +1726,7 @@ import { createLayerManager } from './ui/layerManager.js';
       clone.style.margin = '0';
       clone.style.zIndex = '10010';
       clone.style.transition = 'none';
-      clonePlane.app.appendChild(clone);
+      (document.getElementById('app') || document.body).appendChild(clone);
       await new Promise((resolve) => requestAnimationFrame(resolve));
       clone.style.transition = `transform ${durationMs}ms ${CONFIG.transferAnimation.easing}, opacity ${durationMs}ms ${CONFIG.transferAnimation.easing}`;
       const dx = (targetRect.left + targetRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
@@ -1879,16 +2097,18 @@ import { createLayerManager } from './ui/layerManager.js';
         if (maybeEndRoundFromConcessions()) return;
         const nextPlayer = nextRoundEligibleIndex(lastPlayerIndex);
         if (nextPlayer === null) {
+          traceAction('continue-no-challenge.open-new-round', { lastPlayerIndex, reason: 'no-eligible-next-player' });
           openNewRound(currentDeclarerIndex());
           return;
         }
         state.currentTurn = nextPlayer;
+        traceAction('continue-no-challenge.turn-advance', { from: lastPlayerIndex, to: nextPlayer, handIds: (state.players[nextPlayer]?.hand || []).map(c => c.id) });
         traceGameplay('turn.advance', { from: lastPlayerIndex, to: nextPlayer, reason: 'claim-stood' });
-        setBanner(state.currentTurn === 0
+        setBanner(state.currentTurn === state.humanSeat
           ? `Your turn. Match ${state.declaredRank}, bluff, or concede the round.`
           : `${seatLabel(state.players[state.currentTurn])} is thinking about ${state.declaredRank}.`);
         render();
-        if (state.currentTurn !== 0) scheduleAiTurn();
+        scheduleNextTurnOrCover();
     }
     async function checkForClearAndRedeal(playerIndex) {
       const player = state.players[playerIndex];
@@ -1925,16 +2145,17 @@ import { createLayerManager } from './ui/layerManager.js';
       state.round += 1;
       state.leaderIndex = playerIndex;
       state.currentTurn = playerIndex;
-      setBanner(playerIndex === 0
+      setBanner(isHumanSeat(playerIndex)
         ? `You cleared your hand. Hands refill up to ${START_HAND_SIZE} cards in turn order, and you lead again.`
         : `${seatLabel(player)} cleared their hand. Hands refill up to ${START_HAND_SIZE} cards in turn order, and they lead again.`, 'good');
       render();
-      if (state.currentTurn !== 0) scheduleAiTurn();
+      scheduleNextTurnOrCover();
       return true;
     }
     function openNewRound(leaderIndex) {
       if (state.gameOver) return;
       if (checkGameOverBySurvivors()) return;
+      traceAction('open-new-round', { leaderIndex, hands: state.players.map(p => ({ id: p.id, handIds: (p.hand || []).map(c => c.id) })) });
       state.leaderIndex = leaderIndex;
       state.currentTurn = leaderIndex;
       state.declaredRank = null;
@@ -1946,30 +2167,43 @@ import { createLayerManager } from './ui/layerManager.js';
       state.round += 1;
       state.selectedCardIds.clear();
       state.roundConcessions.clear();
-      setBanner(state.currentTurn === 0
+      setBanner(state.currentTurn === state.humanSeat
         ? 'You open the new round. Select cards and declare any number.'
         : `${seatLabel(state.currentTurn)} opens a new round.`);
       render();
-      if (state.currentTurn !== 0) scheduleAiTurn();
+      scheduleNextTurnOrCover();
     }
     function checkGameOverBySurvivors() {
       const survivors = alivePlayers();
       if (survivors.length === 1) {
         state.gameOver = true;
         state.winnerIndex = survivors[0].id;
-        setBanner(survivors[0].id === 0 ? 'You win. Everyone else ran out of chips.' : `${seatLabel(survivors[0])} wins. Everyone else ran out of chips.`, 'good');
+        const winnerIsHuman = isHumanSeat(survivors[0].id);
+        setBanner(winnerIsHuman ? 'You win. Everyone else ran out of chips.' : `${seatLabel(survivors[0])} wins. Everyone else ran out of chips.`, 'good');
         addLog(state.banner);
         render();
         return true;
       }
       return false;
     }
+    function humanChipCountForAward() {
+      // Award Bronze equal to seat-0's chips (the primary/account player).
+      return state.players[0]?.chips ?? 0;
+    }
+    function goToLobby() {
+      const chips = humanChipCountForAward();
+      if (window.ScratchbonesLobby) {
+        window.ScratchbonesLobby.onGameEnd(chips);
+      } else {
+        void startGame();
+      }
+    }
     function scheduleAiTurn() {
       if (state.gameOver) return;
       const actorId = state.currentTurn;
       const thinkMs = aiDecisionDelayMs('turn', actorId);
       window.setTimeout(() => {
-        if (!state.gameOver && state.currentTurn !== 0 && !state.challengeWindow && !state.betting) {
+        if (!state.gameOver && !isHumanSeat(state.currentTurn) && !state.challengeWindow && !state.betting) {
           aiTakeTurn(state.currentTurn);
         }
       }, thinkMs);
@@ -1977,14 +2211,16 @@ import { createLayerManager } from './ui/layerManager.js';
     function scheduleBettingAiIfNeeded() {
       if (!state.betting || state.gameOver) return;
       const actorId = state.betting.currentActorId;
-      if (actorId === 0) return;
-      const intent = aiBetIntent(actorId);
-      const thinkMs = aiDecisionDelayMs('betting', actorId);
-      window.setTimeout(() => {
-        if (state.betting && !state.gameOver && state.betting.currentActorId === actorId) {
-          aiTakeBettingAction(actorId, intent);
-        }
-      }, thinkMs);
+      if (!isHumanSeat(actorId)) {
+        const intent = aiBetIntent(actorId);
+        const thinkMs = aiDecisionDelayMs('betting', actorId);
+        window.setTimeout(() => {
+          if (state.betting && !state.gameOver && state.betting.currentActorId === actorId) {
+            aiTakeBettingAction(actorId, intent);
+          }
+        }, thinkMs);
+      }
+      // Human seat: UI is already visible; wait for input.
     }
     function aiTakeTurn(playerIndex) {
       const player = state.players[playerIndex];
@@ -2273,13 +2509,13 @@ import { createLayerManager } from './ui/layerManager.js';
       }
     }
     function humanBetAction(action) {
-      resolveBetAction(0, action);
+      void resolveBetAction(state.humanSeat, action).catch(e => console.error('[betting] humanBetAction error', e));
     }
     function humanOpenTierSelected(tierId) {
-      resolveBetAction(0, { type: 'open-tier', tierId });
+      void resolveBetAction(state.humanSeat, { type: 'open-tier', tierId }).catch(e => console.error('[betting] humanOpenTierSelected error', e));
     }
     function humanRaiseTierSelected(tierId) {
-      resolveBetAction(0, { type: 'raise-tier', tierId });
+      void resolveBetAction(state.humanSeat, { type: 'raise-tier', tierId }).catch(e => console.error('[betting] humanRaiseTierSelected error', e));
     }
     function transferCardsBetweenHands(fromId, toId, limit) {
       const from = state.players[fromId];
@@ -2308,7 +2544,7 @@ import { createLayerManager } from './ui/layerManager.js';
       return moved;
     }
     function humanPickSmuggleTarget(play, candidateIds) {
-      if (play.playerIndex !== 0 || candidateIds.length <= 1) return candidateIds[0];
+      if (!isHumanSeat(play.playerIndex) || candidateIds.length <= 1) return candidateIds[0];
       const list = candidateIds.map((id) => `${id}: ${seatLabel(id)}`).join('\n');
       const picked = window.prompt(`Smuggle Bone: choose target seat id\n${list}`, String(candidateIds[0]));
       const pickedId = Number(picked);
@@ -2316,7 +2552,7 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     function humanPickTrapCardIds(fromId, maxCount) {
       const from = state.players[fromId];
-      if (fromId !== 0 || !from) return null;
+      if (!isHumanSeat(fromId) || !from) return null;
       const cap = Math.min(Math.max(0, Number(maxCount) || 0), from.hand.length);
       if (!cap) return [];
       const options = from.hand.map((card, index) => `${index + 1}: ${card.trickType ? card.trickType.toUpperCase() : (card.wild ? 'Wild' : `Rank ${card.rank}`)}`);
@@ -2333,7 +2569,7 @@ import { createLayerManager } from './ui/layerManager.js';
       if (!movedCards.length) return;
       const candidateIds = alivePlayers().map((player) => player.id).filter((id) => id !== play.playerIndex);
       if (!candidateIds.length) return;
-      if (play.playerIndex === 0) {
+      if (isHumanSeat(play.playerIndex)) {
         state.smuggleSelection = {
           playCardIds: movedCards.map((card) => card.id),
           candidateIds,
@@ -2344,7 +2580,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return;
       }
       const targetId = humanPickSmuggleTarget(play, candidateIds);
-      await animateCardTransferBatch({ cards: movedCards, fromKind: 'table', toKind: targetId === 0 ? 'hand' : 'seatHand', toPlayerId: targetId });
+      await animateCardTransferBatch({ cards: movedCards, fromKind: 'table', toKind: isHumanSeat(targetId) ? 'hand' : 'seatHand', toPlayerId: targetId });
       state.players[targetId].hand.push(...movedCards);
       state.players[targetId].hand.sort(sortCards);
       play.cards = play.cards.filter((card) => card.trickType === 'smuggle');
@@ -2361,7 +2597,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const movedCards = lastPlay.cards.filter((card) => selection.playCardIds.includes(card.id));
       const targetId = selection.selectedTargetId;
       if (movedCards.length && Number.isInteger(targetId)) {
-        await animateCardTransferBatch({ cards: movedCards, fromKind: 'table', toKind: targetId === 0 ? 'hand' : 'seatHand', toPlayerId: targetId });
+        await animateCardTransferBatch({ cards: movedCards, fromKind: 'table', toKind: isHumanSeat(targetId) ? 'hand' : 'seatHand', toPlayerId: targetId });
         state.players[targetId].hand.push(...movedCards);
         state.players[targetId].hand.sort(sortCards);
         lastPlay.cards = lastPlay.cards.filter((card) => !selection.playCardIds.includes(card.id));
@@ -2374,8 +2610,8 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     async function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return;
-      if (challengedId === 0) {
-        const maxCount = Math.min(play.cards.length, state.players[0].hand.length);
+      if (isHumanSeat(challengedId)) {
+        const maxCount = Math.min(play.cards.length, state.players[state.humanSeat].hand.length);
         if (maxCount <= 0) {
           addLog('Trap Bone fizzles: no cards available to offload.');
           return;
@@ -2390,16 +2626,16 @@ import { createLayerManager } from './ui/layerManager.js';
       if (Array.isArray(selectedCardIds)) moved = transferSpecificCardsBetweenHands(challengedId, challengerId, selectedCardIds);
       if (!moved.length) moved = transferCardsBetweenHands(challengedId, challengerId, play.cards.length);
       if (!moved.length) return;
-      await animateCardTransferBatch({ cards: moved, fromKind: challengedId === 0 ? 'hand' : 'seatHand', fromPlayerId: challengedId, toKind: challengerId === 0 ? 'hand' : 'seatHand', toPlayerId: challengerId, arcMode: challengedId !== 0 && challengerId !== 0 ? 'inward' : 'auto' });
+      await animateCardTransferBatch({ cards: moved, fromKind: isHumanSeat(challengedId) ? 'hand' : 'seatHand', fromPlayerId: challengedId, toKind: isHumanSeat(challengerId) ? 'hand' : 'seatHand', toPlayerId: challengerId, arcMode: !isHumanSeat(challengedId) && !isHumanSeat(challengerId) ? 'inward' : 'auto' });
       addLog(`Trap Bone triggers: ${seatLabel(challengedId)} transfers ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
     }
     async function resolvePendingTrapSelection() {
       if (!state.trapSelection) return;
       const { challengerId, maxCount } = state.trapSelection;
       const selectedIds = [...state.selectedCardIds].slice(0, maxCount);
-      let moved = transferSpecificCardsBetweenHands(0, challengerId, selectedIds);
-      if (!moved.length) moved = transferCardsBetweenHands(0, challengerId, maxCount);
-      if (moved.length) await animateCardTransferBatch({ cards: moved, fromKind: 'hand', toKind: challengerId === 0 ? 'hand' : 'seatHand', toPlayerId: challengerId });
+      let moved = transferSpecificCardsBetweenHands(state.humanSeat, challengerId, selectedIds);
+      if (!moved.length) moved = transferCardsBetweenHands(state.humanSeat, challengerId, maxCount);
+      if (moved.length) await animateCardTransferBatch({ cards: moved, fromKind: 'hand', toKind: isHumanSeat(challengerId) ? 'hand' : 'seatHand', toPlayerId: challengerId });
       if (moved.length) addLog(`Trap Bone triggers: You transfer ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
       state.selectedCardIds.clear();
       state.trapSelection = null;
@@ -2410,7 +2646,7 @@ import { createLayerManager } from './ui/layerManager.js';
       state.players[challengerId].trickPunishActive = false;
       const moved = transferCardsBetweenHands(challengerId, challengedId, play.cards.length);
       if (!moved.length) return;
-      await animateCardTransferBatch({ cards: moved, fromKind: challengerId === 0 ? 'hand' : 'seatHand', fromPlayerId: challengerId, toKind: challengedId === 0 ? 'hand' : 'seatHand', toPlayerId: challengedId, arcMode: challengerId !== 0 && challengedId !== 0 ? 'inward' : 'auto' });
+      await animateCardTransferBatch({ cards: moved, fromKind: isHumanSeat(challengerId) ? 'hand' : 'seatHand', fromPlayerId: challengerId, toKind: isHumanSeat(challengedId) ? 'hand' : 'seatHand', toPlayerId: challengedId, arcMode: !isHumanSeat(challengerId) && !isHumanSeat(challengedId) ? 'inward' : 'auto' });
       addLog(`Punish Bone triggers: ${seatLabel(challengerId)} gives ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengedId)}.`);
     }
         function normalizedAssetPath(basePath, fileName) {
@@ -3143,7 +3379,7 @@ import { createLayerManager } from './ui/layerManager.js';
       }
       const overflowPx = Math.max(0, challengePane.scrollHeight - challengePane.clientHeight);
       const severity = clampNumber(overflowPx / 220, 0, 1);
-      const humanClaimDecisionTurn = state.currentTurn === 0 && !!state.challengeWindow && !state.betting;
+      const humanClaimDecisionTurn = state.currentTurn === state.humanSeat && !!state.challengeWindow && !state.betting;
       // Deterministic resolver order:
       // 1) wrap text
       // 2) reduce font scale
@@ -3464,7 +3700,7 @@ import { createLayerManager } from './ui/layerManager.js';
 
         // Determine if an opponent just played (for avatar-origin card flights)
         const latestPlay = state.betting?.play || state.challengeWindow?.lastPlay || state.pile.at(-1) || null;
-        const actorIsOpponent = !!(latestPlay && latestPlay.playerIndex !== 0);
+        const actorIsOpponent = !!(latestPlay && !isHumanSeat(latestPlay.playerIndex));
         const actorRect = actorIsOpponent ? seatAvatarAnim.getPreRenderClusterRect() : null;
         const deckRect = document.querySelector('.tableDeckPlaceholder')?.getBoundingClientRect() || null;
 
@@ -3763,16 +3999,17 @@ import { createLayerManager } from './ui/layerManager.js';
       cardAnimator.capturePreRender();
       const app = document.getElementById('app');
       const layoutPolicy = applyLayoutContract(app);
-      const player = state.players[0] || { hand: [], chips: 0, clears: 0 };
+      const hs = state.humanSeat;
+      const player = state.players[hs] || { hand: [], chips: 0, clears: 0 };
       const selected = selectedCards();
-      const canHumanAct = !state.gameOver && state.currentTurn === 0 && !state.challengeWindow && !state.betting && !hasConcededThisRound(0);
+      const canHumanAct = !state.gameOver && state.currentTurn === hs && !state.challengeWindow && !state.betting && !hasConcededThisRound(hs);
       const declareOptions = Array.from({ length: RANK_COUNT }, (_, i) => i + 1)
         .map(rank => `<option value="${rank}" ${state.declaredRank === rank ? 'selected' : ''}>${rank}</option>`)
         .join('');
-      const bettingActorHuman = !!state.betting && state.betting.currentActorId === 0;
-      const humanCallAmount = state.betting ? amountToCall(0) : 0;
-      const humanLegalActions = state.betting && bettingActorHuman ? legalBettingActionsFor(0) : [];
-      const humanRaiseTierIds = state.betting && bettingActorHuman ? legalStakeTierIdsForPlayer(0) : [];
+      const bettingActorHuman = !!state.betting && state.betting.currentActorId === hs;
+      const humanCallAmount = state.betting ? amountToCall(hs) : 0;
+      const humanLegalActions = state.betting && bettingActorHuman ? legalBettingActionsFor(hs) : [];
+      const humanRaiseTierIds = state.betting && bettingActorHuman ? legalStakeTierIdsForPlayer(hs) : [];
       const humanCanRaise = humanLegalActions.includes('raise-tier') && humanRaiseTierIds.length > 0;
       if (state.betting) {
         const bettingUiDebug = {
@@ -3797,7 +4034,7 @@ import { createLayerManager } from './ui/layerManager.js';
         uiDebugState.bettingUiDebugKey = null;
       }
       const challengeWindow = state.challengeWindow;
-      const humanCanDecideChallenge = !!(challengeWindow && !state.betting && !state.gameOver && challengeWindow.lastPlay.playerIndex !== 0);
+      const humanCanDecideChallenge = !!(challengeWindow && !state.betting && !state.gameOver && challengeWindow.lastPlay.playerIndex !== hs);
       const challengePromptText = humanCanDecideChallenge ? formatChallengePrompt(challengeWindow.lastPlay) : '';
       const latestPilePlay = state.pile.at(-1) || null;
       const latestPlay = state.betting?.play || state.challengeWindow?.lastPlay || (state.challengeIntro ? latestPilePlay : null);
@@ -3934,7 +4171,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return '';
       };
       const renderStakeTierButtons = (mode) => {
-        const allowedTierIds = mode === 'open' ? legalStakeTierIdsForPlayer(0) : humanRaiseTierIds;
+        const allowedTierIds = mode === 'open' ? legalStakeTierIdsForPlayer(hs) : humanRaiseTierIds;
         const locked = !!state.betting?.actionInFlight;
         return `<div class="stakeTierBtnRow" data-proj-id="betting-tier-buttons">${STAKE_TIERS.map((tier) => {
           const enabled = allowedTierIds.includes(tier.id) && !locked;
@@ -4005,7 +4242,8 @@ import { createLayerManager } from './ui/layerManager.js';
         <div class="topbar" data-proj-id="topbar">
           <div class="titleRow">
             <h1>${escapeHtml(GAME_TITLE)}</h1>
-            <button class="ghost" id="restartBtn">New Match</button>
+            ${window.ScratchbonesAccount ? `<div class="chip" style="display:inline-flex;align-items:center;gap:3px;"><span style="font-style:normal;">🪙</span>${window.ScratchbonesAccount.getBronze()} Bronze</div>` : ''}
+            <button class="ghost" id="lobbyBtn">← Lobby</button>
           </div>
           <div class="chipRow">
             <div class="chip">Round ${state.round}</div>
@@ -4016,9 +4254,10 @@ import { createLayerManager } from './ui/layerManager.js';
         </div>
         <div id="aiSidebar" class="fit-target fit-0" data-proj-id="sidebar">
           <div class="sectionTitle" style="padding:6px 10px 2px;color:var(--accent-2);">Table</div>
-          ${state.players.slice(1).map(p => `
+          ${state.players.filter(p => p.id !== hs).map(p => `
             <div class="aiSeat ${p.eliminated ? 'eliminated' : ''}" data-proj-id="seat-${p.id}" data-ai-seat-id="${p.id}" style="${state.smuggleSelection ? `outline:2px solid ${state.smuggleSelection.selectedTargetId === p.id ? 'var(--warning)' : 'var(--text)'};cursor:pointer;` : (state.trapSelection && state.trapSelection.challengerId === p.id ? 'outline:2px solid var(--danger);' : '')}">
               <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
+                <div class="seatName">${escapeHtml(p.name)}</div>
                 <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
                 ${renderSeatCoinRow(p)}
                 <div class="seatStatus">${p.lastAction}</div>
@@ -4039,7 +4278,7 @@ import { createLayerManager } from './ui/layerManager.js';
               <div class="seatStatus">${player.lastAction}</div>
             </div>
             <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
-              <canvas class="seatPortrait" data-seat-id="0" width="220" height="220"></canvas>
+              <canvas class="seatPortrait" data-seat-id="${hs}" width="220" height="220"></canvas>
             </div>
           </div>
         </div>
@@ -4158,11 +4397,8 @@ import { createLayerManager } from './ui/layerManager.js';
         const select = document.getElementById('declareRank');
         if (select) select.value = String(state.declaredRank);
       }
-      document.getElementById('restartBtn')?.addEventListener('click', startGame);
-      document.getElementById('playBtn')?.addEventListener('click', humanPlay);
-      document.getElementById('concedeBtn')?.addEventListener('click', humanConcedeRound);
-      document.getElementById('challengeBtnFixed')?.addEventListener('click', () => { clearChallengeTimer(); humanChallenge(); });
-      document.getElementById('letPassBtnFixed')?.addEventListener('click', () => { clearChallengeTimer(); humanAcceptNoChallenge(); });
+      document.getElementById('lobbyBtn')?.addEventListener('click', goToLobby);
+      // Card selection is always local (included in 'play' action when submitted)
       app.querySelectorAll('.card[data-card-id]').forEach(el => {
         el.addEventListener('click', () => toggleSelect(Number(el.getAttribute('data-card-id'))));
       });
@@ -4170,13 +4406,63 @@ import { createLayerManager } from './ui/layerManager.js';
       resolveChallengeLayoutPressure(app, layoutPolicy?.allowChallengeOverflow !== false);
       renderSeatPortraits();
       mountClaimClusterCinematicStage(app, { cinematicMode, cinematicPhase, cinematicRevealPlay, bettingActorHuman, humanCallAmount });
-      document.getElementById('betCallBtn')?.addEventListener('click', () => humanBetAction('call'));
-      document.getElementById('betFoldBtn')?.addEventListener('click', () => humanBetAction('fold'));
-      document.getElementById('betPunishToggleBtn')?.addEventListener('click', () => {
-        if (!state.betting || state.betting.currentActorId !== 0) return;
-        state.betting.punishArmed = !state.betting.punishArmed;
-        render();
-      });
+      {
+        // Route all player actions through the network when in client mode.
+        const _net = window.ScratchbonesNetwork;
+        const _isClient = !!_net?.isClient();
+        document.getElementById('playBtn')?.addEventListener('click', () => {
+          if (_isClient) {
+            const cards = selectedCards();
+            const rank = Number(document.getElementById('declareRank')?.value);
+            traceAction('client.send-play', { cardCount: cards.length, rank, humanSeat: state.humanSeat, currentTurn: state.currentTurn });
+            _net.sendAction({ type: 'play', cardIds: cards.map(c => c.id), declaredRank: rank });
+          } else { humanPlay(); }
+        });
+        document.getElementById('concedeBtn')?.addEventListener('click', () => {
+          if (_isClient) { traceAction('client.send-concede', { humanSeat: state.humanSeat }); _net.sendAction({ type: 'concede-round' }); }
+          else humanConcedeRound();
+        });
+        document.getElementById('challengeBtnFixed')?.addEventListener('click', () => {
+          if (_isClient) { traceAction('client.send-challenge', { humanSeat: state.humanSeat }); _net.sendAction({ type: 'challenge' }); }
+          else { clearChallengeTimer(); humanChallenge(); }
+        });
+        document.getElementById('letPassBtnFixed')?.addEventListener('click', () => {
+          if (_isClient) { traceAction('client.send-accept-no-challenge', { humanSeat: state.humanSeat, currentTurn: state.currentTurn, challengers: state.challengeWindow?.challengerOptions }); _net.sendAction({ type: 'accept-no-challenge' }); }
+          else { clearChallengeTimer(); humanAcceptNoChallenge(); }
+        });
+        document.getElementById('betCallBtn')?.addEventListener('click', () => {
+          if (_isClient) _net.sendAction({ type: 'bet-action', action: 'call' });
+          else void humanBetAction('call');
+        });
+        document.getElementById('betFoldBtn')?.addEventListener('click', () => {
+          if (_isClient) _net.sendAction({ type: 'bet-action', action: 'fold' });
+          else void humanBetAction('fold');
+        });
+        document.getElementById('betPunishToggleBtn')?.addEventListener('click', () => {
+          if (_isClient) { _net.sendAction({ type: 'punish-toggle' }); return; }
+          if (!state.betting || !isHumanSeat(state.betting.currentActorId)) return;
+          state.betting.punishArmed = !state.betting.punishArmed;
+          render();
+        });
+        app.querySelectorAll('[data-stake-tier-action="open"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const tierId = btn.getAttribute('data-stake-tier-id');
+            if (_isClient) _net.sendAction({ type: 'bet-open-tier', tierId });
+            else humanOpenTierSelected(tierId);
+          });
+        });
+        app.querySelectorAll('[data-stake-tier-action="raise"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const tierId = btn.getAttribute('data-stake-tier-id');
+            if (_isClient) _net.sendAction({ type: 'bet-raise-tier', tierId });
+            else humanRaiseTierSelected(tierId);
+          });
+        });
+        document.getElementById('cinContinueBtn')?.addEventListener('click', () => {
+          if (_isClient) { state.cinematicMode = null; render(); }
+          else closeCinematic(true);
+        });
+      }
       app.querySelectorAll('[data-smuggle-seat]').forEach((button) => {
         button.addEventListener('click', () => {
           if (!state.smuggleSelection) return;
@@ -4195,13 +4481,6 @@ import { createLayerManager } from './ui/layerManager.js';
         });
       });
       document.getElementById('trapOffloadBtn')?.addEventListener('click', () => { void resolvePendingTrapSelection(); });
-      app.querySelectorAll('[data-stake-tier-action="open"]').forEach((btn) => {
-        btn.addEventListener('click', () => humanOpenTierSelected(btn.getAttribute('data-stake-tier-id')));
-      });
-      app.querySelectorAll('[data-stake-tier-action="raise"]').forEach((btn) => {
-        btn.addEventListener('click', () => humanRaiseTierSelected(btn.getAttribute('data-stake-tier-id')));
-      });
-      document.getElementById('cinContinueBtn')?.addEventListener('click', () => closeCinematic(true));
       const layoutMode = getScratchbonesLayoutMode();
       document.body.classList.toggle('layout-mode-authored', layoutMode === 'authored');
       if (layoutMode === 'authored') {
@@ -4233,6 +4512,7 @@ import { createLayerManager } from './ui/layerManager.js';
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
       cardAnimator.animatePostRender();
       seatAvatarAnim.animatePostRender();
+      pushNetworkState();
     }
     function debugSnapshot() {
       const regionsConfig = getLayoutRegionsConfig();
@@ -4339,14 +4619,83 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     function generatePlayerProfile(player) {
       if (!_portraitCosmetics) return null;
-      const { hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, hatOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter, conditionalCosmeticsByFighter } = _portraitCosmetics;
+      const { optionCache, hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, hatOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter, conditionalCosmeticsByFighter } = _portraitCosmetics;
       const seedStr = player.seed || `player-${player.id}`;
       const rng = mulberry32(hashStringToSeed(seedStr));
       const fighterGender = f => f.gender ?? (f.id === 'M' ? 'male' : f.id === 'F' ? 'female' : null);
+
+      if (player.isHuman && player.appearance) {
+        const { speciesId, gender, cosmetics, bodyColors } = player.appearance;
+        // Find fighter matching species+gender (mao-ao uses legacy 'M'/'F' ids)
+        const normalizedSpecies = speciesId ? speciesId.replace(/-/g, '_') : null;
+        const fighter = FIGHTERS.find(f =>
+          (f.speciesId === speciesId || f.speciesId === normalizedSpecies) &&
+          fighterGender(f) === gender
+        ) || FIGHTERS[0];
+        const fighterPool = [fighter];
+        // Generate base profile for this fighter (provides hat, torso, arm cosmetics randomly)
+        const profile = randomProfileSeeded(rng, fighterPool, hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
+        if (!profile) return null;
+        // Override with saved cosmetics, but never override forced slots
+        const lookupOption = id => id ? (optionCache?.get(id) ?? null) : null;
+        const forced = forcedCosmeticsByFighter?.[fighter.id] ?? {};
+        const forcedSlots = new Set(Object.keys(forced));
+        if (cosmetics) {
+          if (cosmetics.hairFront !== undefined && !forcedSlots.has('hairFront')) profile.hairFront = lookupOption(cosmetics.hairFront);
+          if (cosmetics.hairBack  !== undefined && !forcedSlots.has('hairBack'))  profile.hairBack  = lookupOption(cosmetics.hairBack);
+          if (cosmetics.hairSide  !== undefined && !forcedSlots.has('hairSide'))  profile.hairSide  = lookupOption(cosmetics.hairSide);
+          if (cosmetics.eyes      !== undefined && !forcedSlots.has('eyes'))      profile.eyes      = lookupOption(cosmetics.eyes);
+          if (cosmetics.facialHair!== undefined && !forcedSlots.has('facialHair'))profile.facialHair= lookupOption(cosmetics.facialHair);
+        }
+        if (bodyColors) {
+          profile.bodyColors = { ...(profile.bodyColors || {}), ...bodyColors };
+        }
+        return profile;
+      }
+
       const fighterPool = player.gender === 'male'   ? FIGHTERS.filter(f => fighterGender(f) === 'male')
                         : player.gender === 'female' ? FIGHTERS.filter(f => fighterGender(f) === 'female')
                         : FIGHTERS;
       return randomProfileSeeded(rng, fighterPool.length ? fighterPool : FIGHTERS, hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
+    }
+    function applyEquippedCosmeticsToHumanPlayers() {
+      if (!_portraitCosmetics) return;
+      const acc = window.ScratchbonesAccount;
+      if (!acc) return;
+      for (const player of state.players) {
+        if (!player.isHuman || !player.profile) continue;
+        const oc = _portraitCosmetics.optionCache;
+        const none = { id: 'none', tintSlot: null, layers: [] };
+        // Use per-player relayed cosmetics when available (online), fall back to local account (hotseat)
+        const equippedList = player.appearance?.equippedCosmetics ?? null;
+        const shopCatalog = acc.getShopCatalog ? acc.getShopCatalog() : [];
+        const getEquipped = (category) => {
+          if (equippedList !== null) {
+            return shopCatalog.find(i => i.category === category && equippedList.includes(i.id))?.id ?? null;
+          }
+          return acc.getEquippedForCategory(category);
+        };
+        const applySlot = (category, profileKey) => {
+          const id = getEquipped(category);
+          player.profile[profileKey] = (id && oc?.has(id)) ? oc.get(id) : none;
+        };
+        applySlot('hat', 'hat');
+        applySlot('torso', 'torsoCosmetic');
+        applySlot('overwear', 'armCosmetic');
+        // Apply clothing dyes from per-player appearance when available, else local account
+        const dyeIds = player.appearance?.appliedDyes !== undefined
+          ? (player.appearance.appliedDyes || {})
+          : (acc.getAppliedDyes ? acc.getAppliedDyes() : {});
+        if (acc.getDyeCatalog) {
+          const catalog = acc.getDyeCatalog();
+          for (const [tintKey, dyeId] of Object.entries(dyeIds)) {
+            if (dyeId) {
+              const dye = catalog.find(d => d.id === dyeId);
+              if (dye) player.profile.bodyColors = { ...(player.profile.bodyColors || {}), [tintKey]: { ...dye.color } };
+            }
+          }
+        }
+      }
     }
     function logPlayerPortraitXforms(player) {
       if (!player?.profile || !window.getProfileSpriteXforms) return;
@@ -4635,7 +4984,7 @@ import { createLayerManager } from './ui/layerManager.js';
         const loser = state.players[cinematicMode.loserId];
         const winnerName = winner?.isHuman ? 'You' : (winner?.name || 'Unknown');
         const loserName = loser?.isHuman ? 'You' : (loser?.name || 'Unknown');
-        const resultToneClass = cinematicMode.winnerId === 0 ? 'res-good' : (cinematicMode.loserId === 0 ? 'res-warn' : 'res-neutral');
+        const resultToneClass = isHumanSeat(cinematicMode.winnerId) ? 'res-good' : (isHumanSeat(cinematicMode.loserId) ? 'res-warn' : 'res-neutral');
         const headlineClass = cinematicPhase === 'reveal' ? (cinematicMode.winnerId === cinematicMode.challengerId ? 'cin-caught' : 'cin-defended') : 'cin-fold';
         const subtitle = cinematicPhase === 'reveal' ? `${winnerName} wins the challenge.` : `${loserName} folds — ${winnerName} takes the pot.`;
         textAnchor.classList.add('claimClusterCinematicPane', 'cinematic-resolution-pane');
@@ -5218,7 +5567,14 @@ import { createLayerManager } from './ui/layerManager.js';
           ? `${basePanelTitle} · ${projectionUiState.lastSelectedProjId}`
           : basePanelTitle;
         if (!projectionUiState.lastSelectedProjId) {
-          varsPanelBody.innerHTML = '<div class="projVarHint">Select an outlined element in map mode, then open Vars.</div>';
+          const hueOff = (window.SCRATCHBONES_CONFIG?.clothingHueOffset) ?? 0;
+          varsPanelBody.innerHTML = `
+            <div class="projVarHint">Global settings — select an outlined element to edit its vars.</div>
+            <label class="projVarRow">
+              <span class="projVarLabel">clothing hue offset</span>
+              <input class="projVarInput" data-global-setting="clothingHueOffset" data-kind="number" type="number" step="1" value="${hueOff}">
+              <input class="projVarInput" data-global-setting="clothingHueOffset" data-kind="range"  type="range"  min="-180" max="180" step="1" value="${hueOff}">
+            </label>`;
           return;
         }
         const relatedVars = resolveRelatedVars(projectionUiState.lastSelectedProjId, projectionUiState.lastSelectedSourceEl);
@@ -5431,6 +5787,17 @@ import { createLayerManager } from './ui/layerManager.js';
           updateEditorStatus(`Inspector updated ${getSelectedAuthoredBox()}.${authoredField}=${Math.round(numeric)}.`);
           return;
         }
+        const globalInput = event.target.closest('[data-global-setting]');
+        if (globalInput) {
+          const setting = globalInput.dataset.globalSetting;
+          const val = parseFloat(globalInput.value);
+          if (!Number.isFinite(val)) return;
+          window.SCRATCHBONES_CONFIG = { ...(window.SCRATCHBONES_CONFIG || {}), [setting]: val };
+          varsPanelBody.querySelectorAll(`[data-global-setting="${setting}"]`).forEach(el => {
+            if (el !== globalInput) el.value = val;
+          });
+          return;
+        }
         const input = event.target.closest('.projVarInput');
         if (!input) return;
         const varName = input.getAttribute('data-proj-var');
@@ -5515,9 +5882,35 @@ import { createLayerManager } from './ui/layerManager.js';
     window.addEventListener('orientationchange', scheduleResponsiveFitPass, { passive: true });
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     window.addEventListener('keydown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
-    void startGame().catch((error) => {
-      console.error('[game] startGame failed', error);
-    });
+    // Client-mode entry point: no game logic runs; just wait for state from the host.
+    async function startClient() {
+      const net = window.ScratchbonesNetwork;
+      if (!net?.isClient()) return;
+      state.humanSeat = net.getSeatId() ?? 0;
+      SCRATCHBONES_AUDIO.startPlaylist();
+      net.on('state-update', (msg) => applyNetworkState(msg.state));
+      net.on('disconnect', () => {
+        console.warn('[net] disconnected from host');
+        if (window.ScratchbonesLobby) window.ScratchbonesLobby.show();
+      });
+    }
+
+    // Host-mode: wire up incoming client actions after game starts.
+    const _origStartGame = startGame;
+    async function startGameWithNetwork() {
+      await _origStartGame();
+      const net = window.ScratchbonesNetwork;
+      if (net?.isHost()) net.on('action', handleNetworkAction);
+    }
+
+    // Expose both entry points so the lobby can call them.
+    window.scratchbonesStartGame = startGameWithNetwork;
+    window.scratchbonesStartClient = startClient;
+    window.dispatchEvent(new CustomEvent('scratchbones:ready'));
+    // Auto-start only when the lobby system is absent (dev/standalone mode).
+    if (!window.ScratchbonesLobby) {
+      void startGameWithNetwork().catch((error) => { console.error('[game] startGame failed', error); });
+    }
     try {
       initCandleLight({ gameConfig: SCRATCHBONES_GAME, debugLog: traceCandlelight });
     } catch (error) {

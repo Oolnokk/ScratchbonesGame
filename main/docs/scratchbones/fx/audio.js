@@ -71,7 +71,7 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
         if (!audio) return Promise.resolve(false);
         const p = audio.play?.();
         if (p && typeof p.catch === 'function') {
-          return p.catch((error) => {
+          return p.then(() => true).catch((error) => {
             const blocked = error?.name === 'NotAllowedError';
             if (!blocked || !autoplayBlockedLogged) {
               logAudio(blocked ? 'warn' : 'error', 'play-failed', { blocked, error: String(error?.message || error) });
