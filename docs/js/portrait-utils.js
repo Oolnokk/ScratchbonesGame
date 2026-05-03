@@ -341,17 +341,18 @@ async function renderProfile(canvas, profile) {
   const filterFor = (slot) => slot ? makeCSSFilter(bodyColors[slot]) : 'none';
   const filterA   = makeCSSFilter(bodyColors.A);
 
-  const baseBodyBackLayers = [];
-  const baseBodyFrontLayers = [];
+  const baseArmLayers = [];
+  const baseNonArmLayers = [];
+  const clothingLayers = [];
   for (const layer of bodyLayerSource) {
-    const target = layer.pos === 'front' ? baseBodyFrontLayers : baseBodyBackLayers;
+    const normalizedId = String(layer.id || '').toLowerCase();
+    const target = normalizedId.startsWith('arm') ? baseArmLayers : baseNonArmLayers;
     target.push({ layer, filter: filterFor(layer.tintSlot || 'A') });
   }
   for (const group of [torsoCosmetic, armCosmetic]) {
     if (!group || !group.layers || !group.layers.length) continue;
     for (const layer of group.layers) {
-      const target = layer.pos === 'back' ? baseBodyBackLayers : baseBodyFrontLayers;
-      target.push({ layer, filter: filterFor(group.tintSlot || 'A') });
+      clothingLayers.push({ layer, filter: filterFor(group.tintSlot || 'A') });
     }
   }
 
@@ -380,10 +381,11 @@ async function renderProfile(canvas, profile) {
   const neededUrls = new Set([
     headUrl,
     ...urLayerSource.map(m => m.url),
-    ...baseBodyBackLayers.map(({ layer }) => layer.url),
+    ...baseArmLayers.map(({ layer }) => layer.url),
+    ...baseNonArmLayers.map(({ layer }) => layer.url),
     ...backLayers.map(({ layer }) => layer.url),
     ...frontLayers.map(({ layer }) => layer.url),
-    ...baseBodyFrontLayers.map(({ layer }) => layer.url),
+    ...clothingLayers.map(({ layer }) => layer.url),
     ...(opacityMaskLayer?.url ? [opacityMaskLayer.url] : []),
     ...blinkOverlayUrlsByBase.values(),
   ]);
@@ -419,11 +421,15 @@ async function renderProfile(canvas, profile) {
   }
   const isBlinkFrame = shouldRenderBlink(headUrl, nowMs);
 
-  for (const { layer, filter } of baseBodyBackLayers) {
+  for (const { layer, filter } of baseArmLayers) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
   }
-  for (const { layer, filter } of baseBodyFrontLayers) {
+  for (const { layer, filter } of baseNonArmLayers) {
+    const img = imgMap.get(layer.url);
+    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+  }
+  for (const { layer, filter } of clothingLayers) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
   }
@@ -554,6 +560,7 @@ function portraitOptionFromJson(entry, json) {
   const resolvedTintSlot = json.slot === 'hat' && colorRange ? 'HAT'
                          : json.slot === 'hood' && colorRange ? 'CLOTH'
                          : !json.appearance && colorRange ? 'CLOTH'
+                         : json.slot === 'hood' && !json.appearance ? (json.tintSlot ?? 'CLOTH')
                          : !json.appearance && json.tintSlot != null ? json.tintSlot
                          : json.slot === 'torso' && !json.appearance ? 'TORSO'
                          : tintSlot;
