@@ -5,6 +5,7 @@ import { compareRenderedScreenSpaceModes, createLayoutDiagnosticsState, resetLay
 import { createScratchbonesAudio } from './fx/audio.js';
 import { initDebugPanelInterceptor } from './debug/panel.js';
 import { initCandleLight } from './fx/candlelight.js';
+import { initTrickBoneGlow } from './fx/trickBoneGlow.js';
 import { createLayerManager } from './ui/layerManager.js';
 
     initDebugPanelInterceptor();
@@ -4144,7 +4145,7 @@ import { createLayerManager } from './ui/layerManager.js';
             const cardAlt = revealCard
               ? (card.wild ? 'Revealed wild scratchbone card' : `Revealed scratchbone ${card.rank} card`)
               : 'Face-down scratchbone card';
-            return `<div class="tableViewCard" style="--fd:0s;" data-card-id="${card.id}"><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${cardAlt}"></div>`;
+            return `<div class="tableViewCard" style="--fd:0s;" data-card-id="${card.id}"${revealCard && card.trickType ? ` data-trick-glow="${card.trickType}"` : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${cardAlt}"></div>`;
           }).join('')
         : '<div class="tiny">No claim yet.</div>');
       const claimClusterShellClass = claimClusterPolicy.transparentShells ? 'floatingTransparentShell' : '';
@@ -4156,7 +4157,7 @@ import { createLayerManager } from './ui/layerManager.js';
           ? `<div class="tiny">Claim cluster visualization active.</div>`
           : latestPlay.cards.map(card => {
               const art = resolveScratchbone2DAsset(card, { flipped: tableCardFaceDown });
-              return `<div class="tableViewCard" data-card-id="${card.id}"><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${tableCardFaceDown ? 'Face-down scratchbone card' : (card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`)}"></div>`;
+              return `<div class="tableViewCard" data-card-id="${card.id}"${!tableCardFaceDown && card.trickType ? ` data-trick-glow="${card.trickType}"` : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${tableCardFaceDown ? 'Face-down scratchbone card' : (card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`)}"></div>`;
             }).join(''))
         : '<div class="tiny">No cards on the table yet.</div>';
       const recentLogs = eventLogEnabled ? state.logs.slice(0, 4) : [];
@@ -4407,7 +4408,7 @@ import { createLayerManager } from './ui/layerManager.js';
                 const cardGlyph = card.wild ? 'W' : String(card.rank);
                 const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id);
                 return `
-                <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}" title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}"${hiddenDealCard ? ' style=\"visibility:hidden;\"' : ' style=\"background:transparent;border:0;box-shadow:none;outline:none;padding:0;width:fit-content;min-width:0;\"'}>
+                <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}"${card.trickType ? ` data-trick-glow="${card.trickType}"` : ''} title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}"${hiddenDealCard ? ' style=\"visibility:hidden;\"' : ' style=\"background:transparent;border:0;box-shadow:none;outline:none;padding:0;width:fit-content;min-width:0;\"'}>
                   <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`}">
                   <span class="cardLabel" aria-hidden="true" style="left:var(--layout-hand-card-label-inset-left,2px);bottom:var(--layout-hand-card-label-inset-bottom,2px);right:auto;top:auto;"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${handCardLabel}</span></span>
                 </button>
@@ -5970,4 +5971,9 @@ import { createLayerManager } from './ui/layerManager.js';
       const initFailure = { error: String(error?.message || error) };
       traceEvent('error', 'candlelight.init-failed', initFailure);
       console.error('[scratchbones:candlelight.init-failed]', initFailure, error);
+    }
+    try {
+      initTrickBoneGlow();
+    } catch (error) {
+      console.error('[scratchbones:trickBoneGlow.init-failed]', String(error?.message || error));
     }
