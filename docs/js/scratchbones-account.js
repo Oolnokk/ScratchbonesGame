@@ -46,7 +46,7 @@
     { id: 'dye:CLOTH:grey',   label: 'Sage',      dyeSlot: 'CLOTH', color: { h:   0, s: -0.50, v: -0.20 } },
     // Additional dyes
     { id: 'dye:CLOTH:navy',   label: 'Navy',      dyeSlot: 'CLOTH', color: { h:  85, s:  1.00, v: -0.45 } },
-    { id: 'dye:CLOTH:scarlet',label: 'Scarlet',   dyeSlot: 'CLOTH', color: { h:-145, s:  1.10, v: -0.10 } },
+    { id: 'dye:CLOTH:scarlet', label: 'Scarlet',   dyeSlot: 'CLOTH', color: { h:-145, s:  1.10, v: -0.10 } },
     { id: 'dye:CLOTH:gold',   label: 'Gold',      dyeSlot: 'CLOTH', color: { h: -95, s:  1.10, v:  0.15 } },
     { id: 'dye:CLOTH:violet', label: 'Violet',    dyeSlot: 'CLOTH', color: { h: 135, s:  1.00, v: -0.35 } },
     { id: 'dye:CLOTH:forest', label: 'Forest',    dyeSlot: 'CLOTH', color: { h: -25, s:  0.60, v: -0.55 } },
