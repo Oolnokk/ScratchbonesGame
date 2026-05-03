@@ -198,7 +198,7 @@
         "id": "armR",
         "url": "portraitsprites/arm-R_tl-m.png",
         "tintSlot": "A",
-        "pos": "back",
+        "pos": "front",
         "xform": {
           "ax": -0.2,
           "ay": 0,

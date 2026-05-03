@@ -419,6 +419,10 @@ async function renderProfile(canvas, profile) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
   }
+  for (const { layer, filter } of bodyFrontLayers) {
+    const img = imgMap.get(layer.url);
+    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+  }
   for (const { layer, filter } of backLayers) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
@@ -439,10 +443,6 @@ async function renderProfile(canvas, profile) {
     const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
     const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
     if (img) drawPortraitLayer(ctx, img, headXform, 'none');
-  }
-  for (const { layer, filter } of bodyFrontLayers) {
-    const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
   }
   if (opacityMaskLayer?.url) {
     const maskImg = imgMap.get(opacityMaskLayer.url);

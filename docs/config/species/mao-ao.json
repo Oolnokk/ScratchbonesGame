@@ -206,7 +206,7 @@
         "id": "armR",
         "url": "portraitsprites/arm-R_mao-ao_m.png",
         "tintSlot": "A",
-        "pos": "back",
+        "pos": "front",
         "xform": {
           "ax": -0.2,
           "ay": 0,
@@ -516,7 +516,7 @@
         "id": "armR",
         "url": "portraitsprites/arm-R_mao-ao_f.png",
         "tintSlot": "A",
-        "pos": "back",
+        "pos": "front",
         "xform": {
           "ax": -0.2,
           "ay": 0,
