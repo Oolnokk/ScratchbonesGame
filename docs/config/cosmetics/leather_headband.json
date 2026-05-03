@@ -1,5 +1,6 @@
 {
   "slot": "hat",
+  "hoodLayering": "under",
   "tags": ["material:leather"],
   "colorRange": {
     "minH": -140,

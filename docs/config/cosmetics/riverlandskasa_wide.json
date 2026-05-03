@@ -1,5 +1,6 @@
 {
   "slot": "hat",
+  "hoodLayering": "over",
   "tags": ["material:rigid_fiber"],
   "colorRange": {
     "minH": -100,

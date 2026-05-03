@@ -20,9 +20,14 @@
       "appearance::Tletingan_M::tl_longponytail",
       "appearance::Tletingan_M::tl_splayedknot",
       "appearance::Tletingan_M::tl_wildbeard",
+      "appearance::Tletingan_M::tl_braid-L",
+      "appearance::Tletingan_M::tl_braid-R",
+      "appearance::Tletingan_M::tl_braidcluster-R",
       "appearance::hat::basic_headband",
+      "appearance::hat::leather_headband",
       "appearance::hat::riverlandskasa_low",
       "appearance::hat::riverlandskasa_wide",
+      "fine_hood_tl",
       "tankantunic_tl_m",
       "bandolier1_tl_m",
       "tankanbodywrap_tl_m"
@@ -33,6 +38,10 @@
         "basic_headband": 30,
         "riverlandskasa_low": 20,
         "riverlandskasa_wide": 20
+      },
+      "hood": {
+        "none": 80,
+        "fine_hood_tl": 20
       },
       "hairFront": {
         "none": 10,
@@ -45,7 +54,13 @@
         "splayedknot": 25
       },
       "hairSide": {
-        "none": 100
+        "none": 60,
+        "braid-R": 20,
+        "braidcluster-R": 20
+      },
+      "hairSideL": {
+        "none": 60,
+        "braid-L": 40
       }
     },
     "bodyColorRanges": {
@@ -209,25 +224,31 @@
         "basic_headband": {
           "hideSlots": []
         },
+        "leather_headband": {
+          "hideSlots": []
+        },
         "riverlandskasa_low": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         },
         "riverlandskasa_tight": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         },
         "riverlandskasa_wide": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         }
       },

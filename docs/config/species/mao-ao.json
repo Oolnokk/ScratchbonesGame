@@ -25,9 +25,14 @@
       "appearance::Mao-ao_M::mao-ao_long_ponytail",
       "appearance::Mao-ao_M::mao-ao_splayedknot_medium",
       "appearance::Mao-ao_M::mao-ao_wildbeard",
+      "appearance::Mao-ao_M::mao-ao_braid-L",
+      "appearance::Mao-ao_M::mao-ao_braid-R",
+      "appearance::Mao-ao_M::mao-ao_braidcluster-R",
       "appearance::hat::basic_headband",
+      "appearance::hat::leather_headband",
       "appearance::hat::riverlandskasa_low",
       "appearance::hat::riverlandskasa_wide",
+      "fine_hood_mao-ao_m",
       "tankantunic_mao-ao_m",
       "bandolier1_mao-ao_m",
       "tankanbodywrap_mao-ao"
@@ -38,6 +43,10 @@
         "basic_headband": 30,
         "riverlandskasa_low": 20,
         "riverlandskasa_wide": 20
+      },
+      "hood": {
+        "none": 80,
+        "fine_hood_mao-ao_m": 20
       },
       "hairFront": {
         "none": 5,
@@ -52,8 +61,14 @@
         "splayedknot_medium": 25
       },
       "hairSide": {
-        "none": 90,
-        "shoulder_length_drape": 10
+        "none": 60,
+        "shoulder_length_drape": 10,
+        "braid-R": 15,
+        "braidcluster-R": 15
+      },
+      "hairSideL": {
+        "none": 60,
+        "braid-L": 40
       }
     },
     "bodyColorRanges": {
@@ -221,21 +236,24 @@
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         },
         "riverlandskasa_tight": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         },
         "riverlandskasa_wide": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         }
       },
@@ -293,9 +311,14 @@
       "appearance::Mao-ao_F::mao-ao_splayedknot_medium",
       "appearance::Mao-ao_F::mao-ao_shoulder_length_drape",
       "appearance::Mao-ao_F::mao-ao_long_ponytail",
+      "appearance::Mao-ao_F::mao-ao_braid-L",
+      "appearance::Mao-ao_F::mao-ao_braid-R",
+      "appearance::Mao-ao_F::mao-ao_braidcluster-R",
       "appearance::hat::basic_headband",
+      "appearance::hat::leather_headband",
       "appearance::hat::riverlandskasa_low",
       "appearance::hat::riverlandskasa_wide",
+      "fine_hood_mao-ao_f",
       "tankantunic_mao-ao_f",
       "bandolier1_mao-ao_f",
       "tankanbodywrap_mao-ao"
@@ -306,6 +329,10 @@
         "basic_headband": 28,
         "riverlandskasa_low": 3.5,
         "riverlandskasa_wide": 3.5
+      },
+      "hood": {
+        "none": 80,
+        "fine_hood_mao-ao_f": 20
       },
       "hairFront": {
         "none": 5,
@@ -318,6 +345,16 @@
         "none": 50,
         "long_ponytail": 25,
         "splayedknot_medium": 25
+      },
+      "hairSide": {
+        "none": 60,
+        "shoulder_length_drape": 10,
+        "braid-R": 15,
+        "braidcluster-R": 15
+      },
+      "hairSideL": {
+        "none": 60,
+        "braid-L": 40
       }
     },
     "disallowedCosmeticCombos": [
@@ -509,21 +546,24 @@
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         },
         "riverlandskasa_tight": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         },
         "riverlandskasa_wide": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         }
       },

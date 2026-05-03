@@ -17,24 +17,24 @@
       "layers": {
         "back": {
           "image": {
-            "url": "./assets/cosmetics/clothes/hat/riverlandskasa_tight-back.png"
+            "url": "./assets/cosmetics/clothes/hat/kenk_riverlandskasa_wide-back.png"
           },
           "spriteStyle": {
             "base": {
               "xform": {
-                "head": { "ax": -0.1, "ay": -0.1, "scaleX": 2, "scaleY": 2, "rotDeg": 0 }
+                "head": { "ax": -0.0983, "ay": -0.0809, "scaleX": 2.49, "scaleY": 2.49, "rotDeg": 0 }
               }
             }
           }
         },
         "front": {
           "image": {
-            "url": "./assets/cosmetics/clothes/hat/riverlandskasa_tight-front.png"
+            "url": "./assets/cosmetics/clothes/hat/kenk_riverlandskasa_wide-front.png"
           },
           "spriteStyle": {
             "base": {
               "xform": {
-                "head": { "ax": -0.1, "ay": -0.1, "scaleX": 2, "scaleY": 2, "rotDeg": 0 }
+                "head": { "ax": -0.0983, "ay": -0.0809, "scaleX": 2.49, "scaleY": 2.49, "rotDeg": 0 }
               }
             }
           }

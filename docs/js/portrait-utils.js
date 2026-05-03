@@ -278,7 +278,7 @@ function applyPortraitOpacityMask(ctx, img, xform) {
 
 function getProfileSpriteXforms(profile) {
   if (!profile) return [];
-  const { fighter, hair, hairFront, hairBack, hairSide, eyes, facialHair, hat, torsoCosmetic, armCosmetic } = profile;
+  const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, hat, torsoCosmetic, armCosmetic } = profile;
   const resolvedFighter = resolvePortraitFighter(fighter) || fighter;
   const headXform = resolvedFighter?.headXform || fighter?.headXform || HEAD_XFORM;
   const opacityMaskLayer = resolvedFighter?.opacityMaskLayer || fighter?.opacityMaskLayer || null;
@@ -299,8 +299,11 @@ function getProfileSpriteXforms(profile) {
       records.push(toRecord('bodyCosmetic', layer, { group: group.id || null, pos: layer.pos || 'front' }));
     }
   }
+  const hatIsUnderHood = hat?.hoodLayering === 'under';
   const allCosmeticGroups = hairFront !== undefined
-    ? [hairBack, hairSide, facialHair, eyes, hairFront, hat]
+    ? (hatIsUnderHood
+        ? [hairBack, hairSideL, hairSide, facialHair, eyes, hairFront, hat, hood]
+        : [hairBack, hairSideL, hairSide, facialHair, eyes, hairFront, hood, hat])
     : [hair, facialHair, eyes, hat];
   for (const group of allCosmeticGroups) {
     if (!group?.layers?.length) continue;
@@ -319,7 +322,7 @@ function getProfileSpriteXforms(profile) {
 // ── Rendering ──────────────────────────────────────────────
 
 async function renderProfile(canvas, profile) {
-  const { fighter, hair, hairFront, hairBack, hairSide, eyes, facialHair, hat, torsoCosmetic, armCosmetic, bodyColors } = profile;
+  const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, hat, torsoCosmetic, armCosmetic, bodyColors } = profile;
   const resolvedFighter = resolvePortraitFighter(fighter) || fighter;
   const headXform = resolvedFighter?.headXform || fighter?.headXform || HEAD_XFORM;
   const opacityMaskLayer = resolvedFighter?.opacityMaskLayer || fighter?.opacityMaskLayer || null;
@@ -353,8 +356,11 @@ async function renderProfile(canvas, profile) {
   }
 
   // Support both three-slot (hairBack/hairSide/hairFront) and legacy single-slot (hair).
+  const hatIsUnderHood = hat?.hoodLayering === 'under';
   const allCosmeticGroups = hairFront !== undefined
-  ? [hairBack, hairSide, facialHair, eyes, hairFront, hat]
+  ? (hatIsUnderHood
+      ? [hairBack, hairSideL, hairSide, facialHair, eyes, hairFront, hat, hood]
+      : [hairBack, hairSideL, hairSide, facialHair, eyes, hairFront, hood, hat])
   : [hair, facialHair, eyes, hat];
   const backLayers  = [];
   const frontLayers = [];
@@ -546,8 +552,9 @@ function portraitOptionFromJson(entry, json) {
                          : !json.appearance && json.tintSlot != null ? json.tintSlot
                          : json.slot === 'torso' && !json.appearance ? 'TORSO'
                          : tintSlot;
-  const hairSlot = json.hairSlot || null; // 'front' | 'back' | 'side'
-  return { id: shortId, label, tintSlot: resolvedTintSlot, layers, slot: json.slot || null, colorRange, hairSlot, tags, materialTag };
+  const hairSlot = json.hairSlot || null; // 'front' | 'back' | 'side' | 'side-L'
+  const hoodLayering = json.hoodLayering || null; // 'under' means hat renders under hood; default is over
+  return { id: shortId, label, tintSlot: resolvedTintSlot, layers, slot: json.slot || null, colorRange, hairSlot, tags, materialTag, hoodLayering };
 }
 
 /**
@@ -604,10 +611,12 @@ async function loadPortraitCosmetics(configBase) {
   // Build categorised option arrays (unfiltered — callers may apply species filtering)
   const hairFrontOptions  = [{ id: 'none', label: 'No Front Hair',  tintSlot: null, layers: [] }];
   const hairBackOptions   = [{ id: 'none', label: 'No Back Hair',   tintSlot: null, layers: [] }];
-  const hairSideOptions   = [{ id: 'none', label: 'No Side Hair',   tintSlot: null, layers: [] }];
+  const hairSideOptions   = [{ id: 'none', label: 'No Side Hair (R)',  tintSlot: null, layers: [] }];
+  const hairSideLOptions  = [{ id: 'none', label: 'No Side Hair (L)',  tintSlot: null, layers: [] }];
   const eyesOptions       = [{ id: 'none', label: 'No Eye Mark',    tintSlot: null, layers: [] }];
   const facialHairOptions = [{ id: 'none', label: 'No Facial Hair', tintSlot: null, layers: [] }];
   const hatOptions        = [{ id: 'none', label: 'No Hat',         tintSlot: null, layers: [] }];
+  const hoodOptions       = [{ id: 'none', label: 'No Hood',        tintSlot: null, layers: [] }];
   const torsoPortraitOptions = [{ id: 'none', label: 'No Torso Clothing', tintSlot: null, layers: [] }];
   const armPortraitOptions = [{ id: 'none', label: 'No Arm Clothing', tintSlot: null, layers: [] }];
   const seenIds = new Set();
@@ -617,15 +626,19 @@ async function loadPortraitCosmetics(configBase) {
     if (!opt || !opt.layers.length) continue;
     if (seenIds.has(opt.id)) continue;
     seenIds.add(opt.id);
-    const cat = opt.slot === 'hat'       ? 'hat'
-              : opt.hairSlot === 'front' ? 'hairFront'
-              : opt.hairSlot === 'back'  ? 'hairBack'
-              : opt.hairSlot === 'side'  ? 'hairSide'
+    const cat = opt.slot === 'hat'        ? 'hat'
+              : opt.slot === 'hood'       ? 'hood'
+              : opt.hairSlot === 'front'  ? 'hairFront'
+              : opt.hairSlot === 'back'   ? 'hairBack'
+              : opt.hairSlot === 'side'   ? 'hairSide'
+              : opt.hairSlot === 'side-L' ? 'hairSideL'
               : portraitCategoryForEntry(entry);
     if      (cat === 'hat')        hatOptions.push(opt);
+    else if (cat === 'hood')       hoodOptions.push(opt);
     else if (cat === 'hairFront')  hairFrontOptions.push(opt);
     else if (cat === 'hairBack')   hairBackOptions.push(opt);
     else if (cat === 'hairSide')   hairSideOptions.push(opt);
+    else if (cat === 'hairSideL')  hairSideLOptions.push(opt);
     else if (cat === 'eyes')       eyesOptions.push(opt);
     else if (cat === 'facialhair') facialHairOptions.push(opt);
 
@@ -729,7 +742,7 @@ async function loadPortraitCosmetics(configBase) {
 
   LAST_RANDOMIZATION_RULES_BY_FIGHTER = randomizationRulesByFighter;
 
-  return { hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, hatOptions, torsoPortraitOptions, armPortraitOptions, indexEntries, optionCache, bodyColorRangesByGender, allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter, conditionalCosmeticsByFighter, randomizationRulesByFighter };
+  return { hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions, hatOptions, hoodOptions, torsoPortraitOptions, armPortraitOptions, indexEntries, optionCache, bodyColorRangesByGender, allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter, conditionalCosmeticsByFighter, randomizationRulesByFighter };
 }
 
 // ── Seeded randomisation ───────────────────────────────────
@@ -896,7 +909,7 @@ function hatHideRuleFor(hatId, randomizationRules) {
  *   per-category weights map (see weightedPickRng docs above). When omitted the selection
  *   falls back to the original uniform-random behaviour.
  */
-function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, hairSideOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter, randomizationRulesByFighter) {
+function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, hoodOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter, randomizationRulesByFighter) {
   const pickRng   = (arr) => arr[Math.floor(rng() * arr.length)];
   const fighterInput = pickRng(fighters);
   const fighter = resolvePortraitFighter(fighterInput);
@@ -928,13 +941,16 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
   const filteredHairFront  = filterArr(hairFrontOptions)  ?? [];
   const filteredHairBack   = filterArr(hairBackOptions)   ?? [];
   const filteredHairSide   = filterArr(hairSideOptions)   ?? [];
+  const filteredHairSideL  = filterArr(hairSideLOptions)  ?? [];
   const filteredEyes       = filterArr(eyesOptions)       ?? [];
   const filteredFacialHair = filterArr(facialHairOptions) ?? [];
   const filteredHat        = filterArr(hatOptions) ?? [{ id: 'none', label: 'No Hat', tintSlot: null, layers: [] }];
+  const filteredHood       = filterArr(hoodOptions) ?? [{ id: 'none', label: 'No Hood', tintSlot: null, layers: [] }];
 
   let hairFront  = weightedPickRng(filteredHairFront.length  ? filteredHairFront  : [{ id: 'none', label: 'No Front Hair', tintSlot: null, layers: [] }], weights?.hairFront,  rng);
   let hairBack   = weightedPickRng(filteredHairBack.length   ? filteredHairBack   : [{ id: 'none', label: 'No Back Hair',  tintSlot: null, layers: [] }], weights?.hairBack,   rng);
-  let hairSide   = weightedPickRng(filteredHairSide.length   ? filteredHairSide   : [{ id: 'none', label: 'No Side Hair',  tintSlot: null, layers: [] }], weights?.hairSide,   rng);
+  let hairSide   = weightedPickRng(filteredHairSide.length   ? filteredHairSide   : [{ id: 'none', label: 'No Side Hair (R)',  tintSlot: null, layers: [] }], weights?.hairSide,   rng);
+  let hairSideL  = weightedPickRng(filteredHairSideL.length  ? filteredHairSideL  : [{ id: 'none', label: 'No Side Hair (L)',  tintSlot: null, layers: [] }], weights?.hairSideL,  rng);
   let eyes         = weightedPickRng(filteredEyes.length       ? filteredEyes       : [{ id: 'none', label: 'No Eye Mark',   tintSlot: null, layers: [] }], weights?.eyes,       rng);
   const noFacialHair = filteredFacialHair.find(o => o.id === 'none') ?? filteredFacialHair[0] ?? { id: 'none', label: 'No Facial Hair', tintSlot: null, layers: [] };
   let facialHair = weights?.facialHair
@@ -946,18 +962,22 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
   let hat = weights?.hat
     ? weightedPickRng(filteredHat.length ? filteredHat : [noHat], weights.hat, rng)
     : (rng() < 0.5 ? pickRng(filteredHat) : noHat);
+  const noHood     = filteredHood.find(o => o.id === 'none') ?? filteredHood[0];
+  let hood = weights?.hood
+    ? weightedPickRng(filteredHood.length ? filteredHood : [noHood], weights.hood, rng)
+    : noHood;
 
   // Enforce disallowed cosmetic combination rules.
   // Each rule specifies conditions (slot-value pairs that must all match) and
   // repairSlots (slots to try forcing to a non-none option, tried in random order).
   if (disallowedCombos.length) {
-    const filteredBySlot = { hairFront: filteredHairFront, hairBack: filteredHairBack, hairSide: filteredHairSide };
+    const filteredBySlot = { hairFront: filteredHairFront, hairBack: filteredHairBack, hairSide: filteredHairSide, hairSideL: filteredHairSideL };
     let maxIter = disallowedCombos.length * 2 + 1;
     let violated = true;
     while (violated && maxIter-- > 0) {
       violated = false;
       for (const rule of disallowedCombos) {
-        const cur = { hairFront, hairBack, hairSide };
+        const cur = { hairFront, hairBack, hairSide, hairSideL };
         const matches = Object.entries(rule.conditions).every(([slot, val]) => cur[slot]?.id === val);
         if (!matches || !rule.repairSlots.length) continue;
         violated = true;
@@ -966,9 +986,10 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
         for (const slot of slots) {
           const nonNone = (filteredBySlot[slot] || []).filter(o => o.id !== 'none');
           if (nonNone.length) {
-            if      (slot === 'hairFront') hairFront = pickRng(nonNone);
-            else if (slot === 'hairBack')  hairBack  = pickRng(nonNone);
-            else if (slot === 'hairSide')  hairSide  = pickRng(nonNone);
+            if      (slot === 'hairFront')  hairFront  = pickRng(nonNone);
+            else if (slot === 'hairBack')   hairBack   = pickRng(nonNone);
+            else if (slot === 'hairSide')   hairSide   = pickRng(nonNone);
+            else if (slot === 'hairSideL')  hairSideL  = pickRng(nonNone);
             break;
           }
         }
@@ -985,24 +1006,26 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
   // Apply forced cosmetics — species-level slots that always override random selection.
   const forced = forcedCosmeticsByFighter?.[fighter.id] ?? forcedCosmeticsByFighter?.[fighterInput?.id];
   if (forced) {
-    const filteredBySlot = { eyes: filteredEyes, facialHair: filteredFacialHair, hairFront: filteredHairFront, hairBack: filteredHairBack, hairSide: filteredHairSide, hat: filteredHat };
+    const filteredBySlot = { eyes: filteredEyes, facialHair: filteredFacialHair, hairFront: filteredHairFront, hairBack: filteredHairBack, hairSide: filteredHairSide, hairSideL: filteredHairSideL, hat: filteredHat, hood: filteredHood };
     for (const [slot, id] of Object.entries(forced)) {
       const opt = filteredBySlot[slot]?.find(o => o.id === id);
       if (!opt) continue;
-      if      (slot === 'eyes')       eyes = opt;
+      if      (slot === 'eyes')       eyes      = opt;
       else if (slot === 'facialHair') facialHair = opt;
-      else if (slot === 'hairFront')  hairFront = opt;
-      else if (slot === 'hairBack')   hairBack = opt;
-      else if (slot === 'hairSide')   hairSide = opt;
-      else if (slot === 'hat')        hat = opt;
+      else if (slot === 'hairFront')  hairFront  = opt;
+      else if (slot === 'hairBack')   hairBack   = opt;
+      else if (slot === 'hairSide')   hairSide   = opt;
+      else if (slot === 'hairSideL')  hairSideL  = opt;
+      else if (slot === 'hat')        hat        = opt;
+      else if (slot === 'hood')       hood       = opt;
     }
   }
 
   // Apply conditional cosmetics — rules that fire based on current slot state and clothing tags.
   const conditionals = conditionalCosmeticsByFighter?.[fighter.id] ?? conditionalCosmeticsByFighter?.[fighterInput?.id];
   if (conditionals) {
-    const curSlots = { hairFront, hairBack, hairSide, eyes, facialHair, hat };
-    const filteredBySlot = { eyes: filteredEyes, facialHair: filteredFacialHair, hairFront: filteredHairFront, hairBack: filteredHairBack, hairSide: filteredHairSide, hat: filteredHat };
+    const curSlots = { hairFront, hairBack, hairSide, hairSideL, eyes, facialHair, hat, hood };
+    const filteredBySlot = { eyes: filteredEyes, facialHair: filteredFacialHair, hairFront: filteredHairFront, hairBack: filteredHairBack, hairSide: filteredHairSide, hairSideL: filteredHairSideL, hat: filteredHat, hood: filteredHood };
     for (const rule of conditionals) {
       const met = Object.entries(rule.conditions).every(([key, val]) => {
         if (key === 'anyClothingTag') return [torsoCosmetic, armCosmetic].some(c => c?.tags?.includes(val));
@@ -1011,12 +1034,14 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
       if (!met) continue;
       const opt = (filteredBySlot[rule.slot] || []).find(o => o.id === rule.cosmeticId);
       if (!opt) continue;
-      if      (rule.slot === 'eyes')       eyes = opt;
+      if      (rule.slot === 'eyes')       eyes      = opt;
       else if (rule.slot === 'facialHair') facialHair = opt;
-      else if (rule.slot === 'hairFront')  hairFront = opt;
-      else if (rule.slot === 'hairBack')   hairBack = opt;
-      else if (rule.slot === 'hairSide')   hairSide = opt;
-      else if (rule.slot === 'hat')        hat = opt;
+      else if (rule.slot === 'hairFront')  hairFront  = opt;
+      else if (rule.slot === 'hairBack')   hairBack   = opt;
+      else if (rule.slot === 'hairSide')   hairSide   = opt;
+      else if (rule.slot === 'hairSideL')  hairSideL  = opt;
+      else if (rule.slot === 'hat')        hat        = opt;
+      else if (rule.slot === 'hood')       hood       = opt;
     }
   }
 
@@ -1031,7 +1056,10 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
       hairBack = noneOptionForSlot(filteredHairBack, 'No Back Hair');
     }
     if (hatHideSlots.has('hairSide')) {
-      hairSide = noneOptionForSlot(filteredHairSide, 'No Side Hair');
+      hairSide = noneOptionForSlot(filteredHairSide, 'No Side Hair (R)');
+    }
+    if (hatHideSlots.has('hairSideL')) {
+      hairSideL = noneOptionForSlot(filteredHairSideL, 'No Side Hair (L)');
     }
     if (hatHideSlots.has('facialHair')) {
       facialHair = noneOptionForSlot(filteredFacialHair, 'No Facial Hair');
@@ -1060,7 +1088,7 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
       ? bodyColors.CLOTH
       : randomColorFromRangeSeeded(hatSourceRange, rng);
   }
-  return { fighter, hairFront, hairBack, hairSide, eyes, facialHair, hat, torsoCosmetic, armCosmetic, bodyColors };
+  return { fighter, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, hat, torsoCosmetic, armCosmetic, bodyColors };
 }
 
 window.setPortraitConfig = setPortraitConfig;

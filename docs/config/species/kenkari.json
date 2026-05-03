@@ -23,9 +23,14 @@
       "appearance::Kenkari_M::kenk_splayedknot_low_m",
       "appearance::Kenkari_M::kenk_shirtbeard",
       "appearance::Kenkari_M::kenk_wildbeard",
+      "appearance::Kenkari_M::kenk_braid-L_m",
+      "appearance::Kenkari_M::kenk_braid-R_m",
+      "appearance::Kenkari_M::kenk_braidcluster-R_m",
       "appearance::hat::basic_headband",
-      "appearance::hat::riverlandskasa_low",
-      "appearance::hat::riverlandskasa_wide",
+      "appearance::hat::leather_headband",
+      "appearance::Kenkari_M::kenk_riverlandskasa_low",
+      "appearance::Kenkari_M::kenk_riverlandskasa_wide",
+      "fine_hood_kenk_m",
       "tankantunic_kenk_m",
       "bandolier1_kenk_m",
       "tankanbodywrap_kenk_m"
@@ -47,8 +52,12 @@
       "hat": {
         "none": 30,
         "basic_headband": 30,
-        "riverlandskasa_low": 20,
-        "riverlandskasa_wide": 20
+        "kenk_riverlandskasa_low": 20,
+        "kenk_riverlandskasa_wide": 20
+      },
+      "hood": {
+        "none": 80,
+        "fine_hood_kenk_m": 20
       },
       "hairFront": {
         "none": 10,
@@ -66,7 +75,13 @@
         "kenk_splayedknot_low_m": 20
       },
       "hairSide": {
-        "none": 100
+        "none": 60,
+        "kenk_braid-R_m": 20,
+        "kenk_braidcluster-R_m": 20
+      },
+      "hairSideL": {
+        "none": 60,
+        "kenk_braid-L_m": 40
       }
     },
     "bodyColorRanges": {
@@ -219,25 +234,23 @@
         "basic_headband": {
           "hideSlots": []
         },
-        "riverlandskasa_low": {
+        "leather_headband": {
+          "hideSlots": []
+        },
+        "kenk_riverlandskasa_low": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         },
-        "riverlandskasa_tight": {
+        "kenk_riverlandskasa_wide": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
-          ]
-        },
-        "riverlandskasa_wide": {
-          "hideSlots": [
-            "hairFront",
-            "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         }
       },
@@ -292,9 +305,14 @@
       "appearance::Kenkari_F::kenk_splayedknot_high_f",
       "appearance::Kenkari_F::kenk_splayedknot_low_f",
       "appearance::Kenkari_F::kenk_shirtbeard_f",
+      "appearance::Kenkari_F::kenk_braid-L_f",
+      "appearance::Kenkari_F::kenk_braid-R_f",
+      "appearance::Kenkari_F::kenk_braidcluster-R_f",
       "appearance::hat::basic_headband",
-      "appearance::hat::riverlandskasa_low",
-      "appearance::hat::riverlandskasa_wide",
+      "appearance::hat::leather_headband",
+      "appearance::Kenkari_F::kenk_riverlandskasa_low",
+      "appearance::Kenkari_F::kenk_riverlandskasa_wide",
+      "fine_hood_kenk_f",
       "tankantunic_kenk_f",
       "bandolier1_kenk_f",
       "tankanwrap_kenk_f"
@@ -316,8 +334,12 @@
       "hat": {
         "none": 65,
         "basic_headband": 28,
-        "riverlandskasa_low": 3.5,
-        "riverlandskasa_wide": 3.5
+        "kenk_riverlandskasa_low": 3.5,
+        "kenk_riverlandskasa_wide": 3.5
+      },
+      "hood": {
+        "none": 80,
+        "fine_hood_kenk_f": 20
       },
       "hairFront": {
         "none": 100
@@ -329,7 +351,13 @@
         "kenk_splayedknot_low_f": 17.5
       },
       "hairSide": {
-        "none": 100
+        "none": 60,
+        "kenk_braid-R_f": 20,
+        "kenk_braidcluster-R_f": 20
+      },
+      "hairSideL": {
+        "none": 60,
+        "kenk_braid-L_f": 40
       },
       "facialHair": {
         "none": 100,
@@ -476,25 +504,23 @@
         "basic_headband": {
           "hideSlots": []
         },
-        "riverlandskasa_low": {
+        "leather_headband": {
+          "hideSlots": []
+        },
+        "kenk_riverlandskasa_low": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         },
-        "riverlandskasa_tight": {
+        "kenk_riverlandskasa_wide": {
           "hideSlots": [
             "hairFront",
             "hairBack",
-            "hairSide"
-          ]
-        },
-        "riverlandskasa_wide": {
-          "hideSlots": [
-            "hairFront",
-            "hairBack",
-            "hairSide"
+            "hairSide",
+            "hairSideL"
           ]
         }
       },
