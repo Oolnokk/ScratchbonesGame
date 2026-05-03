@@ -12,7 +12,7 @@
     { id: 'appearance::hat::basic_headband',       label: 'Basic Headband',        price: 5,  category: 'hat', description: 'A simple cloth headband.' },
     { id: 'appearance::hat::leather_headband',     label: 'Leather Headband',      price: 8,  category: 'hat', description: 'A sturdy leather headband.', material: 'leather' },
     { id: 'appearance::hat::riverlandskasa_low',   label: 'Riverland Kasa (Low)',  price: 10, category: 'hat', description: 'Traditional riverland hat, worn low.', material: 'rigid_fiber' },
-    { id: 'appearance::hat::riverlandskasa_tight', label: 'Riverland Kasa (Tight)',price: 10, category: 'hat', description: 'Traditional riverland hat, tight fit.', material: 'rigid_fiber' },
+    { id: 'appearance::hat::riverlandskasa_tight', label: 'Riverland Kasa (Tight)', price: 10, category: 'hat', description: 'Traditional riverland hat, tight fit.', material: 'rigid_fiber' },
     { id: 'appearance::hat::riverlandskasa_wide',  label: 'Riverland Kasa (Wide)', price: 10, category: 'hat', description: 'Traditional riverland hat, wide brim.', material: 'rigid_fiber' },
     // Hats — Kenkari specific
     { id: 'appearance::Kenkari_M::kenk_riverlandskasa_low',  label: 'Kenkari Kasa (Low)',  price: 10, category: 'hat', species: 'kenkari', gender: 'male',   description: 'Kenkari riverland hat, worn low.', material: 'rigid_fiber' },
