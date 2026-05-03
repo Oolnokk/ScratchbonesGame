@@ -44,12 +44,12 @@
           ]},
         ],
         colorOptions: [
-          { label: 'Cool',   h:-70, s:-0.80, v:-0.55 },
-          { label: 'Dusk',   h:-40, s:-0.70, v:-0.45 },
-          { label: 'Stone',  h:  0, s:-0.70, v:-0.30 },
-          { label: 'Sand',   h: 30, s:-0.60, v:-0.15 },
-          { label: 'Pale',   h: 10, s:-0.90, v: 0.25 },
-          { label: 'Raven',  h:  0, s:-0.90, v:-0.85 },
+          { label: 'Earth',   h:-70, s:-0.80, v:-0.55 },
+          { label: 'Olive',   h:-40, s:-0.70, v:-0.45 },
+          { label: 'Sage',    h:  0, s:-0.70, v:-0.30 },
+          { label: 'Seafoam', h: 30, s:-0.60, v:-0.15 },
+          { label: 'Ash',     h: 10, s:-0.90, v: 0.25 },
+          { label: 'Onyx',    h:  0, s:-0.90, v:-0.85 },
         ],
       },
       female: {
@@ -78,17 +78,17 @@
           ]},
         ],
         colorOptions: [
-          { label: 'Cool',   h:-70, s:-0.80, v:-0.55 },
-          { label: 'Dusk',   h:-40, s:-0.70, v:-0.45 },
-          { label: 'Stone',  h:  0, s:-0.70, v:-0.30 },
-          { label: 'Sand',   h: 30, s:-0.60, v:-0.15 },
-          { label: 'Pale',   h: 10, s:-0.90, v: 0.25 },
-          { label: 'Raven',  h:  0, s:-0.90, v:-0.85 },
+          { label: 'Earth',   h:-70, s:-0.80, v:-0.55 },
+          { label: 'Olive',   h:-40, s:-0.70, v:-0.45 },
+          { label: 'Sage',    h:  0, s:-0.70, v:-0.30 },
+          { label: 'Seafoam', h: 30, s:-0.60, v:-0.15 },
+          { label: 'Ash',     h: 10, s:-0.90, v: 0.25 },
+          { label: 'Onyx',    h:  0, s:-0.90, v:-0.85 },
         ],
       },
     },
     'tletingan': {
-      label: 'Tletingan', genders: ['male'], swatchBase: '#80a060',
+      label: 'Tletingan', genders: ['male'], swatchBase: '#7dc89a',
       male: {
         slots: [
           { slot: 'hairFront', label: 'Front Hair', options: [
@@ -107,17 +107,17 @@
           ]},
         ],
         colorOptions: [
-          { label: 'Forest', h:-85, s:-0.30, v:-0.40 },
-          { label: 'Fern',   h:-60, s:-0.20, v:-0.35 },
+          { label: 'Umber',  h:-85, s:-0.30, v:-0.40 },
+          { label: 'Khaki',  h:-60, s:-0.20, v:-0.35 },
           { label: 'Olive',  h:-40, s:-0.10, v:-0.30 },
-          { label: 'Earth',  h:-20, s: 0.00, v:-0.20 },
-          { label: 'Rust',   h:  0, s: 0.10, v:-0.15 },
+          { label: 'Forest', h:-20, s: 0.00, v:-0.20 },
+          { label: 'Fern',   h:  0, s: 0.10, v:-0.15 },
           { label: 'Ash',    h:-80, s:-0.40, v:-0.45 },
         ],
       },
     },
     'kenkari': {
-      label: 'Kenkari', genders: ['male', 'female'], swatchBase: '#d0b060',
+      label: 'Kenkari', genders: ['male', 'female'], swatchBase: '#7dc89a',
       male: {
         forcedCosmetics: { eyes: 'kenk_eyedisks' },
         slots: [
@@ -137,14 +137,14 @@
           ]},
         ],
         colorOptions: [
-          { label: 'Crimson', h: -20, s:0.80, v: 0.00 },
-          { label: 'Indigo',  h: -80, s:0.90, v: 0.00 },
-          { label: 'Amber',   h:  40, s:1.00, v: 0.10 },
-          { label: 'Forest',  h: 120, s:0.90, v: 0.00 },
-          { label: 'Azure',   h: 160, s:0.80, v:-0.10 },
-          { label: 'Violet',  h:-120, s:0.80, v:-0.10 },
-          { label: 'Rose',    h: -40, s:0.70, v: 0.10 },
-          { label: 'Gold',    h:  60, s:0.90, v: 0.10 },
+          { label: 'Jade',        h: -20, s:0.80, v: 0.00 },
+          { label: 'Lime',        h: -80, s:0.90, v: 0.00 },
+          { label: 'Teal',        h:  40, s:1.00, v: 0.10 },
+          { label: 'Amethyst',    h: 120, s:0.90, v: 0.00 },
+          { label: 'Fuchsia',     h: 160, s:0.80, v:-0.10 },
+          { label: 'Ember',       h:-120, s:0.80, v:-0.10 },
+          { label: 'Chartreuse',  h: -40, s:0.70, v: 0.10 },
+          { label: 'Azure',       h:  60, s:0.90, v: 0.10 },
         ],
       },
       female: {
@@ -158,14 +158,14 @@
           ]},
         ],
         colorOptions: [
-          { label: 'Crimson', h: -20, s:0.80, v: 0.00 },
-          { label: 'Indigo',  h: -80, s:0.90, v: 0.00 },
-          { label: 'Amber',   h:  40, s:1.00, v: 0.10 },
-          { label: 'Forest',  h: 120, s:0.90, v: 0.00 },
-          { label: 'Azure',   h: 160, s:0.80, v:-0.10 },
-          { label: 'Violet',  h:-120, s:0.80, v:-0.10 },
-          { label: 'Rose',    h: -40, s:0.70, v: 0.10 },
-          { label: 'Gold',    h:  60, s:0.90, v: 0.10 },
+          { label: 'Jade',        h: -20, s:0.80, v: 0.00 },
+          { label: 'Lime',        h: -80, s:0.90, v: 0.00 },
+          { label: 'Teal',        h:  40, s:1.00, v: 0.10 },
+          { label: 'Amethyst',    h: 120, s:0.90, v: 0.00 },
+          { label: 'Fuchsia',     h: 160, s:0.80, v:-0.10 },
+          { label: 'Ember',       h:-120, s:0.80, v:-0.10 },
+          { label: 'Chartreuse',  h: -40, s:0.70, v: 0.10 },
+          { label: 'Azure',       h:  60, s:0.90, v: 0.10 },
         ],
       },
     },
@@ -215,9 +215,11 @@
   }
 
   function swatchStyle(base, h, s, v) {
+    const hueOffset = (window.SCRATCHBONES_CONFIG?.clothingHueOffset) ?? 0;
     const sat = Math.max(0, 1 + s).toFixed(3);
     const bri = Math.max(0, 1 + v).toFixed(3);
-    return `background:${base};filter:hue-rotate(${h}deg) saturate(${sat}) brightness(${bri})`;
+    const finalH = (Number(h) || 0) + hueOffset;
+    return `background:${base};filter:hue-rotate(${finalH}deg) saturate(${sat}) brightness(${bri})`;
   }
 
   // Derive C from A: slightly lighter and less saturated (highlight/marking)
@@ -992,7 +994,7 @@
       if (!net) { alert('Network module not loaded'); return; }
       const acc = window.ScratchbonesAccount;
       const username = acc?.getUsername() || 'Host';
-      const appearance = acc?.getAppearance() ?? null;
+      const appearance = getFullAppearance();
       _onlineOccupants = [{ seatId: 0, name: username }];
       _onlineOccupantAppearances = { 0: appearance };
       net.createRoom(wsUrl(), username, _onlinePlayerCount, appearance)
@@ -1037,7 +1039,7 @@
         if (!net) { showJoinError('Network module not loaded'); return; }
         const acc = window.ScratchbonesAccount;
         const username = acc?.getUsername() || 'Player';
-        const appearance = acc?.getAppearance() ?? null;
+        const appearance = getFullAppearance();
         doJoinBtn.disabled = true;
         net.joinRoom(wsUrl(), code, username, appearance)
           .then(seatId => {
@@ -1073,6 +1075,16 @@
 
   function getLocalAppearance() {
     return window.ScratchbonesAccount?.getAppearance() ?? null;
+  }
+
+  function getFullAppearance() {
+    const acc = window.ScratchbonesAccount;
+    if (!acc) return null;
+    return {
+      ...acc.getAppearance(),
+      equippedCosmetics: [...(acc.getEquippedCosmetics() || [])],
+      appliedDyes: { ...(acc.getAppliedDyes() || {}) },
+    };
   }
 
   function show(screen) {

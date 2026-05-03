@@ -32,16 +32,16 @@
 
   // Dyes set a bodyColor slot (CLOTH or HAT) to a specific tint.
   const DYE_CATALOG = [
-    { id: 'dye:CLOTH:red',    label: 'Red',     dyeSlot: 'CLOTH', color: { h: -20, s:  0.50, v: -0.30 } },
-    { id: 'dye:CLOTH:orange', label: 'Orange',  dyeSlot: 'CLOTH', color: { h:  20, s:  0.80, v: -0.20 } },
-    { id: 'dye:CLOTH:yellow', label: 'Yellow',  dyeSlot: 'CLOTH', color: { h:  55, s:  0.70, v:  0.00 } },
-    { id: 'dye:CLOTH:green',  label: 'Green',   dyeSlot: 'CLOTH', color: { h: 120, s:  0.60, v: -0.30 } },
-    { id: 'dye:CLOTH:blue',   label: 'Blue',    dyeSlot: 'CLOTH', color: { h:-160, s:  0.70, v: -0.25 } },
-    { id: 'dye:CLOTH:purple', label: 'Purple',  dyeSlot: 'CLOTH', color: { h:-100, s:  0.60, v: -0.25 } },
-    { id: 'dye:CLOTH:brown',  label: 'Brown',   dyeSlot: 'CLOTH', color: { h: -30, s:  0.10, v: -0.50 } },
-    { id: 'dye:CLOTH:black',  label: 'Black',   dyeSlot: 'CLOTH', color: { h:   0, s: -0.50, v: -0.80 } },
-    { id: 'dye:CLOTH:white',  label: 'White',   dyeSlot: 'CLOTH', color: { h:   0, s: -0.80, v:  0.50 } },
-    { id: 'dye:CLOTH:grey',   label: 'Grey',    dyeSlot: 'CLOTH', color: { h:   0, s: -0.70, v: -0.10 } },
+    { id: 'dye:CLOTH:red',    label: 'Jade',      dyeSlot: 'CLOTH', color: { h: -20, s:  0.50, v: -0.30 } },
+    { id: 'dye:CLOTH:orange', label: 'Teal',      dyeSlot: 'CLOTH', color: { h:  20, s:  0.80, v: -0.20 } },
+    { id: 'dye:CLOTH:yellow', label: 'Azure',     dyeSlot: 'CLOTH', color: { h:  55, s:  0.70, v:  0.00 } },
+    { id: 'dye:CLOTH:green',  label: 'Amethyst',  dyeSlot: 'CLOTH', color: { h: 120, s:  0.60, v: -0.30 } },
+    { id: 'dye:CLOTH:blue',   label: 'Crimson',   dyeSlot: 'CLOTH', color: { h:-160, s:  0.70, v: -0.25 } },
+    { id: 'dye:CLOTH:purple', label: 'Amber',     dyeSlot: 'CLOTH', color: { h:-100, s:  0.60, v: -0.25 } },
+    { id: 'dye:CLOTH:brown',  label: 'Moss',      dyeSlot: 'CLOTH', color: { h: -30, s:  0.10, v: -0.50 } },
+    { id: 'dye:CLOTH:black',  label: 'Onyx',      dyeSlot: 'CLOTH', color: { h:   0, s: -0.50, v: -0.80 } },
+    { id: 'dye:CLOTH:white',  label: 'Mist',      dyeSlot: 'CLOTH', color: { h:   0, s: -0.80, v:  0.50 } },
+    { id: 'dye:CLOTH:grey',   label: 'Sage',      dyeSlot: 'CLOTH', color: { h:   0, s: -0.70, v: -0.10 } },
   ];
 
   // Starter dyes given to every new account

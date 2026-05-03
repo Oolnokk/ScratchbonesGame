@@ -4666,16 +4666,27 @@ import { createLayerManager } from './ui/layerManager.js';
         if (!player.isHuman || !player.profile) continue;
         const oc = _portraitCosmetics.optionCache;
         const none = { id: 'none', tintSlot: null, layers: [] };
+        // Use per-player relayed cosmetics when available (online), fall back to local account (hotseat)
+        const equippedList = player.appearance?.equippedCosmetics ?? null;
+        const shopCatalog = acc.getShopCatalog ? acc.getShopCatalog() : [];
+        const getEquipped = (category) => {
+          if (equippedList !== null) {
+            return shopCatalog.find(i => i.category === category && equippedList.includes(i.id))?.id ?? null;
+          }
+          return acc.getEquippedForCategory(category);
+        };
         const applySlot = (category, profileKey) => {
-          const id = acc.getEquippedForCategory(category);
+          const id = getEquipped(category);
           player.profile[profileKey] = (id && oc?.has(id)) ? oc.get(id) : none;
         };
         applySlot('hat', 'hat');
         applySlot('torso', 'torsoCosmetic');
         applySlot('overwear', 'armCosmetic');
-        // Apply clothing dyes (keys are tintSlot names: HAT, TORSO, CLOTH, ...)
-        if (acc.getAppliedDyes && acc.getDyeCatalog) {
-          const dyeIds = acc.getAppliedDyes();
+        // Apply clothing dyes from per-player appearance when available, else local account
+        const dyeIds = player.appearance?.appliedDyes !== undefined
+          ? (player.appearance.appliedDyes || {})
+          : (acc.getAppliedDyes ? acc.getAppliedDyes() : {});
+        if (acc.getDyeCatalog) {
           const catalog = acc.getDyeCatalog();
           for (const [tintKey, dyeId] of Object.entries(dyeIds)) {
             if (dyeId) {
