@@ -1,0 +1,37 @@
+{
+  "slot": "hat",
+  "tags": ["material:leather"],
+  "colorRange": {
+    "minH": -140,
+    "maxH": -100,
+    "stops": [
+      { "h": -140, "sMin": 0.20, "sMax": 1.00, "vMin": -0.60, "vMax":  0.10 },
+      { "h": -120, "sMin": 0.20, "sMax": 1.10, "vMin": -0.55, "vMax":  0.15 },
+      { "h": -100, "sMin": 0.10, "sMax": 0.80, "vMin": -0.45, "vMax":  0.20 }
+    ]
+  },
+  "parts": {
+    "head": {
+      "layers": {
+        "front": {
+          "image": {
+            "url": "./assets/cosmetics/clothes/hat/headband.png"
+          },
+          "spriteStyle": {
+            "base": {
+              "xform": {
+                "head": {
+                  "ax": -0.248,
+                  "ay": -0.027,
+                  "scaleX": 2.45,
+                  "scaleY": 2.45,
+                  "rotDeg": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

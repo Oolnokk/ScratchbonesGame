@@ -1,6 +1,6 @@
 {
   "slot": "hat",
-  "tags": ["material:reed"],
+  "tags": ["material:rigid_fiber"],
   "colorRange": {
     "minH": -100,
     "maxH":  -45,

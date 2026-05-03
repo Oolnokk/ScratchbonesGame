@@ -1,6 +1,6 @@
 {
   "slot": "torso",
-  "tintSlot": "none",
+  "tintSlot": "TORSO",
   "meta": {
     "name": "Bandolier"
   },
@@ -27,5 +27,8 @@
         }
       }
     }
-  }
+  },
+  "tags": [
+    "material:leather"
+  ]
 }

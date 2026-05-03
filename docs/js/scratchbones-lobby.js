@@ -259,9 +259,11 @@
   }
 
   function swatchStyle(base, h, s, v) {
-    const hueOffset = (window.SCRATCHBONES_CONFIG?.clothingHueOffset) ?? 0;
-    const sat = Math.max(0, 1 + s).toFixed(3);
-    const bri = Math.max(0, 1 + v).toFixed(3);
+    const hueOffset   = (window.SCRATCHBONES_CONFIG?.clothingHueOffset)   ?? 0;
+    const satOffset   = (window.SCRATCHBONES_CONFIG?.clothingSatOffset)   ?? 0;
+    const lightOffset = (window.SCRATCHBONES_CONFIG?.clothingLightOffset) ?? 0;
+    const sat = Math.max(0, 1 + (Number(s) || 0) + satOffset).toFixed(3);
+    const bri = Math.max(0, 1 + (Number(v) || 0) + lightOffset).toFixed(3);
     const finalH = (Number(h) || 0) + hueOffset;
     return `background:${base};filter:hue-rotate(${finalH}deg) saturate(${sat}) brightness(${bri})`;
   }
@@ -571,6 +573,8 @@
     for (const slot of CLOTHING_SLOTS) {
       const ownedItems = fullCatalog.filter(item => item.category === slot.category && acc && acc.isUnlocked(item.id));
       const equippedId = acc ? acc.getEquippedForCategory(slot.category) : null;
+      const equippedItem = fullCatalog.find(c => c.id === equippedId);
+      const equippedMaterial = equippedItem?.material || 'cloth';
       const opts = [
         `<option value="">None</option>`,
         ...ownedItems.map(item =>
@@ -586,7 +590,8 @@
         </div>`;
       if (isDyeOpen) {
         const [keyA, keyB, keyC] = slot.tintKeys;
-        let dyeRows = ownedDyes.map(d => {
+        const dyesForSlot = ownedDyes.filter(d => (d.group || 'cloth') === equippedMaterial);
+        let dyeRows = dyesForSlot.map(d => {
           const style = swatchStyle(DYE_SWATCH_BASE, d.color.h, d.color.s, d.color.v);
           return `
             <div class="sb-dye-row">
@@ -603,7 +608,7 @@
         ).join('');
         slotsHtml += `
           <div class="sb-dye-panel">
-            <div class="sb-muted" style="font-size:0.74em;margin-bottom:5px;">Dye this item — A: primary color · B/C: sub-channels (future)</div>
+            <div class="sb-muted" style="font-size:0.74em;margin-bottom:5px;">Color this item — A: primary · B/C: sub-channels (future)</div>
             ${dyeRows}
             ${clearBtns ? `<div class="sb-dye-clears">${clearBtns}</div>` : ''}
           </div>`;
