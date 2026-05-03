@@ -774,7 +774,7 @@ import { createLayerManager } from './ui/layerManager.js';
       for (const id of prevHidden) {
         if (!newHidden.has(id)) {
           state.dealRevealNowIds.add(id);
-          newHidden.add(id); // restore temporarily; render() will flush after snapshot
+          newHidden.add(id); // keep temporarily in hidden set so capturePreRender skips it; render() removes it after taking the snapshot
         }
       }
       state.dealLandingHiddenCardIds = newHidden;
@@ -1021,7 +1021,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const speedMultiplier = Math.max(0.1, Number(CONFIG.cards.transferAnimation.dealSpeedMultiplier) || 1);
       return Math.max(1, Math.round(Number(durationMs || 0) / speedMultiplier));
     }
-    async function animateDealCardToPlayer({ card, playerIndex }) {
+    async function animateDealCardToPlayer({ card, playerIndex, landingCardIndex: _landingCardIndex }) {
       const player = state.players[playerIndex];
       if (!card || !player || player.eliminated) return;
       // Queue the card for reveal: render() will flush dealRevealNowIds after capturePreRender
