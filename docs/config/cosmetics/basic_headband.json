@@ -1,14 +1,34 @@
 {
   "slot": "hat",
   "hoodLayering": "under",
-  "tags": ["material:cloth"],
+  "tags": [
+    "material:cloth"
+  ],
   "colorRange": {
     "minH": -180,
     "maxH": 180,
     "stops": [
-      { "h": -180, "sMin": 0.05, "sMax": 0.85, "vMin": -0.10, "vMax": 0.35 },
-      { "h":    0, "sMin": 0.05, "sMax": 0.85, "vMin": -0.10, "vMax": 0.35 },
-      { "h":  180, "sMin": 0.05, "sMax": 0.85, "vMin": -0.10, "vMax": 0.35 }
+      {
+        "h": -180,
+        "sMin": 0.05,
+        "sMax": 0.85,
+        "vMin": -0.1,
+        "vMax": 0.35
+      },
+      {
+        "h": 0,
+        "sMin": 0.05,
+        "sMax": 0.85,
+        "vMin": -0.1,
+        "vMax": 0.35
+      },
+      {
+        "h": 180,
+        "sMin": 0.05,
+        "sMax": 0.85,
+        "vMin": -0.1,
+        "vMax": 0.35
+      }
     ]
   },
   "parts": {
@@ -22,10 +42,10 @@
             "base": {
               "xform": {
                 "head": {
-                  "ax": -0.248,
-                  "ay": -0.027,
-                  "scaleX": 2.45,
-                  "scaleY": 2.45,
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
                   "rotDeg": 0
                 }
               }

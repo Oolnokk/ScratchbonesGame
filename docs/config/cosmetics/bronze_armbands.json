@@ -1,7 +1,15 @@
 {
   "slot": "arms",
-  "meta": { "name": "Bronze Armbands" },
-  "hsv": { "defaults": { "h": 0, "s": 0, "v": 0 } },
+  "meta": {
+    "name": "Bronze Armbands"
+  },
+  "hsv": {
+    "defaults": {
+      "h": 0,
+      "s": 0,
+      "v": 0
+    }
+  },
   "parts": {
     "arm_L_lower": {
       "attachBone": "arm_L_lower",
@@ -15,7 +23,13 @@
           "spriteStyle": {
             "base": {
               "xform": {
-                "armLower": { "ax": 0.2, "ay": 0, "scaleX": 1.75, "scaleY": 2.25 }
+                "armLower": {
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
+                  "rotDeg": 0
+                }
               }
             }
           }
@@ -34,7 +48,13 @@
           "spriteStyle": {
             "base": {
               "xform": {
-                "armLower": { "ax": 0.2, "ay": 0, "scaleX": 1.75, "scaleY": 2.25 }
+                "armLower": {
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
+                  "rotDeg": 0
+                }
               }
             }
           }

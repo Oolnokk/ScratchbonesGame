@@ -1,8 +1,27 @@
 {
-  "slots": ["overwear"],
+  "slots": [
+    "overwear"
+  ],
   "hsv": {
-    "defaults": { "h": 0, "s": 0, "v": 0 },
-    "limits": { "h": [-45, 45], "s": [-0.4, 0.4], "v": [-0.3, 0.5] }
+    "defaults": {
+      "h": 0,
+      "s": 0,
+      "v": 0
+    },
+    "limits": {
+      "h": [
+        -45,
+        45
+      ],
+      "s": [
+        -0.4,
+        0.4
+      ],
+      "v": [
+        -0.3,
+        0.5
+      ]
+    }
   },
   "parts": {
     "torso": {
@@ -14,16 +33,30 @@
           "spriteStyle": {
             "base": {
               "xform": {
-                "torso": { "ax": -0.5, "ay": -0.15, "scaleMulX": 3.8, "scaleMulY": 4.7 }
+                "torso": {
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleMulX": 3.8,
+                  "scaleMulY": 4.7,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
+                  "rotDeg": 0
+                }
               }
             }
           },
           "warp": {
             "base": {
               "units": "percent",
-              "bl": { "x": -0.05 },
-              "br": { "x": 0.05 },
-              "center": { "y": 0.05 }
+              "bl": {
+                "x": -0.05
+              },
+              "br": {
+                "x": 0.05
+              },
+              "center": {
+                "y": 0.05
+              }
             }
           }
         }
@@ -38,7 +71,13 @@
           "spriteStyle": {
             "base": {
               "xform": {
-                "legUpper": { "ax": -0.12, "ay": 0.1, "scaleX": 2.2, "scaleY": 2.1 }
+                "legUpper": {
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
+                  "rotDeg": 0
+                }
               }
             }
           }
@@ -54,7 +93,13 @@
           "spriteStyle": {
             "base": {
               "xform": {
-                "legUpper": { "ax": -0.12, "ay": 0.1, "scaleX": 2.2, "scaleY": 2.1 }
+                "legUpper": {
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
+                  "rotDeg": 0
+                }
               }
             }
           }

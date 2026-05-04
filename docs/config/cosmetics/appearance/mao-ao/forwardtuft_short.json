@@ -1,10 +1,14 @@
 {
-  "meta": { "name": "Forward Tuft (Short)" },
+  "meta": {
+    "name": "Forward Tuft (Short)"
+  },
   "type": "appearance",
   "hairSlot": "front",
   "appearance": {
     "inheritSprite": "head",
-    "bodyColors": ["A"],
+    "bodyColors": [
+      "A"
+    ],
     "originalId": "mao-ao_forwardtuft_short"
   },
   "parts": {
@@ -18,10 +22,10 @@
             "base": {
               "xform": {
                 "head": {
-                  "ax": -0.1,
-                  "ay": -0.1,
-                  "scaleX": 2,
-                  "scaleY": 2,
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
                   "rotDeg": 0
                 }
               }

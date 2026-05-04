@@ -1,15 +1,41 @@
 {
   "slot": "hat",
   "hoodLayering": "over",
-  "tags": ["material:rigid_fiber"],
+  "tags": [
+    "material:rigid_fiber"
+  ],
   "colorRange": {
     "minH": -100,
-    "maxH":  -45,
+    "maxH": -45,
     "stops": [
-      { "h": -100, "sMin": -0.60, "sMax": -0.40, "vMin": -0.40, "vMax":  0.45 },
-      { "h": -100, "sMin": -0.55, "sMax": -0.30, "vMin": -0.45, "vMax":  0.45 },
-      { "h":  -70, "sMin": -0.50, "sMax": -0.05, "vMin": -0.50, "vMax":  0.40 },
-      { "h":  -45, "sMin": -0.40, "sMax":  0.20, "vMin": -0.65, "vMax":  0.15 }
+      {
+        "h": -100,
+        "sMin": -0.6,
+        "sMax": -0.4,
+        "vMin": -0.4,
+        "vMax": 0.45
+      },
+      {
+        "h": -100,
+        "sMin": -0.55,
+        "sMax": -0.3,
+        "vMin": -0.45,
+        "vMax": 0.45
+      },
+      {
+        "h": -70,
+        "sMin": -0.5,
+        "sMax": -0.05,
+        "vMin": -0.5,
+        "vMax": 0.4
+      },
+      {
+        "h": -45,
+        "sMin": -0.4,
+        "sMax": 0.2,
+        "vMin": -0.65,
+        "vMax": 0.15
+      }
     ]
   },
   "parts": {
@@ -22,7 +48,13 @@
           "spriteStyle": {
             "base": {
               "xform": {
-                "head": { "ax": -0.1, "ay": -0.1, "scaleX": 2, "scaleY": 2, "rotDeg": 0 }
+                "head": {
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
+                  "rotDeg": 0
+                }
               }
             }
           }
@@ -34,7 +66,13 @@
           "spriteStyle": {
             "base": {
               "xform": {
-                "head": { "ax": -0.1, "ay": -0.1, "scaleX": 2, "scaleY": 2, "rotDeg": 0 }
+                "head": {
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
+                  "rotDeg": 0
+                }
               }
             }
           }

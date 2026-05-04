@@ -18,10 +18,10 @@
       "spriteStyle": {
         "xform": {
           "head": {
-            "ax": 0,
-            "ay": 0.01,
-            "scaleX": 1,
-            "scaleY": 1,
+            "ax": -0.2,
+            "ay": 0,
+            "scaleX": 2.55,
+            "scaleY": 2.55,
             "rotDeg": 0
           }
         }

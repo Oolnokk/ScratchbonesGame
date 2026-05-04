@@ -1,7 +1,11 @@
 {
   "slot": "overwear",
   "hsv": {
-    "defaults": { "h": 0, "s": 0, "v": 0 }
+    "defaults": {
+      "h": 0,
+      "s": 0,
+      "v": 0
+    }
   },
   "parts": {
     "torso": {
@@ -16,14 +20,30 @@
             "bone": "arm_R_upper",
             "initialLayer": "arm_R_upper",
             "ranges": [
-              { "minDeg": 181, "maxDeg": 360, "layer": "torso" },
-              { "minDeg": 0, "maxDeg": 180, "layer": "arm_R_upper" }
+              {
+                "minDeg": 181,
+                "maxDeg": 360,
+                "layer": "torso"
+              },
+              {
+                "minDeg": 0,
+                "maxDeg": 180,
+                "layer": "arm_R_upper"
+              }
             ]
           },
           "spriteStyle": {
             "base": {
               "xform": {
-                "torso": { "ax": 0, "ay": -0.2, "scaleMulX": 2, "scaleMulY": 2 }
+                "torso": {
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleMulX": 2,
+                  "scaleMulY": 2,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
+                  "rotDeg": 0
+                }
               }
             }
           }
@@ -38,14 +58,30 @@
             "bone": "arm_R_upper",
             "initialLayer": "torso",
             "ranges": [
-              { "minDeg": 181, "maxDeg": 360, "layer": "arm_R_upper" },
-              { "minDeg": 0, "maxDeg": 180, "layer": "torso" }
+              {
+                "minDeg": 181,
+                "maxDeg": 360,
+                "layer": "arm_R_upper"
+              },
+              {
+                "minDeg": 0,
+                "maxDeg": 180,
+                "layer": "torso"
+              }
             ]
           },
           "spriteStyle": {
             "base": {
               "xform": {
-                "torso": { "ax": 0, "ay": -0.2, "scaleMulX": 2.5, "scaleMulY": 2 }
+                "torso": {
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleMulX": 2.5,
+                  "scaleMulY": 2,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
+                  "rotDeg": 0
+                }
               }
             }
           }
@@ -59,11 +95,17 @@
             "url": ""
           },
           "attachBone": "arm_R_upper",
-          "drawSlot": "arm_R_lower", 
+          "drawSlot": "arm_R_lower",
           "spriteStyle": {
             "base": {
               "xform": {
-                "armUpper": { "ax": 0, "ay": -0.2, "scaleX": 2, "scaleY": 2 }
+                "armUpper": {
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
+                  "rotDeg": 0
+                }
               }
             }
           }
