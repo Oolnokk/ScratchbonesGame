@@ -462,32 +462,35 @@ async function renderProfile(canvas, profile) {
     }
   }
   const isBlinkFrame = shouldRenderBlink(headUrl, nowMs);
+  const resolveXform = (layer) => layer.xformPreset
+    ? getPortraitXformPreset(layer.xformPreset)
+    : composeXform(headXform, layer);
 
   for (const { layer, filter } of baseLeftArmLayers) {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, layer.xformPreset ? getPortraitXformPreset(layer.xformPreset) : composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const { layer, filter } of baseTorsoLayers) {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, layer.xformPreset ? getPortraitXformPreset(layer.xformPreset) : composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const { layer, filter } of baseRightArmLayers) {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, layer.xformPreset ? getPortraitXformPreset(layer.xformPreset) : composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const { layer, filter } of torsoClothingLayers)
   {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, layer.xformPreset ? getPortraitXformPreset(layer.xformPreset) : composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const { layer, filter } of overwearLayers)
   {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, layer.xformPreset ? getPortraitXformPreset(layer.xformPreset) : composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const { layer, filter } of backLayers) {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, layer.xformPreset ? getPortraitXformPreset(layer.xformPreset) : composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('A'), filterA); }
   for (const mid of urLayerSource) {
@@ -498,7 +501,7 @@ async function renderProfile(canvas, profile) {
   }
   for (const { layer, filter } of frontLayers) {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, layer.xformPreset ? getPortraitXformPreset(layer.xformPreset) : composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const mid of urLayerSource) {
     if (mid.renderOrder !== 'topLayer') continue;
@@ -508,7 +511,7 @@ async function renderProfile(canvas, profile) {
   }
   if (opacityMaskLayer?.url) {
     const maskImg = imgMap.get(opacityMaskLayer.url);
-    if (maskImg) applyPortraitOpacityMask(ctx, maskImg, opacityMaskLayer.xformPreset ? getPortraitXformPreset(opacityMaskLayer.xformPreset) : composeXform(headXform, opacityMaskLayer));
+    if (maskImg) applyPortraitOpacityMask(ctx, maskImg, resolveXform(opacityMaskLayer));
   }
 }
 

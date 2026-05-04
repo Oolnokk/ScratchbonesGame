@@ -1292,12 +1292,12 @@
     const el = overlay();
     if (el) el.style.display = 'none';
     // Restore Map button, hide Cosmetic Vars button and its panel
-    const mapBtn = document.getElementById('projMapBtn');
-    const cvBtn  = document.getElementById('cosmeticVarsBtn');
+    const mapBtn  = document.getElementById('projMapBtn');
+    const cvBtn   = document.getElementById('cosmeticVarsBtn');
     const cvPanel = document.getElementById('cosmeticVarsPanel');
     if (mapBtn)  mapBtn.style.display = '';
-    if (cvBtn)   cvBtn.style.display = 'none';
-    if (cvPanel) { cvPanel.classList.remove('open'); cvBtn?.classList.remove('active'); }
+    if (cvBtn)   { cvBtn.style.display = 'none'; cvBtn.classList.remove('active'); }
+    if (cvPanel) cvPanel.classList.remove('open');
   }
 
   function onGameEnd(chipCount) {

@@ -1982,7 +1982,7 @@
     /* Freeze game interaction while mapping */
     body.proj-mapping button:not(#projMapBtn):not(#projVarBtn):not(#projExportBtn):not(#projSubBtn):not(#projLayerPreviewBtn):not(#projVarCopyBtn):not(#projVarCloseBtn):not(#cosmeticVarsBtn):not(#cosmeticVarsCloseBtn):not(#cosmeticVarsApplyBtn),
     body.proj-mapping select,
-    body.proj-mapping input:not(.projVarInput):not(.cvpField input),
+    body.proj-mapping input:not(.projVarInput):not(.cvpFieldInput),
     body.proj-mapping .card {
       pointer-events: none !important;
     }
@@ -2370,7 +2370,7 @@
     }
     .cvpField { display: flex; flex-direction: column; gap: 2px; }
     .cvpField label { color: #cdbb9f; font-size: 0.64rem; }
-    .cvpField input {
+    .cvpFieldInput {
       width: 100%; min-width: 0;
       background: rgba(26,18,15,0.95);
       border: 1px solid rgba(200,150,80,0.35);
@@ -2431,41 +2431,41 @@
       <div class="cvpPreset" data-preset="A">
         <div class="cvpPresetLabel">Preset A &mdash; <em>heads, ur-heads, eyes</em></div>
         <div class="cvpFields">
-          <div class="cvpField"><label>ax</label><input id="cvp-A-ax" type="number" step="0.001" value="-0.2"></div>
-          <div class="cvpField"><label>ay</label><input id="cvp-A-ay" type="number" step="0.001" value="0"></div>
-          <div class="cvpField"><label>scaleX</label><input id="cvp-A-scaleX" type="number" step="0.01" value="2.55"></div>
-          <div class="cvpField"><label>scaleY</label><input id="cvp-A-scaleY" type="number" step="0.01" value="2.55"></div>
-          <div class="cvpField"><label>rotDeg</label><input id="cvp-A-rotDeg" type="number" step="0.1" value="0"></div>
+          <div class="cvpField"><label>ax</label><input class="cvpFieldInput" id="cvp-A-ax" type="number" step="0.001" value="-0.2"></div>
+          <div class="cvpField"><label>ay</label><input class="cvpFieldInput" id="cvp-A-ay" type="number" step="0.001" value="0"></div>
+          <div class="cvpField"><label>scaleX</label><input class="cvpFieldInput" id="cvp-A-scaleX" type="number" step="0.01" value="2.55"></div>
+          <div class="cvpField"><label>scaleY</label><input class="cvpFieldInput" id="cvp-A-scaleY" type="number" step="0.01" value="2.55"></div>
+          <div class="cvpField"><label>rotDeg</label><input class="cvpFieldInput" id="cvp-A-rotDeg" type="number" step="0.1" value="0"></div>
         </div>
       </div>
       <div class="cvpPreset" data-preset="B">
         <div class="cvpPresetLabel">Preset B &mdash; <em>body layers, cosmetics</em></div>
         <div class="cvpFields">
-          <div class="cvpField"><label>ax</label><input id="cvp-B-ax" type="number" step="0.001" value="-0.0983"></div>
-          <div class="cvpField"><label>ay</label><input id="cvp-B-ay" type="number" step="0.001" value="-0.0809"></div>
-          <div class="cvpField"><label>scaleX</label><input id="cvp-B-scaleX" type="number" step="0.01" value="2.49"></div>
-          <div class="cvpField"><label>scaleY</label><input id="cvp-B-scaleY" type="number" step="0.01" value="2.49"></div>
-          <div class="cvpField"><label>rotDeg</label><input id="cvp-B-rotDeg" type="number" step="0.1" value="0"></div>
+          <div class="cvpField"><label>ax</label><input class="cvpFieldInput" id="cvp-B-ax" type="number" step="0.001" value="-0.0983"></div>
+          <div class="cvpField"><label>ay</label><input class="cvpFieldInput" id="cvp-B-ay" type="number" step="0.001" value="-0.0809"></div>
+          <div class="cvpField"><label>scaleX</label><input class="cvpFieldInput" id="cvp-B-scaleX" type="number" step="0.01" value="2.49"></div>
+          <div class="cvpField"><label>scaleY</label><input class="cvpFieldInput" id="cvp-B-scaleY" type="number" step="0.01" value="2.49"></div>
+          <div class="cvpField"><label>rotDeg</label><input class="cvpFieldInput" id="cvp-B-rotDeg" type="number" step="0.1" value="0"></div>
         </div>
       </div>
       <div class="cvpPreset" data-preset="C">
         <div class="cvpPresetLabel">Preset C &mdash; <em>reserved</em></div>
         <div class="cvpFields">
-          <div class="cvpField"><label>ax</label><input id="cvp-C-ax" type="number" step="0.001" value="0"></div>
-          <div class="cvpField"><label>ay</label><input id="cvp-C-ay" type="number" step="0.001" value="0"></div>
-          <div class="cvpField"><label>scaleX</label><input id="cvp-C-scaleX" type="number" step="0.01" value="1"></div>
-          <div class="cvpField"><label>scaleY</label><input id="cvp-C-scaleY" type="number" step="0.01" value="1"></div>
-          <div class="cvpField"><label>rotDeg</label><input id="cvp-C-rotDeg" type="number" step="0.1" value="0"></div>
+          <div class="cvpField"><label>ax</label><input class="cvpFieldInput" id="cvp-C-ax" type="number" step="0.001" value="0"></div>
+          <div class="cvpField"><label>ay</label><input class="cvpFieldInput" id="cvp-C-ay" type="number" step="0.001" value="0"></div>
+          <div class="cvpField"><label>scaleX</label><input class="cvpFieldInput" id="cvp-C-scaleX" type="number" step="0.01" value="1"></div>
+          <div class="cvpField"><label>scaleY</label><input class="cvpFieldInput" id="cvp-C-scaleY" type="number" step="0.01" value="1"></div>
+          <div class="cvpField"><label>rotDeg</label><input class="cvpFieldInput" id="cvp-C-rotDeg" type="number" step="0.1" value="0"></div>
         </div>
       </div>
       <div class="cvpPreset" data-preset="D">
         <div class="cvpPresetLabel">Preset D &mdash; <em>reserved</em></div>
         <div class="cvpFields">
-          <div class="cvpField"><label>ax</label><input id="cvp-D-ax" type="number" step="0.001" value="0"></div>
-          <div class="cvpField"><label>ay</label><input id="cvp-D-ay" type="number" step="0.001" value="0"></div>
-          <div class="cvpField"><label>scaleX</label><input id="cvp-D-scaleX" type="number" step="0.01" value="1"></div>
-          <div class="cvpField"><label>scaleY</label><input id="cvp-D-scaleY" type="number" step="0.01" value="1"></div>
-          <div class="cvpField"><label>rotDeg</label><input id="cvp-D-rotDeg" type="number" step="0.1" value="0"></div>
+          <div class="cvpField"><label>ax</label><input class="cvpFieldInput" id="cvp-D-ax" type="number" step="0.001" value="0"></div>
+          <div class="cvpField"><label>ay</label><input class="cvpFieldInput" id="cvp-D-ay" type="number" step="0.001" value="0"></div>
+          <div class="cvpField"><label>scaleX</label><input class="cvpFieldInput" id="cvp-D-scaleX" type="number" step="0.01" value="1"></div>
+          <div class="cvpField"><label>scaleY</label><input class="cvpFieldInput" id="cvp-D-scaleY" type="number" step="0.01" value="1"></div>
+          <div class="cvpField"><label>rotDeg</label><input class="cvpFieldInput" id="cvp-D-rotDeg" type="number" step="0.1" value="0"></div>
         </div>
       </div>
       <button class="cvpApplyBtn" id="cosmeticVarsApplyBtn">Apply</button>
