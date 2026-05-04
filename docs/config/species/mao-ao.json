@@ -5,7 +5,8 @@
     "headSprite": "fightersprites/mao-ao-m/head_mint.png",
     "headUrLayers": [
       {
-        "url": "fightersprites/mao-ao-m/untinted_regions/ur-head.png"
+        "url": "fightersprites/mao-ao-m/untinted_regions/ur-head.png",
+        "renderOrder": "topLayer"
       }
     ],
     "headXform": {
@@ -32,10 +33,10 @@
       "appearance::hat::leather_headband",
       "appearance::hat::riverlandskasa_low",
       "appearance::hat::riverlandskasa_wide",
-      "fine_hood_mao-ao_m",
-      "tankantunic_mao-ao_m",
-      "bandolier1_mao-ao_m",
-      "tankanbodywrap_mao-ao"
+      "fine_hood",
+      "tankan_tunic",
+      "bandolier1",
+      "tankan_bodywrap"
     ],
     "cosmeticWeights": {
       "hat": {
@@ -46,7 +47,7 @@
       },
       "hood": {
         "none": 80,
-        "fine_hood_mao-ao_m": 20
+        "fine_hood": 20
       },
       "hairFront": {
         "none": 5,
@@ -293,7 +294,8 @@
     "headSprite": "fightersprites/mao-ao-f/head.png",
     "headUrLayers": [
       {
-        "url": "fightersprites/mao-ao-f/untinted_regions/ur-head.png"
+        "url": "fightersprites/mao-ao-f/untinted_regions/ur-head.png",
+        "renderOrder": "topLayer"
       }
     ],
     "headXform": {
@@ -318,10 +320,10 @@
       "appearance::hat::leather_headband",
       "appearance::hat::riverlandskasa_low",
       "appearance::hat::riverlandskasa_wide",
-      "fine_hood_mao-ao_f",
-      "tankantunic_mao-ao_f",
-      "bandolier1_mao-ao_f",
-      "tankanbodywrap_mao-ao"
+      "fine_hood",
+      "tankan_tunic",
+      "bandolier1",
+      "tankan_bodywrap"
     ],
     "cosmeticWeights": {
       "hat": {
@@ -332,7 +334,7 @@
       },
       "hood": {
         "none": 80,
-        "fine_hood_mao-ao_f": 20
+        "fine_hood": 20
       },
       "hairFront": {
         "none": 5,

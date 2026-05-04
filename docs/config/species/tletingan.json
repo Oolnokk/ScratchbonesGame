@@ -5,7 +5,8 @@
     "headSprite": "fightersprites/tletingan/head_mint.png",
     "headUrLayers": [
       {
-        "url": "fightersprites/tletingan/untinted_regions/ur-head.png"
+        "url": "fightersprites/tletingan/untinted_regions/ur-head.png",
+        "renderOrder": "topLayer"
       }
     ],
     "headXform": {
@@ -27,10 +28,10 @@
       "appearance::hat::leather_headband",
       "appearance::hat::riverlandskasa_low",
       "appearance::hat::riverlandskasa_wide",
-      "fine_hood_tl",
-      "tankantunic_tl_m",
-      "bandolier1_tl_m",
-      "tankanbodywrap_tl_m"
+      "fine_hood",
+      "tankan_tunic",
+      "bandolier1",
+      "tankan_bodywrap"
     ],
     "cosmeticWeights": {
       "hat": {
@@ -41,7 +42,7 @@
       },
       "hood": {
         "none": 80,
-        "fine_hood_tl": 20
+        "fine_hood": 20
       },
       "hairFront": {
         "none": 10,
