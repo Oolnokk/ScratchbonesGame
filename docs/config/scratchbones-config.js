@@ -567,7 +567,7 @@ window.SCRATCHBONES_CONFIG = {
             }
           ],
           "backlitAlphaDefault": 0.14,
-          "thevmenuOpacity": 0.2,
+          "thevmenuOpacity": 0.35,
           "thevmenuLayerZIndex": 2147483646,
           "thevmenuOccluderSelectors": ["#aiSidebar", ".humanSeatZone", ".turnSpotlight", ".claimCluster"],
           "backlitBlurDefault": 0,
@@ -827,7 +827,7 @@ window.SCRATCHBONES_CONFIG = {
           {
             "id": "ui-avatars-over-lighting",
             "layer": "above-lighting-content",
-            "selectors": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar", ".actorAvatarFloat", ".reactorAvatarFloat"],
+            "selectors": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar"],
             "preserveSpace": true,
             "keepOriginal": true,
             "promotedOpacity": 0.72
@@ -835,36 +835,7 @@ window.SCRATCHBONES_CONFIG = {
           {
             "id": "ui-shell-over-lighting",
             "layer": "above-lighting-shell",
-            "selectors": [
-              "#aiSidebar",
-              ".humanSeatZone",
-          ".claimCluster",
-              ".seatHandPreview",
-              ".seatHandCard",
-              ".seatHandCard img",
-              ".topbar",
-              ".tableViewHeader",
-              ".seatSeed",
-              ".seatTags",
-              ".humanSeatChipBadge",
-              ".claimCluster",
-                  ".claimClusterBettingLayer",
-              ".claimRankBox",
-              ".claimTimesBoxLeft",
-              ".claimCountBoxLeft",
-              ".claimTimesBoxRight",
-              ".claimCountBoxRight",
-              ".claimClusterTextAnchor",
-              ".controls",
-              ".challengePromptPane",
-              ".eventLog",
-              ".stakeVisualPanel",
-              ".challengeBar",
-              ".bettingStatusAnchor",
-              ".leftContributionAnchor",
-              ".rightContributionAnchor",
-              ".bettingChoiceAnchor"
-            ],
+            "selectors": [],
             "preserveSpace": true
           }
         ]
