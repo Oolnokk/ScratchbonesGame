@@ -216,7 +216,7 @@ window.SCRATCHBONES_CONFIG = {
     },
     "portrait": {
       "xformPresets": {
-        "A": { "ax": 0,    "ay": 0,       "scaleX": 1, "scaleY": 1, "rotDeg": 0 },
+        "A": { "ax": -0.2, "ay": 0, "scaleX": 2.55, "scaleY": 2.55, "rotDeg": 0 },
         "B": { "ax": -0.0983, "ay": -0.0809, "scaleX": 2.49, "scaleY": 2.49, "rotDeg": 0 },
         "C": { "ax": 0,       "ay": 0,       "scaleX": 1,    "scaleY": 1,    "rotDeg": 0 },
         "D": { "ax": 0,       "ay": 0,       "scaleX": 1,    "scaleY": 1,    "rotDeg": 0 }
