@@ -278,7 +278,7 @@ function applyPortraitOpacityMask(ctx, img, xform) {
 
 function getProfileSpriteXforms(profile) {
   if (!profile) return [];
-  const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, hat, torsoCosmetic, armCosmetic } = profile;
+  const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, pauldron, hat, torsoCosmetic, armCosmetic } = profile;
   const resolvedFighter = resolvePortraitFighter(fighter) || fighter;
   const headXform = resolvedFighter?.headXform || fighter?.headXform || HEAD_XFORM;
   const opacityMaskLayer = resolvedFighter?.opacityMaskLayer || fighter?.opacityMaskLayer || null;
@@ -302,9 +302,9 @@ function getProfileSpriteXforms(profile) {
   const hatIsUnderHood = hat?.hoodLayering === 'under';
   const allCosmeticGroups = hairFront !== undefined
     ? (hatIsUnderHood
-        ? [hairBack, hairSideL, hairSide, facialHair, eyes, hairFront, hat, hood]
-        : [hairBack, hairSideL, hairSide, facialHair, eyes, hairFront, hood, hat])
-    : [hair, facialHair, eyes, hat];
+        ? [hairBack, hairSideL, eyes, hairFront, facialHair, hairSide, hood, pauldron, hat]
+        : [hairBack, hairSideL, eyes, hairFront, facialHair, hairSide, hood, pauldron, hat])
+    : [hair, eyes, facialHair, hat];
   for (const group of allCosmeticGroups) {
     if (!group?.layers?.length) continue;
     for (const layer of group.layers) {
@@ -322,7 +322,7 @@ function getProfileSpriteXforms(profile) {
 // ── Rendering ──────────────────────────────────────────────
 
 async function renderProfile(canvas, profile) {
-  const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, hat, torsoCosmetic, armCosmetic, bodyColors } = profile;
+  const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, pauldron, hat, torsoCosmetic, armCosmetic, bodyColors } = profile;
   const resolvedFighter = resolvePortraitFighter(fighter) || fighter;
   const headXform = resolvedFighter?.headXform || fighter?.headXform || HEAD_XFORM;
   const opacityMaskLayer = resolvedFighter?.opacityMaskLayer || fighter?.opacityMaskLayer || null;
@@ -341,16 +341,23 @@ async function renderProfile(canvas, profile) {
   const filterFor = (slot) => slot ? makeCSSFilter(bodyColors[slot]) : 'none';
   const filterA   = makeCSSFilter(bodyColors.A);
 
-  const bodyBackLayers = [];
-  const bodyFrontLayers = [];
+  const baseLeftArmLayers = [];
+  const baseTorsoLayers = [];
+  const baseRightArmLayers = [];
+  const torsoClothingLayers = [];
+  const overwearLayers = [];
   for (const layer of bodyLayerSource) {
-    const target = layer.pos === 'front' ? bodyFrontLayers : bodyBackLayers;
+    const normalizedId = String(layer.id || '').toLowerCase();
+    const target = normalizedId.includes('arml') ? baseLeftArmLayers
+      : normalizedId.includes('armr') ? baseRightArmLayers
+      : normalizedId.includes('torso') ? baseTorsoLayers
+      : baseTorsoLayers;
     target.push({ layer, filter: filterFor(layer.tintSlot || 'A') });
   }
   for (const group of [torsoCosmetic, armCosmetic]) {
     if (!group || !group.layers || !group.layers.length) continue;
     for (const layer of group.layers) {
-      const target = layer.pos === 'back' ? bodyBackLayers : bodyFrontLayers;
+      const target = group?.slot === 'torso' ? torsoClothingLayers : overwearLayers;
       target.push({ layer, filter: filterFor(group.tintSlot || 'A') });
     }
   }
@@ -359,14 +366,18 @@ async function renderProfile(canvas, profile) {
   const hatIsUnderHood = hat?.hoodLayering === 'under';
   const allCosmeticGroups = hairFront !== undefined
   ? (hatIsUnderHood
-      ? [hairBack, hairSideL, hairSide, facialHair, eyes, hairFront, hat, hood]
-      : [hairBack, hairSideL, hairSide, facialHair, eyes, hairFront, hood, hat])
-  : [hair, facialHair, eyes, hat];
+      ? [hairBack, hairSideL, eyes, hairFront, facialHair, hairSide, hood, pauldron, hat]
+      : [hairBack, hairSideL, eyes, hairFront, facialHair, hairSide, hood, pauldron, hat])
+  : [hair, eyes, facialHair, hat];
   const backLayers  = [];
   const frontLayers = [];
 
+  const hoodHideFrontAndSideHair = Boolean(hood?.layers?.length);
+  const hiddenCosmeticGroups = hoodHideFrontAndSideHair ? new Set([hairFront, hairSide, hairSideL]) : null;
+
   for (const group of allCosmeticGroups) {
     if (!group || !group.layers.length) continue;
+    if (hiddenCosmeticGroups?.has(group)) continue;
     for (const layer of group.layers) {
       const target = layer.pos === 'back' ? backLayers : frontLayers;
       target.push({ layer, filter: filterFor(group.tintSlot) });
@@ -376,10 +387,13 @@ async function renderProfile(canvas, profile) {
   const neededUrls = new Set([
     headUrl,
     ...urLayerSource.map(m => m.url),
-    ...bodyBackLayers.map(({ layer }) => layer.url),
-    ...backLayers.map(({ layer }) => layer.url),
+    ...baseLeftArmLayers.map(({ layer }) => layer.url),
+    ...baseTorsoLayers.map(({ layer }) => layer.url),
+    ...baseRightArmLayers.map(({ layer }) => layer.url),
+        ...backLayers.map(({ layer }) => layer.url),
     ...frontLayers.map(({ layer }) => layer.url),
-    ...bodyFrontLayers.map(({ layer }) => layer.url),
+    ...torsoClothingLayers.map(({ layer }) => layer.url),
+    ...overwearLayers.map(({ layer }) => layer.url),
     ...(opacityMaskLayer?.url ? [opacityMaskLayer.url] : []),
     ...blinkOverlayUrlsByBase.values(),
   ]);
@@ -415,11 +429,25 @@ async function renderProfile(canvas, profile) {
   }
   const isBlinkFrame = shouldRenderBlink(headUrl, nowMs);
 
-  for (const { layer, filter } of bodyBackLayers) {
+  for (const { layer, filter } of baseLeftArmLayers) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
   }
-  for (const { layer, filter } of bodyFrontLayers) {
+  for (const { layer, filter } of baseTorsoLayers) {
+    const img = imgMap.get(layer.url);
+    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+  }
+  for (const { layer, filter } of baseRightArmLayers) {
+    const img = imgMap.get(layer.url);
+    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+  }
+  for (const { layer, filter } of torsoClothingLayers)
+  {
+    const img = imgMap.get(layer.url);
+    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+  }
+  for (const { layer, filter } of overwearLayers)
+  {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
   }
@@ -548,7 +576,9 @@ function portraitOptionFromJson(entry, json) {
       ?.toLowerCase()
       || null;
   const resolvedTintSlot = json.slot === 'hat' && colorRange ? 'HAT'
+                         : json.slot === 'hood' && colorRange ? 'HOOD'
                          : !json.appearance && colorRange ? 'CLOTH'
+                         : json.slot === 'hood' && !json.appearance ? (json.tintSlot ?? 'HOOD')
                          : !json.appearance && json.tintSlot != null ? json.tintSlot
                          : json.slot === 'torso' && !json.appearance ? 'TORSO'
                          : tintSlot;
