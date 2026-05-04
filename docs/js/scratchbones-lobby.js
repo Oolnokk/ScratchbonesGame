@@ -2,9 +2,9 @@
   'use strict';
 
   const MODES = [
-    { id: 'pve',   label: 'PvE',   desc: '1 Human + AI opponents',   humanRange: null },
-    { id: 'pvp',   label: 'PvP',   desc: 'All Human players',        humanRange: [2, 4] },
-    { id: 'pvpve', label: 'PvPvE', desc: 'Human + AI mix',           humanRange: [2, 3] },
+    { id: 'pvpve', label: 'PvPvE', desc: 'Online: 1+ Human + AI fill', humanRange: null },
+    { id: 'pve',   label: 'PvE',   desc: 'Offline vs AI',              humanRange: null },
+    { id: 'pvp',   label: 'PvP',   desc: 'Online: All Human players',  humanRange: [2, 4] },
   ];
 
   // ── Species UI data ────────────────────────────────────────
@@ -246,6 +246,8 @@
   };
 
   // ── Lobby state ────────────────────────────────────────────
+  const NPC_NAMES = ['Rook', 'Sable', 'Grim', 'Vex'];
+
   let _screen = 'create';
   let _selectedMode = 'pve';
   let _selectedPlayerCount = 2;
@@ -256,6 +258,7 @@
   let _editAppearance = null;   // { speciesId, gender, cosmetics, bodyColors }
   let _editAIdx = 0;            // index into current species/gender colorOptions for A
   let _editBIdx = 0;            // index into current species/gender colorOptions for B
+  let _editName = '';           // name field being edited in appearance editor
 
   // Online state
   let _onlinePlayerCount = 2;
@@ -263,7 +266,7 @@
   let _onlineOccupants = [];        // [{seatId, name}]
   let _onlineOccupantAppearances = {}; // { seatId: appearance }
   let _myOnlineSeat = null;
-  let _fillWithNpcs = false;        // true when PvE mode routes through online flow
+  let _fillWithNpcs = false;        // true when PvPvE mode routes through online flow with NPC fill
 
   // Portrait preview
   let _lobbyPortraitCosmetics = null;
@@ -499,12 +502,11 @@
         <span class="sb-mode-desc">${esc(m.desc)}</span>
       </button>`).join('');
 
-    const maxHumans = _selectedMode === 'pvpve' ? 3 : 4;
-    const playerPicker = _selectedMode !== 'pve' ? `
+    const playerPicker = _selectedMode === 'pvp' ? `
       <div class="sb-player-row">
         <span>Human players:</span>
         <div class="sb-count-group">
-          ${[2, 3, 4].filter(n => n <= maxHumans).map(n =>
+          ${[2, 3, 4].map(n =>
             `<button class="sb-count-btn${_selectedPlayerCount === n ? ' selected' : ''}" data-count="${n}">${n}</button>`
           ).join('')}
         </div>
@@ -602,7 +604,12 @@
             <canvas id="sb-ap-canvas" width="160" height="160" class="sb-portrait-canvas"></canvas>
           </div>
           <div class="sb-ap-controls">
-            <div class="sb-label">Species</div>
+            <div class="sb-label">Name</div>
+            <div class="sb-field">
+              <input id="sb-edit-name" type="text" maxlength="24" value="${esc(_editName || '')}"
+                     autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box;" />
+            </div>
+            <div class="sb-label" style="margin-top:8px;">Species</div>
             <div class="sb-sel-group">${speciesBtns}</div>
             <div class="sb-label" style="margin-top:8px;">Gender</div>
             <div class="sb-sel-group">${genderBtns}</div>
@@ -929,6 +936,7 @@
 
   function openAppearanceEditor() {
     const acc = window.ScratchbonesAccount;
+    _editName = acc ? (acc.getUsername() || 'Player') : 'Player';
     const saved = acc ? acc.getAppearance() : null;
     _editAppearance = {
       speciesId: saved?.speciesId || 'mao-ao',
@@ -982,10 +990,7 @@
     el.querySelectorAll('.sb-mode-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         _selectedMode = btn.dataset.mode;
-        if (_selectedMode === 'pve') _selectedPlayerCount = 1;
-        else if (_selectedPlayerCount < 2) _selectedPlayerCount = 2;
-        const maxH = _selectedMode === 'pvpve' ? 3 : 4;
-        if (_selectedPlayerCount > maxH) _selectedPlayerCount = maxH;
+        if (_selectedMode === 'pvp' && _selectedPlayerCount < 2) _selectedPlayerCount = 2;
         render();
       });
     });
@@ -1088,6 +1093,8 @@
     });
 
     document.getElementById('sb-save-appearance-btn')?.addEventListener('click', () => {
+      const nameVal = (document.getElementById('sb-edit-name')?.value || '').trim();
+      if (nameVal) window.ScratchbonesAccount?.setUsername(nameVal);
       window.ScratchbonesAccount?.setAppearance(_editAppearance);
       _screen = 'main';
       render();
@@ -1290,11 +1297,44 @@
 
   function startGame() {
     if (!window.ScratchbonesAccount?.isCreated()) return;
-    // PvP and PvE both use the online lobby flow (no hot-seat local play).
-    // PvE sets _fillWithNpcs so empty seats are filled with AI when the host starts.
-    _fillWithNpcs = (_selectedMode === 'pve');
+    if (_selectedMode === 'pve') {
+      // True offline play: skip the online lobby entirely
+      startOfflineGame();
+      return;
+    }
+    // PvPvE routes through online lobby with NPC fill for empty seats
+    _fillWithNpcs = (_selectedMode === 'pvpve');
     _screen = 'online';
     render();
+  }
+
+  function startOfflineGame() {
+    const acc = window.ScratchbonesAccount;
+    const username = acc?.getUsername() || 'Player';
+    const ap = getLocalAppearance();
+    const totalPlayers = 4;
+    const humanSeat = 0;
+    const npcNames = ['Rook', 'Sable', 'Grim', 'Vex'];
+    const playerNames = { [humanSeat]: username };
+    const playerAppearances = { [humanSeat]: ap };
+    let npcIndex = 0;
+    for (let seat = 0; seat < totalPlayers; seat++) {
+      if (seat !== humanSeat) {
+        playerNames[seat] = NPC_NAMES[npcIndex % NPC_NAMES.length];
+        npcIndex++;
+      }
+    }
+    window.SCRATCHBONES_SESSION = {
+      mode: 'pve',
+      humanSeats: [humanSeat],
+      playerNames,
+      playerAppearances,
+    };
+    _postGameMessage = '';
+    hide();
+    if (_scratchbonesReady && window.scratchbonesStartGame) {
+      void window.scratchbonesStartGame().catch(e => console.error('[lobby] startOfflineGame error', e));
+    }
   }
 
   function startOnlineGame() {
@@ -1309,13 +1349,12 @@
     // Use per-seat appearances collected from player-joined events
     const playerAppearances = { ..._onlineOccupantAppearances };
 
-    // In PvE (NPC fill) mode, fill any remaining seats with AI players
+    // In PvPvE (NPC fill) mode, fill any remaining seats with AI players
     if (_fillWithNpcs) {
-      const npcNames = ['Rook', 'Sable', 'Grim', 'Vex'];
       let npcIndex = 0;
       for (let seat = 0; seat < _onlinePlayerCount; seat++) {
         if (!humanSeats.includes(seat)) {
-          playerNames[seat] = npcNames[npcIndex % npcNames.length] || `NPC ${seat + 1}`;
+          playerNames[seat] = NPC_NAMES[npcIndex % NPC_NAMES.length] || `NPC ${seat + 1}`;
           npcIndex++;
         }
       }
