@@ -399,16 +399,48 @@
     const acc = window.ScratchbonesAccount;
     if (acc) {
       const none = { id: 'none', tintSlot: null, layers: [] };
+      const equippedFromAppearance = Array.isArray(appearance?.equippedCosmetics) ? appearance.equippedCosmetics : null;
+      const appliedDyesFromAppearance = appearance && Object.prototype.hasOwnProperty.call(appearance, 'appliedDyes')
+        ? (appearance.appliedDyes || {})
+        : null;
+      const resolveVariantId = (category, equippedId) => {
+        if (!equippedId) return null;
+        const shopCatalog = acc.getShopCatalog ? acc.getShopCatalog() : [];
+        const base = shopCatalog.find(i => i.id === equippedId);
+        if (!base) return equippedId;
+        const candidates = shopCatalog.filter(i =>
+          i.category === category &&
+          i.label === base.label &&
+          (i.material || null) === (base.material || null) &&
+          i.species === speciesId &&
+          (!i.gender || i.gender === gender)
+        );
+        const ids = [equippedId, ...candidates.map(i => i.id)];
+        return ids.find(id => optionCache?.has(id)) ?? equippedId;
+      };
       const applyEquip = (cat, key, noneOpt) => {
-        const id = acc.getEquippedForCategory(cat);
-        profile[key] = (id && optionCache?.has(id)) ? optionCache.get(id) : (noneOpt ?? none);
+        let id = null;
+        if (equippedFromAppearance) {
+          const shopCatalog = acc.getShopCatalog ? acc.getShopCatalog() : [];
+          id = shopCatalog.find(i => i.category === cat && equippedFromAppearance.includes(i.id))?.id ?? null;
+        } else {
+          id = acc.getEquippedForCategory(cat);
+        }
+        const resolvedId = resolveVariantId(cat, id);
+        profile[key] = (resolvedId && optionCache?.has(resolvedId)) ? optionCache.get(resolvedId) : (noneOpt ?? none);
       };
       applyEquip('hat', 'hat', hatOptions[0]);
       applyEquip('hood', 'hood', hoodOptions[0]);
       applyEquip('torso', 'torsoCosmetic', torsoPortraitOptions[0]);
       applyEquip('overwear', 'armCosmetic', armPortraitOptions[0]);
+      const collaredTag = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.collaredTag || 'collared';
+      const shirtbeardIds = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.shirtbeardIds || ['kenk_shirtbeard', 'kenk_shirtbeard_f'];
+      const hasCollaredClothing = [profile.torsoCosmetic, profile.armCosmetic].some(c => c?.tags?.includes(collaredTag));
+      if (!hasCollaredClothing && shirtbeardIds.includes(profile.facialHair?.id)) {
+        profile.facialHair = optionCache?.get('none') || { id: 'none', label: 'No Facial Hair', tintSlot: null, layers: [] };
+      }
       // Apply clothing dyes (keys are tintSlot names: HAT, TORSO, CLOTH, ...)
-      const dyeIds = acc.getAppliedDyes ? acc.getAppliedDyes() : {};
+      const dyeIds = appliedDyesFromAppearance ?? (acc.getAppliedDyes ? acc.getAppliedDyes() : {});
       const catalog = acc.getDyeCatalog ? acc.getDyeCatalog() : [];
       for (const [tintKey, dyeId] of Object.entries(dyeIds)) {
         if (dyeId) {

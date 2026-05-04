@@ -43,6 +43,23 @@
     { id: 'fine_hood_tl',       label: 'Fine Hood', price: 15, category: 'hood', species: 'tletingan', gender: 'male',   description: 'A finely crafted hood with trim.' },
   ];
 
+  function cosmeticEntitlementKey(item) {
+    if (!item) return null;
+    return [item.category || '', item.label || '', item.material || ''].join('::');
+  }
+  function findShopItem(id) {
+    return SHOP_CATALOG.find(c => c.id === id) || null;
+  }
+  function ownsCosmeticGroup(acc, cosmeticId) {
+    const target = findShopItem(cosmeticId);
+    if (!target) return false;
+    const targetKey = cosmeticEntitlementKey(target);
+    return (acc.unlockedCosmetics || []).some(ownedId => {
+      const owned = findShopItem(ownedId);
+      return owned && cosmeticEntitlementKey(owned) === targetKey;
+    });
+  }
+
   // Dyes set a bodyColor slot (CLOTH, HAT, TORSO, …) to a specific tint.
   // Colors are offsets applied to the mint base (#7dc89a) via hue-rotate/saturate/brightness.
   // Hex values are the standard reference colors from the color name; offsets are computed
@@ -256,7 +273,7 @@
 
   function getUnlockedCosmetics() { return [...(getAccount().unlockedCosmetics || [])]; }
   function getEquippedCosmetics() { return [...(getAccount().equippedCosmetics || [])]; }
-  function isUnlocked(id) { return getAccount().unlockedCosmetics.includes(id); }
+  function isUnlocked(id) { return ownsCosmeticGroup(getAccount(), id); }
   function isEquipped(id) { return getAccount().equippedCosmetics.includes(id); }
 
   function getEquippedForCategory(category) {
@@ -290,7 +307,7 @@
     const item = SHOP_CATALOG.find(c => c.id === cosmeticId);
     if (!item) return { ok: false, error: 'Unknown cosmetic' };
     const acc = getAccount();
-    if (acc.unlockedCosmetics.includes(cosmeticId)) return { ok: false, error: 'Already owned' };
+    if (ownsCosmeticGroup(acc, cosmeticId)) return { ok: false, error: 'Already owned' };
     if (acc.bronze < item.price) return { ok: false, error: 'Not enough Bronze' };
     acc.bronze -= item.price;
     acc.unlockedCosmetics.push(cosmeticId);
@@ -300,7 +317,7 @@
 
   function equipCosmetic(cosmeticId) {
     const acc = getAccount();
-    if (!acc.unlockedCosmetics.includes(cosmeticId)) return false;
+    if (!ownsCosmeticGroup(acc, cosmeticId)) return false;
     const item = SHOP_CATALOG.find(c => c.id === cosmeticId);
     if (!item) return false;
     acc.equippedCosmetics = acc.equippedCosmetics.filter(id => {

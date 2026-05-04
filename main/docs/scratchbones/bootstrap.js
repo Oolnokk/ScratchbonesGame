@@ -4700,26 +4700,51 @@ import { createLayerManager } from './ui/layerManager.js';
         const oc = _portraitCosmetics.optionCache;
         const none = { id: 'none', tintSlot: null, layers: [] };
         // Use per-player relayed cosmetics when available (online), fall back to local account (hotseat)
-        const equippedList = player.appearance?.equippedCosmetics ?? null;
+        const hasAppearance = !!player.appearance;
+        const equippedList = Array.isArray(player.appearance?.equippedCosmetics) ? player.appearance.equippedCosmetics : null;
         const shopCatalog = acc.getShopCatalog ? acc.getShopCatalog() : [];
+        const resolveVariantId = (category, equippedId) => {
+          if (!equippedId) return null;
+          const base = shopCatalog.find(i => i.id === equippedId);
+          if (!base) return equippedId;
+          const speciesId = player.appearance?.speciesId;
+          const gender = player.appearance?.gender;
+          const candidates = shopCatalog.filter(i =>
+            i.category === category &&
+            i.label === base.label &&
+            (i.material || null) === (base.material || null) &&
+            i.species === speciesId &&
+            (!i.gender || i.gender === gender)
+          );
+          const ids = [equippedId, ...candidates.map(i => i.id)];
+          return ids.find(id => oc?.has(id)) ?? equippedId;
+        };
         const getEquipped = (category) => {
           if (equippedList !== null) {
             return shopCatalog.find(i => i.category === category && equippedList.includes(i.id))?.id ?? null;
           }
+          if (hasAppearance) return null;
           return acc.getEquippedForCategory(category);
         };
         const applySlot = (category, profileKey) => {
           const id = getEquipped(category);
-          player.profile[profileKey] = (id && oc?.has(id)) ? oc.get(id) : none;
+          const resolvedId = resolveVariantId(category, id);
+          player.profile[profileKey] = (resolvedId && oc?.has(resolvedId)) ? oc.get(resolvedId) : none;
         };
         applySlot('hat', 'hat');
         applySlot('hood', 'hood');
         applySlot('torso', 'torsoCosmetic');
         applySlot('overwear', 'armCosmetic');
+        const collaredTag = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.collaredTag || 'collared';
+        const shirtbeardIds = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.shirtbeardIds || ['kenk_shirtbeard', 'kenk_shirtbeard_f'];
+        const hasCollaredClothing = [player.profile.torsoCosmetic, player.profile.armCosmetic].some(c => c?.tags?.includes(collaredTag));
+        if (!hasCollaredClothing && shirtbeardIds.includes(player.profile.facialHair?.id)) {
+          player.profile.facialHair = oc?.get('none') || { id: 'none', label: 'No Facial Hair', tintSlot: null, layers: [] };
+        }
         // Apply clothing dyes from per-player appearance when available, else local account
         const dyeIds = player.appearance?.appliedDyes !== undefined
           ? (player.appearance.appliedDyes || {})
-          : (acc.getAppliedDyes ? acc.getAppliedDyes() : {});
+          : (hasAppearance ? {} : (acc.getAppliedDyes ? acc.getAppliedDyes() : {}));
         if (acc.getDyeCatalog) {
           const catalog = acc.getDyeCatalog();
           for (const [tintKey, dyeId] of Object.entries(dyeIds)) {
