@@ -726,7 +726,7 @@ async function loadPortraitCosmetics(configBase) {
     }
     for (const entry of entries) {
       const opt = portraitOptionFromJson(entry, json);
-      if (opt.layers.length) {
+      if (opt.layers.length || Object.keys(opt.variantLayers).length) {
         optionCache.set(entry.id, opt);
         indexEntries.push(entry);
       }
@@ -771,8 +771,8 @@ async function loadPortraitCosmetics(configBase) {
     if (!entry.id.startsWith('appearance::')) {
       const allOptLayers = [...opt.layers, ...Object.values(opt.variantLayers || {}).flat()];
       const lowerLayers = allOptLayers.map(l => (l.url || '').toLowerCase());
-      if (lowerLayers.some(u => u.includes('/torso/portrait/') || u.includes('/overwear/portrait/'))) torsoPortraitOptions.push(opt);
-      if (lowerLayers.some(u => u.includes('/arms/portrait/'))) armPortraitOptions.push(opt);
+      if (lowerLayers.some(u => u.includes('/torso/portrait/'))) torsoPortraitOptions.push(opt);
+      if (lowerLayers.some(u => u.includes('/arms/portrait/') || u.includes('/overwear/portrait/'))) armPortraitOptions.push(opt);
     }
   }
 
@@ -1125,10 +1125,11 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
     }
   }
 
-  const filteredTorso = filterArr(torsoPortraitOptions) ?? [];
-  const filteredArm   = filterArr(armPortraitOptions)   ?? [];
-  const torsoCosmetic = weightedPickRng(filteredTorso.length ? filteredTorso : [{ id: 'none', label: 'No Torso Clothing', tintSlot: null, layers: [] }], null, rng);
-  const armCosmetic   = weightedPickRng(filteredArm.length   ? filteredArm   : [{ id: 'none', label: 'No Arm Clothing',   tintSlot: null, layers: [] }], null, rng);
+  const hasClothingVariant = (o) => o.id === 'none' || resolveOptionLayers(o, fighter).length > 0;
+  const filteredTorso = (torsoPortraitOptions ?? []).filter(hasClothingVariant);
+  const filteredArm   = (armPortraitOptions   ?? []).filter(hasClothingVariant);
+  const torsoCosmetic = weightedPickRng(filteredTorso.length ? filteredTorso : [{ id: 'none', label: 'No Torso Clothing', tintSlot: null, layers: [] }], weights?.torso, rng);
+  const armCosmetic   = weightedPickRng(filteredArm.length   ? filteredArm   : [{ id: 'none', label: 'No Arm Clothing',   tintSlot: null, layers: [] }], weights?.overwear, rng);
 
   // Apply forced cosmetics — species-level slots that always override random selection.
   const forced = forcedCosmeticsByFighter?.[fighter.id] ?? forcedCosmeticsByFighter?.[fighterInput?.id];
