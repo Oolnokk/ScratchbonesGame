@@ -379,7 +379,10 @@ async function renderProfile(canvas, profile) {
     if (hiddenCosmeticGroups?.has(group)) continue;
     for (const layer of group.layers) {
       const target = layer.pos === 'back' ? backLayers : frontLayers;
-      target.push({ layer, filter: filterFor(group.tintSlot) });
+      const key = layer.paletteColorKey;
+      const layerTintSlot = (!key || key === 'A') ? group.tintSlot
+        : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
+      target.push({ layer, filter: filterFor(layerTintSlot) });
     }
   }
 
@@ -505,6 +508,7 @@ function portraitOptionFromJson(entry, json) {
 
   const layers = [];
   const head   = json.parts && json.parts.head;
+  const paletteLayerMap = (json.palette && json.palette.layers) ? json.palette.layers : null;
 
   if (head) {
     if (head.layers) {
@@ -514,6 +518,8 @@ function portraitOptionFromJson(entry, json) {
           (layer.spriteStyle && layer.spriteStyle.xform && layer.spriteStyle.xform.head) || {};
         const imgUrl = layer.image && layer.image.url;
         if (imgUrl) {
+          const layerRole = layer.layerRole || null;
+          const paletteColorKey = (layerRole && paletteLayerMap) ? (paletteLayerMap[layerRole] || null) : null;
           layers.push({
             url: portraitRelPath(imgUrl),
             ax:  xf.ax     ?? 0,
@@ -521,6 +527,7 @@ function portraitOptionFromJson(entry, json) {
             sx:  xf.scaleX ?? 1,
             sy:  xf.scaleY ?? 1,
             pos: layerName === 'back' ? 'back' : 'front',
+            paletteColorKey,
           });
         }
       }
