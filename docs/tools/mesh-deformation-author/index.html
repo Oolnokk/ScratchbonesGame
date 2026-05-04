@@ -207,6 +207,8 @@
       /* responsive: scale down if needed */
       max-width: min(512px, calc(100vw - 300px));
       max-height: min(512px, calc(100vh - 110px));
+      /* prevent browser scroll/zoom gestures from interfering with touch drags */
+      touch-action: none;
     }
 
     /* ── Legend ── */
@@ -853,9 +855,11 @@ function getCanvasXY(e) {
   const rect   = canvas.getBoundingClientRect();
   const scaleX = CS / rect.width;
   const scaleY = CS / rect.height;
+  // Support both mouse events (clientX/Y) and touch events (touches[0])
+  const src = e.touches?.[0] || e.changedTouches?.[0] || e;
   return [
-    (e.clientX - rect.left) * scaleX,
-    (e.clientY - rect.top)  * scaleY
+    (src.clientX - rect.left) * scaleX,
+    (src.clientY - rect.top)  * scaleY
   ];
 }
 
@@ -926,6 +930,39 @@ canvas.addEventListener('contextmenu', e => {
     render();
     setStatus('Point ' + (i + 1) + (locked[i] ? ' locked.' : ' unlocked.'));
   }
+});
+
+// ── Touch events (mobile / mobile-emulation) ─────────────────────
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (previewOn) { stopPreview(); return; }
+
+  const [px, py] = getCanvasXY(e);
+  const i = findNearest(px, py);
+  if (i >= 0) {
+    selIdx = i;
+    if (!locked[i]) {
+      isDragging = true;
+      dragIdx    = i;
+    }
+  } else {
+    selIdx = -1;
+  }
+  render();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (isDragging && dragIdx >= 0) {
+    const [px, py] = getCanvasXY(e);
+    poses[curPoseIdx].points[dragIdx] = toNorm(px, py);
+    render();
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => {
+  isDragging = false;
+  dragIdx    = -1;
 });
 
 // =================================================================
