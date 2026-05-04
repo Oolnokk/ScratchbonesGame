@@ -4703,6 +4703,22 @@ import { createLayerManager } from './ui/layerManager.js';
         const hasAppearance = !!player.appearance;
         const equippedList = Array.isArray(player.appearance?.equippedCosmetics) ? player.appearance.equippedCosmetics : null;
         const shopCatalog = acc.getShopCatalog ? acc.getShopCatalog() : [];
+        const resolveVariantId = (category, equippedId) => {
+          if (!equippedId) return null;
+          const base = shopCatalog.find(i => i.id === equippedId);
+          if (!base) return equippedId;
+          const speciesId = player.appearance?.speciesId;
+          const gender = player.appearance?.gender;
+          const candidates = shopCatalog.filter(i =>
+            i.category === category &&
+            i.label === base.label &&
+            (i.material || null) === (base.material || null) &&
+            i.species === speciesId &&
+            (!i.gender || i.gender === gender)
+          );
+          const ids = [equippedId, ...candidates.map(i => i.id)];
+          return ids.find(id => oc?.has(id)) ?? equippedId;
+        };
         const getEquipped = (category) => {
           if (equippedList !== null) {
             return shopCatalog.find(i => i.category === category && equippedList.includes(i.id))?.id ?? null;
@@ -4712,7 +4728,8 @@ import { createLayerManager } from './ui/layerManager.js';
         };
         const applySlot = (category, profileKey) => {
           const id = getEquipped(category);
-          player.profile[profileKey] = (id && oc?.has(id)) ? oc.get(id) : none;
+          const resolvedId = resolveVariantId(category, id);
+          player.profile[profileKey] = (resolvedId && oc?.has(resolvedId)) ? oc.get(resolvedId) : none;
         };
         applySlot('hat', 'hat');
         applySlot('hood', 'hood');
