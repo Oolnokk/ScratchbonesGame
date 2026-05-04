@@ -1451,7 +1451,7 @@
     const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.xformPresets || {};
     const defaults = window.SCRATCHBONES_CONFIG?.game?.portrait?.xformPresets || {};
     for (const name of ['A', 'B', 'C', 'D']) {
-      const p = cfg[name] || defaults[name];
+      const p = cfg[name] || defaults[name] || {};
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? 0; };
       set(`cvp-${name}-ax`,     p.ax     ?? 0);
       set(`cvp-${name}-ay`,     p.ay     ?? 0);
