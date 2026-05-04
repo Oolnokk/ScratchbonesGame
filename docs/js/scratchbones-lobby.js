@@ -1320,7 +1320,7 @@
   function startOfflineGame() {
     const acc = window.ScratchbonesAccount;
     const username = acc?.getUsername() || 'Player';
-    const ap = getLocalAppearance();
+    const ap = getFullAppearance();
     const totalPlayers = 4;
     const humanSeat = 0;
     const npcNames = ['Rook', 'Sable', 'Grim', 'Vex'];
