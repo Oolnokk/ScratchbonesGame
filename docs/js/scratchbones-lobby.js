@@ -399,8 +399,18 @@
     const acc = window.ScratchbonesAccount;
     if (acc) {
       const none = { id: 'none', tintSlot: null, layers: [] };
+      const equippedFromAppearance = Array.isArray(appearance?.equippedCosmetics) ? appearance.equippedCosmetics : null;
+      const appliedDyesFromAppearance = appearance && Object.prototype.hasOwnProperty.call(appearance, 'appliedDyes')
+        ? (appearance.appliedDyes || {})
+        : null;
       const applyEquip = (cat, key, noneOpt) => {
-        const id = acc.getEquippedForCategory(cat);
+        let id = null;
+        if (equippedFromAppearance) {
+          const shopCatalog = acc.getShopCatalog ? acc.getShopCatalog() : [];
+          id = shopCatalog.find(i => i.category === cat && equippedFromAppearance.includes(i.id))?.id ?? null;
+        } else {
+          id = acc.getEquippedForCategory(cat);
+        }
         profile[key] = (id && optionCache?.has(id)) ? optionCache.get(id) : (noneOpt ?? none);
       };
       applyEquip('hat', 'hat', hatOptions[0]);
@@ -408,7 +418,7 @@
       applyEquip('torso', 'torsoCosmetic', torsoPortraitOptions[0]);
       applyEquip('overwear', 'armCosmetic', armPortraitOptions[0]);
       // Apply clothing dyes (keys are tintSlot names: HAT, TORSO, CLOTH, ...)
-      const dyeIds = acc.getAppliedDyes ? acc.getAppliedDyes() : {};
+      const dyeIds = appliedDyesFromAppearance ?? (acc.getAppliedDyes ? acc.getAppliedDyes() : {});
       const catalog = acc.getDyeCatalog ? acc.getDyeCatalog() : [];
       for (const [tintKey, dyeId] of Object.entries(dyeIds)) {
         if (dyeId) {
