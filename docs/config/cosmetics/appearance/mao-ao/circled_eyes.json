@@ -13,7 +13,7 @@
   "parts": {
     "head": {
       "image": {
-        "url": "./assets/cosmetics/appearance/mao-ao/eyes/circled_eyes_mint.png"
+        "url": "./assets/cosmetics/appearance/mao-ao/eyes/circled_eyes.png"
       },
       "spriteStyle": {
         "xform": {
