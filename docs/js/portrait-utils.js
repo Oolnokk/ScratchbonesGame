@@ -381,7 +381,7 @@ async function renderProfile(canvas, profile) {
       const target = layer.pos === 'back' ? backLayers : frontLayers;
       const key = layer.paletteColorKey;
       const layerTintSlot = (!key || key === 'A') ? group.tintSlot
-        : (group.tintSlot ? `${group.tintSlot}_${key}` : group.tintSlot);
+        : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
       target.push({ layer, filter: filterFor(layerTintSlot) });
     }
   }
