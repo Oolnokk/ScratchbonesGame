@@ -4736,9 +4736,11 @@ import { createLayerManager } from './ui/layerManager.js';
         applySlot('torso', 'torsoCosmetic');
         applySlot('overwear', 'armCosmetic');
         const collaredTag = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.collaredTag || 'collared';
-        const shirtbeardIds = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.shirtbeardIds || ['kenk_shirtbeard', 'kenk_shirtbeard_f'];
+        const collarLockedFacialHairIds = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.collarLockedFacialHairIds
+          || window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.shirtbeardIds
+          || ['kenk_shirtbeard', 'kenk_shirtbeard_f'];
         const hasCollaredClothing = [player.profile.torsoCosmetic, player.profile.armCosmetic].some(c => c?.tags?.includes(collaredTag));
-        if (!hasCollaredClothing && shirtbeardIds.includes(player.profile.facialHair?.id)) {
+        if (!hasCollaredClothing && collarLockedFacialHairIds.includes(player.profile.facialHair?.id)) {
           player.profile.facialHair = oc?.get('none') || { id: 'none', label: 'No Facial Hair', tintSlot: null, layers: [] };
         }
         // Apply clothing dyes from per-player appearance when available, else local account

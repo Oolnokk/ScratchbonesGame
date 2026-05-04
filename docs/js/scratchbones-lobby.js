@@ -434,9 +434,11 @@
       applyEquip('torso', 'torsoCosmetic', torsoPortraitOptions[0]);
       applyEquip('overwear', 'armCosmetic', armPortraitOptions[0]);
       const collaredTag = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.collaredTag || 'collared';
-      const shirtbeardIds = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.shirtbeardIds || ['kenk_shirtbeard', 'kenk_shirtbeard_f'];
+      const collarLockedFacialHairIds = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.collarLockedFacialHairIds
+        || window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.shirtbeardIds
+        || ['kenk_shirtbeard', 'kenk_shirtbeard_f'];
       const hasCollaredClothing = [profile.torsoCosmetic, profile.armCosmetic].some(c => c?.tags?.includes(collaredTag));
-      if (!hasCollaredClothing && shirtbeardIds.includes(profile.facialHair?.id)) {
+      if (!hasCollaredClothing && collarLockedFacialHairIds.includes(profile.facialHair?.id)) {
         profile.facialHair = optionCache?.get('none') || { id: 'none', label: 'No Facial Hair', tintSlot: null, layers: [] };
       }
       // Apply clothing dyes (keys are tintSlot names: HAT, TORSO, CLOTH, ...)
@@ -703,15 +705,38 @@
     const acc = window.ScratchbonesAccount;
     const bronze = acc ? acc.getBronze() : 0;
     const appearance = acc ? acc.getAppearance() : { speciesId: 'mao-ao', gender: 'male' };
-    const catalog = acc ? acc.getShopCatalogForAppearance(appearance.speciesId, appearance.gender) : [];
+    const fullCatalog = acc && acc.getShopCatalog ? acc.getShopCatalog() : [];
+    const scopedCatalog = acc ? acc.getShopCatalogForAppearance(appearance.speciesId, appearance.gender) : [];
+    const entitlementKey = (item) => [item.category || '', item.label || '', item.material || ''].join('::');
+    const dedupedMap = new Map();
+    for (const item of scopedCatalog) {
+      const key = entitlementKey(item);
+      const prev = dedupedMap.get(key);
+      if (!prev) {
+        dedupedMap.set(key, item);
+        continue;
+      }
+      const score = (x) => (x.species === appearance.speciesId ? 2 : 0) + (x.gender === appearance.gender ? 1 : 0);
+      if (score(item) > score(prev)) dedupedMap.set(key, item);
+    }
+    const catalog = [...dedupedMap.values()];
     const categories = [...new Set(catalog.map(c => c.category))];
+    const equippedIds = new Set(acc?.getEquippedCosmetics?.() || []);
+    const isEquippedGroup = (item) => {
+      const key = entitlementKey(item);
+      for (const equippedId of equippedIds) {
+        const equippedItem = fullCatalog.find(c => c.id === equippedId);
+        if (equippedItem && entitlementKey(equippedItem) === key) return true;
+      }
+      return false;
+    };
 
     let rows = '';
     for (const cat of categories) {
       rows += `<div class="sb-shop-cat">${cap(cat)}</div>`;
       for (const item of catalog.filter(c => c.category === cat)) {
         const owned = acc && acc.isUnlocked(item.id);
-        const equipped = acc && acc.isEquipped(item.id);
+        const equipped = acc && isEquippedGroup(item);
         let btn;
         if (owned) {
           btn = equipped
