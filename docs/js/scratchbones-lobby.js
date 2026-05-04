@@ -1284,6 +1284,19 @@
     }
   }
 
+
+  function alignCosmeticVarsButtonToMapAnchor() {
+    const mapBtn = document.getElementById('projMapBtn');
+    const cvBtn = document.getElementById('cosmeticVarsBtn');
+    if (!mapBtn || !cvBtn) return;
+    const mapRect = mapBtn.getBoundingClientRect();
+    if (!Number.isFinite(mapRect.width) || mapRect.width <= 0) return;
+    cvBtn.style.left = `${Math.round(mapRect.left)}px`;
+    cvBtn.style.top = `${Math.round(mapRect.top)}px`;
+    cvBtn.style.right = 'auto';
+    cvBtn.style.bottom = 'auto';
+  }
+
   function showJoinError(msg) {
     const el = document.getElementById('sb-join-error');
     if (el) { el.textContent = msg; el.style.display = ''; }
@@ -1314,10 +1327,11 @@
     // In lobby: swap Map button for Cosmetic Vars button
     const mapBtn = document.getElementById('projMapBtn');
     const cvBtn  = document.getElementById('cosmeticVarsBtn');
-    if (mapBtn) mapBtn.style.display = 'none';
     if (cvBtn) cvBtn.style.display = '';
     else if (mapBtn) logCosmeticVarsError('Map button hidden but Cosmetic Vars button is missing during lobby show().');
     enforceCosmeticVarsStacking();
+    alignCosmeticVarsButtonToMapAnchor();
+    if (mapBtn) mapBtn.style.display = 'none';
   }
 
   function hide() {
@@ -1482,6 +1496,7 @@
       root.appendChild(panel);
     }
     enforceCosmeticVarsStacking();
+    alignCosmeticVarsButtonToMapAnchor();
     if (!document.getElementById('cosmeticVarsBtn') || !document.getElementById('cosmeticVarsPanel')) {
       logCosmeticVarsError('Cosmetic Vars UI creation incomplete after _ensureCosmeticVarsDom().', {
         hasButton: !!document.getElementById('cosmeticVarsBtn'),
