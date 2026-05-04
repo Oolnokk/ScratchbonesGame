@@ -726,7 +726,7 @@ async function loadPortraitCosmetics(configBase) {
     }
     for (const entry of entries) {
       const opt = portraitOptionFromJson(entry, json);
-      if (opt.layers.length) {
+      if (opt.layers.length || Object.keys(opt.variantLayers).length) {
         optionCache.set(entry.id, opt);
         indexEntries.push(entry);
       }
@@ -771,8 +771,8 @@ async function loadPortraitCosmetics(configBase) {
     if (!entry.id.startsWith('appearance::')) {
       const allOptLayers = [...opt.layers, ...Object.values(opt.variantLayers || {}).flat()];
       const lowerLayers = allOptLayers.map(l => (l.url || '').toLowerCase());
-      if (lowerLayers.some(u => u.includes('/torso/portrait/') || u.includes('/overwear/portrait/'))) torsoPortraitOptions.push(opt);
-      if (lowerLayers.some(u => u.includes('/arms/portrait/'))) armPortraitOptions.push(opt);
+      if (lowerLayers.some(u => u.includes('/torso/portrait/'))) torsoPortraitOptions.push(opt);
+      if (lowerLayers.some(u => u.includes('/arms/portrait/') || u.includes('/overwear/portrait/'))) armPortraitOptions.push(opt);
     }
   }
 
