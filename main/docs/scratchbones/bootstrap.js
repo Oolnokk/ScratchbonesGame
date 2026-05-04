@@ -4367,9 +4367,9 @@ import { createLayerManager } from './ui/layerManager.js';
                 ${focusReactor ? `<canvas class="seatPortrait" data-seat-id="${focusReactor.id}" width="220" height="220"></canvas>` : ''}
               </div>
               ${focusReactor ? `<div class="claimAvatarNameTag">${escapeHtml(seatFirstName(focusReactor))}</div>` : ''}
-              ${(challengeIntro && focusReactor) ? `<div class="fx-burst-shell"><div class="cin-action-burst burst-liar">${escapeHtml(challengeIntro.burstText || 'LIAR!!!')}</div></div>` : ''}
               <div class="claimAvatarLocalOverlay" aria-hidden="true"></div>
             </div>
+            ${(challengeIntro && focusReactor) ? `<div class="fx-burst-shell" style="z-index:15;"><div class="cin-action-burst burst-liar">${escapeHtml(challengeIntro.burstText || 'LIAR!!!')}</div></div>` : ''}
             <div class="claimClusterTextAnchor ${claimClusterShellClass}" data-proj-id="claim-cinematic-text" style="${claimClusterElementStyle(claimClusterPolicy.elements.cinematicPane)}"></div>
             <div class="claimClusterBettingLayer" data-proj-id="claim-cluster-betting-layer">
               <div class="bettingStatusAnchor" data-stake-betting-status-anchor data-proj-id="betting-status-anchor"></div>
