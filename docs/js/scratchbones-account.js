@@ -331,7 +331,13 @@
 
   function unequipCosmetic(cosmeticId) {
     const acc = getAccount();
-    acc.equippedCosmetics = acc.equippedCosmetics.filter(id => id !== cosmeticId);
+    const target = findShopItem(cosmeticId);
+    if (!target) return false;
+    const targetKey = cosmeticEntitlementKey(target);
+    acc.equippedCosmetics = acc.equippedCosmetics.filter(id => {
+      const entry = findShopItem(id);
+      return !entry || cosmeticEntitlementKey(entry) !== targetKey;
+    });
     save();
     return true;
   }
