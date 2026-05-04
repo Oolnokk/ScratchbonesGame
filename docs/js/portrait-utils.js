@@ -10,6 +10,33 @@
 
 // ── Constants / Config ─────────────────────────────────────
 
+// ── Xform Presets ──────────────────────────────────────────
+// A: heads, ur-heads, eye cosmetics
+// B: body layers and all other cosmetics
+// C/D: placeholder presets (identity)
+const _XFORM_PRESET_DEFAULTS = {
+  A: { ax: -0.2,    ay: 0,       sx: 2.55, sy: 2.55 },
+  B: { ax: -0.0983, ay: -0.0809, sx: 2.49, sy: 2.49 },
+  C: { ax: 0,       ay: 0,       sx: 1,    sy: 1    },
+  D: { ax: 0,       ay: 0,       sx: 1,    sy: 1    },
+};
+
+/**
+ * Returns the current normalized xform for a named preset (A/B/C/D).
+ * Values are read live from SCRATCHBONES_CONFIG so the lobby panel can
+ * update them and have all sprites re-render with the new values.
+ */
+function getPortraitXformPreset(name) {
+  const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.xformPresets;
+  const preset = (cfg && cfg[name]) || _XFORM_PRESET_DEFAULTS[name] || _XFORM_PRESET_DEFAULTS.C;
+  return {
+    ax: preset.ax ?? 0,
+    ay: preset.ay ?? 0,
+    sx: preset.scaleX ?? preset.sx ?? 1,
+    sy: preset.scaleY ?? preset.sy ?? 1,
+  };
+}
+
 const _PORTRAIT_DEFAULTS = {
   canvas: { width: 200, height: 200, layerSize: 80 },
   headXform: { ax: 0, ay: -0.1, sx: 0.95, sy: 1.14 },
@@ -285,10 +312,13 @@ function getProfileSpriteXforms(profile) {
   const headUrl = resolvedFighter?.headUrl || fighter?.headUrl;
   const bodyLayerSource = resolvedFighter?.bodyLayers || fighter?.bodyLayers || [];
   const urLayerSource = resolvedFighter?.urLayers || fighter?.urLayers || [];
+  const resolveLayerXform = (layer) => layer?.xformPreset
+    ? getPortraitXformPreset(layer.xformPreset)
+    : composeXform(headXform, layer || {});
   const toRecord = (part, layer, extra = {}) => ({
     part,
     url: layer?.url || null,
-    xform: composeXform(headXform, layer || {}),
+    xform: resolveLayerXform(layer),
     ...extra,
   });
   const records = [];
@@ -311,9 +341,9 @@ function getProfileSpriteXforms(profile) {
       records.push(toRecord('cosmetic', layer, { group: group.id || null, pos: layer.pos || 'front' }));
     }
   }
-  if (headUrl) records.push({ part: 'head', url: headUrl, xform: { ...headXform } });
+  if (headUrl) records.push({ part: 'head', url: headUrl, xform: { ...getPortraitXformPreset('A') } });
   for (const layer of urLayerSource) {
-    records.push({ part: 'headOverlay', url: layer.url || null, renderOrder: layer.renderOrder || 'normal', xform: { ...(layer.xform || headXform) } });
+    records.push({ part: 'headOverlay', url: layer.url || null, renderOrder: layer.renderOrder || 'normal', xform: { ...getPortraitXformPreset('A') } });
   }
   if (opacityMaskLayer?.url) records.push(toRecord('opacityMask', opacityMaskLayer));
   return records;
@@ -432,53 +462,56 @@ async function renderProfile(canvas, profile) {
     }
   }
   const isBlinkFrame = shouldRenderBlink(headUrl, nowMs);
+  const resolveXform = (layer) => layer.xformPreset
+    ? getPortraitXformPreset(layer.xformPreset)
+    : composeXform(headXform, layer);
 
   for (const { layer, filter } of baseLeftArmLayers) {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const { layer, filter } of baseTorsoLayers) {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const { layer, filter } of baseRightArmLayers) {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const { layer, filter } of torsoClothingLayers)
   {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const { layer, filter } of overwearLayers)
   {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const { layer, filter } of backLayers) {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
-  { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, headXform, filterA); }
+  { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('A'), filterA); }
   for (const mid of urLayerSource) {
     if (mid.renderOrder === 'topLayer') continue;
     const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
     const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
-    if (img) drawPortraitLayer(ctx, img, headXform, 'none');
+    if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('A'), 'none');
   }
   for (const { layer, filter } of frontLayers) {
     const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
   for (const mid of urLayerSource) {
     if (mid.renderOrder !== 'topLayer') continue;
     const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
     const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
-    if (img) drawPortraitLayer(ctx, img, headXform, 'none');
+    if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('A'), 'none');
   }
   if (opacityMaskLayer?.url) {
     const maskImg = imgMap.get(opacityMaskLayer.url);
-    if (maskImg) applyPortraitOpacityMask(ctx, maskImg, composeXform(headXform, opacityMaskLayer));
+    if (maskImg) applyPortraitOpacityMask(ctx, maskImg, resolveXform(opacityMaskLayer));
   }
 }
 
@@ -671,6 +704,10 @@ async function loadPortraitCosmetics(configBase) {
               : opt.hairSlot === 'side'   ? 'hairSide'
               : opt.hairSlot === 'side-L' ? 'hairSideL'
               : portraitCategoryForEntry(entry);
+    // Tag each layer with its xform preset: eyes → A, everything else → B
+    const layerPreset = (cat === 'eyes') ? 'A' : 'B';
+    opt.xformPreset = layerPreset;
+    for (const l of opt.layers) l.xformPreset = layerPreset;
     if      (cat === 'hat')        hatOptions.push(opt);
     else if (cat === 'hood')       hoodOptions.push(opt);
     else if (cat === 'hairFront')  hairFrontOptions.push(opt);
@@ -715,7 +752,7 @@ async function loadPortraitCosmetics(configBase) {
               gender: genderKey,
               label: `${sData.label || entry.label} (${genderKey === 'male' ? 'M' : 'F'})`,
               headUrl: genderData.headSprite,
-              bodyLayers: genderData.portraitBodyLayers.map(normalizePortraitLayerXform),
+              bodyLayers: genderData.portraitBodyLayers.map(l => ({ ...normalizePortraitLayerXform(l), xformPreset: 'B' })),
               urLayers: (genderData.headUrLayers || []).map(l => ({ url: l.url, renderOrder: l.renderOrder })),
               headXform: genderData.headXform ? normalizePortraitLayerXform(genderData.headXform) : null,
               opacityMaskLayer: genderData.portraitOpacityMaskLayer ? normalizePortraitMaskLayer(genderData.portraitOpacityMaskLayer) : null,
@@ -728,7 +765,7 @@ async function loadPortraitCosmetics(configBase) {
               ...(fighterPortraitOverrides[fighter.id] || {}),
               ...(genderData.headXform ? { headXform: genderData.headXform } : {}),
               ...(Array.isArray(genderData.portraitBodyLayers) ? {
-                bodyLayers: genderData.portraitBodyLayers.map(normalizePortraitLayerXform)
+                bodyLayers: genderData.portraitBodyLayers.map(l => ({ ...normalizePortraitLayerXform(l), xformPreset: 'B' }))
               } : {}),
               ...(genderData.portraitOpacityMaskLayer ? {
                 opacityMaskLayer: normalizePortraitMaskLayer(genderData.portraitOpacityMaskLayer)
@@ -1131,3 +1168,4 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
 
 window.setPortraitConfig = setPortraitConfig;
 window.getPortraitFighters = () => FIGHTERS;
+window.getPortraitXformPreset = getPortraitXformPreset;

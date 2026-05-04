@@ -1281,11 +1281,23 @@
     render();
     const el = overlay();
     if (el) el.style.display = 'flex';
+    // In lobby: swap Map button for Cosmetic Vars button
+    const mapBtn = document.getElementById('projMapBtn');
+    const cvBtn  = document.getElementById('cosmeticVarsBtn');
+    if (mapBtn) mapBtn.style.display = 'none';
+    if (cvBtn)  cvBtn.style.display = '';
   }
 
   function hide() {
     const el = overlay();
     if (el) el.style.display = 'none';
+    // Restore Map button, hide Cosmetic Vars button and its panel
+    const mapBtn  = document.getElementById('projMapBtn');
+    const cvBtn   = document.getElementById('cosmeticVarsBtn');
+    const cvPanel = document.getElementById('cosmeticVarsPanel');
+    if (mapBtn)  mapBtn.style.display = '';
+    if (cvBtn)   { cvBtn.style.display = 'none'; cvBtn.classList.remove('active'); }
+    if (cvPanel) cvPanel.classList.remove('open');
   }
 
   function onGameEnd(chipCount) {
@@ -1393,10 +1405,73 @@
     }
   }
 
+  // ── Cosmetic Vars Panel ───────────────────────────────────
+
+  function _syncCosmeticVarsInputs() {
+    const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.xformPresets || {};
+    const defaults = { A: { ax:-0.2, ay:0, scaleX:2.55, scaleY:2.55, rotDeg:0 },
+                       B: { ax:-0.0983, ay:-0.0809, scaleX:2.49, scaleY:2.49, rotDeg:0 },
+                       C: { ax:0, ay:0, scaleX:1, scaleY:1, rotDeg:0 },
+                       D: { ax:0, ay:0, scaleX:1, scaleY:1, rotDeg:0 } };
+    for (const name of ['A', 'B', 'C', 'D']) {
+      const p = cfg[name] || defaults[name];
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? 0; };
+      set(`cvp-${name}-ax`,     p.ax     ?? 0);
+      set(`cvp-${name}-ay`,     p.ay     ?? 0);
+      set(`cvp-${name}-scaleX`, p.scaleX ?? p.sx ?? 1);
+      set(`cvp-${name}-scaleY`, p.scaleY ?? p.sy ?? 1);
+      set(`cvp-${name}-rotDeg`, p.rotDeg ?? 0);
+    }
+  }
+
+  function _applyCosmeticVarsPresets() {
+    if (!window.SCRATCHBONES_CONFIG) window.SCRATCHBONES_CONFIG = {};
+    if (!window.SCRATCHBONES_CONFIG.game) window.SCRATCHBONES_CONFIG.game = {};
+    if (!window.SCRATCHBONES_CONFIG.game.portrait) window.SCRATCHBONES_CONFIG.game.portrait = {};
+    const presets = {};
+    for (const name of ['A', 'B', 'C', 'D']) {
+      const get = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+      presets[name] = {
+        ax:     get(`cvp-${name}-ax`),
+        ay:     get(`cvp-${name}-ay`),
+        scaleX: get(`cvp-${name}-scaleX`) || 1,
+        scaleY: get(`cvp-${name}-scaleY`) || 1,
+        rotDeg: get(`cvp-${name}-rotDeg`),
+      };
+    }
+    window.SCRATCHBONES_CONFIG.game.portrait.xformPresets = presets;
+    // Re-render all visible portrait canvases
+    const acc = window.ScratchbonesAccount;
+    const ap = _editAppearance || (acc ? acc.getAppearance() : null);
+    for (const id of ['sb-ap-canvas', 'sb-col-canvas', 'sb-shop-canvas']) {
+      const canvas = document.getElementById(id);
+      if (canvas && ap && window.renderProfile) renderPreviewCanvas(id, ap);
+    }
+  }
+
+  function _initCosmeticVarsPanel() {
+    const btn   = document.getElementById('cosmeticVarsBtn');
+    const panel = document.getElementById('cosmeticVarsPanel');
+    const closeBtn = document.getElementById('cosmeticVarsCloseBtn');
+    const applyBtn = document.getElementById('cosmeticVarsApplyBtn');
+    if (!btn || !panel) return;
+    btn.addEventListener('click', () => {
+      const open = panel.classList.toggle('open');
+      btn.classList.toggle('active', open);
+      if (open) _syncCosmeticVarsInputs();
+    });
+    closeBtn?.addEventListener('click', () => {
+      panel.classList.remove('open');
+      btn.classList.remove('active');
+    });
+    applyBtn?.addEventListener('click', _applyCosmeticVarsPresets);
+  }
+
   function init() {
     window.ScratchbonesAccount?.load();
     // Pre-load portrait cosmetics for preview
     ensurePortraitCosmetics();
+    _initCosmeticVarsPanel();
 
     if (window.scratchbonesStartGame) {
       _scratchbonesReady = true;
