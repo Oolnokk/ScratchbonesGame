@@ -1980,9 +1980,9 @@
       background: rgba(200,153,82,0.09) !important;
     }
     /* Freeze game interaction while mapping */
-    body.proj-mapping button:not(#projMapBtn):not(#projVarBtn):not(#projExportBtn):not(#projSubBtn):not(#projLayerPreviewBtn):not(#projVarCopyBtn):not(#projVarCloseBtn),
+    body.proj-mapping button:not(#projMapBtn):not(#projVarBtn):not(#projExportBtn):not(#projSubBtn):not(#projLayerPreviewBtn):not(#projVarCopyBtn):not(#projVarCloseBtn):not(#cosmeticVarsBtn):not(#cosmeticVarsCloseBtn):not(#cosmeticVarsApplyBtn),
     body.proj-mapping select,
-    body.proj-mapping input:not(.projVarInput),
+    body.proj-mapping input:not(.projVarInput):not(.cvpField input),
     body.proj-mapping .card {
       pointer-events: none !important;
     }
@@ -2288,14 +2288,107 @@
     :fullscreen #projExportBtn,
     :fullscreen #projMapTip,
     :fullscreen #editorStatus,
+    :fullscreen #cosmeticVarsBtn,
+    :fullscreen #cosmeticVarsPanel,
     :-webkit-full-screen #projMapBtn,
     :-webkit-full-screen #projVarBtn,
     :-webkit-full-screen #projSubBtn,
     :-webkit-full-screen #projExportBtn,
     :-webkit-full-screen #projMapTip,
-    :-webkit-full-screen #editorStatus {
+    :-webkit-full-screen #editorStatus,
+    :-webkit-full-screen #cosmeticVarsBtn,
+    :-webkit-full-screen #cosmeticVarsPanel {
       display: none !important;
     }
+    /* ── Cosmetic Xform Vars button & panel ─────────────────── */
+    #cosmeticVarsBtn {
+      position: fixed;
+      bottom: calc(10px + var(--safe)); right: 116px;
+      z-index: 1000;
+      background: rgba(30,20,18,0.92);
+      border: 1px solid rgba(200,150,80,0.4);
+      color: #c89952; font-size: 0.72rem;
+      padding: 6px 11px; border-radius: 8px;
+      cursor: pointer; letter-spacing: 0.05em;
+      display: none;
+    }
+    #cosmeticVarsBtn:hover { background: rgba(67,49,43,0.97); }
+    #cosmeticVarsBtn.active { background: #c89952; color: #15110f; }
+    #cosmeticVarsBtn.active:hover { background: #e0ad60; }
+    #cosmeticVarsPanel {
+      position: fixed;
+      bottom: calc(50px + var(--safe));
+      right: 10px;
+      width: min(480px, calc(100vw - 20px));
+      max-height: min(80vh, 760px);
+      background: rgba(14,10,9,0.97);
+      border: 1px solid rgba(200,150,80,0.4);
+      border-radius: 10px;
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+    #cosmeticVarsPanel.open { display: flex; }
+    .cvpHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(200,150,80,0.15);
+      background: rgba(30,20,18,0.92);
+      flex-shrink: 0;
+    }
+    .cvpTitle { font-size: 0.75rem; letter-spacing: 0.06em; color: #f2d08f; }
+    .cvpCloseBtn {
+      font-size: 0.68rem; padding: 3px 8px;
+      background: rgba(67,49,43,0.9);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text); border-radius: 5px; cursor: pointer;
+    }
+    .cvpCloseBtn:hover { background: rgba(90,66,55,0.95); }
+    .cvpBody {
+      overflow-y: auto;
+      padding: 8px 10px 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.70rem;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .cvpPreset { border: 1px solid rgba(200,150,80,0.2); border-radius: 7px; padding: 8px; }
+    .cvpPresetLabel {
+      font-size: 0.72rem; color: #f2d08f; margin-bottom: 6px; letter-spacing: 0.04em;
+    }
+    .cvpPresetLabel em { color: #c8bfaf; font-style: normal; }
+    .cvpFields {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+    }
+    .cvpField { display: flex; flex-direction: column; gap: 2px; }
+    .cvpField label { color: #cdbb9f; font-size: 0.64rem; }
+    .cvpField input {
+      width: 100%; min-width: 0;
+      background: rgba(26,18,15,0.95);
+      border: 1px solid rgba(200,150,80,0.35);
+      border-radius: 5px;
+      color: #f4e8d0;
+      padding: 3px 5px;
+      font-size: 0.66rem;
+      font-family: inherit;
+    }
+    .cvpApplyBtn {
+      align-self: flex-end;
+      margin-top: 4px;
+      font-size: 0.72rem; padding: 5px 14px;
+      background: #c89952; color: #15110f;
+      border: none; border-radius: 6px; cursor: pointer;
+      letter-spacing: 0.06em;
+    }
+    .cvpApplyBtn:hover { background: #e0ad60; }
   </style>
 </head>
 <body>
@@ -2325,6 +2418,57 @@
     </div>
     <div id="projVarPanelBody">
       <div class="projVarHint">Select an outlined element in map mode, then open Vars.</div>
+    </div>
+  </div>
+  <!-- Cosmetic Xform Vars button & panel (shown in lobby instead of Map button) -->
+  <button id="cosmeticVarsBtn" title="Edit portrait xform presets">Cosmetic Vars</button>
+  <div id="cosmeticVarsPanel" aria-live="polite">
+    <div class="cvpHead">
+      <span class="cvpTitle">Portrait Xform Presets</span>
+      <button class="cvpCloseBtn" id="cosmeticVarsCloseBtn">Close</button>
+    </div>
+    <div class="cvpBody" id="cosmeticVarsBody">
+      <div class="cvpPreset" data-preset="A">
+        <div class="cvpPresetLabel">Preset A &mdash; <em>heads, ur-heads, eyes</em></div>
+        <div class="cvpFields">
+          <div class="cvpField"><label>ax</label><input id="cvp-A-ax" type="number" step="0.001" value="-0.2"></div>
+          <div class="cvpField"><label>ay</label><input id="cvp-A-ay" type="number" step="0.001" value="0"></div>
+          <div class="cvpField"><label>scaleX</label><input id="cvp-A-scaleX" type="number" step="0.01" value="2.55"></div>
+          <div class="cvpField"><label>scaleY</label><input id="cvp-A-scaleY" type="number" step="0.01" value="2.55"></div>
+          <div class="cvpField"><label>rotDeg</label><input id="cvp-A-rotDeg" type="number" step="0.1" value="0"></div>
+        </div>
+      </div>
+      <div class="cvpPreset" data-preset="B">
+        <div class="cvpPresetLabel">Preset B &mdash; <em>body layers, cosmetics</em></div>
+        <div class="cvpFields">
+          <div class="cvpField"><label>ax</label><input id="cvp-B-ax" type="number" step="0.001" value="-0.0983"></div>
+          <div class="cvpField"><label>ay</label><input id="cvp-B-ay" type="number" step="0.001" value="-0.0809"></div>
+          <div class="cvpField"><label>scaleX</label><input id="cvp-B-scaleX" type="number" step="0.01" value="2.49"></div>
+          <div class="cvpField"><label>scaleY</label><input id="cvp-B-scaleY" type="number" step="0.01" value="2.49"></div>
+          <div class="cvpField"><label>rotDeg</label><input id="cvp-B-rotDeg" type="number" step="0.1" value="0"></div>
+        </div>
+      </div>
+      <div class="cvpPreset" data-preset="C">
+        <div class="cvpPresetLabel">Preset C &mdash; <em>reserved</em></div>
+        <div class="cvpFields">
+          <div class="cvpField"><label>ax</label><input id="cvp-C-ax" type="number" step="0.001" value="0"></div>
+          <div class="cvpField"><label>ay</label><input id="cvp-C-ay" type="number" step="0.001" value="0"></div>
+          <div class="cvpField"><label>scaleX</label><input id="cvp-C-scaleX" type="number" step="0.01" value="1"></div>
+          <div class="cvpField"><label>scaleY</label><input id="cvp-C-scaleY" type="number" step="0.01" value="1"></div>
+          <div class="cvpField"><label>rotDeg</label><input id="cvp-C-rotDeg" type="number" step="0.1" value="0"></div>
+        </div>
+      </div>
+      <div class="cvpPreset" data-preset="D">
+        <div class="cvpPresetLabel">Preset D &mdash; <em>reserved</em></div>
+        <div class="cvpFields">
+          <div class="cvpField"><label>ax</label><input id="cvp-D-ax" type="number" step="0.001" value="0"></div>
+          <div class="cvpField"><label>ay</label><input id="cvp-D-ay" type="number" step="0.001" value="0"></div>
+          <div class="cvpField"><label>scaleX</label><input id="cvp-D-scaleX" type="number" step="0.01" value="1"></div>
+          <div class="cvpField"><label>scaleY</label><input id="cvp-D-scaleY" type="number" step="0.01" value="1"></div>
+          <div class="cvpField"><label>rotDeg</label><input id="cvp-D-rotDeg" type="number" step="0.1" value="0"></div>
+        </div>
+      </div>
+      <button class="cvpApplyBtn" id="cosmeticVarsApplyBtn">Apply</button>
     </div>
   </div>
   <!-- Debug log panel -->
