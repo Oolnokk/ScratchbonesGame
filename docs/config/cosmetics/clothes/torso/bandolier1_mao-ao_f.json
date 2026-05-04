@@ -18,7 +18,8 @@
                   "ax": -0.2,
                   "ay": 0,
                   "scaleX": 2.55,
-                  "scaleY": 2.55
+                  "scaleY": 2.55,
+                  "rotDeg": 0
                 }
               }
             }

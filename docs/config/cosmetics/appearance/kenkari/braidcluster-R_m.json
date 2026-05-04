@@ -1,10 +1,14 @@
 {
-  "meta": { "name": "Braid Cluster (Right)" },
+  "meta": {
+    "name": "Braid Cluster (Right)"
+  },
   "type": "appearance",
   "hairSlot": "side",
   "appearance": {
     "inheritSprite": "head",
-    "bodyColors": ["A"],
+    "bodyColors": [
+      "A"
+    ],
     "originalId": "kenk_braidcluster-R_m"
   },
   "parts": {
@@ -18,10 +22,10 @@
             "base": {
               "xform": {
                 "head": {
-                  "ax": -0.0983,
-                  "ay": -0.0809,
-                  "scaleX": 2.49,
-                  "scaleY": 2.49,
+                  "ax": -0.2,
+                  "ay": 0,
+                  "scaleX": 2.55,
+                  "scaleY": 2.55,
                   "rotDeg": 0
                 }
               }

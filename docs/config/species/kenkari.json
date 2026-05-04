@@ -174,10 +174,10 @@
         "tintSlot": "A",
         "pos": "back",
         "xform": {
-          "ax": -0.0983,
-          "ay": -0.0809,
-          "scaleX": 2.49,
-          "scaleY": 2.49,
+          "ax": -0.2,
+          "ay": 0,
+          "scaleX": 2.55,
+          "scaleY": 2.55,
           "rotDeg": 0
         }
       },
@@ -187,10 +187,10 @@
         "tintSlot": "A",
         "pos": "back",
         "xform": {
-          "ax": -0.0983,
-          "ay": -0.0809,
-          "scaleX": 2.49,
-          "scaleY": 2.49,
+          "ax": -0.2,
+          "ay": 0,
+          "scaleX": 2.55,
+          "scaleY": 2.55,
           "rotDeg": 0
         }
       },
@@ -200,10 +200,10 @@
         "tintSlot": "A",
         "pos": "front",
         "xform": {
-          "ax": -0.0983,
-          "ay": -0.0809,
-          "scaleX": 2.49,
-          "scaleY": 2.49,
+          "ax": -0.2,
+          "ay": 0,
+          "scaleX": 2.55,
+          "scaleY": 2.55,
           "rotDeg": 0
         }
       }
@@ -212,10 +212,10 @@
       "id": "opacityMask",
       "url": "hud/spriteopacitymask_cloud.png",
       "xform": {
-        "ax": 0,
+        "ax": -0.2,
         "ay": 0,
         "scaleX": 2.55,
-        "scaleY": 2.4,
+        "scaleY": 2.55,
         "rotDeg": 0
       }
     },
@@ -454,10 +454,10 @@
         "tintSlot": "A",
         "pos": "back",
         "xform": {
-          "ax": -0.0983,
-          "ay": -0.0809,
-          "scaleX": 2.49,
-          "scaleY": 2.49,
+          "ax": -0.2,
+          "ay": 0,
+          "scaleX": 2.55,
+          "scaleY": 2.55,
           "rotDeg": 0
         }
       },
@@ -467,10 +467,10 @@
         "tintSlot": "A",
         "pos": "back",
         "xform": {
-          "ax": -0.0983,
-          "ay": -0.0809,
-          "scaleX": 2.49,
-          "scaleY": 2.49,
+          "ax": -0.2,
+          "ay": 0,
+          "scaleX": 2.55,
+          "scaleY": 2.55,
           "rotDeg": 0
         }
       },
@@ -480,10 +480,10 @@
         "tintSlot": "A",
         "pos": "front",
         "xform": {
-          "ax": -0.0983,
-          "ay": -0.0809,
-          "scaleX": 2.49,
-          "scaleY": 2.49,
+          "ax": -0.2,
+          "ay": 0,
+          "scaleX": 2.55,
+          "scaleY": 2.55,
           "rotDeg": 0
         }
       }
@@ -492,10 +492,10 @@
       "id": "opacityMask",
       "url": "hud/spriteopacitymask_cloud.png",
       "xform": {
-        "ax": 0,
+        "ax": -0.2,
         "ay": 0,
         "scaleX": 2.55,
-        "scaleY": 2.6,
+        "scaleY": 2.55,
         "rotDeg": 0
       }
     },

@@ -1,13 +1,27 @@
 {
   "slot": "hood",
-  "meta": { "name": "Anuri's Hood" },
+  "meta": {
+    "name": "Anuri's Hood"
+  },
   "hsl": {
-    "defaults": { "h": 150, "s": 0.6, "l": 0.28 }
+    "defaults": {
+      "h": 150,
+      "s": 0.6,
+      "l": 0.28
+    }
   },
   "palette": {
     "colors": {
-      "A": { "h": 150, "s": 0.6, "l": 0.28 },
-      "B": { "h": -90, "s": -0.12, "l": 0.35 }
+      "A": {
+        "h": 150,
+        "s": 0.6,
+        "l": 0.28
+      },
+      "B": {
+        "h": -90,
+        "s": -0.12,
+        "l": 0.35
+      }
     },
     "layers": {
       "layer0": "A",
@@ -21,7 +35,13 @@
       "spriteStyle": {
         "base": {
           "xform": {
-            "head": { "ax": -0.1, "ay": -0.1, "scaleX": 2.25, "scaleY": 3 }
+            "head": {
+              "ax": -0.2,
+              "ay": 0,
+              "scaleX": 2.55,
+              "scaleY": 2.55,
+              "rotDeg": 0
+            }
           }
         }
       },
@@ -30,21 +50,27 @@
           "layerRole": "layer0",
           "image": {
             "url": "./assets/cosmetics/clothes/hat/anuri_hood-front.png",
-            "colors": ["A"]
+            "colors": [
+              "A"
+            ]
           }
         },
         "front_exposed": {
           "layerRole": "layer1",
           "image": {
             "exposedPart": "ear",
-            "colors": ["A"]
+            "colors": [
+              "A"
+            ]
           }
         },
         "front_trim": {
           "layerRole": "overlay",
           "image": {
             "url": "./assets/cosmetics/clothes/hat/anuri_hood-front-trim.png",
-            "colors": ["overlay"]
+            "colors": [
+              "overlay"
+            ]
           }
         }
       }

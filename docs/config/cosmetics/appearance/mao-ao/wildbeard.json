@@ -1,9 +1,13 @@
 {
-  "meta": { "name": "Wildbeard" },
+  "meta": {
+    "name": "Wildbeard"
+  },
   "type": "appearance",
   "appearance": {
     "inheritSprite": "head",
-    "bodyColors": ["A"],
+    "bodyColors": [
+      "A"
+    ],
     "originalId": "mao-ao_wildbeard"
   },
   "parts": {
@@ -14,11 +18,11 @@
       "spriteStyle": {
         "xform": {
           "head": {
-            "ax": -0.15,
-  "ay": -0.09,
-  "scaleX": 2.3,
-  "scaleY": 2.5,
-  "rotDeg": 0
+            "ax": -0.2,
+            "ay": 0,
+            "scaleX": 2.55,
+            "scaleY": 2.55,
+            "rotDeg": 0
           }
         }
       }
