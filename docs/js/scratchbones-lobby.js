@@ -1406,13 +1406,50 @@
   }
 
   // ── Cosmetic Vars Panel ───────────────────────────────────
+  function _ensureCosmeticVarsDom() {
+    if (document.getElementById('cosmeticVarsBtn') && document.getElementById('cosmeticVarsPanel')) return;
+    const root = document.body || document.documentElement;
+    if (!root) return;
+    if (!document.getElementById('cosmeticVarsBtn')) {
+      const btn = document.createElement('button');
+      btn.id = 'cosmeticVarsBtn';
+      btn.title = 'Edit portrait xform presets';
+      btn.textContent = 'Cosmetic Vars';
+      btn.style.display = 'none';
+      root.appendChild(btn);
+    }
+    if (!document.getElementById('cosmeticVarsPanel')) {
+      const panel = document.createElement('div');
+      panel.id = 'cosmeticVarsPanel';
+      panel.setAttribute('aria-live', 'polite');
+      panel.innerHTML = `
+        <div class="cvpHead">
+          <span class="cvpTitle">Portrait Xform Presets</span>
+          <button class="cvpCloseBtn" id="cosmeticVarsCloseBtn">Close</button>
+        </div>
+        <div class="cvpBody" id="cosmeticVarsBody">
+          ${['A', 'B', 'C', 'D'].map((name) => `
+            <div class="cvpPreset" data-preset="${name}">
+              <div class="cvpPresetLabel">Preset ${name}</div>
+              <div class="cvpFields">
+                <div class="cvpField"><label>ax</label><input class="cvpFieldInput" id="cvp-${name}-ax" type="number" step="0.001" value="0"></div>
+                <div class="cvpField"><label>ay</label><input class="cvpFieldInput" id="cvp-${name}-ay" type="number" step="0.001" value="0"></div>
+                <div class="cvpField"><label>scaleX</label><input class="cvpFieldInput" id="cvp-${name}-scaleX" type="number" step="0.01" value="1"></div>
+                <div class="cvpField"><label>scaleY</label><input class="cvpFieldInput" id="cvp-${name}-scaleY" type="number" step="0.01" value="1"></div>
+                <div class="cvpField"><label>rotDeg</label><input class="cvpFieldInput" id="cvp-${name}-rotDeg" type="number" step="0.1" value="0"></div>
+              </div>
+            </div>`).join('')}
+        </div>
+        <div class="cvpActions">
+          <button class="cvpApplyBtn" id="cosmeticVarsApplyBtn">Apply Live</button>
+        </div>`;
+      root.appendChild(panel);
+    }
+  }
 
   function _syncCosmeticVarsInputs() {
     const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.xformPresets || {};
-    const defaults = { A: { ax:-0.2, ay:0, scaleX:2.55, scaleY:2.55, rotDeg:0 },
-                       B: { ax:-0.0983, ay:-0.0809, scaleX:2.49, scaleY:2.49, rotDeg:0 },
-                       C: { ax:0, ay:0, scaleX:1, scaleY:1, rotDeg:0 },
-                       D: { ax:0, ay:0, scaleX:1, scaleY:1, rotDeg:0 } };
+    const defaults = window.SCRATCHBONES_CONFIG?.game?.portrait?.xformPresets || {};
     for (const name of ['A', 'B', 'C', 'D']) {
       const p = cfg[name] || defaults[name];
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? 0; };
@@ -1450,6 +1487,7 @@
   }
 
   function _initCosmeticVarsPanel() {
+    _ensureCosmeticVarsDom();
     const btn   = document.getElementById('cosmeticVarsBtn');
     const panel = document.getElementById('cosmeticVarsPanel');
     const closeBtn = document.getElementById('cosmeticVarsCloseBtn');
