@@ -270,15 +270,6 @@ function makeCSSFilter(color) {
 
 // ── Canvas helpers ─────────────────────────────────────────
 
-function composeXform(base, child) {
-  return {
-    ax: (base.ax ?? 0) + (child.ax ?? 0),
-    ay: (base.ay ?? 0) + (child.ay ?? 0),
-    sx: (base.sx ?? 1) * (child.sx ?? 1),
-    sy: (base.sy ?? 1) * (child.sy ?? 1),
-  };
-}
-
 function drawPortraitLayer(ctx, img, xform, cssFilter) {
   const { ax, ay, sx, sy } = xform;
   const h  = PORTRAIT_L * sy;
@@ -307,14 +298,18 @@ function getProfileSpriteXforms(profile) {
   if (!profile) return [];
   const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, pauldron, hat, torsoCosmetic, armCosmetic } = profile;
   const resolvedFighter = resolvePortraitFighter(fighter) || fighter;
-  const headXform = resolvedFighter?.headXform || fighter?.headXform || HEAD_XFORM;
   const opacityMaskLayer = resolvedFighter?.opacityMaskLayer || fighter?.opacityMaskLayer || null;
   const headUrl = resolvedFighter?.headUrl || fighter?.headUrl;
   const bodyLayerSource = resolvedFighter?.bodyLayers || fighter?.bodyLayers || [];
   const urLayerSource = resolvedFighter?.urLayers || fighter?.urLayers || [];
   const resolveLayerXform = (layer) => layer?.xformPreset
     ? getPortraitXformPreset(layer.xformPreset)
-    : composeXform(headXform, layer || {});
+    : {
+      ax: layer?.ax ?? 0,
+      ay: layer?.ay ?? 0,
+      sx: layer?.sx ?? 1,
+      sy: layer?.sy ?? 1,
+    };
   const toRecord = (part, layer, extra = {}) => ({
     part,
     url: layer?.url || null,
@@ -341,9 +336,9 @@ function getProfileSpriteXforms(profile) {
       records.push(toRecord('cosmetic', layer, { group: group.id || null, hairSlot: group.hairSlot || null, pos: layer.pos || 'front' }));
     }
   }
-  if (headUrl) records.push({ part: 'head', url: headUrl, xform: composeXform(headXform, { ...getPortraitXformPreset('A') }) });
+  if (headUrl) records.push({ part: 'head', url: headUrl, xform: getPortraitXformPreset('B') });
   for (const layer of urLayerSource) {
-    records.push({ part: 'headOverlay', url: layer.url || null, renderOrder: layer.renderOrder || 'normal', xform: composeXform(headXform, { ...getPortraitXformPreset('A') }) });
+    records.push({ part: 'headOverlay', url: layer.url || null, renderOrder: layer.renderOrder || 'normal', xform: getPortraitXformPreset('B') });
   }
   if (opacityMaskLayer?.url) records.push(toRecord('opacityMask', opacityMaskLayer));
   return records;
@@ -354,7 +349,6 @@ function getProfileSpriteXforms(profile) {
 async function renderProfile(canvas, profile) {
   const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, pauldron, hat, torsoCosmetic, armCosmetic, bodyColors } = profile;
   const resolvedFighter = resolvePortraitFighter(fighter) || fighter;
-  const headXform = resolvedFighter?.headXform || fighter?.headXform || HEAD_XFORM;
   const opacityMaskLayer = resolvedFighter?.opacityMaskLayer || fighter?.opacityMaskLayer || null;
   const headUrl = resolvedFighter?.headUrl || fighter?.headUrl;
   const bodyLayerSource = resolvedFighter?.bodyLayers || fighter?.bodyLayers || [];
@@ -472,7 +466,12 @@ async function renderProfile(canvas, profile) {
   const isBlinkFrame = shouldRenderBlink(headUrl, nowMs);
   const resolveXform = (layer) => layer.xformPreset
     ? getPortraitXformPreset(layer.xformPreset)
-    : composeXform(headXform, layer);
+    : {
+      ax: layer?.ax ?? 0,
+      ay: layer?.ay ?? 0,
+      sx: layer?.sx ?? 1,
+      sy: layer?.sy ?? 1,
+    };
 
   for (const { layer, filter } of baseLeftArmLayers) {
     const img = imgMap.get(layer.url);
@@ -502,12 +501,12 @@ async function renderProfile(canvas, profile) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
-  { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, composeXform(headXform, getPortraitXformPreset('A')), filterA); }
+  { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), filterA); }
   for (const mid of urLayerSource) {
     if (mid.renderOrder === 'topLayer') continue;
     const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
     const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
-    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, getPortraitXformPreset('A')), 'none');
+    if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), 'none');
   }
   for (const { layer, filter } of frontLayers) {
     const img = imgMap.get(layer.url);
@@ -517,7 +516,7 @@ async function renderProfile(canvas, profile) {
     if (mid.renderOrder !== 'topLayer') continue;
     const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
     const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
-    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, getPortraitXformPreset('A')), 'none');
+    if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), 'none');
   }
   if (opacityMaskLayer?.url) {
     const maskImg = imgMap.get(opacityMaskLayer.url);
