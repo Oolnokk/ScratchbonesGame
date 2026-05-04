@@ -636,11 +636,29 @@
     const DYE_SWATCH_BASE = '#7dc89a'; // mint — matches the authored asset base color
 
     const ownedDyes = dyes.filter(d => acc && acc.isDyeOwned(d.id));
+    const appearance = acc ? acc.getAppearance() : { speciesId: 'mao-ao', gender: 'male' };
+    const entitlementKey = (item) => [item.category || '', item.label || '', item.material || ''].join('::');
 
     let slotsHtml = '';
     for (const slot of CLOTHING_SLOTS) {
-      const ownedItems = fullCatalog.filter(item => item.category === slot.category && acc && acc.isUnlocked(item.id));
       const equippedId = acc ? acc.getEquippedForCategory(slot.category) : null;
+      const ownedByCategory = fullCatalog.filter(item => item.category === slot.category && acc && acc.isUnlocked(item.id));
+      const ownedMap = new Map();
+      for (const item of ownedByCategory) {
+        const key = entitlementKey(item);
+        const prev = ownedMap.get(key);
+        if (!prev) {
+          ownedMap.set(key, item);
+          continue;
+        }
+        const score = (x) => (x.species === appearance.speciesId ? 2 : 0) + (x.gender === appearance.gender ? 1 : 0);
+        const prevIsEquipped = prev.id === equippedId;
+        const itemIsEquipped = item.id === equippedId;
+        if ((itemIsEquipped && !prevIsEquipped) || (itemIsEquipped === prevIsEquipped && score(item) > score(prev))) {
+          ownedMap.set(key, item);
+        }
+      }
+      const ownedItems = [...ownedMap.values()];
       const equippedItem = fullCatalog.find(c => c.id === equippedId);
       const equippedMaterial = equippedItem?.material || 'cloth';
       const opts = [
