@@ -1125,10 +1125,11 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
     }
   }
 
-  const filteredTorso = filterArr(torsoPortraitOptions) ?? [];
-  const filteredArm   = filterArr(armPortraitOptions)   ?? [];
-  const torsoCosmetic = weightedPickRng(filteredTorso.length ? filteredTorso : [{ id: 'none', label: 'No Torso Clothing', tintSlot: null, layers: [] }], null, rng);
-  const armCosmetic   = weightedPickRng(filteredArm.length   ? filteredArm   : [{ id: 'none', label: 'No Arm Clothing',   tintSlot: null, layers: [] }], null, rng);
+  const hasClothingVariant = (o) => o.id === 'none' || resolveOptionLayers(o, fighter).length > 0;
+  const filteredTorso = (torsoPortraitOptions ?? []).filter(hasClothingVariant);
+  const filteredArm   = (armPortraitOptions   ?? []).filter(hasClothingVariant);
+  const torsoCosmetic = weightedPickRng(filteredTorso.length ? filteredTorso : [{ id: 'none', label: 'No Torso Clothing', tintSlot: null, layers: [] }], weights?.torso, rng);
+  const armCosmetic   = weightedPickRng(filteredArm.length   ? filteredArm   : [{ id: 'none', label: 'No Arm Clothing',   tintSlot: null, layers: [] }], weights?.overwear, rng);
 
   // Apply forced cosmetics — species-level slots that always override random selection.
   const forced = forcedCosmeticsByFighter?.[fighter.id] ?? forcedCosmeticsByFighter?.[fighterInput?.id];
