@@ -23,7 +23,7 @@
           "spriteStyle": {
             "base": {
               "xform": {
-                "head": { "ax": -0.1, "ay": -0.1, "scaleX": 2, "scaleY": 2, "rotDeg": 0 }
+                "head": { "ax": -0.0983, "ay": -0.0809, "scaleX": 2.49, "scaleY": 2.49, "rotDeg": 0 }
               }
             }
           }
@@ -37,7 +37,7 @@
           "spriteStyle": {
             "base": {
               "xform": {
-                "head": { "ax": -0.1, "ay": -0.1, "scaleX": 2, "scaleY": 2, "rotDeg": 0 }
+                "head": { "ax": -0.0983, "ay": -0.0809, "scaleX": 2.49, "scaleY": 2.49, "rotDeg": 0 }
               }
             }
           }
