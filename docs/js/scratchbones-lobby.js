@@ -667,12 +667,13 @@
           `<option value="${esc(item.id)}"${item.id === equippedId ? ' selected' : ''}>${esc(item.label)}</option>`
         ),
       ].join('');
+      const slotEmpty = !ownedItems.length && !equippedId;
       const isDyeOpen = _activeDyeSlot === slot.key;
       slotsHtml += `
         <div class="sb-slot-row">
           <span class="sb-slot-label">${esc(slot.label)}</span>
-          <select class="sb-cosmetic-select sb-slot-select" data-slot-cat="${slot.category}"${!ownedItems.length && !equippedId ? ' disabled' : ''}>${opts}</select>
-          <button class="sb-btn-ghost sb-dye-toggle${isDyeOpen ? ' active' : ''}" data-toggle-dye="${slot.key}">Dye ▾</button>
+          <select class="sb-cosmetic-select sb-slot-select" data-slot-cat="${slot.category}"${slotEmpty ? ' disabled' : ''}>${opts}</select>
+          <button class="sb-btn-ghost sb-dye-toggle${isDyeOpen ? ' active' : ''}" data-toggle-dye="${slot.key}"${slotEmpty ? ' disabled' : ''}>Dye ▾</button>
         </div>`;
       if (isDyeOpen) {
         const [keyA, keyB, keyC] = slot.tintKeys;
@@ -930,9 +931,17 @@
   function openAppearanceEditor() {
     const acc = window.ScratchbonesAccount;
     const saved = acc ? acc.getAppearance() : null;
+    const speciesId = saved?.speciesId || 'mao-ao';
+    const specData = SPECIES_DATA[speciesId];
+    let gender = saved?.gender || 'male';
+    // Guard: if saved gender is unavailable for this species (e.g. after a data migration),
+    // fall back to the first valid gender so the UI is never left in a disabled+selected state.
+    if (specData && !specData.genders.includes(gender)) {
+      gender = specData.genders[0];
+    }
     _editAppearance = {
-      speciesId: saved?.speciesId || 'mao-ao',
-      gender:    saved?.gender    || 'male',
+      speciesId,
+      gender,
       cosmetics: { ...(saved?.cosmetics || {}) },
       bodyColors: {
         A: { ...(saved?.bodyColors?.A || { h:0, s:-0.70, v:-0.30 }) },
@@ -1107,7 +1116,7 @@
         } else {
           acc.equipCosmetic(id);
         }
-        renderPreviewCanvas('sb-col-canvas', acc.getAppearance());
+        render();
       });
     });
 
@@ -1335,7 +1344,7 @@
     hide();
     const acc = window.ScratchbonesAccount;
     const username = acc?.getUsername() || 'Player';
-    const ap = getLocalAppearance();
+    const ap = getFullAppearance();
     window.SCRATCHBONES_SESSION = {
       mode: 'online-client',
       humanSeats: [_myOnlineSeat],
