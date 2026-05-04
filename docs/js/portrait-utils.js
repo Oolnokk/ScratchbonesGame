@@ -338,12 +338,12 @@ function getProfileSpriteXforms(profile) {
   for (const group of allCosmeticGroups) {
     if (!group?.layers?.length) continue;
     for (const layer of group.layers) {
-      records.push(toRecord('cosmetic', layer, { group: group.id || null, pos: layer.pos || 'front' }));
+      records.push(toRecord('cosmetic', layer, { group: group.id || null, hairSlot: group.hairSlot || null, pos: layer.pos || 'front' }));
     }
   }
-  if (headUrl) records.push({ part: 'head', url: headUrl, xform: { ...getPortraitXformPreset('A') } });
+  if (headUrl) records.push({ part: 'head', url: headUrl, xform: composeXform(headXform, { ...getPortraitXformPreset('A') }) });
   for (const layer of urLayerSource) {
-    records.push({ part: 'headOverlay', url: layer.url || null, renderOrder: layer.renderOrder || 'normal', xform: { ...getPortraitXformPreset('A') } });
+    records.push({ part: 'headOverlay', url: layer.url || null, renderOrder: layer.renderOrder || 'normal', xform: composeXform(headXform, { ...getPortraitXformPreset('A') }) });
   }
   if (opacityMaskLayer?.url) records.push(toRecord('opacityMask', opacityMaskLayer));
   return records;
@@ -401,6 +401,14 @@ async function renderProfile(canvas, profile) {
   const backLayers  = [];
   const frontLayers = [];
 
+  const backLayerPriority = (entry) => {
+    const groupId = String(entry?.group?.id || '').toLowerCase();
+    const hairSlot = String(entry?.group?.hairSlot || '').toLowerCase();
+    if (hairSlot === 'back') return 0;
+    if (groupId.includes('kasa')) return 1;
+    return 2;
+  };
+
   const hoodHideFrontAndSideHair = Boolean(hood?.layers?.length);
   const hiddenCosmeticGroups = hoodHideFrontAndSideHair ? new Set([hairFront, hairSide, hairSideL]) : null;
 
@@ -412,7 +420,7 @@ async function renderProfile(canvas, profile) {
       const key = layer.paletteColorKey;
       const layerTintSlot = (!key || key === 'A') ? group.tintSlot
         : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
-      target.push({ layer, filter: filterFor(layerTintSlot) });
+      target.push({ layer, filter: filterFor(layerTintSlot), group });
     }
   }
 
@@ -488,16 +496,18 @@ async function renderProfile(canvas, profile) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
+  backLayers.sort((a, b) => backLayerPriority(a) - backLayerPriority(b));
+
   for (const { layer, filter } of backLayers) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
   }
-  { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('A'), filterA); }
+  { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, composeXform(headXform, getPortraitXformPreset('A')), filterA); }
   for (const mid of urLayerSource) {
     if (mid.renderOrder === 'topLayer') continue;
     const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
     const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
-    if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('A'), 'none');
+    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, getPortraitXformPreset('A')), 'none');
   }
   for (const { layer, filter } of frontLayers) {
     const img = imgMap.get(layer.url);
@@ -507,7 +517,7 @@ async function renderProfile(canvas, profile) {
     if (mid.renderOrder !== 'topLayer') continue;
     const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
     const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
-    if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('A'), 'none');
+    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, getPortraitXformPreset('A')), 'none');
   }
   if (opacityMaskLayer?.url) {
     const maskImg = imgMap.get(opacityMaskLayer.url);
