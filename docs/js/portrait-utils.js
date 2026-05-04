@@ -11,7 +11,7 @@
 // ── Constants / Config ─────────────────────────────────────
 
 // ── Xform Presets ──────────────────────────────────────────
-// A: heads, ur-heads, eye cosmetics
+// A: heads and ur-head overlays
 // B: body layers and all other cosmetics
 // C/D: placeholder presets (identity)
 const _XFORM_PRESET_DEFAULTS = {
@@ -704,8 +704,8 @@ async function loadPortraitCosmetics(configBase) {
               : opt.hairSlot === 'side'   ? 'hairSide'
               : opt.hairSlot === 'side-L' ? 'hairSideL'
               : portraitCategoryForEntry(entry);
-    // Tag each layer with its xform preset: eyes → A, everything else → B
-    const layerPreset = (cat === 'eyes') ? 'A' : 'B';
+    // Tag each cosmetic layer with the clothing xform preset (B)
+    const layerPreset = 'B';
     opt.xformPreset = layerPreset;
     for (const l of opt.layers) l.xformPreset = layerPreset;
     if      (cat === 'hat')        hatOptions.push(opt);
