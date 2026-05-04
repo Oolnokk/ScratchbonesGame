@@ -319,8 +319,10 @@ function getProfileSpriteXforms(profile) {
   const records = [];
   for (const layer of bodyLayerSource) records.push(toRecord('body', layer, { pos: layer.pos || 'back', id: layer.id || null }));
   for (const group of [torsoCosmetic, armCosmetic]) {
-    if (!group?.layers?.length) continue;
-    for (const layer of group.layers) {
+    if (!group) continue;
+    const groupLayers = resolveOptionLayers(group, resolvedFighter);
+    if (!groupLayers.length) continue;
+    for (const layer of groupLayers) {
       records.push(toRecord('bodyCosmetic', layer, { group: group.id || null, pos: layer.pos || 'front' }));
     }
   }
@@ -331,8 +333,10 @@ function getProfileSpriteXforms(profile) {
         : [hairBack, hairSideL, hairFront, facialHair, eyes, hairSide, hood, pauldron, hat])
     : [hair, eyes, facialHair, hat];
   for (const group of allCosmeticGroups) {
-    if (!group?.layers?.length) continue;
-    for (const layer of group.layers) {
+    if (!group) continue;
+    const groupLayers = resolveOptionLayers(group, resolvedFighter);
+    if (!groupLayers.length) continue;
+    for (const layer of groupLayers) {
       records.push(toRecord('cosmetic', layer, { group: group.id || null, hairSlot: group.hairSlot || null, pos: layer.pos || 'front' }));
     }
   }
@@ -378,8 +382,10 @@ async function renderProfile(canvas, profile) {
     target.push({ layer, filter: filterFor(layer.tintSlot || 'A') });
   }
   for (const group of [torsoCosmetic, armCosmetic]) {
-    if (!group || !group.layers || !group.layers.length) continue;
-    for (const layer of group.layers) {
+    if (!group) continue;
+    const groupLayers = resolveOptionLayers(group, resolvedFighter);
+    if (!groupLayers.length) continue;
+    for (const layer of groupLayers) {
       const target = group?.slot === 'torso' ? torsoClothingLayers : overwearLayers;
       target.push({ layer, filter: filterFor(group.tintSlot || 'A') });
     }
@@ -403,13 +409,15 @@ async function renderProfile(canvas, profile) {
     return 2;
   };
 
-  const hoodHideFrontAndSideHair = Boolean(hood?.layers?.length);
+  const hoodHideFrontAndSideHair = Boolean(resolveOptionLayers(hood, resolvedFighter).length);
   const hiddenCosmeticGroups = hoodHideFrontAndSideHair ? new Set([hairFront, hairSide, hairSideL]) : null;
 
   for (const group of allCosmeticGroups) {
-    if (!group || !group.layers.length) continue;
+    if (!group) continue;
+    const groupLayers = resolveOptionLayers(group, resolvedFighter);
+    if (!groupLayers.length) continue;
     if (hiddenCosmeticGroups?.has(group)) continue;
-    for (const layer of group.layers) {
+    for (const layer of groupLayers) {
       const target = layer.pos === 'back' ? backLayers : frontLayers;
       const key = layer.paletteColorKey;
       const layerTintSlot = (!key || key === 'A') ? group.tintSlot
@@ -543,15 +551,14 @@ function portraitCategoryForEntry(entry) {
   return 'hair';
 }
 
-function portraitOptionFromJson(entry, json) {
-  const label    = (json.meta && json.meta.name) || entry.id.split('::').pop().replace(/^mao-ao_/i, '').replace(/_/g, ' ');
-  const tintSlot = (json.appearance && json.appearance.bodyColors && json.appearance.bodyColors[0]) || null;
-  const shortId  = entry.id.split('::').pop().replace(/^mao-ao_/i, '');
-
+/**
+ * Extract portrait layer descriptors from a cosmetic JSON `parts` block.
+ * paletteLayerMap (optional): maps layerRole names to palette color keys.
+ */
+function _extractLayersFromParts(partsJson, paletteLayerMap) {
+  if (!partsJson || typeof partsJson !== 'object') return [];
   const layers = [];
-  const head   = json.parts && json.parts.head;
-  const paletteLayerMap = (json.palette && json.palette.layers) ? json.palette.layers : null;
-
+  const head = partsJson.head;
   if (head) {
     if (head.layers) {
       for (const [layerName, layer] of Object.entries(head.layers)) {
@@ -590,11 +597,9 @@ function portraitOptionFromJson(entry, json) {
       }
     }
   }
-
-  // Portrait torso/arm clothing layers come from non-appearance cosmetic files and
-  // are selected by using '/portrait/' asset paths.
-  if (!layers.length && json.parts && typeof json.parts === 'object') {
-    for (const [partName, partDef] of Object.entries(json.parts)) {
+  // Portrait torso/arm clothing layers are identified by their '/portrait/' asset paths.
+  if (!layers.length) {
+    for (const [partName, partDef] of Object.entries(partsJson)) {
       const partLayers = partDef && partDef.layers ? partDef.layers : null;
       if (!partLayers || typeof partLayers !== 'object') continue;
       for (const [layerName, layer] of Object.entries(partLayers)) {
@@ -618,6 +623,43 @@ function portraitOptionFromJson(entry, json) {
       }
     }
   }
+  return layers;
+}
+
+/**
+ * Return the correct layer list for an option given the current fighter.
+ * Falls back to option.layers when no matching variant exists.
+ */
+function resolveOptionLayers(option, fighter) {
+  if (!option) return [];
+  const vl = option.variantLayers;
+  if (vl && fighter) {
+    const key = (fighter.speciesId || '') + '_' + (fighter.gender || '');
+    const resolved = vl[key];
+    if (resolved && resolved.length) return resolved;
+  }
+  return option.layers || [];
+}
+
+function portraitOptionFromJson(entry, json) {
+  const label    = (json.meta && json.meta.name) || entry.id.split('::').pop().replace(/^mao-ao_/i, '').replace(/_/g, ' ');
+  const tintSlot = (json.appearance && json.appearance.bodyColors && json.appearance.bodyColors[0]) || null;
+  const shortId  = entry.id.split('::').pop().replace(/^mao-ao_/i, '');
+
+  const paletteLayerMap = (json.palette && json.palette.layers) ? json.palette.layers : null;
+
+  // Extract default layers from the top-level parts block.
+  const layers = _extractLayersFromParts(json.parts, paletteLayerMap);
+
+  // Extract per-species-gender variant layers from the speciesVariants block.
+  // Keys are "{speciesId}_{genderKey}" (e.g. "mao-ao_male", "kenkari_female").
+  const variantLayers = {};
+  if (json.speciesVariants && typeof json.speciesVariants === 'object') {
+    for (const [variantKey, variantData] of Object.entries(json.speciesVariants)) {
+      const vLayers = _extractLayersFromParts(variantData && variantData.parts, paletteLayerMap);
+      if (vLayers.length) variantLayers[variantKey] = vLayers;
+    }
+  }
 
   const colorRange = json.colorRange || null;
   const tags = Array.isArray(json.tags) ? json.tags : [];
@@ -637,7 +679,7 @@ function portraitOptionFromJson(entry, json) {
                          : tintSlot;
   const hairSlot = json.hairSlot || null; // 'front' | 'back' | 'side' | 'side-L'
   const hoodLayering = json.hoodLayering || null; // 'under' means hat renders under hood; default is over
-  return { id: shortId, label, tintSlot: resolvedTintSlot, layers, slot: json.slot || null, colorRange, hairSlot, tags, materialTag, hoodLayering };
+  return { id: shortId, label, tintSlot: resolvedTintSlot, layers, variantLayers, slot: json.slot || null, colorRange, hairSlot, tags, materialTag, hoodLayering };
 }
 
 /**
@@ -706,7 +748,8 @@ async function loadPortraitCosmetics(configBase) {
 
   for (const entry of indexEntries) {
     const opt = optionCache.get(entry.id);
-    if (!opt || !opt.layers.length) continue;
+    const optHasLayers = opt && (opt.layers.length > 0 || Object.keys(opt.variantLayers || {}).length > 0);
+    if (!optHasLayers) continue;
     if (seenIds.has(opt.id)) continue;
     seenIds.add(opt.id);
     const cat = opt.slot === 'hat'        ? 'hat'
@@ -726,7 +769,8 @@ async function loadPortraitCosmetics(configBase) {
     else if (cat === 'facialhair') facialHairOptions.push(opt);
 
     if (!entry.id.startsWith('appearance::')) {
-      const lowerLayers = opt.layers.map(l => (l.url || '').toLowerCase());
+      const allOptLayers = [...opt.layers, ...Object.values(opt.variantLayers || {}).flat()];
+      const lowerLayers = allOptLayers.map(l => (l.url || '').toLowerCase());
       if (lowerLayers.some(u => u.includes('/torso/portrait/') || u.includes('/overwear/portrait/'))) torsoPortraitOptions.push(opt);
       if (lowerLayers.some(u => u.includes('/arms/portrait/'))) armPortraitOptions.push(opt);
     }
@@ -1153,7 +1197,7 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
   bodyColors = applyBodyColorRulesSeeded(bodyColors, randomizationRules, rng);
 
   const clothingRule = randomizationRules?.clothingColors;
-  const hasClothPiece = Boolean(torsoCosmetic?.layers?.length || armCosmetic?.layers?.length);
+  const hasClothPiece = Boolean(resolveOptionLayers(torsoCosmetic, fighter).length || resolveOptionLayers(armCosmetic, fighter).length);
   const syncAcrossPieces = clothingRule?.syncAcrossPieces === true;
   const ruleRange = clothingRule?.range || null;
   const clothSourceRange = ruleRange || torsoCosmetic?.colorRange || armCosmetic?.colorRange || null;

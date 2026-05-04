@@ -30,10 +30,10 @@
       "appearance::hat::leather_headband",
       "appearance::Kenkari_M::kenk_riverlandskasa_low",
       "appearance::Kenkari_M::kenk_riverlandskasa_wide",
-      "fine_hood_kenk_m",
-      "tankantunic_kenk_m",
-      "bandolier1_kenk_m",
-      "tankanbodywrap_kenk_m"
+      "fine_hood",
+      "tankan_tunic",
+      "bandolier1",
+      "tankan_bodywrap"
     ],
     "forcedCosmetics": {
       "eyes": "kenk_eyedisks"
@@ -57,7 +57,7 @@
       },
       "hood": {
         "none": 80,
-        "fine_hood_kenk_m": 20
+        "fine_hood": 20
       },
       "hairFront": {
         "none": 10,
@@ -312,10 +312,10 @@
       "appearance::hat::leather_headband",
       "appearance::Kenkari_F::kenk_riverlandskasa_low",
       "appearance::Kenkari_F::kenk_riverlandskasa_wide",
-      "fine_hood_kenk_f",
-      "tankantunic_kenk_f",
-      "bandolier1_kenk_f",
-      "tankanwrap_kenk_f"
+      "fine_hood",
+      "tankan_tunic",
+      "bandolier1",
+      "tankan_bodywrap"
     ],
     "forcedCosmetics": {
       "eyes": "none"
@@ -339,7 +339,7 @@
       },
       "hood": {
         "none": 80,
-        "fine_hood_kenk_f": 20
+        "fine_hood": 20
       },
       "hairFront": {
         "none": 100

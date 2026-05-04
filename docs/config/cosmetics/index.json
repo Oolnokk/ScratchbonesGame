@@ -211,60 +211,16 @@
       "path": "./appearance/kenkari/splayedknot_low_f.json"
     },
     {
-      "id": "tankantunic_mao-ao_m",
-      "path": "./clothes/torso/tankantunic_mao-ao_m.json"
+      "id": "tankan_tunic",
+      "path": "./clothes/torso/tankan_tunic.json"
     },
     {
-      "id": "tankantunic_mao-ao_f",
-      "path": "./clothes/torso/tankantunic_mao-ao_f.json"
+      "id": "bandolier1",
+      "path": "./clothes/torso/bandolier1.json"
     },
     {
-      "id": "tankantunic_tl_m",
-      "path": "./clothes/torso/tankantunic_tl_m.json"
-    },
-    {
-      "id": "bandolier1_mao-ao_m",
-      "path": "./clothes/torso/bandolier1_mao-ao_m.json"
-    },
-    {
-      "id": "bandolier1_mao-ao_f",
-      "path": "./clothes/torso/bandolier1_mao-ao_f.json"
-    },
-    {
-      "id": "bandolier1_tl_m",
-      "path": "./clothes/torso/bandolier1_tl_m.json"
-    },
-    {
-      "id": "tankantunic_kenk_m",
-      "path": "./clothes/torso/tankantunic_kenk_m.json"
-    },
-    {
-      "id": "tankantunic_kenk_f",
-      "path": "./clothes/torso/tankantunic_kenk_f.json"
-    },
-    {
-      "id": "bandolier1_kenk_m",
-      "path": "./clothes/torso/bandolier1_kenk_m.json"
-    },
-    {
-      "id": "bandolier1_kenk_f",
-      "path": "./clothes/torso/bandolier1_kenk_f.json"
-    },
-    {
-      "id": "tankanbodywrap_mao-ao",
-      "path": "./clothes/overwear/tankanbodywrap_mao-ao.json"
-    },
-    {
-      "id": "tankanbodywrap_tl_m",
-      "path": "./clothes/overwear/tankanbodywrap_tl_m.json"
-    },
-    {
-      "id": "tankanbodywrap_kenk_m",
-      "path": "./clothes/overwear/tankanbodywrap_kenk_m.json"
-    },
-    {
-      "id": "tankanwrap_kenk_f",
-      "path": "./clothes/overwear/tankanwrap_kenk_f.json"
+      "id": "tankan_bodywrap",
+      "path": "./clothes/overwear/tankan_bodywrap.json"
     },
     {
       "id": "appearance::Mao-ao_M::mao-ao_braid-L",
@@ -343,24 +299,8 @@
       "path": "./kenk_riverlandskasa_wide.json"
     },
     {
-      "id": "fine_hood_mao-ao_m",
-      "path": "./fine_hood_mao-ao_m.json"
-    },
-    {
-      "id": "fine_hood_mao-ao_f",
-      "path": "./fine_hood_mao-ao_f.json"
-    },
-    {
-      "id": "fine_hood_kenk_m",
-      "path": "./fine_hood_kenk_m.json"
-    },
-    {
-      "id": "fine_hood_kenk_f",
-      "path": "./fine_hood_kenk_f.json"
-    },
-    {
-      "id": "fine_hood_tl",
-      "path": "./fine_hood_tl.json"
+      "id": "fine_hood",
+      "path": "./fine_hood.json"
     }
   ]
 }
