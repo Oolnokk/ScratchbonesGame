@@ -215,6 +215,11 @@ window.SCRATCHBONES_CONFIG = {
       }
     },
     "portrait": {
+      "cosmetics": {
+        "collaredTag": "collared",
+        "shirtbeardIds": ["kenk_shirtbeard", "kenk_shirtbeard_f"],
+        "collarLockedFacialHairIds": ["kenk_shirtbeard", "kenk_shirtbeard_f"]
+      },
       "blink": {
         "enabled": true,
         "minIntervalMs": 2500,

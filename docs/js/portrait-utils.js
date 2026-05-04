@@ -302,8 +302,8 @@ function getProfileSpriteXforms(profile) {
   const hatIsUnderHood = hat?.hoodLayering === 'under';
   const allCosmeticGroups = hairFront !== undefined
     ? (hatIsUnderHood
-        ? [hairBack, hairSideL, eyes, hairFront, facialHair, hairSide, hat, hood, pauldron]
-        : [hairBack, hairSideL, eyes, hairFront, facialHair, hairSide, hood, pauldron, hat])
+        ? [hairBack, hairSideL, hairFront, facialHair, eyes, hairSide, hat, hood, pauldron]
+        : [hairBack, hairSideL, hairFront, facialHair, eyes, hairSide, hood, pauldron, hat])
     : [hair, eyes, facialHair, hat];
   for (const group of allCosmeticGroups) {
     if (!group?.layers?.length) continue;
@@ -366,8 +366,8 @@ async function renderProfile(canvas, profile) {
   const hatIsUnderHood = hat?.hoodLayering === 'under';
   const allCosmeticGroups = hairFront !== undefined
   ? (hatIsUnderHood
-      ? [hairBack, hairSideL, eyes, hairFront, facialHair, hairSide, hat, hood, pauldron]
-      : [hairBack, hairSideL, eyes, hairFront, facialHair, hairSide, hood, pauldron, hat])
+      ? [hairBack, hairSideL, hairFront, facialHair, eyes, hairSide, hat, hood, pauldron]
+      : [hairBack, hairSideL, hairFront, facialHair, eyes, hairSide, hood, pauldron, hat])
   : [hair, eyes, facialHair, hat];
   const backLayers  = [];
   const frontLayers = [];
