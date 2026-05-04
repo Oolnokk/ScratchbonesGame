@@ -341,12 +341,18 @@ async function renderProfile(canvas, profile) {
   const filterFor = (slot) => slot ? makeCSSFilter(bodyColors[slot]) : 'none';
   const filterA   = makeCSSFilter(bodyColors.A);
 
-  const baseArmLayers = [];
-  const baseNonArmLayers = [];
+  const baseBackArmLayers = [];
+  const baseBackNonArmLayers = [];
+  const baseFrontNonArmLayers = [];
+  const baseFrontArmLayers = [];
   const clothingLayers = [];
   for (const layer of bodyLayerSource) {
     const normalizedId = String(layer.id || '').toLowerCase();
-    const target = normalizedId.startsWith('arm') ? baseArmLayers : baseNonArmLayers;
+    const isArmLayer = normalizedId.startsWith('arm');
+    const isFrontLayer = layer.pos === 'front';
+    const target = isFrontLayer
+      ? (isArmLayer ? baseFrontArmLayers : baseFrontNonArmLayers)
+      : (isArmLayer ? baseBackArmLayers : baseBackNonArmLayers);
     target.push({ layer, filter: filterFor(layer.tintSlot || 'A') });
   }
   for (const group of [torsoCosmetic, armCosmetic]) {
@@ -381,8 +387,10 @@ async function renderProfile(canvas, profile) {
   const neededUrls = new Set([
     headUrl,
     ...urLayerSource.map(m => m.url),
-    ...baseArmLayers.map(({ layer }) => layer.url),
-    ...baseNonArmLayers.map(({ layer }) => layer.url),
+    ...baseBackArmLayers.map(({ layer }) => layer.url),
+    ...baseBackNonArmLayers.map(({ layer }) => layer.url),
+    ...baseFrontNonArmLayers.map(({ layer }) => layer.url),
+    ...baseFrontArmLayers.map(({ layer }) => layer.url),
     ...backLayers.map(({ layer }) => layer.url),
     ...frontLayers.map(({ layer }) => layer.url),
     ...clothingLayers.map(({ layer }) => layer.url),
@@ -421,15 +429,23 @@ async function renderProfile(canvas, profile) {
   }
   const isBlinkFrame = shouldRenderBlink(headUrl, nowMs);
 
-  for (const { layer, filter } of baseArmLayers) {
+  for (const { layer, filter } of baseBackArmLayers) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
   }
-  for (const { layer, filter } of baseNonArmLayers) {
+  for (const { layer, filter } of baseBackNonArmLayers) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
   }
   for (const { layer, filter } of clothingLayers) {
+    const img = imgMap.get(layer.url);
+    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+  }
+  for (const { layer, filter } of baseFrontNonArmLayers) {
+    const img = imgMap.get(layer.url);
+    if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
+  }
+  for (const { layer, filter } of baseFrontArmLayers) {
     const img = imgMap.get(layer.url);
     if (img) drawPortraitLayer(ctx, img, composeXform(headXform, layer), filter);
   }
