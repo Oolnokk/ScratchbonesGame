@@ -4,7 +4,7 @@
   },
   "type": "appearance",
   "appearance": {
-    "inheritSprite": "head",
+    "inheritSprite": "",
     "bodyColors": [
       "A"
     ],
