@@ -1254,6 +1254,36 @@
     }
   }
 
+
+  function logCosmeticVarsError(message, details = null) {
+    if (details != null) console.error('[lobby][cosmetic-vars] ' + message, details);
+    else console.error('[lobby][cosmetic-vars] ' + message);
+  }
+
+
+  function getCosmeticVarsLayerConfig() {
+    const uiCfg = window.SCRATCHBONES_CONFIG?.ui || {};
+    return {
+      buttonZIndex: Number(uiCfg.cosmeticVarsButtonZIndex) || 2147483000,
+      panelZIndex: Number(uiCfg.cosmeticVarsPanelZIndex) || 2147483001,
+    };
+  }
+
+  function enforceCosmeticVarsStacking() {
+    const btn = document.getElementById('cosmeticVarsBtn');
+    const panel = document.getElementById('cosmeticVarsPanel');
+    if (!btn && !panel) return;
+    const { buttonZIndex, panelZIndex } = getCosmeticVarsLayerConfig();
+    if (btn) {
+      btn.style.position = 'fixed';
+      btn.style.zIndex = String(buttonZIndex);
+    }
+    if (panel) {
+      panel.style.position = 'fixed';
+      panel.style.zIndex = String(panelZIndex);
+    }
+  }
+
   function showJoinError(msg) {
     const el = document.getElementById('sb-join-error');
     if (el) { el.textContent = msg; el.style.display = ''; }
@@ -1285,7 +1315,9 @@
     const mapBtn = document.getElementById('projMapBtn');
     const cvBtn  = document.getElementById('cosmeticVarsBtn');
     if (mapBtn) mapBtn.style.display = 'none';
-    if (cvBtn)  cvBtn.style.display = '';
+    if (cvBtn) cvBtn.style.display = '';
+    else if (mapBtn) logCosmeticVarsError('Map button hidden but Cosmetic Vars button is missing during lobby show().');
+    enforceCosmeticVarsStacking();
   }
 
   function hide() {
@@ -1298,6 +1330,7 @@
     if (mapBtn)  mapBtn.style.display = '';
     if (cvBtn)   { cvBtn.style.display = 'none'; cvBtn.classList.remove('active'); }
     if (cvPanel) cvPanel.classList.remove('open');
+    enforceCosmeticVarsStacking();
   }
 
   function onGameEnd(chipCount) {
@@ -1409,7 +1442,10 @@
   function _ensureCosmeticVarsDom() {
     if (document.getElementById('cosmeticVarsBtn') && document.getElementById('cosmeticVarsPanel')) return;
     const root = document.body || document.documentElement;
-    if (!root) return;
+    if (!root) {
+      logCosmeticVarsError('Cannot create Cosmetic Vars UI because document root is missing.');
+      return;
+    }
     if (!document.getElementById('cosmeticVarsBtn')) {
       const btn = document.createElement('button');
       btn.id = 'cosmeticVarsBtn';
@@ -1444,6 +1480,13 @@
           <button class="cvpApplyBtn" id="cosmeticVarsApplyBtn">Apply Live</button>
         </div>`;
       root.appendChild(panel);
+    }
+    enforceCosmeticVarsStacking();
+    if (!document.getElementById('cosmeticVarsBtn') || !document.getElementById('cosmeticVarsPanel')) {
+      logCosmeticVarsError('Cosmetic Vars UI creation incomplete after _ensureCosmeticVarsDom().', {
+        hasButton: !!document.getElementById('cosmeticVarsBtn'),
+        hasPanel: !!document.getElementById('cosmeticVarsPanel'),
+      });
     }
   }
 
@@ -1492,7 +1535,10 @@
     const panel = document.getElementById('cosmeticVarsPanel');
     const closeBtn = document.getElementById('cosmeticVarsCloseBtn');
     const applyBtn = document.getElementById('cosmeticVarsApplyBtn');
-    if (!btn || !panel) return;
+    if (!btn || !panel) {
+      logCosmeticVarsError('Cosmetic Vars UI failed to initialize (missing button or panel).', { hasButton: !!btn, hasPanel: !!panel });
+      return;
+    }
     btn.addEventListener('click', () => {
       const open = panel.classList.toggle('open');
       btn.classList.toggle('active', open);
