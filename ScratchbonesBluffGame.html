@@ -2005,6 +2005,9 @@
     #candleDarknessCanvas { mix-blend-mode: multiply; }
     #candleGlowCanvas     { mix-blend-mode: screen; }
     #app.challenge-visuals-active .claimCluster { z-index: 3; }
+    /* The reactor avatar is cloned into a layer-manager portal (keepOriginal:true).
+       Hide the burst in the portal copy — only the original inside .claimCluster shows it. */
+    .ui-layer-portal .fx-burst-shell { display: none !important; }
 
     /* ── Lobby overlay ──────────────────────────────────────── */
     #sb-lobby {

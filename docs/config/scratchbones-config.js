@@ -841,10 +841,7 @@ window.SCRATCHBONES_CONFIG = {
               ".seatSeed",
               ".seatTags",
               ".humanSeatChipBadge",
-              ".controls",
-              ".challengePromptPane",
               ".eventLog",
-              ".stakeVisualPanel",
             ],
             "preserveSpace": true
           }
