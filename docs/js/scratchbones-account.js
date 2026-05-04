@@ -19,30 +19,50 @@
     { id: 'appearance::Kenkari_F::kenk_riverlandskasa_low',  label: 'Kenkari Kasa (Low)',  price: 10, category: 'hat', species: 'kenkari', gender: 'female', description: 'Kenkari riverland hat, worn low.', material: 'rigid_fiber' },
     { id: 'appearance::Kenkari_M::kenk_riverlandskasa_wide', label: 'Kenkari Kasa (Wide)', price: 10, category: 'hat', species: 'kenkari', gender: 'male',   description: 'Kenkari riverland hat, wide brim.', material: 'rigid_fiber' },
     { id: 'appearance::Kenkari_F::kenk_riverlandskasa_wide', label: 'Kenkari Kasa (Wide)', price: 10, category: 'hat', species: 'kenkari', gender: 'female', description: 'Kenkari riverland hat, wide brim.', material: 'rigid_fiber' },
-    // Torso — species+gender specific
-    { id: 'tankantunic_mao-ao_m',  label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'mao-ao',    gender: 'male',   description: 'A fitted tankan-style tunic.' },
-    { id: 'tankantunic_mao-ao_f',  label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'mao-ao',    gender: 'female', description: 'A fitted tankan-style tunic.' },
-    { id: 'tankantunic_tl_m',      label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'tletingan', gender: 'male',   description: 'A fitted tankan-style tunic.' },
-    { id: 'tankantunic_kenk_m',    label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'kenkari',   gender: 'male',   description: 'A fitted tankan-style tunic.' },
-    { id: 'tankantunic_kenk_f',    label: 'Tankan Tunic',  price: 12, category: 'torso',   species: 'kenkari',   gender: 'female', description: 'A fitted tankan-style tunic.' },
-    { id: 'bandolier1_mao-ao_m',   label: 'Bandolier',     price: 8,  category: 'torso',   species: 'mao-ao',    gender: 'male',   description: 'A rugged leather bandolier.', material: 'leather' },
-    { id: 'bandolier1_mao-ao_f',   label: 'Bandolier',     price: 8,  category: 'torso',   species: 'mao-ao',    gender: 'female', description: 'A rugged leather bandolier.', material: 'leather' },
-    { id: 'bandolier1_tl_m',       label: 'Bandolier',     price: 8,  category: 'torso',   species: 'tletingan', gender: 'male',   description: 'A rugged leather bandolier.', material: 'leather' },
-    { id: 'bandolier1_kenk_m',     label: 'Bandolier',     price: 8,  category: 'torso',   species: 'kenkari',   gender: 'male',   description: 'A rugged leather bandolier.', material: 'leather' },
-    { id: 'bandolier1_kenk_f',     label: 'Bandolier',     price: 8,  category: 'torso',   species: 'kenkari',   gender: 'female', description: 'A rugged leather bandolier.', material: 'leather' },
-    // Overwear — species+gender specific
-    { id: 'tankanbodywrap_mao-ao', label: 'Tankan Bodywrap',price: 15, category: 'overwear', species: 'mao-ao',   gender: null,     description: 'A wrapped ceremonial bodywrap.' },
-    { id: 'tankanbodywrap_tl_m',   label: 'Tankan Bodywrap',price: 15, category: 'overwear', species: 'tletingan',gender: 'male',   description: 'A wrapped ceremonial bodywrap.' },
-    { id: 'tankanbodywrap_kenk_m', label: 'Tankan Bodywrap',price: 15, category: 'overwear', species: 'kenkari',  gender: 'male',   description: 'A wrapped ceremonial bodywrap.' },
-    { id: 'tankanwrap_kenk_f',     label: 'Tankan Wrap',    price: 15, category: 'overwear', species: 'kenkari',  gender: 'female', description: 'A wrapped ceremonial garment.' },
-    // Hoods — species+gender specific
-    { id: 'fine_hood_mao-ao_m', label: 'Fine Hood', price: 15, category: 'hood', species: 'mao-ao',    gender: 'male',   description: 'A finely crafted hood with trim.' },
-    { id: 'fine_hood_mao-ao_f', label: 'Fine Hood', price: 15, category: 'hood', species: 'mao-ao',    gender: 'female', description: 'A finely crafted hood with trim.' },
-    { id: 'fine_hood_kenk_m',   label: 'Fine Hood', price: 15, category: 'hood', species: 'kenkari',   gender: 'male',   description: 'A finely crafted hood with trim.' },
-    { id: 'fine_hood_kenk_f',   label: 'Fine Hood', price: 15, category: 'hood', species: 'kenkari',   gender: 'female', description: 'A finely crafted hood with trim.' },
-    { id: 'fine_hood_tl',       label: 'Fine Hood', price: 15, category: 'hood', species: 'tletingan', gender: 'male',   description: 'A finely crafted hood with trim.' },
+    // Torso
+    { id: 'tankan_tunic',   label: 'Tankan Tunic',    price: 12, category: 'torso',   description: 'A fitted tankan-style tunic.' },
+    { id: 'bandolier1',     label: 'Bandolier',       price: 8,  category: 'torso',   description: 'A rugged leather bandolier.', material: 'leather' },
+    // Overwear
+    { id: 'tankan_bodywrap', label: 'Tankan Body Wrap', price: 15, category: 'overwear', description: 'A wrapped ceremonial bodywrap.' },
+    // Hoods
+    { id: 'fine_hood',      label: 'Fine Hood',       price: 15, category: 'hood',    description: 'A finely crafted hood with trim.' },
   ];
 
+  // Migration map: old per-variant cosmetic IDs → new consolidated IDs.
+  const _COSMETIC_ID_MIGRATIONS = {
+    'tankantunic_mao-ao_m': 'tankan_tunic',
+    'tankantunic_mao-ao_f': 'tankan_tunic',
+    'tankantunic_tl_m':     'tankan_tunic',
+    'tankantunic_kenk_m':   'tankan_tunic',
+    'tankantunic_kenk_f':   'tankan_tunic',
+    'bandolier1_mao-ao_m':  'bandolier1',
+    'bandolier1_mao-ao_f':  'bandolier1',
+    'bandolier1_tl_m':      'bandolier1',
+    'bandolier1_kenk_m':    'bandolier1',
+    'bandolier1_kenk_f':    'bandolier1',
+    'tankanbodywrap_mao-ao': 'tankan_bodywrap',
+    'tankanbodywrap_tl_m':  'tankan_bodywrap',
+    'tankanbodywrap_kenk_m':'tankan_bodywrap',
+    'tankanwrap_kenk_f':    'tankan_bodywrap',
+    'fine_hood_mao-ao_m':   'fine_hood',
+    'fine_hood_mao-ao_f':   'fine_hood',
+    'fine_hood_kenk_m':     'fine_hood',
+    'fine_hood_kenk_f':     'fine_hood',
+    'fine_hood_tl':         'fine_hood',
+  };
+
+  function migrateId(id) { return _COSMETIC_ID_MIGRATIONS[id] || id; }
+
+  function migrateIdArray(arr) {
+    if (!Array.isArray(arr)) return arr;
+    const seen = new Set();
+    const result = [];
+    for (const id of arr) {
+      const mapped = migrateId(id);
+      if (!seen.has(mapped)) { seen.add(mapped); result.push(mapped); }
+    }
+    return result;
+  }
   function cosmeticEntitlementKey(item) {
     if (!item) return null;
     return [item.category || '', item.label || '', item.material || ''].join('::');
@@ -187,6 +207,14 @@
         _account.appearance = { ...base.appearance, ...(parsed.appearance || {}) };
         _account.appearance.cosmetics = { ...(parsed.appearance?.cosmetics || {}) };
         _account.appearance.bodyColors = { ...base.appearance.bodyColors, ...(parsed.appearance?.bodyColors || {}) };
+        // Migrate old cosmetic IDs to consolidated IDs
+        _account.unlockedCosmetics = migrateIdArray(_account.unlockedCosmetics || []);
+        _account.equippedCosmetics = migrateIdArray(_account.equippedCosmetics || []);
+        const migratedCosmetics = {};
+        for (const [slot, id] of Object.entries(_account.appearance.cosmetics || {})) {
+          migratedCosmetics[slot] = migrateId(id);
+        }
+        _account.appearance.cosmetics = migratedCosmetics;
         // Migrate old color-object format and intermediate A/B/C-channel format
         const rawDyes = parsed.appliedDyes || {};
         const dyeValuesAreObjects = Object.values(rawDyes).some(v => v !== null && typeof v === 'object');
