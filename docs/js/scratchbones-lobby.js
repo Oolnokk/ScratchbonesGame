@@ -399,16 +399,50 @@
     const acc = window.ScratchbonesAccount;
     if (acc) {
       const none = { id: 'none', tintSlot: null, layers: [] };
+      const equippedFromAppearance = Array.isArray(appearance?.equippedCosmetics) ? appearance.equippedCosmetics : null;
+      const appliedDyesFromAppearance = appearance && Object.prototype.hasOwnProperty.call(appearance, 'appliedDyes')
+        ? (appearance.appliedDyes || {})
+        : null;
+      const resolveVariantId = (category, equippedId) => {
+        if (!equippedId) return null;
+        const shopCatalog = acc.getShopCatalog ? acc.getShopCatalog() : [];
+        const base = shopCatalog.find(i => i.id === equippedId);
+        if (!base) return equippedId;
+        const candidates = shopCatalog.filter(i =>
+          i.category === category &&
+          i.label === base.label &&
+          (i.material || null) === (base.material || null) &&
+          i.species === speciesId &&
+          (!i.gender || i.gender === gender)
+        );
+        const ids = [equippedId, ...candidates.map(i => i.id)];
+        return ids.find(id => optionCache?.has(id)) ?? equippedId;
+      };
       const applyEquip = (cat, key, noneOpt) => {
-        const id = acc.getEquippedForCategory(cat);
-        profile[key] = (id && optionCache?.has(id)) ? optionCache.get(id) : (noneOpt ?? none);
+        let id = null;
+        if (equippedFromAppearance) {
+          const shopCatalog = acc.getShopCatalog ? acc.getShopCatalog() : [];
+          id = shopCatalog.find(i => i.category === cat && equippedFromAppearance.includes(i.id))?.id ?? null;
+        } else {
+          id = acc.getEquippedForCategory(cat);
+        }
+        const resolvedId = resolveVariantId(cat, id);
+        profile[key] = (resolvedId && optionCache?.has(resolvedId)) ? optionCache.get(resolvedId) : (noneOpt ?? none);
       };
       applyEquip('hat', 'hat', hatOptions[0]);
       applyEquip('hood', 'hood', hoodOptions[0]);
       applyEquip('torso', 'torsoCosmetic', torsoPortraitOptions[0]);
       applyEquip('overwear', 'armCosmetic', armPortraitOptions[0]);
+      const collaredTag = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.collaredTag || 'collared';
+      const collarLockedFacialHairIds = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.collarLockedFacialHairIds
+        || window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.shirtbeardIds
+        || ['kenk_shirtbeard', 'kenk_shirtbeard_f'];
+      const hasCollaredClothing = [profile.torsoCosmetic, profile.armCosmetic].some(c => c?.tags?.includes(collaredTag));
+      if (!hasCollaredClothing && collarLockedFacialHairIds.includes(profile.facialHair?.id)) {
+        profile.facialHair = optionCache?.get('none') || { id: 'none', label: 'No Facial Hair', tintSlot: null, layers: [] };
+      }
       // Apply clothing dyes (keys are tintSlot names: HAT, TORSO, CLOTH, ...)
-      const dyeIds = acc.getAppliedDyes ? acc.getAppliedDyes() : {};
+      const dyeIds = appliedDyesFromAppearance ?? (acc.getAppliedDyes ? acc.getAppliedDyes() : {});
       const catalog = acc.getDyeCatalog ? acc.getDyeCatalog() : [];
       for (const [tintKey, dyeId] of Object.entries(dyeIds)) {
         if (dyeId) {
@@ -602,11 +636,29 @@
     const DYE_SWATCH_BASE = '#7dc89a'; // mint — matches the authored asset base color
 
     const ownedDyes = dyes.filter(d => acc && acc.isDyeOwned(d.id));
+    const appearance = acc ? acc.getAppearance() : { speciesId: 'mao-ao', gender: 'male' };
+    const entitlementKey = (item) => [item.category || '', item.label || '', item.material || ''].join('::');
 
     let slotsHtml = '';
     for (const slot of CLOTHING_SLOTS) {
-      const ownedItems = fullCatalog.filter(item => item.category === slot.category && acc && acc.isUnlocked(item.id));
       const equippedId = acc ? acc.getEquippedForCategory(slot.category) : null;
+      const ownedByCategory = fullCatalog.filter(item => item.category === slot.category && acc && acc.isUnlocked(item.id));
+      const ownedMap = new Map();
+      for (const item of ownedByCategory) {
+        const key = entitlementKey(item);
+        const prev = ownedMap.get(key);
+        if (!prev) {
+          ownedMap.set(key, item);
+          continue;
+        }
+        const score = (x) => (x.species === appearance.speciesId ? 2 : 0) + (x.gender === appearance.gender ? 1 : 0);
+        const prevIsEquipped = prev.id === equippedId;
+        const itemIsEquipped = item.id === equippedId;
+        if ((itemIsEquipped && !prevIsEquipped) || (itemIsEquipped === prevIsEquipped && score(item) > score(prev))) {
+          ownedMap.set(key, item);
+        }
+      }
+      const ownedItems = [...ownedMap.values()];
       const equippedItem = fullCatalog.find(c => c.id === equippedId);
       const equippedMaterial = equippedItem?.material || 'cloth';
       const opts = [
@@ -671,15 +723,38 @@
     const acc = window.ScratchbonesAccount;
     const bronze = acc ? acc.getBronze() : 0;
     const appearance = acc ? acc.getAppearance() : { speciesId: 'mao-ao', gender: 'male' };
-    const catalog = acc ? acc.getShopCatalogForAppearance(appearance.speciesId, appearance.gender) : [];
+    const fullCatalog = acc && acc.getShopCatalog ? acc.getShopCatalog() : [];
+    const scopedCatalog = acc ? acc.getShopCatalogForAppearance(appearance.speciesId, appearance.gender) : [];
+    const entitlementKey = (item) => [item.category || '', item.label || '', item.material || ''].join('::');
+    const dedupedMap = new Map();
+    for (const item of scopedCatalog) {
+      const key = entitlementKey(item);
+      const prev = dedupedMap.get(key);
+      if (!prev) {
+        dedupedMap.set(key, item);
+        continue;
+      }
+      const score = (x) => (x.species === appearance.speciesId ? 2 : 0) + (x.gender === appearance.gender ? 1 : 0);
+      if (score(item) > score(prev)) dedupedMap.set(key, item);
+    }
+    const catalog = [...dedupedMap.values()];
     const categories = [...new Set(catalog.map(c => c.category))];
+    const equippedIds = new Set(acc?.getEquippedCosmetics?.() || []);
+    const isEquippedGroup = (item) => {
+      const key = entitlementKey(item);
+      for (const equippedId of equippedIds) {
+        const equippedItem = fullCatalog.find(c => c.id === equippedId);
+        if (equippedItem && entitlementKey(equippedItem) === key) return true;
+      }
+      return false;
+    };
 
     let rows = '';
     for (const cat of categories) {
       rows += `<div class="sb-shop-cat">${cap(cat)}</div>`;
       for (const item of catalog.filter(c => c.category === cat)) {
         const owned = acc && acc.isUnlocked(item.id);
-        const equipped = acc && acc.isEquipped(item.id);
+        const equipped = acc && isEquippedGroup(item);
         let btn;
         if (owned) {
           btn = equipped
