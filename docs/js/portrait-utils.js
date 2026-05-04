@@ -561,6 +561,7 @@ function portraitOptionFromJson(entry, json) {
             sy:  xf.scaleY ?? 1,
             pos: layerName === 'back' ? 'back' : 'front',
             paletteColorKey,
+            xformPreset: 'B',
           });
         }
       }
@@ -575,6 +576,7 @@ function portraitOptionFromJson(entry, json) {
           sx:  xf.scaleX ?? 1,
           sy:  xf.scaleY ?? 1,
           pos: 'front',
+          xformPreset: 'B',
         });
       }
     }
@@ -602,6 +604,7 @@ function portraitOptionFromJson(entry, json) {
           sx:  xf.scaleX ?? xf.scaleMulX ?? 1,
           sy:  xf.scaleY ?? xf.scaleMulY ?? 1,
           pos: layerName === 'back' ? 'back' : 'front',
+          xformPreset: 'B',
         });
       }
     }
@@ -704,10 +707,6 @@ async function loadPortraitCosmetics(configBase) {
               : opt.hairSlot === 'side'   ? 'hairSide'
               : opt.hairSlot === 'side-L' ? 'hairSideL'
               : portraitCategoryForEntry(entry);
-    // Tag each cosmetic layer with the clothing xform preset (B)
-    const layerPreset = 'B';
-    opt.xformPreset = layerPreset;
-    for (const l of opt.layers) l.xformPreset = layerPreset;
     if      (cat === 'hat')        hatOptions.push(opt);
     else if (cat === 'hood')       hoodOptions.push(opt);
     else if (cat === 'hairFront')  hairFrontOptions.push(opt);
