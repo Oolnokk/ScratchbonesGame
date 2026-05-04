@@ -433,6 +433,12 @@
       applyEquip('hood', 'hood', hoodOptions[0]);
       applyEquip('torso', 'torsoCosmetic', torsoPortraitOptions[0]);
       applyEquip('overwear', 'armCosmetic', armPortraitOptions[0]);
+      const collaredTag = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.collaredTag || 'collared';
+      const shirtbeardIds = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.shirtbeardIds || ['kenk_shirtbeard', 'kenk_shirtbeard_f'];
+      const hasCollaredClothing = [profile.torsoCosmetic, profile.armCosmetic].some(c => c?.tags?.includes(collaredTag));
+      if (!hasCollaredClothing && shirtbeardIds.includes(profile.facialHair?.id)) {
+        profile.facialHair = optionCache?.get('none') || { id: 'none', label: 'No Facial Hair', tintSlot: null, layers: [] };
+      }
       // Apply clothing dyes (keys are tintSlot names: HAT, TORSO, CLOTH, ...)
       const dyeIds = appliedDyesFromAppearance ?? (acc.getAppliedDyes ? acc.getAppliedDyes() : {});
       const catalog = acc.getDyeCatalog ? acc.getDyeCatalog() : [];
