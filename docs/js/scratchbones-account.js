@@ -231,6 +231,12 @@
   }
 
   function getUsername() { return getAccount().username || 'Player'; }
+
+  function setUsername(username) {
+    const acc = getAccount();
+    const trimmed = String(username || '').trim().slice(0, 24);
+    if (trimmed) { acc.username = trimmed; save(); }
+  }
   function getBronze()   { return getAccount().bronze; }
 
   function addBronze(amount) {
@@ -388,6 +394,7 @@
     isCreated,
     createAccount,
     getUsername,
+    setUsername,
     getBronze,
     addBronze,
     spendBronze,
