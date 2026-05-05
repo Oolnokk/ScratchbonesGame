@@ -227,65 +227,147 @@
     return result.slice(0, cfg.loadoutSize);
   }
 
+  function normalizeAppearance(appearance) {
+    const base = defaultAppearance();
+    const source = appearance || {};
+    return {
+      speciesId: source.speciesId || base.speciesId,
+      gender:    source.gender    || base.gender,
+      cosmetics: { ...(source.cosmetics || {}) },
+      bodyColors: {
+        ...base.bodyColors,
+        ...(source.bodyColors || {}),
+      },
+    };
+  }
+
+  function normalizeAppliedDyes(rawDyes) {
+    const source = rawDyes || {};
+    const dyeValuesAreObjects = Object.values(source).some(v => v !== null && typeof v === 'object');
+    const hasBodyChannels = ['A', 'B', 'C'].some(ch => ch in source);
+    return (dyeValuesAreObjects || hasBodyChannels) ? {} : { ...source };
+  }
+
+  function migrateAppearanceCosmeticIds(appearance) {
+    const normalized = normalizeAppearance(appearance);
+    const migratedCosmetics = {};
+    for (const [slot, id] of Object.entries(normalized.cosmetics || {})) {
+      migratedCosmetics[slot] = id ? migrateId(id) : id;
+    }
+    normalized.cosmetics = migratedCosmetics;
+    return normalized;
+  }
+
+  function makeKhymeryyanId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    return `khym-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function sanitizeName(name, fallback = 'Player') {
+    return String(name || '').trim().slice(0, 24) || fallback;
+  }
+
+  function normalizeKhymeryyan(raw = {}, fallbackName = 'Player', unlockedTrickBones = null) {
+    const unlocked = normalizeUnlockedTrickBones(unlockedTrickBones);
+    return {
+      id: String(raw.id || makeKhymeryyanId()),
+      name: sanitizeName(raw.name ?? raw.username, fallbackName),
+      appearance: migrateAppearanceCosmeticIds(raw.appearance),
+      equippedCosmetics: migrateIdArray(raw.equippedCosmetics || []),
+      appliedDyes: normalizeAppliedDyes(raw.appliedDyes || {}),
+      trickBoneLoadout: normalizeTrickLoadout(raw.trickBoneLoadout, unlocked),
+    };
+  }
+
+  function cloneKhymeryyan(k) {
+    return k ? {
+      id: k.id,
+      name: k.name,
+      appearance: normalizeAppearance(k.appearance),
+      equippedCosmetics: [...(k.equippedCosmetics || [])],
+      appliedDyes: { ...(k.appliedDyes || {}) },
+      trickBoneLoadout: [...(k.trickBoneLoadout || [])],
+    } : null;
+  }
+
   function defaultAccount() {
     return {
-      username: null,
       bronze: BRONZE_PASSIVE_MAX,
       bronzePassiveLastMs: Date.now(),
       unlockedCosmetics: [],
-      equippedCosmetics: [],
       ownedDyes: [...STARTER_DYE_IDS],
-      appliedDyes: {},
       unlockedTrickBones: normalizeUnlockedTrickBones(),
-      trickBoneLoadout: normalizeTrickLoadout(),
-      appearance: defaultAppearance(),
+      khymeryyans: [],
+      activeKhymeryyanId: null,
       createdAt: Date.now(),
     };
   }
 
+  function accountWithStarterKhymeryyan(name = 'Player') {
+    const acc = defaultAccount();
+    const khymeryyan = normalizeKhymeryyan({ name }, name, acc.unlockedTrickBones);
+    acc.khymeryyans = [khymeryyan];
+    acc.activeKhymeryyanId = khymeryyan.id;
+    return acc;
+  }
+
   let _account = null;
+
+  function normalizeAccount(parsed = null) {
+    const base = defaultAccount();
+    if (!parsed) return base;
+    const acc = { ...base, ...parsed };
+
+    acc.unlockedCosmetics = migrateIdArray(acc.unlockedCosmetics || []);
+    acc.unlockedTrickBones = normalizeUnlockedTrickBones(acc.unlockedTrickBones);
+
+    if (!acc.ownedDyes || !acc.ownedDyes.length) {
+      acc.ownedDyes = [...STARTER_DYE_IDS];
+    } else {
+      const currentOwned = new Set(acc.ownedDyes);
+      const newDyes = STARTER_DYE_IDS.filter(id => !currentOwned.has(id));
+      if (newDyes.length) acc.ownedDyes = [...acc.ownedDyes, ...newDyes];
+    }
+
+    if (Array.isArray(parsed.khymeryyans) && parsed.khymeryyans.length) {
+      acc.khymeryyans = parsed.khymeryyans.map((kh, index) =>
+        normalizeKhymeryyan(kh, index === 0 ? 'Player' : `Khymeryyan ${index + 1}`, acc.unlockedTrickBones)
+      );
+    } else {
+      // Legacy sb_account_v1 migration: username/appearance/equips/dyes/loadout become one Khymeryyan.
+      const legacyName = sanitizeName(parsed.username, 'Player');
+      acc.khymeryyans = [normalizeKhymeryyan({
+        id: parsed.activeKhymeryyanId,
+        name: legacyName,
+        appearance: parsed.appearance,
+        equippedCosmetics: parsed.equippedCosmetics,
+        appliedDyes: parsed.appliedDyes,
+        trickBoneLoadout: parsed.trickBoneLoadout,
+      }, legacyName, acc.unlockedTrickBones)];
+    }
+
+    const activeExists = acc.khymeryyans.some(kh => kh.id === acc.activeKhymeryyanId);
+    acc.activeKhymeryyanId = activeExists ? acc.activeKhymeryyanId : (acc.khymeryyans[0]?.id || null);
+
+    // Remove legacy per-profile top-level fields from the persisted shape.
+    delete acc.username;
+    delete acc.appearance;
+    delete acc.equippedCosmetics;
+    delete acc.appliedDyes;
+    delete acc.trickBoneLoadout;
+
+    return acc;
+  }
 
   function load() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
-      const base = defaultAccount();
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        _account = { ...base, ...parsed };
-        _account.appearance = { ...base.appearance, ...(parsed.appearance || {}) };
-        _account.appearance.cosmetics = { ...(parsed.appearance?.cosmetics || {}) };
-        _account.appearance.bodyColors = { ...base.appearance.bodyColors, ...(parsed.appearance?.bodyColors || {}) };
-        // Migrate old cosmetic IDs to consolidated IDs
-        _account.unlockedCosmetics = migrateIdArray(_account.unlockedCosmetics || []);
-        _account.equippedCosmetics = migrateIdArray(_account.equippedCosmetics || []);
-        const migratedCosmetics = {};
-        for (const [slot, id] of Object.entries(_account.appearance.cosmetics || {})) {
-          migratedCosmetics[slot] = migrateId(id);
-        }
-        _account.appearance.cosmetics = migratedCosmetics;
-        _account.unlockedTrickBones = normalizeUnlockedTrickBones(_account.unlockedTrickBones);
-        _account.trickBoneLoadout = normalizeTrickLoadout(_account.trickBoneLoadout, _account.unlockedTrickBones);
-        // Migrate old color-object format and intermediate A/B/C-channel format
-        const rawDyes = parsed.appliedDyes || {};
-        const dyeValuesAreObjects = Object.values(rawDyes).some(v => v !== null && typeof v === 'object');
-        const hasBodyChannels = ['A', 'B', 'C'].some(ch => ch in rawDyes);
-        _account.appliedDyes = (dyeValuesAreObjects || hasBodyChannels) ? {} : { ...rawDyes };
-        // Grant starter dyes to existing accounts that don't have them yet
-        if (!_account.ownedDyes || !_account.ownedDyes.length) {
-          _account.ownedDyes = [...STARTER_DYE_IDS];
-        } else {
-          // Grant any newly-added dyes to existing accounts
-          const currentOwned = new Set(_account.ownedDyes);
-          const newDyes = STARTER_DYE_IDS.filter(id => !currentOwned.has(id));
-          if (newDyes.length) _account.ownedDyes = [..._account.ownedDyes, ...newDyes];
-        }
-      } else {
-        _account = base;
-      }
+      _account = raw ? normalizeAccount(JSON.parse(raw)) : defaultAccount();
     } catch (_) {
       _account = defaultAccount();
     }
     tickPassiveIncome();
+    save();
     return _account;
   }
 
@@ -299,21 +381,130 @@
     return _account;
   }
 
-  function isCreated() { return !!(getAccount().username); }
+  function getActiveKhymeryyanRef() {
+    const acc = getAccount();
+    let active = acc.khymeryyans.find(kh => kh.id === acc.activeKhymeryyanId) || acc.khymeryyans[0] || null;
+    if (!active && acc.khymeryyans.length === 0) return null;
+    if (active && acc.activeKhymeryyanId !== active.id) {
+      acc.activeKhymeryyanId = active.id;
+      save();
+    }
+    return active;
+  }
+
+  function isCreated() { return getAccount().khymeryyans.length > 0; }
 
   function createAccount(username) {
-    _account = defaultAccount();
-    _account.username = String(username || '').trim().slice(0, 24) || 'Player';
+    _account = accountWithStarterKhymeryyan(username);
     save();
     return _account;
   }
 
-  function getUsername() { return getAccount().username || 'Player'; }
+  function getKhymeryyans() {
+    return getAccount().khymeryyans.map(cloneKhymeryyan);
+  }
+
+  function getActiveKhymeryyan() {
+    return cloneKhymeryyan(getActiveKhymeryyanRef());
+  }
+
+  function setActiveKhymeryyan(id) {
+    const acc = getAccount();
+    const khymeryyan = acc.khymeryyans.find(kh => kh.id === id);
+    if (!khymeryyan) return false;
+    acc.activeKhymeryyanId = khymeryyan.id;
+    save();
+    return true;
+  }
+
+  function createKhymeryyan(name, options = {}) {
+    const acc = getAccount();
+    const source = options.sourceKhymeryyan || {};
+    const fallbackName = `Khymeryyan ${acc.khymeryyans.length + 1}`;
+    const khymeryyan = normalizeKhymeryyan({
+      ...source,
+      id: makeKhymeryyanId(),
+      name: sanitizeName(name ?? source.name, fallbackName),
+      appearance: options.appearance || source.appearance || defaultAppearance(),
+      equippedCosmetics: options.equippedCosmetics || source.equippedCosmetics || [],
+      appliedDyes: options.appliedDyes || source.appliedDyes || {},
+      trickBoneLoadout: options.trickBoneLoadout || source.trickBoneLoadout,
+    }, fallbackName, acc.unlockedTrickBones);
+    acc.khymeryyans.push(khymeryyan);
+    if (options.makeActive !== false) acc.activeKhymeryyanId = khymeryyan.id;
+    save();
+    return cloneKhymeryyan(khymeryyan);
+  }
+
+  function deleteKhymeryyan(id) {
+    const acc = getAccount();
+    if (acc.khymeryyans.length <= 1) return false;
+    const index = acc.khymeryyans.findIndex(kh => kh.id === id);
+    if (index < 0) return false;
+    const [removed] = acc.khymeryyans.splice(index, 1);
+    if (acc.activeKhymeryyanId === removed.id) {
+      acc.activeKhymeryyanId = acc.khymeryyans[Math.max(0, index - 1)]?.id || acc.khymeryyans[0]?.id || null;
+    }
+    save();
+    return true;
+  }
+
+  function renameKhymeryyan(id, name) {
+    const acc = getAccount();
+    const khymeryyan = acc.khymeryyans.find(kh => kh.id === id);
+    if (!khymeryyan) return false;
+    const trimmed = sanitizeName(name, '');
+    if (!trimmed) return false;
+    khymeryyan.name = trimmed;
+    save();
+    return true;
+  }
+
+  function setKhymeryyanAppearance(id, appearance) {
+    const acc = getAccount();
+    const khymeryyan = acc.khymeryyans.find(kh => kh.id === id);
+    if (!khymeryyan) return false;
+    khymeryyan.appearance = normalizeAppearance(appearance);
+    save();
+    return true;
+  }
+
+  function setKhymeryyanEquippedCosmetics(id, equippedCosmetics) {
+    const acc = getAccount();
+    const khymeryyan = acc.khymeryyans.find(kh => kh.id === id);
+    if (!khymeryyan || !Array.isArray(equippedCosmetics)) return false;
+    khymeryyan.equippedCosmetics = migrateIdArray(equippedCosmetics);
+    save();
+    return true;
+  }
+
+  function setKhymeryyanAppliedDyes(id, appliedDyes) {
+    const acc = getAccount();
+    const khymeryyan = acc.khymeryyans.find(kh => kh.id === id);
+    if (!khymeryyan) return false;
+    khymeryyan.appliedDyes = normalizeAppliedDyes(appliedDyes || {});
+    save();
+    return true;
+  }
+
+  function setKhymeryyanTrickBoneLoadout(id, loadout) {
+    const acc = getAccount();
+    const khymeryyan = acc.khymeryyans.find(kh => kh.id === id);
+    if (!khymeryyan) return false;
+    const normalized = normalizeTrickLoadout(loadout, acc.unlockedTrickBones);
+    if (normalized.length !== trickBoneConfig().loadoutSize) return false;
+    khymeryyan.trickBoneLoadout = normalized;
+    save();
+    return true;
+  }
+
+  function getUsername() { return getActiveKhymeryyanRef()?.name || 'Player'; }
 
   function setUsername(username) {
-    const acc = getAccount();
-    const trimmed = String(username || '').trim().slice(0, 24);
-    if (trimmed) { acc.username = trimmed; save(); }
+    const active = getActiveKhymeryyanRef();
+    if (!active) return;
+    const trimmed = sanitizeName(username, '');
+    if (trimmed) { active.name = trimmed; save(); }
   }
   function getBronze()   { return getAccount().bronze; }
 
@@ -356,12 +547,12 @@
   }
 
   function getUnlockedCosmetics() { return [...(getAccount().unlockedCosmetics || [])]; }
-  function getEquippedCosmetics() { return [...(getAccount().equippedCosmetics || [])]; }
+  function getEquippedCosmetics() { return [...(getActiveKhymeryyanRef()?.equippedCosmetics || [])]; }
   function isUnlocked(id) { return ownsCosmeticGroup(getAccount(), id); }
-  function isEquipped(id) { return getAccount().equippedCosmetics.includes(id); }
+  function isEquipped(id) { return getEquippedCosmetics().includes(id); }
 
   function getEquippedForCategory(category) {
-    for (const id of getAccount().equippedCosmetics) {
+    for (const id of getEquippedCosmetics()) {
       const entry = SHOP_CATALOG.find(c => c.id === id);
       if (entry && entry.category === category) return id;
     }
@@ -369,21 +560,13 @@
   }
 
   function getAppearance() {
-    const acc = getAccount();
-    return acc.appearance || defaultAppearance();
+    return getActiveKhymeryyanRef()?.appearance || defaultAppearance();
   }
 
   function setAppearance(appearance) {
-    const acc = getAccount();
-    acc.appearance = {
-      speciesId: appearance.speciesId || 'mao-ao',
-      gender:    appearance.gender    || 'male',
-      cosmetics: { ...(appearance.cosmetics || {}) },
-      bodyColors: {
-        ...defaultAppearance().bodyColors,
-        ...(appearance.bodyColors || {}),
-      },
-    };
+    const active = getActiveKhymeryyanRef();
+    if (!active) return;
+    active.appearance = normalizeAppearance(appearance);
     save();
   }
 
@@ -401,24 +584,27 @@
 
   function equipCosmetic(cosmeticId) {
     const acc = getAccount();
+    const active = getActiveKhymeryyanRef();
+    if (!active) return false;
     if (!ownsCosmeticGroup(acc, cosmeticId)) return false;
     const item = SHOP_CATALOG.find(c => c.id === cosmeticId);
     if (!item) return false;
-    acc.equippedCosmetics = acc.equippedCosmetics.filter(id => {
+    active.equippedCosmetics = (active.equippedCosmetics || []).filter(id => {
       const e = SHOP_CATALOG.find(c => c.id === id);
       return !e || e.category !== item.category;
     });
-    acc.equippedCosmetics.push(cosmeticId);
+    active.equippedCosmetics.push(cosmeticId);
     save();
     return true;
   }
 
   function unequipCosmetic(cosmeticId) {
-    const acc = getAccount();
+    const active = getActiveKhymeryyanRef();
+    if (!active) return false;
     const target = findShopItem(cosmeticId);
     if (!target) return false;
     const targetKey = cosmeticEntitlementKey(target);
-    acc.equippedCosmetics = acc.equippedCosmetics.filter(id => {
+    active.equippedCosmetics = (active.equippedCosmetics || []).filter(id => {
       const entry = findShopItem(id);
       return !entry || cosmeticEntitlementKey(entry) !== targetKey;
     });
@@ -432,7 +618,7 @@
   function getTrickBoneDefinitions() { return { ...trickBoneConfig().definitions }; }
   function getTrickBoneLoadoutSize() { return trickBoneConfig().loadoutSize; }
   function getUnlockedTrickBones() { return [...(getAccount().unlockedTrickBones || [])]; }
-  function getTrickBoneLoadout() { return normalizeTrickLoadout(getAccount().trickBoneLoadout, getAccount().unlockedTrickBones); }
+  function getTrickBoneLoadout() { return normalizeTrickLoadout(getActiveKhymeryyanRef()?.trickBoneLoadout, getAccount().unlockedTrickBones); }
   function isTrickBoneUnlocked(id) { return getUnlockedTrickBones().includes(id); }
 
   function unlockTrickBone(id) {
@@ -440,22 +626,17 @@
     const normalized = normalizeUnlockedTrickBones([...(acc.unlockedTrickBones || []), id]);
     if (normalized.length === (acc.unlockedTrickBones || []).length) return false;
     acc.unlockedTrickBones = normalized;
-    acc.trickBoneLoadout = normalizeTrickLoadout(acc.trickBoneLoadout, acc.unlockedTrickBones);
+    acc.khymeryyans.forEach(kh => { kh.trickBoneLoadout = normalizeTrickLoadout(kh.trickBoneLoadout, acc.unlockedTrickBones); });
     save();
     return true;
   }
 
   function setTrickBoneLoadout(loadout) {
-    const acc = getAccount();
-    const normalized = normalizeTrickLoadout(loadout, acc.unlockedTrickBones);
-    if (normalized.length !== trickBoneConfig().loadoutSize) return false;
-    acc.trickBoneLoadout = normalized;
-    save();
-    return true;
+    const active = getActiveKhymeryyanRef();
+    return active ? setKhymeryyanTrickBoneLoadout(active.id, loadout) : false;
   }
 
   function setTrickBoneLoadoutSlot(slotIndex, trickId) {
-    const acc = getAccount();
     const index = Number(slotIndex);
     if (!Number.isInteger(index) || index < 0 || index >= trickBoneConfig().loadoutSize) return false;
     if (!isTrickBoneUnlocked(trickId)) return false;
@@ -471,23 +652,26 @@
   function isDyeOwned(id)  { return (getAccount().ownedDyes || []).includes(id); }
 
   function getAppliedDyes() {
-    return getAccount().appliedDyes || {};
+    return getActiveKhymeryyanRef()?.appliedDyes || {};
   }
 
   function applyDye(dyeId, tintKey) {
     if (!tintKey || typeof tintKey !== 'string') return false;
     const acc = getAccount();
+    const active = getActiveKhymeryyanRef();
+    if (!active) return false;
     if (!(acc.ownedDyes || []).includes(dyeId)) return false;
     if (!DYE_CATALOG.find(d => d.id === dyeId)) return false;
-    acc.appliedDyes = { ...(acc.appliedDyes || {}), [tintKey]: dyeId };
+    active.appliedDyes = { ...(active.appliedDyes || {}), [tintKey]: dyeId };
     save();
     return true;
   }
 
   function removeDye(dyeSlot) {
-    const acc = getAccount();
-    acc.appliedDyes = { ...(acc.appliedDyes || {}) };
-    delete acc.appliedDyes[dyeSlot];
+    const active = getActiveKhymeryyanRef();
+    if (!active) return;
+    active.appliedDyes = { ...(active.appliedDyes || {}) };
+    delete active.appliedDyes[dyeSlot];
     save();
   }
 
@@ -509,6 +693,16 @@
     save,
     isCreated,
     createAccount,
+    getKhymeryyans,
+    getActiveKhymeryyan,
+    setActiveKhymeryyan,
+    createKhymeryyan,
+    deleteKhymeryyan,
+    renameKhymeryyan,
+    setKhymeryyanAppearance,
+    setKhymeryyanEquippedCosmetics,
+    setKhymeryyanAppliedDyes,
+    setKhymeryyanTrickBoneLoadout,
     getUsername,
     setUsername,
     getBronze,

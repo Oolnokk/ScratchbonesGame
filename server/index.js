@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 8080;
 const wss = new WebSocket.Server({ port: PORT });
 
-// rooms: Map<code, { host, hostSeatId, hostName, hostAppearance, hostLoadout, clients: Map<seatId, {ws, name, appearance, playerLoadout}>, lastState }>
+// rooms: Map<code, { host, hostSeatId, hostName, hostKhymeryyan, hostAppearance, hostLoadout, clients: Map<seatId, {ws, name, khymeryyan, appearance, playerLoadout}>, lastState }>
 const rooms = new Map();
 
 function makeCode() {
@@ -19,6 +19,29 @@ function send(ws, obj) {
 
 function normalizePlayerLoadout(loadout) {
   return Array.isArray(loadout) ? loadout.map(id => String(id || '').trim()).filter(Boolean).slice(0, 12) : [];
+}
+
+function normalizeKhymeryyanPayload(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const name = String(payload.name || '').trim().slice(0, 32);
+  return {
+    id: payload.id ? String(payload.id).slice(0, 64) : null,
+    name: name || null,
+    appearance: payload.appearance && typeof payload.appearance === 'object' ? payload.appearance : null,
+    equippedCosmetics: Array.isArray(payload.equippedCosmetics) ? payload.equippedCosmetics.map(String).slice(0, 24) : [],
+    appliedDyes: payload.appliedDyes && typeof payload.appliedDyes === 'object' ? payload.appliedDyes : {},
+    trickBoneLoadout: normalizePlayerLoadout(payload.trickBoneLoadout || payload.playerLoadout),
+  };
+}
+
+function occupantPayload(seatId, name, appearance, playerLoadout, khymeryyan) {
+  return {
+    seatId,
+    name,
+    appearance: appearance ?? khymeryyan?.appearance ?? null,
+    playerLoadout: playerLoadout || khymeryyan?.trickBoneLoadout || [],
+    khymeryyan: khymeryyan ?? null,
+  };
 }
 
 function filterStateForSeat(fullState, seatId) {
@@ -61,13 +84,15 @@ wss.on('connection', ws => {
       roomCode = makeCode();
       seatId = 0;
       role = 'host';
-      const hostName = String(msg.playerName || 'Player 1').slice(0, 32);
+      const hostKhymeryyan = normalizeKhymeryyanPayload(msg.selectedKhymeryyan);
+      const hostName = String(msg.playerName || hostKhymeryyan?.name || 'Player 1').slice(0, 32);
       rooms.set(roomCode, {
         host: ws,
         hostSeatId: 0,
         hostName,
-        hostAppearance: msg.playerAppearance ?? null,
-        hostLoadout: normalizePlayerLoadout(msg.playerLoadout),
+        hostKhymeryyan,
+        hostAppearance: msg.playerAppearance ?? hostKhymeryyan?.appearance ?? null,
+        hostLoadout: normalizePlayerLoadout(msg.playerLoadout || hostKhymeryyan?.trickBoneLoadout),
         clients: new Map(),
         lastState: null,
         totalSeats: Math.max(2, Math.min(4, Number(msg.totalSeats) || 2)),
@@ -93,10 +118,11 @@ wss.on('connection', ws => {
       }
       if (seat === null) { send(ws, { type: 'error', reason: 'No seats available' }); return; }
 
-      const playerName = String(msg.playerName || `Player ${seat + 1}`).slice(0, 32);
-      const playerAppearance = msg.playerAppearance ?? null;
-      const playerLoadout = normalizePlayerLoadout(msg.playerLoadout);
-      room.clients.set(seat, { ws, name: playerName, appearance: playerAppearance, playerLoadout });
+      const playerKhymeryyan = normalizeKhymeryyanPayload(msg.selectedKhymeryyan);
+      const playerName = String(msg.playerName || playerKhymeryyan?.name || `Player ${seat + 1}`).slice(0, 32);
+      const playerAppearance = msg.playerAppearance ?? playerKhymeryyan?.appearance ?? null;
+      const playerLoadout = normalizePlayerLoadout(msg.playerLoadout || playerKhymeryyan?.trickBoneLoadout);
+      room.clients.set(seat, { ws, name: playerName, khymeryyan: playerKhymeryyan, appearance: playerAppearance, playerLoadout });
       roomCode = code;
       role = 'client';
       seatId = seat;
@@ -110,8 +136,8 @@ wss.on('connection', ws => {
 
       // Notify host — include per-seat appearances so host can pass them into the session
       const occupants = [
-        { seatId: room.hostSeatId, name: room.hostName, appearance: room.hostAppearance ?? null, playerLoadout: room.hostLoadout || [] },
-        ...[...room.clients.entries()].map(([s, { name, appearance, playerLoadout }]) => ({ seatId: s, name, appearance, playerLoadout: playerLoadout || [] })),
+        occupantPayload(room.hostSeatId, room.hostName, room.hostAppearance, room.hostLoadout, room.hostKhymeryyan),
+        ...[...room.clients.entries()].map(([s, { name, khymeryyan, appearance, playerLoadout }]) => occupantPayload(s, name, appearance, playerLoadout, khymeryyan)),
       ];
       send(room.host, { type: 'player-joined', seatId, playerName, occupants });
       return;
@@ -141,8 +167,8 @@ wss.on('connection', ws => {
     if (msg.type === 'start-game' && role === 'host') {
       const room = rooms.get(roomCode);
       if (!room) return;
-      for (const { ws: clientWs } of room.clients.values()) {
-        send(clientWs, { type: 'start-game' });
+      for (const { ws: clientWs, khymeryyan, appearance, playerLoadout } of room.clients.values()) {
+        send(clientWs, { type: 'start-game', khymeryyan: khymeryyan ?? null, appearance: appearance ?? null, playerLoadout: playerLoadout || [] });
       }
       return;
     }

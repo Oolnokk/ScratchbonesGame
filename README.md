@@ -50,3 +50,7 @@ environment variable).
 Scratchbones now builds trick bones from player loadouts instead of a fixed deck-wide trick count. Each player brings a configured six-slot trick bone loadout; duplicates are allowed. At the start of each fresh deck, every active player's loadout is added to the shared deck before shuffling and dealing. Trick bones are not placed directly into their owner's hand, so any player can be dealt another player's preferred Smuggle, Trap, or Punish bones.
 
 The default trick-bone unlocks, six-slot default loadout, per-trick metadata, and NPC trick archetype weights live in `docs/config/scratchbones-config.js` under `game.trickBones`.
+
+## Account and Khymeryyans
+
+Scratchbones stores one browser-local account in `localStorage` under `sb_account_v1`. Account-wide Bronze, cosmetic unlocks, dye ownership, and unlocked trick bones are shared across the account. Playable identities are Khymeryyans: each Khymeryyan has its own name, species/gender appearance, equipped cosmetics, applied dyes, and trick bone loadout. The lobby lets players select, create, duplicate, delete, and edit Khymeryyans before offline or online play.
