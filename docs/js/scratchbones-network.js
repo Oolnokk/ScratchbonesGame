@@ -44,9 +44,9 @@
     });
   }
 
-  async function createRoom(url, hostName, totalSeats, playerAppearance, playerLoadout) {
+  async function createRoom(url, hostName, totalSeats, playerAppearance, playerLoadout, selectedKhymeryyan = null) {
     await _open(url);
-    _send({ type: 'create-room', playerName: hostName, totalSeats, playerAppearance: playerAppearance ?? null, playerLoadout: Array.isArray(playerLoadout) ? playerLoadout : [] });
+    _send({ type: 'create-room', playerName: hostName, totalSeats, playerAppearance: playerAppearance ?? null, playerLoadout: Array.isArray(playerLoadout) ? playerLoadout : [], selectedKhymeryyan: selectedKhymeryyan ?? null });
     const reply = await _awaitReply('room-created');
     _role = 'host';
     _seatId = 0;
@@ -54,9 +54,9 @@
     return reply.code;
   }
 
-  async function joinRoom(url, code, playerName, playerAppearance, playerLoadout) {
+  async function joinRoom(url, code, playerName, playerAppearance, playerLoadout, selectedKhymeryyan = null) {
     await _open(url);
-    _send({ type: 'join-room', code, playerName, playerAppearance: playerAppearance ?? null, playerLoadout: Array.isArray(playerLoadout) ? playerLoadout : [] });
+    _send({ type: 'join-room', code, playerName, playerAppearance: playerAppearance ?? null, playerLoadout: Array.isArray(playerLoadout) ? playerLoadout : [], selectedKhymeryyan: selectedKhymeryyan ?? null });
     const reply = await _awaitReply('joined');
     _role = 'client';
     _seatId = reply.seatId;

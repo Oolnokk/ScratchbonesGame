@@ -513,13 +513,13 @@
     return `
       <div class="sb-card">
         <div class="sb-title">SCRATCHBONES!</div>
-        <div class="sb-subtitle">Create your character to begin</div>
+        <div class="sb-subtitle">Create your Khymeryyan to begin</div>
         <div class="sb-field">
           <label for="sb-name">Your Name</label>
           <input id="sb-name" type="text" maxlength="24" placeholder="Enter name…" autocomplete="off" spellcheck="false" />
         </div>
         <div class="sb-actions">
-          <button class="sb-btn-primary" id="sb-create-btn">Create Character</button>
+          <button class="sb-btn-primary" id="sb-create-btn">Create Khymeryyan</button>
         </div>
       </div>`;
   }
@@ -527,7 +527,13 @@
   function renderMain() {
     const acc = window.ScratchbonesAccount;
     const bronze = acc ? acc.getBronze() : 0;
-    const username = acc ? acc.getUsername() : 'Player';
+    const activeKhymeryyan = acc?.getActiveKhymeryyan?.() || null;
+    const username = activeKhymeryyan?.name || (acc ? acc.getUsername() : 'Player');
+    const khymeryyans = acc?.getKhymeryyans?.() || [];
+    const canDeleteKhymeryyan = khymeryyans.length > 1;
+    const khymeryyanOptions = khymeryyans.map(kh =>
+      `<option value="${esc(kh.id)}"${kh.id === activeKhymeryyan?.id ? ' selected' : ''}>${esc(kh.name)}</option>`
+    ).join('');
     const canEarnPassive = acc && bronze < acc.BRONZE_PASSIVE_MAX;
 
     const modeButtons = MODES.map(m => `
@@ -560,11 +566,20 @@
         </div>
         ${postMsg}
         <div class="sb-welcome">Welcome back, ${esc(username)}!</div>
+        <div class="sb-label">Khymeryyan</div>
+        <div class="sb-player-row">
+          <select id="sb-khymeryyan-select" style="flex:1;min-width:0;">${khymeryyanOptions}</select>
+          <div class="sb-count-group">
+            <button class="sb-count-btn" id="sb-new-khymeryyan-btn" title="Create Khymeryyan">New</button>
+            <button class="sb-count-btn" id="sb-duplicate-khymeryyan-btn" title="Duplicate active Khymeryyan">Duplicate</button>
+            <button class="sb-count-btn${canDeleteKhymeryyan ? '' : ' disabled'}" id="sb-delete-khymeryyan-btn"${canDeleteKhymeryyan ? '' : ' disabled'} title="Delete active Khymeryyan">Delete</button>
+          </div>
+        </div>
         <div class="sb-label">Game Mode</div>
         <div class="sb-mode-picker">${modeButtons}</div>
         ${playerPicker}
         <div class="sb-actions">
-          <button class="sb-btn-ghost" id="sb-appearance-btn">Edit Appearance</button>
+          <button class="sb-btn-ghost" id="sb-appearance-btn">Edit Khymeryyan</button>
           <button class="sb-btn-ghost" id="sb-collections-btn">Collections</button>
           <button class="sb-btn-ghost" id="sb-trick-loadout-btn">Trick Loadout</button>
           <button class="sb-btn-ghost" id="sb-shop-btn">Shop</button>
@@ -631,7 +646,7 @@
       <div class="sb-card sb-wide-card">
         <div class="sb-header">
           <button class="sb-btn-ghost" id="sb-back-btn">← Back</button>
-          <div class="sb-title">Appearance</div>
+          <div class="sb-title">Khymeryyan</div>
           <div class="sb-bronze"><span class="sb-coin">🪙</span>${bronze}&nbsp;Bronze</div>
         </div>
         <div class="sb-ap-layout">
@@ -1033,6 +1048,43 @@
       window.ScratchbonesAccount?.watchAd(); render();
     });
 
+    document.getElementById('sb-khymeryyan-select')?.addEventListener('change', e => {
+      window.ScratchbonesAccount?.setActiveKhymeryyan?.(e.target.value);
+      _activeDyeSlot = null;
+      render();
+    });
+
+    document.getElementById('sb-new-khymeryyan-btn')?.addEventListener('click', () => {
+      const acc = window.ScratchbonesAccount;
+      if (!acc?.createKhymeryyan) return;
+      const defaultName = `Khymeryyan ${(acc.getKhymeryyans?.() || []).length + 1}`;
+      const name = (window.prompt?.('Name this Khymeryyan:', defaultName) || '').trim();
+      acc.createKhymeryyan(name || defaultName);
+      _activeDyeSlot = null;
+      render();
+    });
+
+    document.getElementById('sb-duplicate-khymeryyan-btn')?.addEventListener('click', () => {
+      const acc = window.ScratchbonesAccount;
+      const active = acc?.getActiveKhymeryyan?.();
+      if (!acc?.createKhymeryyan || !active) return;
+      const defaultName = `${active.name || 'Khymeryyan'} Copy`;
+      const name = (window.prompt?.('Name the duplicate Khymeryyan:', defaultName) || '').trim();
+      acc.createKhymeryyan(name || defaultName, { sourceKhymeryyan: active });
+      _activeDyeSlot = null;
+      render();
+    });
+
+    document.getElementById('sb-delete-khymeryyan-btn')?.addEventListener('click', () => {
+      const acc = window.ScratchbonesAccount;
+      const active = acc?.getActiveKhymeryyan?.();
+      if (!acc?.deleteKhymeryyan || !active) return;
+      if (window.confirm && !window.confirm(`Delete ${active.name || 'this Khymeryyan'}?`)) return;
+      acc.deleteKhymeryyan(active.id);
+      _activeDyeSlot = null;
+      render();
+    });
+
     el.querySelectorAll('.sb-mode-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         _selectedMode = btn.dataset.mode;
@@ -1100,7 +1152,7 @@
       });
     });
 
-    el.querySelectorAll('.sb-cosmetic-select').forEach(sel => {
+    el.querySelectorAll('.sb-cosmetic-select[data-slot]').forEach(sel => {
       sel.addEventListener('change', () => {
         if (!_editAppearance) return;
         _editAppearance.cosmetics[sel.dataset.slot] = sel.value || null;
@@ -1140,7 +1192,7 @@
 
     document.getElementById('sb-save-appearance-btn')?.addEventListener('click', () => {
       const nameVal = (document.getElementById('sb-edit-name')?.value || '').trim();
-      if (nameVal) window.ScratchbonesAccount?.setUsername(nameVal);
+      if (nameVal) window.ScratchbonesAccount?.renameKhymeryyan?.(window.ScratchbonesAccount?.getActiveKhymeryyan?.()?.id, nameVal) || window.ScratchbonesAccount?.setUsername(nameVal);
       window.ScratchbonesAccount?.setAppearance(_editAppearance);
       _screen = 'main';
       render();
@@ -1221,13 +1273,14 @@
         alert(`You need at least ${MIN_BRONZE} Bronze to host a game.`);
         return;
       }
-      const username = acc.getUsername() || 'Host';
+      const selectedKhymeryyan = getFullKhymeryyan();
+      const username = selectedKhymeryyan?.name || acc.getUsername() || 'Host';
       const appearance = getFullAppearance();
       const playerLoadout = getLocalPlayerLoadout();
       _onlineOccupants = [{ seatId: 0, name: username }];
       _onlineOccupantAppearances = { 0: appearance };
       _onlineOccupantLoadouts = { 0: playerLoadout };
-      net.createRoom(wsUrl(), username, _onlinePlayerCount, appearance, playerLoadout)
+      net.createRoom(wsUrl(), username, _onlinePlayerCount, appearance, playerLoadout, selectedKhymeryyan)
         .then(code => {
           _roomCode = code;
           _myOnlineSeat = 0;
@@ -1276,11 +1329,12 @@
           showJoinError(`You need at least ${MIN_BRONZE} Bronze to join a game.`);
           return;
         }
-        const username = acc.getUsername() || 'Player';
+        const selectedKhymeryyan = getFullKhymeryyan();
+        const username = selectedKhymeryyan?.name || acc.getUsername() || 'Player';
         const appearance = getFullAppearance();
         const playerLoadout = getLocalPlayerLoadout();
         doJoinBtn.disabled = true;
-        net.joinRoom(wsUrl(), code, username, appearance, playerLoadout)
+        net.joinRoom(wsUrl(), code, username, appearance, playerLoadout, selectedKhymeryyan)
           .then(seatId => {
             _myOnlineSeat = seatId;
             _roomCode = code;
@@ -1318,30 +1372,37 @@
 
   // ── Session helpers ────────────────────────────────────────
 
-  function getLocalAppearance() {
-    return window.ScratchbonesAccount?.getAppearance() ?? null;
-  }
-
   function getFullKhymeryyan() {
     const acc = window.ScratchbonesAccount;
     if (!acc) return null;
+    const active = acc.getActiveKhymeryyan?.();
+    if (!active) return null;
+    const trickBoneLoadout = [...(active.trickBoneLoadout || acc.getTrickBoneLoadout?.() || [])];
     return {
-      appearance: {
-        ...acc.getAppearance(),
-        equippedCosmetics: [...(acc.getEquippedCosmetics() || [])],
-        appliedDyes: { ...(acc.getAppliedDyes() || {}) },
-      },
-      playerLoadout: [...(acc.getTrickBoneLoadout?.() || [])],
+      id: active.id,
+      name: active.name || acc.getUsername?.() || 'Player',
+      appearance: { ...active.appearance },
+      equippedCosmetics: [...(active.equippedCosmetics || [])],
+      appliedDyes: { ...(active.appliedDyes || {}) },
+      trickBoneLoadout,
+      playerLoadout: trickBoneLoadout,
       unlockedTrickBones: [...(acc.getUnlockedTrickBones?.() || [])],
     };
   }
 
   function getFullAppearance() {
-    return getFullKhymeryyan()?.appearance ?? null;
+    const khymeryyan = getFullKhymeryyan();
+    return khymeryyan ? {
+      ...khymeryyan.appearance,
+      name: khymeryyan.name,
+      equippedCosmetics: [...khymeryyan.equippedCosmetics],
+      appliedDyes: { ...khymeryyan.appliedDyes },
+      trickBoneLoadout: [...khymeryyan.trickBoneLoadout],
+    } : null;
   }
 
   function getLocalPlayerLoadout() {
-    return getFullKhymeryyan()?.playerLoadout ?? [];
+    return getFullKhymeryyan()?.trickBoneLoadout ?? [];
   }
 
   function show(screen) {
@@ -1398,12 +1459,11 @@
   }
 
   function startOfflineGame() {
-    const acc = window.ScratchbonesAccount;
-    const username = acc?.getUsername() || 'Player';
+    const khymeryyan = getFullKhymeryyan();
+    const username = khymeryyan?.name || 'Player';
     const ap = getFullAppearance();
     const totalPlayers = 4;
     const humanSeat = 0;
-    const npcNames = ['Rook', 'Sable', 'Grim', 'Vex'];
     const playerNames = { [humanSeat]: username };
     const playerAppearances = { [humanSeat]: ap };
     const playerLoadouts = { [humanSeat]: getLocalPlayerLoadout() };
@@ -1464,8 +1524,8 @@
 
   function startOnlineClient() {
     hide();
-    const acc = window.ScratchbonesAccount;
-    const username = acc?.getUsername() || 'Player';
+    const khymeryyan = getFullKhymeryyan();
+    const username = khymeryyan?.name || 'Player';
     const ap = getFullAppearance();
     window.SCRATCHBONES_SESSION = {
       mode: 'online-client',
