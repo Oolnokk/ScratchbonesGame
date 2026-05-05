@@ -18,6 +18,7 @@
     "allowedCosmetics": [
       "appearance::Mao-ao_M::mao-ao_circled_eyes",
       "appearance::Mao-ao_M::mao-ao_circled_eye_L",
+      "appearance::Mao-ao_M::mao-ao_circled_eye_R",
       "appearance::Mao-ao_M::mao-ao_smooth_striped",
       "appearance::Mao-ao_M::mao-ao_forwardtuft_short",
       "appearance::Mao-ao_M::mao-ao_forwardtuft_long",
@@ -306,6 +307,8 @@
     },
     "allowedCosmetics": [
       "appearance::Mao-ao_F::mao-ao_circled_eyes_f",
+      "appearance::Mao-ao_F::mao-ao_circled_eye_L",
+      "appearance::Mao-ao_F::mao-ao_circled_eye_R",
       "appearance::Mao-ao_F::mao-ao_smooth_striped",
       "appearance::Mao-ao_F::mao-ao_forwardtuft_short",
       "appearance::Mao-ao_F::mao-ao_forwardtuft_long",

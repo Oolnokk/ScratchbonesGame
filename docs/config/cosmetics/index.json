@@ -67,6 +67,10 @@
       "path": "./appearance/mao-ao/circled_eye_L.json"
     },
     {
+      "id": "appearance::Mao-ao_M::mao-ao_circled_eye_R",
+      "path": "./appearance/mao-ao/circled_eye_R.json"
+    },
+    {
       "id": "appearance::Mao-ao_M::mao-ao_smooth_striped",
       "path": "./appearance/mao-ao/smooth_striped.json"
     },
@@ -108,7 +112,11 @@
     },
     {
       "id": "appearance::Mao-ao_F::mao-ao_circled_eye_L",
-      "path": "./appearance/mao-ao/circled_eye_L.json"
+      "path": "./appearance/mao-ao/circled_eye_L_f.json"
+    },
+    {
+      "id": "appearance::Mao-ao_F::mao-ao_circled_eye_R",
+      "path": "./appearance/mao-ao/circled_eye_R_f.json"
     },
     {
       "id": "appearance::Mao-ao_F::mao-ao_smooth_striped",
