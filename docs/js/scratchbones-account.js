@@ -329,7 +329,7 @@
       if (newDyes.length) acc.ownedDyes = [...acc.ownedDyes, ...newDyes];
     }
 
-    if (Array.isArray(parsed.khymeryyans) && parsed.khymeryyans.length) {
+    if (Array.isArray(parsed.khymeryyans)) {
       acc.khymeryyans = parsed.khymeryyans.map((kh, index) =>
         normalizeKhymeryyan(kh, index === 0 ? 'Player' : `Khymeryyan ${index + 1}`, acc.unlockedTrickBones)
       );
