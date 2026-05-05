@@ -192,6 +192,7 @@ function shouldRenderBlink(headUrl, nowMs) {
 
 let _puAssetBase = './assets/';
 const IMG_CACHE  = new Map();
+const BREATHING_ANIMATIONS = new WeakMap();
 
 /** Set the asset base URL used by loadImg(). Call before rendering. */
 function setPortraitAssetBase(base) {
@@ -644,6 +645,9 @@ async function renderProfile(canvas, profile) {
   const breathingGridCols = Number(breathingMesh?.gridCols) || 0;
   const breathingGridRows = Number(breathingMesh?.gridRows) || 0;
   const meshEnabled = Array.isArray(breathingPoints) && breathingGridCols > 1 && breathingGridRows > 1;
+  const breathingAnimCfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.breathing || {};
+  const breathingFps = Math.max(1, Number(breathingAnimCfg.fps) || 12);
+  const breathingFrameMs = 1000 / breathingFps;
 
   const drawLayers = (layerList) => {
     for (const { layer, filter, layerPart } of layerList) {
@@ -678,6 +682,31 @@ async function renderProfile(canvas, profile) {
   if (opacityMaskLayer?.url) {
     const maskImg = imgMap.get(opacityMaskLayer.url);
     if (maskImg) applyPortraitOpacityMask(ctx, maskImg, resolveXform(opacityMaskLayer));
+  }
+
+  const existingAnimation = BREATHING_ANIMATIONS.get(canvas);
+  if (meshEnabled) {
+    if (!existingAnimation) {
+      const state = { rafId: 0, lastFrameMs: 0, profile, rendering: false };
+      const animate = (frameMs) => {
+        if (!BREATHING_ANIMATIONS.has(canvas)) return;
+        if (!state.rendering && frameMs - state.lastFrameMs >= breathingFrameMs) {
+          state.lastFrameMs = frameMs;
+          state.rendering = true;
+          Promise.resolve(renderProfile(canvas, state.profile)).finally(() => {
+            state.rendering = false;
+          });
+        }
+        state.rafId = requestAnimationFrame(animate);
+      };
+      state.rafId = requestAnimationFrame(animate);
+      BREATHING_ANIMATIONS.set(canvas, state);
+    } else {
+      existingAnimation.profile = profile;
+    }
+  } else if (existingAnimation) {
+    cancelAnimationFrame(existingAnimation.rafId);
+    BREATHING_ANIMATIONS.delete(canvas);
   }
 }
 
