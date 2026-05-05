@@ -436,7 +436,8 @@ async function renderProfile(canvas, profile) {
   const sideLeftLayers   = [];  // left side hairstyle, drawn before head
   const facialHairLayers = [];  // facial hair, drawn after head
   const eyesLayers       = [];  // eyes, drawn after facial hair
-  const frontHairLayers  = [];  // front + right-side hairstyle, drawn after ur-head
+  const frontHairLayers   = [];  // front fringe hair, drawn after facial hair and ur-head overlays
+  const rightSideHairLayers = [];  // right-side hairstyle, drawn between head and facial hair
   const hatUnderLayers   = [];  // hat front when hoodLayering=under
   const hoodPauldronLayers = []; // hood then pauldron
   const hatOverLayers    = [];  // hat front when hoodLayering=over (default)
@@ -471,7 +472,7 @@ async function renderProfile(canvas, profile) {
     pushToTarget(facialHair, facialHairLayers);
     pushToTarget(eyes, eyesLayers);
     pushToTarget(hairFront, frontHairLayers);
-    pushToTarget(hairSide, frontHairLayers);
+    pushToTarget(hairSide, rightSideHairLayers);
     if (hat) {
       const groupLayers = resolveOptionLayers(hat, resolvedFighter);
       for (const layer of groupLayers) {
@@ -511,6 +512,7 @@ async function renderProfile(canvas, profile) {
     ...torsoClothingLayers.map(({ layer }) => layer.url),
     ...overwearLayers.map(({ layer }) => layer.url),
     ...sideLeftLayers.map(({ layer }) => layer.url),
+    ...rightSideHairLayers.map(({ layer }) => layer.url),
     ...facialHairLayers.map(({ layer }) => layer.url),
     ...eyesLayers.map(({ layer }) => layer.url),
     ...frontHairLayers.map(({ layer }) => layer.url),
@@ -577,14 +579,15 @@ async function renderProfile(canvas, profile) {
   drawLayers(overwearLayers);
   drawLayers(sideLeftLayers);
   { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), filterA); }
+  drawLayers(rightSideHairLayers);
   drawLayers(facialHairLayers);
+  drawLayers(frontHairLayers);
   drawLayers(eyesLayers);
   for (const mid of urLayerSource) {
     const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
     const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
     if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), 'none');
   }
-  drawLayers(frontHairLayers);
   drawLayers(hatUnderLayers);
   drawLayers(hoodPauldronLayers);
   drawLayers(hatOverLayers);
