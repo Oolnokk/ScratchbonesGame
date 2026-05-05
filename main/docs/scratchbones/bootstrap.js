@@ -4681,6 +4681,61 @@ import { createLayerManager } from './ui/layerManager.js';
     } else {
       console.warn('[game] portrait utils unavailable; falling back to initials.');
     }
+    function portraitVariantKeysForFighter(fighter) {
+      const speciesId = String(fighter?.speciesId || '').trim();
+      const gender = String(fighter?.gender || '').trim();
+      if (!speciesId || !gender) return [];
+      return [...new Set([
+        `${speciesId}_${gender}`,
+        `${speciesId.replace(/_/g, '-')}_${gender}`,
+        `${speciesId.replace(/-/g, '_')}_${gender}`,
+      ])];
+    }
+    function resolvePortraitOptionLayersForFighter(option, fighter) {
+      if (!option) return [];
+      const variantLayers = option.variantLayers;
+      if (variantLayers && fighter) {
+        for (const variantKey of portraitVariantKeysForFighter(fighter)) {
+          const resolvedLayers = variantLayers[variantKey];
+          if (resolvedLayers?.length) return resolvedLayers;
+        }
+      }
+      return option.layers || [];
+    }
+    function hasVisiblePortraitClothing(option, fighter) {
+      return option?.id !== 'none' && resolvePortraitOptionLayersForFighter(option, fighter).length > 0;
+    }
+    function countVisiblePortraitClothing(profile, clothingSlots) {
+      return clothingSlots.reduce((count, slot) => count + (hasVisiblePortraitClothing(profile?.[slot], profile?.fighter) ? 1 : 0), 0);
+    }
+    function selectNpcClothingRepairSlot(profile, clothingSlots, slotPreference) {
+      const slotSet = new Set(clothingSlots);
+      for (const slot of slotPreference) {
+        if (!slotSet.has(slot) || hasVisiblePortraitClothing(profile?.[slot], profile?.fighter)) continue;
+        const optionPoolName = SCRATCHBONES_GAME.portrait?.randomization?.clothingOptionPoolsBySlot?.[slot];
+        const optionPool = Array.isArray(_portraitCosmetics?.[optionPoolName]) ? _portraitCosmetics[optionPoolName] : [];
+        const candidates = optionPool.filter(option => hasVisiblePortraitClothing(option, profile?.fighter));
+        if (candidates.length) return { slot, candidates };
+      }
+      return null;
+    }
+    function ensureMinimumNpcClothingArticles(player, profile, rng) {
+      if (!profile || player?.isHuman) return profile;
+      const randomizationConfig = SCRATCHBONES_GAME.portrait?.randomization || {};
+      const minimumClothingArticles = Math.max(0, Number(randomizationConfig.minimumNpcClothingArticles) || 0);
+      if (minimumClothingArticles <= 0) return profile;
+      const clothingSlots = Array.isArray(randomizationConfig.clothingSlots) ? randomizationConfig.clothingSlots : [];
+      const slotPreference = Array.isArray(randomizationConfig.clothingRepairSlotPreference) ? randomizationConfig.clothingRepairSlotPreference : clothingSlots;
+      let visibleClothingCount = countVisiblePortraitClothing(profile, clothingSlots);
+      const repairLimit = Math.min(minimumClothingArticles, clothingSlots.length);
+      for (let repairs = 0; visibleClothingCount < minimumClothingArticles && repairs < repairLimit; repairs++) {
+        const repair = selectNpcClothingRepairSlot(profile, clothingSlots, slotPreference);
+        if (!repair) break;
+        profile[repair.slot] = repair.candidates[Math.floor(rng() * repair.candidates.length)];
+        visibleClothingCount = countVisiblePortraitClothing(profile, clothingSlots);
+      }
+      return profile;
+    }
     function generatePlayerProfile(player) {
       if (!_portraitCosmetics) return null;
       const { optionCache, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions, hatOptions, hoodOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter, conditionalCosmeticsByFighter } = _portraitCosmetics;
@@ -4721,7 +4776,8 @@ import { createLayerManager } from './ui/layerManager.js';
       const fighterPool = player.gender === 'male'   ? FIGHTERS.filter(f => fighterGender(f) === 'male')
                         : player.gender === 'female' ? FIGHTERS.filter(f => fighterGender(f) === 'female')
                         : FIGHTERS;
-      return randomProfileSeeded(rng, fighterPool.length ? fighterPool : FIGHTERS, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, hoodOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
+      const profile = randomProfileSeeded(rng, fighterPool.length ? fighterPool : FIGHTERS, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, hoodOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
+      return ensureMinimumNpcClothingArticles(player, profile, rng);
     }
     function applyEquippedCosmeticsToHumanPlayers() {
       if (!_portraitCosmetics) return;
