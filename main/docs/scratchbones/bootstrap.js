@@ -2030,7 +2030,7 @@ import { createLayerManager } from './ui/layerManager.js';
           addLog(`${seatLabel(player)} raises the stake to ${newStake}.`);
           if (state.gameOver) return;
           if (paid < amountNeeded) {
-            finalizeChallengeByFold(opponentId, playerId, 'could not fund the raise');
+            await finalizeChallengeByFold(opponentId, playerId, 'could not fund the raise');
             return;
           }
           state.betting.currentActorId = opponentId;
@@ -2040,7 +2040,7 @@ import { createLayerManager } from './ui/layerManager.js';
         }
         if (command === 'fold') {
           player.lastAction = 'Folded challenge';
-          finalizeChallengeByFold(opponentId, playerId, 'folded');
+          await finalizeChallengeByFold(opponentId, playerId, 'folded');
         }
       } finally {
         if (!options.allowWhileLocked && state.betting) {
@@ -2058,7 +2058,34 @@ import { createLayerManager } from './ui/layerManager.js';
       const ownContribution = state.betting.contributions?.[winnerId] || 0;
       return Math.max(0, grossAward - ownContribution);
     }
-    function finalizeChallengeByFold(winnerId, loserId, reason) {
+    function challengeTransferSourceAnchors() {
+      if (!state.betting) return [];
+      const anchors = [];
+      const poolAnchor = tablePotPileAnchor();
+      if (poolAnchor) anchors.push(poolAnchor);
+      for (const playerId of [state.betting.challengerId, state.betting.challengedId]) {
+        const contributionAnchor = contributionAnchorForPlayer(playerId);
+        if (contributionAnchor) anchors.push(contributionAnchor);
+      }
+      return anchors;
+    }
+    async function animateChallengeAwardToWinner(winnerId, grossAward) {
+      if (!state.betting || grossAward <= 0) return;
+      const sourceAnchors = challengeTransferSourceAnchors();
+      const toAnchor = walletCoinRowAnchorForPlayer(winnerId);
+      if (!sourceAnchors.length || !toAnchor) {
+        console.warn('[chip-transfer] challenge award skip: unresolved anchor selector', {
+          fromSelectors: ['[data-pot-pile-anchor]', '[data-stake-contrib-anchor]'],
+          toSelector: `[data-wallet-coin-row-anchor="${Number(winnerId)}"]`,
+          hasSources: sourceAnchors.length > 0,
+          hasTo: !!toAnchor,
+          grossAward
+        });
+        return;
+      }
+      await animateCoinTransferCluster({ fromAnchor: sourceAnchors[0], toAnchor, transferAmount: grossAward, durationMs: CONFIG.transferAnimation.clusterMoveMs });
+    }
+    async function finalizeChallengeByFold(winnerId, loserId, reason) {
       if (!state.betting || state.gameOver) return;
       SCRATCHBONES_AUDIO.playChallengeEnd();
       SCRATCHBONES_AUDIO.stopChallengeMusic();
@@ -2077,6 +2104,7 @@ import { createLayerManager } from './ui/layerManager.js';
           if (state.gameOver) return;
         }
       }
+      await animateChallengeAwardToWinner(winnerId, award);
       const netGain = netChallengeGainFor(winnerId, award);
       winner.chips += award;
       state.stats.chipsMovedByChallenges += award;
@@ -2114,6 +2142,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const pot = challengePotTotal();
       const netGain = netChallengeGainFor(winnerId, pot);
       showClaimGlow('red', 2500, async () => {
+        await animateChallengeAwardToWinner(winnerId, pot);
         winner.chips += pot;
         state.stats.chipsMovedByChallenges += pot;
         observeRevealedTruthForReads(play, play.truthful);
