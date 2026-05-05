@@ -268,17 +268,39 @@ function makeCSSFilter(color) {
   return buildCSSFilter(color.h, color.s, color.v ?? color.l);
 }
 
+function isHexColor(value) {
+  return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value);
+}
+
 // ── Canvas helpers ─────────────────────────────────────────
 
-function drawPortraitLayer(ctx, img, xform, cssFilter) {
+function drawPortraitLayer(ctx, img, xform, tint) {
   const { ax, ay, sx, sy } = xform;
   const h  = PORTRAIT_L * sy;
   const w  = (img.naturalWidth / img.naturalHeight) * PORTRAIT_L * sx;
   const cx = PORTRAIT_CW / 2 + ay * PORTRAIT_L;
   const cy = PORTRAIT_CH / 2 - ax * PORTRAIT_L;
+  const dx = cx - w / 2;
+  const dy = cy - h / 2;
+  const usesTargetHex = isHexColor(tint?.hex);
+  const cssFilter = usesTargetHex ? buildCSSFilter(0, 0, 0) : (typeof tint === 'string' ? tint : makeCSSFilter(tint));
+
   ctx.save();
-  ctx.filter = cssFilter || 'none';
-  ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+  if (usesTargetHex) {
+    const temp = document.createElement('canvas');
+    temp.width = PORTRAIT_CW;
+    temp.height = PORTRAIT_CH;
+    const tempCtx = temp.getContext('2d');
+    tempCtx.drawImage(img, dx, dy, w, h);
+    tempCtx.globalCompositeOperation = 'source-atop';
+    tempCtx.fillStyle = tint.hex;
+    tempCtx.fillRect(0, 0, PORTRAIT_CW, PORTRAIT_CH);
+    ctx.filter = cssFilter;
+    ctx.drawImage(temp, 0, 0);
+  } else {
+    ctx.filter = cssFilter;
+    ctx.drawImage(img, dx, dy, w, h);
+  }
   ctx.restore();
 }
 
@@ -401,8 +423,8 @@ async function renderProfile(canvas, profile) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, PORTRAIT_CW, PORTRAIT_CH);
 
-  const filterFor = (slot) => slot ? makeCSSFilter(bodyColors[slot]) : 'none';
-  const filterA   = makeCSSFilter(bodyColors.A);
+  const tintFor = (slot) => slot ? bodyColors[slot] : null;
+  const tintA = bodyColors.A;
 
   const baseLeftArmLayers = [];
   const baseTorsoLayers = [];
@@ -415,7 +437,7 @@ async function renderProfile(canvas, profile) {
       : normalizedId.includes('armr') ? baseRightArmLayers
       : normalizedId.includes('torso') ? baseTorsoLayers
       : baseTorsoLayers;
-    target.push({ layer, filter: filterFor(layer.tintSlot || 'A') });
+    target.push({ layer, tint: tintFor(layer.tintSlot || 'A') });
   }
   for (const group of [torsoCosmetic, armCosmetic]) {
     if (!group) continue;
@@ -423,7 +445,7 @@ async function renderProfile(canvas, profile) {
     if (!groupLayers.length) continue;
     for (const layer of groupLayers) {
       const target = group?.slot === 'torso' ? torsoClothingLayers : overwearLayers;
-      target.push({ layer, filter: filterFor(group.tintSlot || 'A') });
+      target.push({ layer, tint: tintFor(group.tintSlot || 'A') });
     }
   }
 
@@ -450,7 +472,7 @@ async function renderProfile(canvas, profile) {
       const key = layer.paletteColorKey;
       const layerTintSlot = (!key || key === 'A') ? group.tintSlot
         : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
-      target.push({ layer, filter: filterFor(layerTintSlot), group });
+      target.push({ layer, tint: tintFor(layerTintSlot), group });
     }
   };
 
@@ -464,7 +486,7 @@ async function renderProfile(canvas, profile) {
           const key = layer.paletteColorKey;
           const layerTintSlot = (!key || key === 'A') ? group.tintSlot
             : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
-          preBackLayers.push({ layer, filter: filterFor(layerTintSlot), group });
+          preBackLayers.push({ layer, tint: tintFor(layerTintSlot), group });
         }
       }
     }
@@ -480,7 +502,7 @@ async function renderProfile(canvas, profile) {
           const key = layer.paletteColorKey;
           const layerTintSlot = (!key || key === 'A') ? hat.tintSlot
             : (hat.tintSlot ? `${hat.tintSlot}_${key}` : null);
-          (hatIsUnderHood ? hatUnderLayers : hatOverLayers).push({ layer, filter: filterFor(layerTintSlot), group: hat });
+          (hatIsUnderHood ? hatUnderLayers : hatOverLayers).push({ layer, tint: tintFor(layerTintSlot), group: hat });
         }
       }
     }
@@ -497,7 +519,7 @@ async function renderProfile(canvas, profile) {
         const key = layer.paletteColorKey;
         const layerTintSlot = (!key || key === 'A') ? group.tintSlot
           : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
-        (layer.pos === 'back' ? preBackLayers : frontHairLayers).push({ layer, filter: filterFor(layerTintSlot), group });
+        (layer.pos === 'back' ? preBackLayers : frontHairLayers).push({ layer, tint: tintFor(layerTintSlot), group });
       }
     }
   }
@@ -565,9 +587,9 @@ async function renderProfile(canvas, profile) {
     };
 
   const drawLayers = (layerList) => {
-    for (const { layer, filter } of layerList) {
+    for (const { layer, tint } of layerList) {
       const img = imgMap.get(layer.url);
-      if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
+      if (img) drawPortraitLayer(ctx, img, resolveXform(layer), tint);
     }
   };
 
@@ -578,7 +600,7 @@ async function renderProfile(canvas, profile) {
   drawLayers(torsoClothingLayers);
   drawLayers(overwearLayers);
   drawLayers(sideLeftLayers);
-  { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), filterA); }
+  { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), tintA); }
   drawLayers(rightSideHairLayers);
   drawLayers(facialHairLayers);
   drawLayers(frontHairLayers);

@@ -326,7 +326,12 @@
       </div>`;
   }
 
-  function swatchStyle(base, h, s, v) {
+  function isHexColor(value) {
+    return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value);
+  }
+
+  function swatchStyle(base, h, s, v, hex) {
+    if (isHexColor(hex)) return `background:${hex}`;
     const hueOffset   = (window.SCRATCHBONES_CONFIG?.clothingHueOffset)   ?? 0;
     const satOffset   = (window.SCRATCHBONES_CONFIG?.clothingSatOffset)   ?? 0;
     const lightOffset = (window.SCRATCHBONES_CONFIG?.clothingLightOffset) ?? 0;
@@ -334,6 +339,11 @@
     const bri = Math.max(0, 1 + (Number(v) || 0) + lightOffset).toFixed(3);
     const finalH = (Number(h) || 0) + hueOffset;
     return `background:${base};filter:hue-rotate(${finalH}deg) saturate(${sat}) brightness(${bri})`;
+  }
+
+  function dyeBodyColor(dye) {
+    if (!dye) return null;
+    return { ...(dye.color || {}), ...(isHexColor(dye.hex) ? { hex: dye.hex } : {}) };
   }
 
   // Derive C from A: slightly lighter and less saturated (highlight/marking)
@@ -484,7 +494,7 @@
       for (const [tintKey, dyeId] of Object.entries(dyeIds)) {
         if (dyeId) {
           const dye = catalog.find(d => d.id === dyeId);
-          if (dye) profile.bodyColors = { ...(profile.bodyColors || {}), [tintKey]: { ...dye.color } };
+          if (dye) profile.bodyColors = { ...(profile.bodyColors || {}), [tintKey]: dyeBodyColor(dye) };
         }
       }
     }
@@ -738,7 +748,7 @@
         const dyesForSlot = ownedDyes.filter(d => (d.group || 'cloth') === equippedMaterial);
         const dyeRowHtml = (d) => {
           const color = d.color || { h: 0, s: 0, v: 0 };
-          const style = swatchStyle(DYE_SWATCH_BASE, color.h, color.s, color.v);
+          const style = swatchStyle(DYE_SWATCH_BASE, color.h, color.s, color.v, d.hex);
           return `
             <div class="sb-dye-row">
               <span class="sb-dye-dot" style="${style}"></span>
