@@ -317,7 +317,26 @@ function getProfileSpriteXforms(profile) {
     ...extra,
   });
   const records = [];
+  const hatIsUnderHood = hat?.hoodLayering === 'under';
+  const pushGroupRecords = (group) => {
+    if (!group) return;
+    const groupLayers = resolveOptionLayers(group, resolvedFighter);
+    for (const layer of groupLayers) {
+      records.push(toRecord('cosmetic', layer, { group: group.id || null, hairSlot: group.hairSlot || null, pos: layer.pos || 'front' }));
+    }
+  };
+  if (hairFront !== undefined) {
+    // Pre-arm back layers: back hairstyle then hat back sprite
+    for (const group of [hairBack, hat]) {
+      if (!group) continue;
+      for (const layer of resolveOptionLayers(group, resolvedFighter)) {
+        if (layer.pos === 'back') records.push(toRecord('cosmetic', layer, { group: group.id || null, hairSlot: group.hairSlot || null, pos: 'back' }));
+      }
+    }
+  }
+  // Body layers (arms, torso)
   for (const layer of bodyLayerSource) records.push(toRecord('body', layer, { pos: layer.pos || 'back', id: layer.id || null }));
+  // Clothing and overwear
   for (const group of [torsoCosmetic, armCosmetic]) {
     if (!group) continue;
     const groupLayers = resolveOptionLayers(group, resolvedFighter);
@@ -326,23 +345,40 @@ function getProfileSpriteXforms(profile) {
       records.push(toRecord('bodyCosmetic', layer, { group: group.id || null, pos: layer.pos || 'front' }));
     }
   }
-  const hatIsUnderHood = hat?.hoodLayering === 'under';
-  const allCosmeticGroups = hairFront !== undefined
-    ? (hatIsUnderHood
-        ? [hairBack, hairSideL, hairFront, facialHair, eyes, hairSide, hat, hood, pauldron]
-        : [hairBack, hairSideL, hairFront, facialHair, eyes, hairSide, hood, pauldron, hat])
-    : [hair, eyes, facialHair, hat];
-  for (const group of allCosmeticGroups) {
-    if (!group) continue;
-    const groupLayers = resolveOptionLayers(group, resolvedFighter);
-    if (!groupLayers.length) continue;
-    for (const layer of groupLayers) {
-      records.push(toRecord('cosmetic', layer, { group: group.id || null, hairSlot: group.hairSlot || null, pos: layer.pos || 'front' }));
+  if (hairFront !== undefined) {
+    // Left side hairstyle before head
+    pushGroupRecords(hairSideL);
+    // Head
+    if (headUrl) records.push({ part: 'head', url: headUrl, xform: getPortraitXformPreset('B') });
+    // Facial hair and eyes after head, before ur-head
+    pushGroupRecords(facialHair);
+    pushGroupRecords(eyes);
+    // Ur-head overlays
+    for (const layer of urLayerSource) {
+      records.push({ part: 'headOverlay', url: layer.url || null, renderOrder: layer.renderOrder || 'normal', xform: getPortraitXformPreset('B') });
     }
-  }
-  if (headUrl) records.push({ part: 'head', url: headUrl, xform: getPortraitXformPreset('B') });
-  for (const layer of urLayerSource) {
-    records.push({ part: 'headOverlay', url: layer.url || null, renderOrder: layer.renderOrder || 'normal', xform: getPortraitXformPreset('B') });
+    // Front hairstyle, right side hairstyle
+    pushGroupRecords(hairFront);
+    pushGroupRecords(hairSide);
+    // Hat (under hood), hood, pauldron, hat (over hood)
+    if (hatIsUnderHood) pushGroupRecords(hat);
+    pushGroupRecords(hood);
+    pushGroupRecords(pauldron);
+    if (!hatIsUnderHood) pushGroupRecords(hat);
+  } else {
+    const legacyGroups = [hair, eyes, facialHair, hat];
+    for (const group of legacyGroups) {
+      if (!group) continue;
+      const groupLayers = resolveOptionLayers(group, resolvedFighter);
+      if (!groupLayers.length) continue;
+      for (const layer of groupLayers) {
+        records.push(toRecord('cosmetic', layer, { group: group.id || null, hairSlot: group.hairSlot || null, pos: layer.pos || 'front' }));
+      }
+    }
+    if (headUrl) records.push({ part: 'head', url: headUrl, xform: getPortraitXformPreset('B') });
+    for (const layer of urLayerSource) {
+      records.push({ part: 'headOverlay', url: layer.url || null, renderOrder: layer.renderOrder || 'normal', xform: getPortraitXformPreset('B') });
+    }
   }
   if (opacityMaskLayer?.url) records.push(toRecord('opacityMask', opacityMaskLayer));
   return records;
@@ -393,49 +429,94 @@ async function renderProfile(canvas, profile) {
 
   // Support both three-slot (hairBack/hairSide/hairFront) and legacy single-slot (hair).
   const hatIsUnderHood = hat?.hoodLayering === 'under';
-  const allCosmeticGroups = hairFront !== undefined
-  ? (hatIsUnderHood
-      ? [hairBack, hairSideL, hairFront, facialHair, eyes, hairSide, hat, hood, pauldron]
-      : [hairBack, hairSideL, hairFront, facialHair, eyes, hairSide, hood, pauldron, hat])
-  : [hair, eyes, facialHair, hat];
-  const backLayers  = [];
-  const frontLayers = [];
-
-  const backLayerPriority = (entry) => {
-    const groupId = String(entry?.group?.id || '').toLowerCase();
-    const hairSlot = String(entry?.group?.hairSlot || '').toLowerCase();
-    if (hairSlot === 'back') return 0;
-    if (groupId.includes('kasa')) return 1;
-    return 2;
-  };
-
   const hoodHideFrontAndSideHair = Boolean(resolveOptionLayers(hood, resolvedFighter).length);
   const hiddenCosmeticGroups = hoodHideFrontAndSideHair ? new Set([hairFront, hairSide, hairSideL]) : null;
 
-  for (const group of allCosmeticGroups) {
-    if (!group) continue;
+  const preBackLayers    = [];  // back hairstyle + hat-back, drawn before arms
+  const sideLeftLayers   = [];  // left side hairstyle, drawn before head
+  const facialHairLayers = [];  // facial hair, drawn after head
+  const eyesLayers       = [];  // eyes, drawn after facial hair
+  const frontHairLayers  = [];  // front + right-side hairstyle, drawn after ur-head
+  const hatUnderLayers   = [];  // hat front when hoodLayering=under
+  const hoodPauldronLayers = []; // hood then pauldron
+  const hatOverLayers    = [];  // hat front when hoodLayering=over (default)
+
+  const pushToTarget = (group, target) => {
+    if (!group || hiddenCosmeticGroups?.has(group)) return;
     const groupLayers = resolveOptionLayers(group, resolvedFighter);
-    if (!groupLayers.length) continue;
-    if (hiddenCosmeticGroups?.has(group)) continue;
+    if (!groupLayers.length) return;
     for (const layer of groupLayers) {
-      const target = layer.pos === 'back' ? backLayers : frontLayers;
       const key = layer.paletteColorKey;
       const layerTintSlot = (!key || key === 'A') ? group.tintSlot
         : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
       target.push({ layer, filter: filterFor(layerTintSlot), group });
+    }
+  };
+
+  if (hairFront !== undefined) {
+    // Pre-arm back layers: back hairstyle then hat back sprite
+    for (const group of [hairBack, hat]) {
+      if (!group) continue;
+      const groupLayers = resolveOptionLayers(group, resolvedFighter);
+      for (const layer of groupLayers) {
+        if (layer.pos === 'back') {
+          const key = layer.paletteColorKey;
+          const layerTintSlot = (!key || key === 'A') ? group.tintSlot
+            : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
+          preBackLayers.push({ layer, filter: filterFor(layerTintSlot), group });
+        }
+      }
+    }
+    pushToTarget(hairSideL, sideLeftLayers);
+    pushToTarget(facialHair, facialHairLayers);
+    pushToTarget(eyes, eyesLayers);
+    pushToTarget(hairFront, frontHairLayers);
+    pushToTarget(hairSide, frontHairLayers);
+    if (hat) {
+      const groupLayers = resolveOptionLayers(hat, resolvedFighter);
+      for (const layer of groupLayers) {
+        if (layer.pos !== 'back') {
+          const key = layer.paletteColorKey;
+          const layerTintSlot = (!key || key === 'A') ? hat.tintSlot
+            : (hat.tintSlot ? `${hat.tintSlot}_${key}` : null);
+          (hatIsUnderHood ? hatUnderLayers : hatOverLayers).push({ layer, filter: filterFor(layerTintSlot), group: hat });
+        }
+      }
+    }
+    pushToTarget(hood, hoodPauldronLayers);
+    pushToTarget(pauldron, hoodPauldronLayers);
+  } else {
+    // Legacy single-slot hair
+    const legacyGroups = [hair, eyes, facialHair, hat];
+    for (const group of legacyGroups) {
+      if (!group) continue;
+      const groupLayers = resolveOptionLayers(group, resolvedFighter);
+      if (!groupLayers.length) continue;
+      for (const layer of groupLayers) {
+        const key = layer.paletteColorKey;
+        const layerTintSlot = (!key || key === 'A') ? group.tintSlot
+          : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
+        (layer.pos === 'back' ? preBackLayers : frontHairLayers).push({ layer, filter: filterFor(layerTintSlot), group });
+      }
     }
   }
 
   const neededUrls = new Set([
     headUrl,
     ...urLayerSource.map(m => m.url),
+    ...preBackLayers.map(({ layer }) => layer.url),
     ...baseLeftArmLayers.map(({ layer }) => layer.url),
     ...baseTorsoLayers.map(({ layer }) => layer.url),
     ...baseRightArmLayers.map(({ layer }) => layer.url),
-        ...backLayers.map(({ layer }) => layer.url),
-    ...frontLayers.map(({ layer }) => layer.url),
     ...torsoClothingLayers.map(({ layer }) => layer.url),
     ...overwearLayers.map(({ layer }) => layer.url),
+    ...sideLeftLayers.map(({ layer }) => layer.url),
+    ...facialHairLayers.map(({ layer }) => layer.url),
+    ...eyesLayers.map(({ layer }) => layer.url),
+    ...frontHairLayers.map(({ layer }) => layer.url),
+    ...hatUnderLayers.map(({ layer }) => layer.url),
+    ...hoodPauldronLayers.map(({ layer }) => layer.url),
+    ...hatOverLayers.map(({ layer }) => layer.url),
     ...(opacityMaskLayer?.url ? [opacityMaskLayer.url] : []),
     ...blinkOverlayUrlsByBase.values(),
   ]);
@@ -481,51 +562,32 @@ async function renderProfile(canvas, profile) {
       sy: layer?.sy ?? 1,
     };
 
-  for (const { layer, filter } of baseLeftArmLayers) {
-    const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
-  }
-  for (const { layer, filter } of baseTorsoLayers) {
-    const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
-  }
-  for (const { layer, filter } of baseRightArmLayers) {
-    const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
-  }
-  for (const { layer, filter } of torsoClothingLayers)
-  {
-    const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
-  }
-  for (const { layer, filter } of overwearLayers)
-  {
-    const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
-  }
-  backLayers.sort((a, b) => backLayerPriority(a) - backLayerPriority(b));
+  const drawLayers = (layerList) => {
+    for (const { layer, filter } of layerList) {
+      const img = imgMap.get(layer.url);
+      if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
+    }
+  };
 
-  for (const { layer, filter } of backLayers) {
-    const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
-  }
+  drawLayers(preBackLayers);
+  drawLayers(baseLeftArmLayers);
+  drawLayers(baseTorsoLayers);
+  drawLayers(baseRightArmLayers);
+  drawLayers(torsoClothingLayers);
+  drawLayers(overwearLayers);
+  drawLayers(sideLeftLayers);
   { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), filterA); }
+  drawLayers(facialHairLayers);
+  drawLayers(eyesLayers);
   for (const mid of urLayerSource) {
-    if (mid.renderOrder === 'topLayer') continue;
     const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
     const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
     if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), 'none');
   }
-  for (const { layer, filter } of frontLayers) {
-    const img = imgMap.get(layer.url);
-    if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
-  }
-  for (const mid of urLayerSource) {
-    if (mid.renderOrder !== 'topLayer') continue;
-    const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
-    const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
-    if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), 'none');
-  }
+  drawLayers(frontHairLayers);
+  drawLayers(hatUnderLayers);
+  drawLayers(hoodPauldronLayers);
+  drawLayers(hatOverLayers);
   if (opacityMaskLayer?.url) {
     const maskImg = imgMap.get(opacityMaskLayer.url);
     if (maskImg) applyPortraitOpacityMask(ctx, maskImg, resolveXform(opacityMaskLayer));
