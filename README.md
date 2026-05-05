@@ -44,3 +44,12 @@ node index.js
 
 The server listens on port 8080 by default (override with the `PORT`
 environment variable).
+
+## Scratchbones Portrait Configuration
+
+NPC portrait randomization is configured under `game.portrait.randomization` in
+`docs/config/scratchbones-config.js`. The `minimumNpcClothingArticles` setting
+defaults to `1`, and the configured `clothingSlots`/repair preference ensure
+NPC-generated portraits are guaranteed at least one visible clothing article.
+This guard only applies to NPC profile generation; human portraits continue to
+use their saved or selected appearance without forced clothing.

@@ -110,6 +110,33 @@ const DEFAULT_CSS_ROOT_VARS = {
   '--layout-card-shadow-alpha': '0.34',
   '--layout-card-contact-alpha': '0.2',
 };
+
+const DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG = {
+  minimumNpcClothingArticles: 1,
+  clothingSlots: ['hat', 'hood', 'torsoCosmetic', 'armCosmetic'],
+  clothingRepairSlotPreference: ['torsoCosmetic', 'armCosmetic', 'hat', 'hood'],
+  clothingOptionPoolsBySlot: {
+    hat: 'hatOptions',
+    hood: 'hoodOptions',
+    torsoCosmetic: 'torsoPortraitOptions',
+    armCosmetic: 'armPortraitOptions',
+  },
+};
+
+function normalizeStringArray(value, fallback) {
+  const source = Array.isArray(value) ? value : fallback;
+  return source.map((item) => String(item || '').trim()).filter(Boolean);
+}
+
+function normalizeStringMap(value, fallback) {
+  const source = value && typeof value === 'object' && !Array.isArray(value)
+    ? { ...fallback, ...value }
+    : fallback;
+  return Object.fromEntries(Object.entries(source)
+    .map(([key, mapValue]) => [String(key || '').trim(), String(mapValue || '').trim()])
+    .filter(([key, mapValue]) => key && mapValue));
+}
+
 const DEFAULT_LAYER_MANAGER_CONFIG = {
   enabled: true,
   hostZIndex: 45,
@@ -321,6 +348,22 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         bettingMaxMs: rawGameConfig.timers?.aiDecisionDelays?.bettingMaxMs ?? 650,
         challengeStaggerMs: rawGameConfig.timers?.aiDecisionDelays?.challengeStaggerMs ?? 220,
       },
+    },
+    portrait: {
+      ...(rawGameConfig.portrait || {}),
+      randomization: (() => {
+        const rawRandomization = rawGameConfig.portrait?.randomization || {};
+        const minimumNpcClothingArticles = Number(rawRandomization.minimumNpcClothingArticles);
+        return {
+          ...rawRandomization,
+          minimumNpcClothingArticles: Number.isFinite(minimumNpcClothingArticles)
+            ? Math.max(0, Math.floor(minimumNpcClothingArticles))
+            : DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.minimumNpcClothingArticles,
+          clothingSlots: normalizeStringArray(rawRandomization.clothingSlots, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.clothingSlots),
+          clothingRepairSlotPreference: normalizeStringArray(rawRandomization.clothingRepairSlotPreference, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.clothingRepairSlotPreference),
+          clothingOptionPoolsBySlot: normalizeStringMap(rawRandomization.clothingOptionPoolsBySlot, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.clothingOptionPoolsBySlot),
+        };
+      })(),
     },
     ai: {
       challengeThreshold: rawGameConfig.ai?.challengeThreshold ?? 0.52,

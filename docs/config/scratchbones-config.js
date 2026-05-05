@@ -226,6 +226,17 @@ window.SCRATCHBONES_CONFIG = {
         "shirtbeardIds": ["kenk_shirtbeard", "kenk_shirtbeard_f"],
         "collarLockedFacialHairIds": ["kenk_shirtbeard", "kenk_shirtbeard_f"]
       },
+      "randomization": {
+        "minimumNpcClothingArticles": 1,
+        "clothingSlots": ["hat", "hood", "torsoCosmetic", "armCosmetic"],
+        "clothingRepairSlotPreference": ["torsoCosmetic", "armCosmetic", "hat", "hood"],
+        "clothingOptionPoolsBySlot": {
+          "hat": "hatOptions",
+          "hood": "hoodOptions",
+          "torsoCosmetic": "torsoPortraitOptions",
+          "armCosmetic": "armPortraitOptions"
+        }
+      },
       "blink": {
         "enabled": true,
         "minIntervalMs": 2500,
