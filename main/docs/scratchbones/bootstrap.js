@@ -1776,6 +1776,15 @@ import { createLayerManager } from './ui/layerManager.js';
     function sleep(ms) {
       return new Promise((resolve) => setTimeout(resolve, ms));
     }
+    async function waitForNonZeroRect(element, maxAttempts = 3) {
+      if (!element) return null;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const rect = element.getBoundingClientRect();
+        if (rect.width && rect.height) return rect;
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      return element.getBoundingClientRect();
+    }
     async function animateCoinCloneToTarget(sourceEl, targetEl, { durationMs = 280, replaceOut = false } = {}) {
       if (!sourceEl || !targetEl) {
         console.warn('[stake-anim] skipped: missing source or target element', {
@@ -1824,8 +1833,8 @@ import { createLayerManager } from './ui/layerManager.js';
         console.warn('[chip-transfer] skipped: missing anchors or non-positive amount', { hasFrom: !!fromAnchor, hasTo: !!toAnchor, transferAmount });
         return;
       }
-      const fromRect = fromAnchor.getBoundingClientRect();
-      const toRect = toAnchor.getBoundingClientRect();
+      const fromRect = await waitForNonZeroRect(fromAnchor);
+      const toRect = await waitForNonZeroRect(toAnchor);
       if (!fromRect.width || !fromRect.height || !toRect.width || !toRect.height) {
         console.warn('[chip-transfer] skipped: zero-size source/target rect', { fromRect: { width: fromRect.width, height: fromRect.height }, toRect: { width: toRect.width, height: toRect.height } });
         return;
