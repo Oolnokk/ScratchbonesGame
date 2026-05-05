@@ -1275,18 +1275,34 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
   bodyColors = applyBodyColorRulesSeeded(bodyColors, randomizationRules, rng);
 
   const clothingRule = randomizationRules?.clothingColors;
-  const hasClothPiece = Boolean(resolveOptionLayers(torsoCosmetic, fighter).length || resolveOptionLayers(armCosmetic, fighter).length);
+  const torsoLayers = resolveOptionLayers(torsoCosmetic, fighter);
+  const armLayers = resolveOptionLayers(armCosmetic, fighter);
+  const hoodLayers = resolveOptionLayers(hood, fighter);
+  const hasClothPiece = Boolean(torsoLayers.length || armLayers.length);
+  const hasHoodPiece = Boolean(hoodLayers.length);
   const syncAcrossPieces = clothingRule?.syncAcrossPieces === true;
   const ruleRange = clothingRule?.range || null;
   const clothSourceRange = ruleRange || torsoCosmetic?.colorRange || armCosmetic?.colorRange || null;
+  const hoodMaterialRange = materialColorRangeFor(hood);
+  const hoodSourceRange = ruleRange || hoodMaterialRange || hood?.colorRange || null;
   const clothMaterialTag = window.CONFIG?.portraitRandomization?.materialTags?.cloth || 'cloth';
   const hatUsesClothMaterial = isMaterialTag(hat, clothMaterialTag);
   const hatMaterialRange = materialColorRangeFor(hat);
   const hatSourceRange = hatMaterialRange
     || (hatUsesClothMaterial ? (ruleRange || hat?.colorRange || null) : (hat?.colorRange || null));
+  const hasPaletteB = (layers) => (layers || []).some(layer => layer?.paletteColorKey === 'B');
 
   if (hasClothPiece && clothSourceRange) {
     bodyColors.CLOTH = randomColorFromRangeSeeded(clothSourceRange, rng);
+    if (hasPaletteB([...torsoLayers, ...armLayers])) {
+      bodyColors.CLOTH_B = randomColorFromRangeSeeded(clothSourceRange, rng);
+    }
+  }
+  if (hasHoodPiece && hoodSourceRange) {
+    bodyColors.HOOD = randomColorFromRangeSeeded(hoodSourceRange, rng);
+    if (hasPaletteB(hoodLayers)) {
+      bodyColors.HOOD_B = randomColorFromRangeSeeded(hoodSourceRange, rng);
+    }
   }
   if (hatSourceRange) {
     bodyColors.HAT = (syncAcrossPieces && hatUsesClothMaterial && bodyColors.CLOTH)
