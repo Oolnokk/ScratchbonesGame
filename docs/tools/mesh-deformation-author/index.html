@@ -986,15 +986,41 @@ function stopPreview() {
   setStatus('Preview stopped.');
 }
 
+function advanceAnimState(time, dt) {
+  const poseCount = poses.length;
+  if (!poseCount) return 0;
+
+  let segIdx = ((Math.floor(time) % poseCount) + poseCount) % poseCount;
+  let segT = time - Math.floor(time);
+  let remaining = Math.max(0, dt);
+
+  while (remaining > 0) {
+    const segDur = Math.max(0.1, poseDurations[segIdx] || animSpeed);
+    const secondsToBoundary = (1 - segT) * segDur;
+
+    if (remaining < secondsToBoundary) {
+      segT += remaining / segDur;
+      remaining = 0;
+      break;
+    }
+
+    remaining -= secondsToBoundary;
+    segIdx = (segIdx + 1) % poseCount;
+    segT = 0;
+  }
+
+  return segIdx + segT;
+}
+
 function animLoop(now) {
   if (!previewOn) return;
 
   const dt  = (now - lastTime) / 1000;
   lastTime  = now;
+  animT = advanceAnimState(animT, dt);
+
   const fromI = Math.floor(animT) % poses.length;
-  const dur = Math.max(0.1, poseDurations[fromI] || animSpeed);
-  animT = animT + dt / dur;
-  const toI   = (Math.floor(animT) + 1) % poses.length;
+  const toI   = (fromI + 1) % poses.length;
   const t = animT - Math.floor(animT);
   // Ken Perlin's smoothstep (3t² − 2t³) — ease-in/ease-out between keyframes
   const st = t * t * (3 - 2 * t);
