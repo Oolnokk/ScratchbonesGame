@@ -2209,8 +2209,8 @@ import { createLayerManager } from './ui/layerManager.js';
       const player = state.players[playerIndex];
       if (player.eliminated || player.hand.length !== 0) return false;
       const totalWon = state.tablePot;
-      const fromAnchor = tablePotPileAnchor();
       render();
+      const fromAnchor = tablePotPileAnchor();
       const toAnchor = walletCoinRowAnchorForPlayer(playerIndex);
       if (!fromAnchor || !toAnchor) {
         console.warn('[chip-transfer] clear payout skip: unresolved anchor selector', {
