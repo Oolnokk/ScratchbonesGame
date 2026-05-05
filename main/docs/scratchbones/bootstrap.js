@@ -1982,7 +1982,7 @@ import { createLayerManager } from './ui/layerManager.js';
           addLog(`${seatLabel(player)} opens the challenge stake at ${chosenTierValue}.`);
           player.lastAction = `Opened ${chosenTierValue}`;
           if (paid < chosenTierValue) {
-            finalizeChallengeByFold(opponentId, playerId, 'could not fund the opening stake');
+            await finalizeChallengeByFold(opponentId, playerId, 'could not fund the opening stake');
             return;
           }
           state.betting.phase = 'response';
@@ -1999,7 +1999,7 @@ import { createLayerManager } from './ui/layerManager.js';
           player.lastAction = 'Called';
           if (state.gameOver) return;
           if (getContribution(playerId) < state.betting.currentTierValue) {
-            finalizeChallengeByFold(opponentId, playerId, 'could not cover the call');
+            await finalizeChallengeByFold(opponentId, playerId, 'could not cover the call');
             return;
           }
           if (maybeAutoRevealAfterMatchedBet()) return;
