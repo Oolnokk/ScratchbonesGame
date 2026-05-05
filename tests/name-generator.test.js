@@ -246,7 +246,7 @@ describe('generateIdentityFromSeed — kenkari culture', () => {
 // ── slagothim culture ─────────────────────────────────────────────────────────
 
 describe('generateIdentityFromSeed — slagothim culture', () => {
-  it('produces a two-part name', () => {
+  it('produces a three-part name (firstname tley location)', () => {
     const name = ng.generateIdentityFromSeed('abc', 'male', 'slagothim');
     const parts = name.split(' ');
     assert.equal(parts.length, 3, `Expected "X tley Y": got ${JSON.stringify(parts)}`);

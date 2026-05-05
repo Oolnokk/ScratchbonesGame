@@ -227,7 +227,7 @@ describe('cosmetic shop', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
     acc.spendBronze(acc.getBronze()); // drain all bronze
-    const result = acc.buyCosmetic('appearance::hat::basic_headband'); // costs 5
+    const result = acc.buyCosmetic('appearance::hat::basic_headband'); // price from catalog
     assert.equal(result.ok, false);
     assert.equal(result.error, 'Not enough Bronze');
   });
