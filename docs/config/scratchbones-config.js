@@ -174,6 +174,168 @@ window.SCRATCHBONES_CONFIG = {
         }
       }
     },
+    "dyes": {
+      "swatchBase": "#7dc89a",
+      "categories": [
+        { "id": "reds", "label": "Reds" },
+        { "id": "oranges", "label": "Oranges" },
+        { "id": "yellows", "label": "Yellows" },
+        { "id": "greens", "label": "Greens" },
+        { "id": "blues", "label": "Blues" },
+        { "id": "purples", "label": "Purples" }
+      ],
+      "catalog": [
+          // ── Cloth dyes — full range ─────────────────────────────────────────────
+          { id: 'dye:CLOTH:red',       label: 'Jade',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:  15, s:  1.67, v: -0.16 } }, // #00A86B
+          { id: 'dye:CLOTH:orange',    label: 'Teal',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  37, s:  1.67, v: -0.36 } }, // #008080
+          { id: 'dye:CLOTH:yellow',    label: 'Azure',    group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  67, s:  1.67, v:  0.27 } }, // #007FFF
+          { id: 'dye:CLOTH:green',     label: 'Amethyst', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h: 127, s:  0.33, v:  0.02 } }, // #9966CC
+          { id: 'dye:CLOTH:blue',      label: 'Crimson',  group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-155, s:  1.42, v:  0.10 } }, // #DC143C
+          { id: 'dye:CLOTH:purple',    label: 'Amber',    group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h: -98, s:  1.67, v:  0.27 } }, // #FFBF00
+          { id: 'dye:CLOTH:brown',     label: 'Moss',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: -68, s:  0.09, v: -0.23 } }, // #8A9A5B
+          { id: 'dye:CLOTH:black',     label: 'Onyx',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:  52, s: -0.81, v: -0.71 } }, // #353839
+          { id: 'dye:CLOTH:white',     label: 'Mist',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  87, s: -0.85, v:  0.04 } }, // #C4C6D0
+          { id: 'dye:CLOTH:grey',      label: 'Sage',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: -35, s: -0.36, v: -0.23 } }, // #7D9B76
+          { id: 'dye:CLOTH:navy',      label: 'Navy',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  97, s:  1.67, v: -0.36 } }, // #000080
+          { id: 'dye:CLOTH:scarlet',   label: 'Scarlet',  group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-135, s:  1.67, v:  0.27 } }, // #FF2400
+          { id: 'dye:CLOTH:gold',      label: 'Gold',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -93, s:  1.67, v:  0.27 } }, // #FFD700
+          { id: 'dye:CLOTH:violet',    label: 'Violet',   group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h: 127, s:  1.67, v:  0.27 } }, // #8000FF
+          { id: 'dye:CLOTH:forest',    label: 'Forest',   group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: -23, s:  1.01, v: -0.31 } }, // #228B22
+          { id: 'dye:CLOTH:ivory',     label: 'Ivory',    group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -83, s: -0.84, v:  0.27 } }, // #FFFFF0
+          { id: 'dye:CLOTH:wine',      label: 'Wine',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-150, s:  0.57, v: -0.43 } }, // #722F37
+          { id: 'dye:CLOTH:cobalt',    label: 'Cobalt',   group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  72, s:  1.67, v: -0.15 } }, // #0047AB
+          // Earth & brown additions
+          { id: 'dye:CLOTH:saddlebrown', label: 'Brown',  group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-118, s:  1.30, v: -0.31 } }, // #8B4513
+          { id: 'dye:CLOTH:rust',      label: 'Rust',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-125, s:  1.46, v: -0.08 } }, // #B7410E
+          { id: 'dye:CLOTH:sand',      label: 'Sand',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-109, s: -0.11, v:  0.05 } }, // #D2B48C
+          { id: 'dye:CLOTH:sienna',    label: 'Sienna',   group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-124, s:  0.92, v: -0.20 } }, // #A0522D
+
+          // Reds additions
+          { id: 'dye:CLOTH:carmine', label: 'Carmine', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-153, s:  1.67, v: -0.25 } }, // #960018
+          { id: 'dye:CLOTH:vermilion', label: 'Vermilion', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-138, s:  1.06, v:  0.14 } }, // #E34234
+          { id: 'dye:CLOTH:rose', label: 'Rose', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-173, s:  1.67, v:  0.28 } }, // #FF007F
+          { id: 'dye:CLOTH:ruby', label: 'Ruby', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-166, s:  1.46, v:  0.12 } }, // #E0115F
+          { id: 'dye:CLOTH:brick', label: 'Brick', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-151, s:  0.81, v:  0.02 } }, // #CB4154
+          { id: 'dye:CLOTH:garnet', label: 'Garnet', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-142, s:  0.44, v: -0.42 } }, // #733635
+          { id: 'dye:CLOTH:poppy', label: 'Poppy', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-143, s:  1.08, v:  0.28 } }, // #FF3838
+          { id: 'dye:CLOTH:currant', label: 'Currant', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-165, s:  1.67, v: -0.31 } }, // #8A0032
+          { id: 'dye:CLOTH:claret', label: 'Claret', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-160, s:  1.18, v: -0.36 } }, // #7F1734
+          { id: 'dye:CLOTH:coral_red', label: 'Coral Red', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-143, s:  1.00, v:  0.28 } }, // #FF4040
+          // Oranges additions
+          { id: 'dye:CLOTH:tangerine', label: 'Tangerine', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-110, s:  1.67, v:  0.21 } }, // #F28500
+          { id: 'dye:CLOTH:persimmon', label: 'Persimmon', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-121, s:  1.67, v:  0.18 } }, // #EC5800
+          { id: 'dye:CLOTH:apricot', label: 'Apricot', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-119, s: -0.21, v:  0.26 } }, // #FBCEB1
+          { id: 'dye:CLOTH:burnt_orange', label: 'Burnt Orange', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-118, s:  1.67, v:  0.02 } }, // #CC5500
+          { id: 'dye:CLOTH:pumpkin', label: 'Pumpkin', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-119, s:  1.42, v:  0.28 } }, // #FF7518
+          { id: 'dye:CLOTH:ochre', label: 'Ochre', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-113, s:  1.22, v:  0.02 } }, // #CC7722
+          { id: 'dye:CLOTH:copperleaf', label: 'Copperleaf', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-128, s:  0.49, v: -0.09 } }, // #B66A50
+          { id: 'dye:CLOTH:marigold', label: 'Marigold', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-104, s:  1.29, v:  0.17 } }, // #EAA221
+          { id: 'dye:CLOTH:flame', label: 'Flame', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-126, s:  1.27, v:  0.13 } }, // #E25822
+          { id: 'dye:CLOTH:cantaloupe', label: 'Cantaloupe', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-108, s:  1.22, v:  0.28 } }, // #FFA62B
+          // Yellows additions
+          { id: 'dye:CLOTH:lemon', label: 'Lemon', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -87, s:  0.84, v:  0.28 } }, // #FFF44F
+          { id: 'dye:CLOTH:saffron', label: 'Saffron', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -98, s:  1.14, v:  0.22 } }, // #F4C430
+          { id: 'dye:CLOTH:citrine', label: 'Citrine', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -89, s:  1.55, v:  0.14 } }, // #E4D00A
+          { id: 'dye:CLOTH:honey', label: 'Honey', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -98, s:  1.55, v:  0.28 } }, // #FFC30B
+          { id: 'dye:CLOTH:maize', label: 'Maize', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -89, s:  0.68, v:  0.26 } }, // #FBEC5D
+          { id: 'dye:CLOTH:mustard', label: 'Mustard', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -96, s:  0.75, v:  0.28 } }, // #FFDB58
+          { id: 'dye:CLOTH:butter', label: 'Butter', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -94, s: -0.23, v:  0.28 } }, // #FFF1B5
+          { id: 'dye:CLOTH:flax', label: 'Flax', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -93, s:  0.21, v:  0.19 } }, // #EEDC82
+          { id: 'dye:CLOTH:canary', label: 'Canary', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -83, s:  0.07, v:  0.28 } }, // #FFFF99
+          { id: 'dye:CLOTH:dandelion', label: 'Dandelion', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h: -88, s:  1.13, v:  0.20 } }, // #F0E130
+          // Greens additions
+          { id: 'dye:CLOTH:emerald', label: 'Emerald', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:  -3, s:  0.60, v:  0.00 } }, // #50C878
+          { id: 'dye:CLOTH:malachite', label: 'Malachite', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:  -3, s:  1.53, v:  0.09 } }, // #0BDA51
+          { id: 'dye:CLOTH:viridian', label: 'Viridian', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:  18, s:  0.35, v: -0.35 } }, // #40826D
+          { id: 'dye:CLOTH:fern', label: 'Fern', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: -37, s:  0.21, v: -0.39 } }, // #4F7942
+          { id: 'dye:CLOTH:olive', label: 'Olive', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: -83, s:  1.67, v: -0.36 } }, // #808000
+          { id: 'dye:CLOTH:mint', label: 'Mint', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: -23, s:  0.08, v:  0.28 } }, // #98FF98
+          { id: 'dye:CLOTH:pine', label: 'Pine', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:  32, s:  1.64, v: -0.39 } }, // #01796F
+          { id: 'dye:CLOTH:laurel', label: 'Laurel', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: -48, s: -0.58, v: -0.07 } }, // #A9BA9D
+          { id: 'dye:CLOTH:shamrock', label: 'Shamrock', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:  13, s:  1.67, v: -0.21 } }, // #009E60
+          { id: 'dye:CLOTH:seafoam', label: 'Seafoam', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:   6, s: -0.21, v:  0.13 } }, // #9FE2BF
+          // Blues additions
+          { id: 'dye:CLOTH:sapphire', label: 'Sapphire', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  73, s:  1.45, v: -0.07 } }, // #0F52BA
+          { id: 'dye:CLOTH:cerulean', label: 'Cerulean', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  53, s:  1.67, v: -0.16 } }, // #007BA7
+          { id: 'dye:CLOTH:sky', label: 'Sky', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  54, s:  0.13, v:  0.18 } }, // #87CEEB
+          { id: 'dye:CLOTH:indigo', label: 'Indigo', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 132, s:  1.67, v: -0.35 } }, // #4B0082
+          { id: 'dye:CLOTH:lapis', label: 'Lapis', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  67, s:  1.02, v: -0.22 } }, // #26619C
+          { id: 'dye:CLOTH:turquoise', label: 'Turquoise', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  31, s:  0.90, v:  0.12 } }, // #40E0D0
+          { id: 'dye:CLOTH:prussian', label: 'Prussian', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  62, s:  1.67, v: -0.58 } }, // #003153
+          { id: 'dye:CLOTH:cornflower', label: 'Cornflower', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  76, s:  0.54, v:  0.19 } }, // #6495ED
+          { id: 'dye:CLOTH:steel', label: 'Steel', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  64, s:  0.63, v: -0.10 } }, // #4682B4
+          { id: 'dye:CLOTH:aegean', label: 'Aegean', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:  68, s:  0.92, v: -0.45 } }, // #1F456E
+          // Purples additions
+          { id: 'dye:CLOTH:lavender', label: 'Lavender', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h: 132, s:  0.14, v:  0.10 } }, // #B57EDC
+          { id: 'dye:CLOTH:plum', label: 'Plum', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h: 164, s:  0.37, v: -0.29 } }, // #8E4585
+          { id: 'dye:CLOTH:mauve', label: 'Mauve', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h: 133, s: -0.17, v:  0.28 } }, // #E0B0FF
+          { id: 'dye:CLOTH:orchid', label: 'Orchid', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h: 159, s:  0.30, v:  0.09 } }, // #DA70D6
+          { id: 'dye:CLOTH:byzantium', label: 'Byzantium', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h: 168, s:  0.69, v: -0.44 } }, // #702963
+          { id: 'dye:CLOTH:mulberry', label: 'Mulberry', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:-175, s:  0.65, v: -0.01 } }, // #C54B8C
+          { id: 'dye:CLOTH:lilac', label: 'Lilac', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h: 157, s: -0.49, v:  0.00 } }, // #C8A2C8
+          { id: 'dye:CLOTH:grape', label: 'Grape', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h: 129, s:  0.95, v: -0.16 } }, // #6F2DA8
+          { id: 'dye:CLOTH:periwinkle', label: 'Periwinkle', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:  97, s: -0.47, v:  0.28 } }, // #CCCCFF
+          { id: 'dye:CLOTH:eggplant', label: 'Eggplant', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:-174, s: -0.09, v: -0.51 } }, // #614051
+
+          // ── Rigid fiber — natural plant-fiber tones (used by kasas) ─────────────
+          { id: 'mat:rigid_fiber:straw',  label: 'Straw',        group: 'rigid_fiber', color: { h: -97, s: -0.03, v:  0.14 } }, // #E4D191
+          { id: 'mat:rigid_fiber:reed',   label: 'Dried Reed',   group: 'rigid_fiber', color: { h:-106, s:  0.38, v: -0.04 } }, // #BF9A5C
+          { id: 'mat:rigid_fiber:pale',   label: 'Pale Fiber',   group: 'rigid_fiber', color: { h:-100, s: -0.45, v:  0.06 } }, // #D4C8A8
+          { id: 'mat:rigid_fiber:tawny',  label: 'Tawny Reed',   group: 'rigid_fiber', color: { h:-104, s:  0.64, v: -0.22 } }, // #9C7A3C
+          { id: 'mat:rigid_fiber:shadow', label: 'Shadow Fiber', group: 'rigid_fiber', color: { h:-115, s: -0.21, v: -0.42 } }, // #736151
+          { id: 'mat:rigid_fiber:marsh',  label: 'Marsh Reed',   group: 'rigid_fiber', color: { h: -60, s: -0.16, v: -0.21 } }, // #8B9E6C
+
+          // ── Metal — pre-iron-age metals and alloys ───────────────────────────────
+          { id: 'mat:metal:copper',    label: 'Copper',    group: 'metal', color: { h:-114, s:  0.93, v: -0.08 } }, // #B87333
+          { id: 'mat:metal:bronze',    label: 'Bronze',    group: 'metal', color: { h:-113, s:  1.02, v:  0.03 } }, // #CD7F32
+          { id: 'mat:metal:tin',       label: 'Tin',       group: 'metal', color: { h:   0, s: -1.00, v:  0.08 } }, // #D8D8D8
+          { id: 'mat:metal:gold',      label: 'Gold',      group: 'metal', color: { h: -93, s:  1.67, v:  0.27 } }, // #FFD700
+          { id: 'mat:metal:silver',    label: 'Silver',    group: 'metal', color: { h:   0, s: -1.00, v: -0.04 } }, // #C0C0C0
+          { id: 'mat:metal:electrum',  label: 'Electrum',  group: 'metal', color: { h: -97, s:  0.97, v:  0.06 } }, // #D4AF37
+
+          // ── Wood — natural and exotic timbers (bronzewood = ironwood) ────────────
+          { id: 'mat:wood:oak',        label: 'Oak',         group: 'wood', color: { h:-102, s:  0.72, v:  0.06 } }, // #D4A84B
+          { id: 'mat:wood:walnut',     label: 'Dark Walnut', group: 'wood', color: { h:-119, s:  1.00, v: -0.54 } }, // #5C3317
+          { id: 'mat:wood:cedar',      label: 'Cedar',       group: 'wood', color: { h:-112, s:  1.20, v: -0.02 } }, // #C47722
+          { id: 'mat:wood:ebony',      label: 'Ebony',       group: 'wood', color: { h:-116, s:  1.67, v: -0.69 } }, // #3E1C00
+          { id: 'mat:wood:bronzewood', label: 'Bronzewood',  group: 'wood', color: { h:-111, s:  0.43, v: -0.20 } }, // #A0784A
+          { id: 'mat:wood:birch',      label: 'Birch',       group: 'wood', color: { h:-103, s: -0.51, v:  0.23 } }, // #F5E6C8
+
+          // ── Chitin — insect/crustacean carapace tones ────────────────────────────
+          { id: 'mat:chitin:amber',    label: 'Amber',       group: 'chitin', color: { h:-108, s:  1.06, v:  0.06 } }, // #D49030
+          { id: 'mat:chitin:horn',     label: 'Horn',        group: 'chitin', color: { h:-105, s:  0.16, v: -0.23 } }, // #9A8257
+          { id: 'mat:chitin:dark',     label: 'Dark Chitin', group: 'chitin', color: { h:-119, s:  0.31, v: -0.70 } }, // #3D2B1F
+          { id: 'mat:chitin:sandy',    label: 'Sandy',       group: 'chitin', color: { h:-106, s: -0.13, v:  0.03 } }, // #CDB38A
+          { id: 'mat:chitin:night',    label: 'Night',       group: 'chitin', color: { h:  90, s: -0.53, v: -0.74 } }, // #2A2B33
+
+          // ── Leather — tanned hide tones ──────────────────────────────────────────
+          { id: 'mat:leather:tan',     label: 'Natural Tan',   group: 'leather', color: { h:-109, s: -0.11, v:  0.05 } }, // #D2B48C
+          { id: 'mat:leather:saddle',  label: 'Saddle Brown',  group: 'leather', color: { h:-118, s:  1.30, v: -0.31 } }, // #8B4513
+          { id: 'mat:leather:chestnut',label: 'Chestnut',      group: 'leather', color: { h:-133, s:  0.72, v: -0.25 } }, // #954535
+          { id: 'mat:leather:dark',    label: 'Dark Leather',  group: 'leather', color: { h:-113, s:  0.49, v: -0.62 } }, // #4B3621
+          { id: 'mat:leather:cognac',  label: 'Cognac',        group: 'leather', color: { h:-137, s:  0.61, v: -0.23 } }, // #9A463D
+          { id: 'mat:leather:cream',   label: 'Cream Leather', group: 'leather', color: { h:-104, s: -0.28, v:  0.23 } }, // #F5DEB3
+          { id: 'mat:leather:umber',   label: 'Umber',         group: 'leather', color: { h:-117, s:  0.72, v: -0.56 } }, // #6B4A2F
+          { id: 'mat:leather:bark',    label: 'Bark Brown',    group: 'leather', color: { h:-121, s:  0.58, v: -0.64 } }, // #5A3D2B
+          { id: 'mat:leather:peat',    label: 'Peat',          group: 'leather', color: { h:-126, s:  0.41, v: -0.72 } }, // #47362C
+          { id: 'mat:leather:moss',    label: 'Mossed Hide',   group: 'leather', color: { h:-86,  s:  0.36, v: -0.60 } }, // #4E4A31
+
+          // ── Fur — natural animal-pelt tones ─────────────────────────────────────
+          { id: 'mat:fur:snow',     label: 'Snow White',   group: 'fur', color: { h:   0, s: -0.95, v:  0.27 } }, // #FFFAFA
+          { id: 'mat:fur:cream',    label: 'Cream',        group: 'fur', color: { h: -95, s: -0.73, v:  0.23 } }, // #F5F0DC
+          { id: 'mat:fur:tawny',    label: 'Tawny',        group: 'fur', color: { h:-118, s:  0.80, v:  0.00 } }, // #C87941
+          { id: 'mat:fur:russet',   label: 'Russet',       group: 'fur', color: { h:-126, s:  1.06, v: -0.23 } }, // #9B4523
+          { id: 'mat:fur:grey',     label: 'Wolf Grey',    group: 'fur', color: { h:   0, s: -1.00, v: -0.36 } }, // #808080
+          { id: 'mat:fur:midnight', label: 'Midnight',     group: 'fur', color: { h:   0, s: -1.00, v: -0.86 } }, // #1C1C1C
+
+          // ── Bamboo — cane tones ──────────────────────────────────────────────────
+          { id: 'mat:bamboo:green',  label: 'Green Bamboo',  group: 'bamboo', color: { h: -23, s:  0.33, v: -0.39 } }, // #3D7A3D
+          { id: 'mat:bamboo:aged',   label: 'Aged Bamboo',   group: 'bamboo', color: { h:-107, s:  0.02, v:  0.06 } }, // #D4B483
+          { id: 'mat:bamboo:young',  label: 'Young Bamboo',  group: 'bamboo', color: { h: -55, s:  0.33, v: -0.08 } }, // #8DB85C
+          { id: 'mat:bamboo:black',  label: 'Black Bamboo',  group: 'bamboo', color: { h: -68, s: -0.54, v: -0.77 } }, // #2C2E26
+          { id: 'mat:bamboo:smoked', label: 'Smoked Bamboo', group: 'bamboo', color: { h:-110, s:  0.04, v: -0.31 } }, // #8B7355
+      ],
+    },
     "chips": {
       "starting": 30,
       "challengeBaseTransfer": 1,
