@@ -2255,9 +2255,9 @@ import { createLayerManager } from './ui/layerManager.js';
       player.chips += totalWon;
       SCRATCHBONES_AUDIO.playChipReceiptBurst({
         chipCount: totalWon,
-        usePreReceiptCount: CONFIG.audio?.payoutBurst?.pitchCountMode !== 'postIncrement',
-        spacingMinMs: CONFIG.audio?.payoutBurst?.spacingMinMs,
-        spacingMaxMs: CONFIG.audio?.payoutBurst?.spacingMaxMs,
+        usePreReceiptCount: CONFIG.assets?.audio?.payoutBurst?.pitchCountMode !== 'postIncrement',
+        spacingMinMs: CONFIG.assets?.audio?.payoutBurst?.spacingMinMs,
+        spacingMaxMs: CONFIG.assets?.audio?.payoutBurst?.spacingMaxMs,
         walletChipCountBeforeReceipt,
       });
       player.clears += 1;
