@@ -181,6 +181,52 @@
     };
   }
 
+
+  function trickBoneConfig() {
+    const cfg = window.SCRATCHBONES_CONFIG?.game?.trickBones || {};
+    const definitions = cfg.definitions || {};
+    const ids = Object.keys(definitions);
+    const loadoutSize = Math.max(1, Number(cfg.loadoutSize) || 6);
+    const defaultUnlocked = Array.isArray(cfg.defaultUnlocked) && cfg.defaultUnlocked.length ? cfg.defaultUnlocked : ids;
+    const defaultLoadout = Array.isArray(cfg.defaultLoadout) && cfg.defaultLoadout.length ? cfg.defaultLoadout : defaultUnlocked;
+    return { definitions, ids, loadoutSize, defaultUnlocked, defaultLoadout };
+  }
+
+  function normalizeUnlockedTrickBones(ids) {
+    const cfg = trickBoneConfig();
+    const validIds = new Set(cfg.ids);
+    const source = Array.isArray(ids) ? ids : cfg.defaultUnlocked;
+    const result = [];
+    for (const rawId of source) {
+      const id = String(rawId || '').trim();
+      if (validIds.has(id) && !result.includes(id)) result.push(id);
+    }
+    return result;
+  }
+
+  function normalizeTrickLoadout(loadout, unlocked = null) {
+    const cfg = trickBoneConfig();
+    const unlockedIds = normalizeUnlockedTrickBones(unlocked);
+    const unlockedSet = new Set(unlockedIds);
+    const source = Array.isArray(loadout) ? loadout : cfg.defaultLoadout;
+    const result = [];
+    for (const rawId of source) {
+      const id = String(rawId || '').trim();
+      if (unlockedSet.has(id)) result.push(id);
+      if (result.length >= cfg.loadoutSize) break;
+    }
+    for (const rawId of cfg.defaultLoadout) {
+      if (result.length >= cfg.loadoutSize) break;
+      const id = String(rawId || '').trim();
+      if (unlockedSet.has(id)) result.push(id);
+    }
+    for (const id of unlockedIds) {
+      if (result.length >= cfg.loadoutSize) break;
+      result.push(id);
+    }
+    return result.slice(0, cfg.loadoutSize);
+  }
+
   function defaultAccount() {
     return {
       username: null,
@@ -190,6 +236,8 @@
       equippedCosmetics: [],
       ownedDyes: [...STARTER_DYE_IDS],
       appliedDyes: {},
+      unlockedTrickBones: normalizeUnlockedTrickBones(),
+      trickBoneLoadout: normalizeTrickLoadout(),
       appearance: defaultAppearance(),
       createdAt: Date.now(),
     };
@@ -215,6 +263,8 @@
           migratedCosmetics[slot] = migrateId(id);
         }
         _account.appearance.cosmetics = migratedCosmetics;
+        _account.unlockedTrickBones = normalizeUnlockedTrickBones(_account.unlockedTrickBones);
+        _account.trickBoneLoadout = normalizeTrickLoadout(_account.trickBoneLoadout, _account.unlockedTrickBones);
         // Migrate old color-object format and intermediate A/B/C-channel format
         const rawDyes = parsed.appliedDyes || {};
         const dyeValuesAreObjects = Object.values(rawDyes).some(v => v !== null && typeof v === 'object');
@@ -376,6 +426,44 @@
     return true;
   }
 
+
+  // ── Trick bone loadout API ─────────────────────────────────
+
+  function getTrickBoneDefinitions() { return { ...trickBoneConfig().definitions }; }
+  function getTrickBoneLoadoutSize() { return trickBoneConfig().loadoutSize; }
+  function getUnlockedTrickBones() { return [...(getAccount().unlockedTrickBones || [])]; }
+  function getTrickBoneLoadout() { return normalizeTrickLoadout(getAccount().trickBoneLoadout, getAccount().unlockedTrickBones); }
+  function isTrickBoneUnlocked(id) { return getUnlockedTrickBones().includes(id); }
+
+  function unlockTrickBone(id) {
+    const acc = getAccount();
+    const normalized = normalizeUnlockedTrickBones([...(acc.unlockedTrickBones || []), id]);
+    if (normalized.length === (acc.unlockedTrickBones || []).length) return false;
+    acc.unlockedTrickBones = normalized;
+    acc.trickBoneLoadout = normalizeTrickLoadout(acc.trickBoneLoadout, acc.unlockedTrickBones);
+    save();
+    return true;
+  }
+
+  function setTrickBoneLoadout(loadout) {
+    const acc = getAccount();
+    const normalized = normalizeTrickLoadout(loadout, acc.unlockedTrickBones);
+    if (normalized.length !== trickBoneConfig().loadoutSize) return false;
+    acc.trickBoneLoadout = normalized;
+    save();
+    return true;
+  }
+
+  function setTrickBoneLoadoutSlot(slotIndex, trickId) {
+    const acc = getAccount();
+    const index = Number(slotIndex);
+    if (!Number.isInteger(index) || index < 0 || index >= trickBoneConfig().loadoutSize) return false;
+    if (!isTrickBoneUnlocked(trickId)) return false;
+    const loadout = getTrickBoneLoadout();
+    loadout[index] = String(trickId);
+    return setTrickBoneLoadout(loadout);
+  }
+
   // ── Dye API ────────────────────────────────────────────────
 
   function getDyeCatalog() { return DYE_CATALOG; }
@@ -438,6 +526,14 @@
     buyCosmetic,
     equipCosmetic,
     unequipCosmetic,
+    getTrickBoneDefinitions,
+    getTrickBoneLoadoutSize,
+    getUnlockedTrickBones,
+    getTrickBoneLoadout,
+    isTrickBoneUnlocked,
+    unlockTrickBone,
+    setTrickBoneLoadout,
+    setTrickBoneLoadoutSlot,
     getDyeCatalog,
     getOwnedDyes,
     isDyeOwned,

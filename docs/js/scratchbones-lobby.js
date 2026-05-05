@@ -263,6 +263,7 @@
   let _roomCode = '';
   let _onlineOccupants = [];        // [{seatId, name}]
   let _onlineOccupantAppearances = {}; // { seatId: appearance }
+  let _onlineOccupantLoadouts = {}; // { seatId: [trickId, ...] }
   let _myOnlineSeat = null;
   let _fillWithNpcs = false;        // true when PvPvE mode routes through online flow with NPC fill
 
@@ -288,6 +289,41 @@
   function wsUrl() {
     return (window.SCRATCHBONES_CONFIG && window.SCRATCHBONES_CONFIG.wsUrl)
       || 'ws://localhost:8080';
+  }
+
+
+  function trickBoneLabel(id) {
+    const definitions = window.ScratchbonesAccount?.getTrickBoneDefinitions?.() || window.SCRATCHBONES_CONFIG?.game?.trickBones?.definitions || {};
+    return definitions[id]?.label || cap(id);
+  }
+
+  function renderTrickLoadoutEditor() {
+    const acc = window.ScratchbonesAccount;
+    const definitions = acc?.getTrickBoneDefinitions?.() || {};
+    const unlocked = acc?.getUnlockedTrickBones?.() || [];
+    const loadout = acc?.getTrickBoneLoadout?.() || [];
+    const slots = loadout.map((id, index) => `
+      <div class="sb-field" style="margin-bottom:8px;">
+        <label for="sb-trick-slot-${index}">Slot ${index + 1}</label>
+        <select id="sb-trick-slot-${index}" data-trick-slot="${index}">
+          ${unlocked.map(optionId => `<option value="${esc(optionId)}"${optionId === id ? ' selected' : ''}>${esc(trickBoneLabel(optionId))}</option>`).join('')}
+        </select>
+      </div>`).join('');
+    const unlockedList = unlocked.map(id => {
+      const def = definitions[id] || {};
+      return `<li><strong>${esc(trickBoneLabel(id))}</strong>${def.wild ? ' · Wild' : ''}${def.description ? `<br><span class="sb-muted">${esc(def.description)}</span>` : ''}</li>`;
+    }).join('');
+    return `
+      <div class="sb-card sb-wide-card">
+        <div class="sb-header">
+          <button class="sb-btn-ghost" id="sb-back-btn">← Back</button>
+          <div class="sb-title">Trick Bone Loadout</div>
+        </div>
+        <div class="sb-muted" style="margin-bottom:10px;">Choose your six trick bones. Duplicates are allowed; your loadout is shuffled into the shared deck before play.</div>
+        ${slots || '<div class="sb-muted">No trick bones unlocked.</div>'}
+        <div class="sb-label" style="margin-top:10px;">Unlocked Trick Bones</div>
+        <ul style="margin:6px 0 0 18px;padding:0;">${unlockedList}</ul>
+      </div>`;
   }
 
   function swatchStyle(base, h, s, v) {
@@ -530,6 +566,7 @@
         <div class="sb-actions">
           <button class="sb-btn-ghost" id="sb-appearance-btn">Edit Appearance</button>
           <button class="sb-btn-ghost" id="sb-collections-btn">Collections</button>
+          <button class="sb-btn-ghost" id="sb-trick-loadout-btn">Trick Loadout</button>
           <button class="sb-btn-ghost" id="sb-shop-btn">Shop</button>
           <button class="sb-btn-ghost" id="sb-online-btn">Play Online</button>
           ${adBtn}
@@ -912,6 +949,7 @@
     if      (_screen === 'create')            el.innerHTML = renderCreate();
     else if (_screen === 'appearance')        el.innerHTML = renderAppearance();
     else if (_screen === 'collections')       el.innerHTML = renderCollections();
+    else if (_screen === 'trick-loadout')     el.innerHTML = renderTrickLoadoutEditor();
     else if (_screen === 'shop')              el.innerHTML = renderShop();
     else if (_screen === 'online')            el.innerHTML = renderOnline();
     else if (_screen === 'online-host-setup') el.innerHTML = renderOnlineHostSetup();
@@ -988,6 +1026,7 @@
     document.getElementById('sb-start-btn')?.addEventListener('click', startGame);
     document.getElementById('sb-appearance-btn')?.addEventListener('click', openAppearanceEditor);
     document.getElementById('sb-collections-btn')?.addEventListener('click', () => { _screen = 'collections'; render(); });
+    document.getElementById('sb-trick-loadout-btn')?.addEventListener('click', () => { _screen = 'trick-loadout'; render(); });
     document.getElementById('sb-shop-btn')?.addEventListener('click', () => { _screen = 'shop'; render(); });
     document.getElementById('sb-online-btn')?.addEventListener('click', () => { _fillWithNpcs = false; _screen = 'online'; render(); });
     document.getElementById('sb-ad-btn')?.addEventListener('click', () => {
@@ -1147,6 +1186,13 @@
       });
     });
 
+    el.querySelectorAll('[data-trick-slot]').forEach(select => {
+      select.addEventListener('change', () => {
+        window.ScratchbonesAccount?.setTrickBoneLoadoutSlot(Number(select.dataset.trickSlot), select.value);
+        render();
+      });
+    });
+
     // ── Shop ───────────────────────────────────────────────────
 
     el.querySelectorAll('.sb-shop-action').forEach(btn => {
@@ -1177,9 +1223,11 @@
       }
       const username = acc.getUsername() || 'Host';
       const appearance = getFullAppearance();
+      const playerLoadout = getLocalPlayerLoadout();
       _onlineOccupants = [{ seatId: 0, name: username }];
       _onlineOccupantAppearances = { 0: appearance };
-      net.createRoom(wsUrl(), username, _onlinePlayerCount, appearance)
+      _onlineOccupantLoadouts = { 0: playerLoadout };
+      net.createRoom(wsUrl(), username, _onlinePlayerCount, appearance, playerLoadout)
         .then(code => {
           _roomCode = code;
           _myOnlineSeat = 0;
@@ -1189,12 +1237,14 @@
             // Store per-seat appearances from the relay
             for (const o of (msg.occupants || [])) {
               if (o.appearance) _onlineOccupantAppearances[o.seatId] = o.appearance;
+              if (Array.isArray(o.playerLoadout)) _onlineOccupantLoadouts[o.seatId] = o.playerLoadout;
             }
             render();
           });
           net.on('player-left', msg => {
             _onlineOccupants = _onlineOccupants.filter(o => o.seatId !== msg.seatId);
             delete _onlineOccupantAppearances[msg.seatId];
+            delete _onlineOccupantLoadouts[msg.seatId];
             render();
           });
           render();
@@ -1228,8 +1278,9 @@
         }
         const username = acc.getUsername() || 'Player';
         const appearance = getFullAppearance();
+        const playerLoadout = getLocalPlayerLoadout();
         doJoinBtn.disabled = true;
-        net.joinRoom(wsUrl(), code, username, appearance)
+        net.joinRoom(wsUrl(), code, username, appearance, playerLoadout)
           .then(seatId => {
             _myOnlineSeat = seatId;
             _roomCode = code;
@@ -1271,14 +1322,26 @@
     return window.ScratchbonesAccount?.getAppearance() ?? null;
   }
 
-  function getFullAppearance() {
+  function getFullKhymeryyan() {
     const acc = window.ScratchbonesAccount;
     if (!acc) return null;
     return {
-      ...acc.getAppearance(),
-      equippedCosmetics: [...(acc.getEquippedCosmetics() || [])],
-      appliedDyes: { ...(acc.getAppliedDyes() || {}) },
+      appearance: {
+        ...acc.getAppearance(),
+        equippedCosmetics: [...(acc.getEquippedCosmetics() || [])],
+        appliedDyes: { ...(acc.getAppliedDyes() || {}) },
+      },
+      playerLoadout: [...(acc.getTrickBoneLoadout?.() || [])],
+      unlockedTrickBones: [...(acc.getUnlockedTrickBones?.() || [])],
     };
+  }
+
+  function getFullAppearance() {
+    return getFullKhymeryyan()?.appearance ?? null;
+  }
+
+  function getLocalPlayerLoadout() {
+    return getFullKhymeryyan()?.playerLoadout ?? [];
   }
 
   function show(screen) {
@@ -1343,6 +1406,7 @@
     const npcNames = ['Rook', 'Sable', 'Grim', 'Vex'];
     const playerNames = { [humanSeat]: username };
     const playerAppearances = { [humanSeat]: ap };
+    const playerLoadouts = { [humanSeat]: getLocalPlayerLoadout() };
     let npcIndex = 0;
     for (let seat = 0; seat < totalPlayers; seat++) {
       if (seat !== humanSeat) {
@@ -1355,6 +1419,7 @@
       humanSeats: [humanSeat],
       playerNames,
       playerAppearances,
+      playerLoadouts,
     };
     _postGameMessage = '';
     hide();
@@ -1374,6 +1439,7 @@
 
     // Use per-seat appearances collected from player-joined events
     const playerAppearances = { ..._onlineOccupantAppearances };
+    const playerLoadouts = { ..._onlineOccupantLoadouts };
 
     // In PvPvE (NPC fill) mode, fill any remaining seats with AI players
     if (_fillWithNpcs) {
@@ -1387,7 +1453,7 @@
     }
 
     const mode = _fillWithNpcs ? 'pve' : 'pvp';
-    window.SCRATCHBONES_SESSION = { mode, humanSeats, playerNames, playerAppearances };
+    window.SCRATCHBONES_SESSION = { mode, humanSeats, playerNames, playerAppearances, playerLoadouts };
     _postGameMessage = '';
     net.broadcastStart();
     hide();
@@ -1406,6 +1472,7 @@
       humanSeats: [_myOnlineSeat],
       playerNames: { [_myOnlineSeat]: username },
       playerAppearances: { [_myOnlineSeat]: ap },
+      playerLoadouts: { [_myOnlineSeat]: getLocalPlayerLoadout() },
     };
     if (_scratchbonesReady && window.scratchbonesStartClient) {
       void window.scratchbonesStartClient().catch(e => console.error('[lobby] startOnlineClient error', e));

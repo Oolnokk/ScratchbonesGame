@@ -206,6 +206,80 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   ],
 };
 
+
+const DEFAULT_TRICK_BONE_DEFINITIONS = {
+  smuggle: { id: 'smuggle', label: 'Smuggle Bone', description: 'Move a selected card to another player when the table allows a smuggle reaction.', wild: false },
+  trap: { id: 'trap', label: 'Trap Bone', description: 'A reactive wild trick bone that can spring during a challenge.', wild: true },
+  punish: { id: 'punish', label: 'Punish Bone', description: 'Arm a punishment before a betting decision to pressure the next claim.', wild: false },
+};
+
+function repeatIdsFromCounts(counts = {}) {
+  const result = [];
+  for (const [id, count] of Object.entries(counts || {})) {
+    const safeCount = Math.max(0, Math.floor(Number(count) || 0));
+    for (let i = 0; i < safeCount; i += 1) result.push(id);
+  }
+  return result;
+}
+
+function normalizeTrickBoneDefinitions(rawDefinitions = {}) {
+  const merged = { ...DEFAULT_TRICK_BONE_DEFINITIONS, ...(rawDefinitions || {}) };
+  const definitions = {};
+  for (const [rawId, rawDefinition] of Object.entries(merged)) {
+    const id = String(rawDefinition?.id || rawId || '').trim();
+    if (!id) continue;
+    definitions[id] = {
+      id,
+      label: String(rawDefinition?.label || id),
+      description: String(rawDefinition?.description || ''),
+      wild: rawDefinition?.wild === true,
+    };
+  }
+  return definitions;
+}
+
+function normalizeTrickIdArray(rawIds, { definitions, fallback = [], size = null, allowShort = false } = {}) {
+  const validIds = new Set(Object.keys(definitions || {}));
+  const source = Array.isArray(rawIds) ? rawIds : fallback;
+  const result = [];
+  for (const rawId of source || []) {
+    const id = String(rawId || '').trim();
+    if (validIds.has(id)) result.push(id);
+  }
+  if (!allowShort && size != null && result.length < size) {
+    const fillIds = (fallback || []).map(rawId => String(rawId || '').trim()).filter(id => validIds.has(id));
+    while (fillIds.length && result.length < size) {
+      for (const id of fillIds) {
+        if (result.length >= size) break;
+        result.push(id);
+      }
+    }
+  }
+  return size == null ? result : result.slice(0, size);
+}
+
+function normalizeNpcTrickArchetypes(rawArchetypes, definitions) {
+  const validIds = new Set(Object.keys(definitions || {}));
+  const fallbackWeights = Object.fromEntries([...validIds].map(id => [id, 1]));
+  const source = Array.isArray(rawArchetypes) && rawArchetypes.length
+    ? rawArchetypes
+    : [{ id: 'balanced', weight: 1, loadoutWeights: fallbackWeights }];
+  return source.map((raw, index) => {
+    const loadoutWeights = {};
+    for (const [rawId, rawWeight] of Object.entries(raw?.loadoutWeights || fallbackWeights)) {
+      const id = String(rawId || '').trim();
+      const weight = Math.max(0, Number(rawWeight) || 0);
+      if (validIds.has(id) && weight > 0) loadoutWeights[id] = weight;
+    }
+    if (!Object.keys(loadoutWeights).length) Object.assign(loadoutWeights, fallbackWeights);
+    return {
+      id: String(raw?.id || `archetype-${index + 1}`),
+      weight: Math.max(0, Number(raw?.weight) || 0),
+      loadoutWeights,
+    };
+  }).filter(archetype => archetype.weight > 0);
+}
+
 export function validateScratchbonesGameConfig(rootConfig, { reportError, debugEnabled = true } = {}) {
   const hasGameConfig = rootConfig && typeof rootConfig.game === 'object' && rootConfig.game !== null;
   if (hasGameConfig) return true;
@@ -216,6 +290,21 @@ export function validateScratchbonesGameConfig(rootConfig, { reportError, debugE
 }
 
 export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
+  const trickBoneDefinitions = normalizeTrickBoneDefinitions(rawGameConfig.trickBones?.definitions);
+  const trickBoneDefinitionIds = Object.keys(trickBoneDefinitions);
+  const migratedDefaultLoadout = repeatIdsFromCounts(rawGameConfig.deck?.trickCardCounts);
+  const trickBoneLoadoutSize = Math.max(1, Number(rawGameConfig.trickBones?.loadoutSize) || migratedDefaultLoadout.length || 6);
+  const defaultTrickLoadoutFallback = migratedDefaultLoadout.length ? migratedDefaultLoadout : trickBoneDefinitionIds;
+  const defaultTrickLoadout = normalizeTrickIdArray(rawGameConfig.trickBones?.defaultLoadout, {
+    definitions: trickBoneDefinitions,
+    fallback: defaultTrickLoadoutFallback,
+    size: trickBoneLoadoutSize,
+  });
+  const defaultUnlockedTrickBones = normalizeTrickIdArray(rawGameConfig.trickBones?.defaultUnlocked, {
+    definitions: trickBoneDefinitions,
+    fallback: trickBoneDefinitionIds,
+    allowShort: true,
+  });
   return {
     debug: {
       enabled: rawGameConfig.debug?.enabled !== false,
@@ -234,13 +323,17 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       copiesPerRank: rawGameConfig.deck?.copiesPerRank ?? 4,
       handSize: rawGameConfig.deck?.handSize ?? 10,
       wildCount: rawGameConfig.deck?.wildCount ?? 10,
-      trickCardCounts: {
-        smuggle: Math.max(0, Number(rawGameConfig.deck?.trickCardCounts?.smuggle) || 0),
-        trap: Math.max(0, Number(rawGameConfig.deck?.trickCardCounts?.trap) || 0),
-        punish: Math.max(0, Number(rawGameConfig.deck?.trickCardCounts?.punish) || 0),
-      },
       playerCount: rawGameConfig.deck?.playerCount ?? 4,
       humanNames: rawGameConfig.deck?.humanNames ?? ['You'],
+    },
+    trickBones: {
+      defaultUnlocked: defaultUnlockedTrickBones,
+      defaultLoadout: defaultTrickLoadout,
+      loadoutSize: trickBoneLoadoutSize,
+      definitions: trickBoneDefinitions,
+      definitionIds: trickBoneDefinitionIds,
+      npcArchetypes: normalizeNpcTrickArchetypes(rawGameConfig.trickBones?.npcArchetypes, trickBoneDefinitions),
+      migratedDeckTrickCardCounts: rawGameConfig.deck?.trickCardCounts || null,
     },
     nameGeneration: {
       defaultCultureId: rawGameConfig.nameGeneration?.defaultCultureId ?? 'mao_ao',
