@@ -5,6 +5,12 @@ window.SCRATCHBONES_CONFIG = {
   // Example: wsUrl: 'wss://mustang-walk-schematic.ngrok-free.dev',
   wsUrl: 'wss://mustang-walk-schematic.ngrok-free.dev',
 
+
+  // Global clothing color tuning offsets.
+  clothingHueOffset: 0,
+  clothingSatOffset: 0,
+  clothingLightOffset: 0,
+
   game: {
     "debug": {
       "enabled": true,
