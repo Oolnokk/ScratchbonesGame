@@ -3,30 +3,31 @@
     const logCandle = (level, event, payload = {}) => {
       if (typeof debugLog === 'function') debugLog(level, `candlelight.${event}`, payload);
     };
+    const APP_REF_W = 1920, APP_REF_H = 1080;
     const candlelightConfig = SCRATCHBONES_GAME.layout?.lighting?.candlelight || {};
-    const sourceReferenceWidth = Math.max(1, Number(candlelightConfig.sourceReferenceWidthPx) || 1);
-    const sourceReferenceHeight = Math.max(1, Number(candlelightConfig.sourceReferenceHeightPx) || 1);
     const rawSources = Array.isArray(candlelightConfig.sources) ? candlelightConfig.sources : [];
-    const lightSources = rawSources.map((source) => ({
-      xPct: Number.isFinite(Number(source?.xPct)) ? Number(source.xPct) : 0,
-      yPct: Number.isFinite(Number(source?.yPct)) ? Number(source.yPct) : 0,
-      intensity: Math.max(0, Number(source?.intensity) || 0),
-      radiusMultiplier: Math.max(0, Number(source?.radiusMultiplier) || 0),
-      flickerSpeed: Math.max(0.01, Number(source?.flickerSpeed) || 0.01),
-      turbulence: Math.max(0, Number(source?.turbulence) || 0),
+    const lightSources = (rawSources.length ? rawSources : [
+      { xPct: 61 / APP_REF_W, yPct: 360 / APP_REF_H, intensity: 0.77, radiusMultiplier: 1, flickerSpeed: 4.17, turbulence: 1 },
+    ]).map((source) => ({
+      xPct: Number.isFinite(Number(source?.xPct)) ? Number(source.xPct) : (61 / APP_REF_W),
+      yPct: Number.isFinite(Number(source?.yPct)) ? Number(source.yPct) : (360 / APP_REF_H),
+      intensity: Math.max(0, Number(source?.intensity) || 0.77),
+      radiusMultiplier: Math.max(0, Number(source?.radiusMultiplier) || 1),
+      flickerSpeed: Math.max(0.01, Number(source?.flickerSpeed) || 4.17),
+      turbulence: Math.max(0, Number(source?.turbulence) || 1),
     }));
-    const RADIUS_REF = Math.max(0, Number(candlelightConfig.radiusRefPx) || Math.max(sourceReferenceWidth, sourceReferenceHeight));
+    const RADIUS_REF = Math.max(0, Number(candlelightConfig.radiusRefPx) || 1200);
     const thevmenuOpacityConfigValue = Number(candlelightConfig.thevmenuOpacity);
     const THEVMENU_CANDLELIGHT_OPACITY_DEFAULT = Number.isFinite(thevmenuOpacityConfigValue)
       ? clamp(thevmenuOpacityConfigValue, 0, 1)
-      : 0;
+      : 0.2;
     const thevmenuLayerZIndexConfig = Number(candlelightConfig.thevmenuLayerZIndex);
     const THEVMENU_CANDLELIGHT_LAYER_Z_INDEX = Number.isFinite(thevmenuLayerZIndexConfig)
       ? Math.round(thevmenuLayerZIndexConfig)
-      : 0;
+      : 2147483646;
     const THEVMENU_OCCLUDER_SELECTORS = Array.isArray(candlelightConfig.thevmenuOccluderSelectors)
       ? candlelightConfig.thevmenuOccluderSelectors.filter(sel => typeof sel === 'string' && sel.trim())
-      : [];
+      : ['#aiSidebar', '.humanSeatZone', '.turnSpotlight', '.claimCluster'];
 
     // Shadow height parameters (demo occluder convention)
     const CARD_SHADOW_HEIGHT = 36;
@@ -55,7 +56,6 @@
     }
 
     let w = 0, h = 0, appRef = null;
-    let thevmenuBodyObserver = null;
 
     // ── Canvas: occluder shadows (mix-blend-mode: multiply) ──────────────────
     // Black silhouettes of the actual card/coin PNGs cast away from the light.
@@ -602,27 +602,13 @@
       thevmenuCandlelightCanvas.style.height = `${rect.height}px`;
     }
 
-    function keepThevmenuLayerOnTop() {
-      if (!document.body) return;
-      if (thevmenuCandlelightHost.parentNode !== document.body || document.body.lastElementChild !== thevmenuCandlelightHost) {
-        document.body.appendChild(thevmenuCandlelightHost);
-      }
-    }
-
-    function observeBodyForTopLayer() {
-      if (thevmenuBodyObserver || !document.body) return;
-      thevmenuBodyObserver = new MutationObserver(() => keepThevmenuLayerOnTop());
-      thevmenuBodyObserver.observe(document.body, { childList: true });
-    }
-
     function ensureInApp(app) {
       // Append in order: shadow first (deepest), then dark, then glow (topmost)
       if (shadowCanvas.parentNode !== app) app.appendChild(shadowCanvas);
       if (darkCanvas.parentNode   !== app) app.appendChild(darkCanvas);
       if (glowCanvas.parentNode   !== app) app.appendChild(glowCanvas);
-      keepThevmenuLayerOnTop();
+      if (thevmenuCandlelightHost.parentNode !== document.body) document.body.appendChild(thevmenuCandlelightHost);
       if (thevmenuCandlelightCanvas.parentNode !== thevmenuCandlelightHost) thevmenuCandlelightHost.appendChild(thevmenuCandlelightCanvas);
-      observeBodyForTopLayer();
       syncThevmenuLayerGeometry(app);
     }
 
