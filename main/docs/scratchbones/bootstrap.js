@@ -4623,13 +4623,24 @@ import { createLayerManager } from './ui/layerManager.js';
     } else {
       console.warn('[game] portrait utils unavailable; falling back to initials.');
     }
+    function portraitVariantKeysForFighter(fighter) {
+      const speciesId = String(fighter?.speciesId || '').trim();
+      const gender = String(fighter?.gender || '').trim();
+      if (!speciesId || !gender) return [];
+      return [...new Set([
+        `${speciesId}_${gender}`,
+        `${speciesId.replace(/_/g, '-')}_${gender}`,
+        `${speciesId.replace(/-/g, '_')}_${gender}`,
+      ])];
+    }
     function resolvePortraitOptionLayersForFighter(option, fighter) {
       if (!option) return [];
       const variantLayers = option.variantLayers;
       if (variantLayers && fighter) {
-        const variantKey = `${fighter.speciesId || ''}_${fighter.gender || ''}`;
-        const resolvedLayers = variantLayers[variantKey];
-        if (resolvedLayers?.length) return resolvedLayers;
+        for (const variantKey of portraitVariantKeysForFighter(fighter)) {
+          const resolvedLayers = variantLayers[variantKey];
+          if (resolvedLayers?.length) return resolvedLayers;
+        }
       }
       return option.layers || [];
     }

@@ -692,13 +692,25 @@ function _extractLayersFromParts(partsJson, paletteLayerMap) {
  * Return the correct layer list for an option given the current fighter.
  * Falls back to option.layers when no matching variant exists.
  */
+function portraitVariantKeysForFighter(fighter) {
+  const speciesId = String(fighter?.speciesId || '').trim();
+  const gender = String(fighter?.gender || '').trim();
+  if (!speciesId || !gender) return [];
+  return [...new Set([
+    `${speciesId}_${gender}`,
+    `${speciesId.replace(/_/g, '-')}_${gender}`,
+    `${speciesId.replace(/-/g, '_')}_${gender}`,
+  ])];
+}
+
 function resolveOptionLayers(option, fighter) {
   if (!option) return [];
   const vl = option.variantLayers;
   if (vl && fighter) {
-    const key = (fighter.speciesId || '') + '_' + (fighter.gender || '');
-    const resolved = vl[key];
-    if (resolved && resolved.length) return resolved;
+    for (const key of portraitVariantKeysForFighter(fighter)) {
+      const resolved = vl[key];
+      if (resolved && resolved.length) return resolved;
+    }
   }
   return option.layers || [];
 }
