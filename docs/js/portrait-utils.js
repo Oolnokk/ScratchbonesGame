@@ -418,13 +418,10 @@ function drawPortraitLayerWithMesh(ctx, img, xform, cssFilter, meshPoints, gridC
     return;
   }
   const { ax, ay, sx, sy } = xform;
-  const cw = ctx.canvas.width;
-  const ch = ctx.canvas.height;
-  const layerSize = Math.min(cw, ch) * 0.4;
-  const w = layerSize * sx;
-  const h = layerSize * sy;
-  const cx = cw * (0.5 + ax);
-  const cy = ch * (0.5 + ay);
+  const h  = PORTRAIT_L * sy;
+  const w  = (img.naturalWidth / img.naturalHeight) * PORTRAIT_L * sx;
+  const cx = PORTRAIT_CW / 2 + ay * PORTRAIT_L;
+  const cy = PORTRAIT_CH / 2 - ax * PORTRAIT_L;
   const left = cx - w / 2;
   const top = cy - h / 2;
   const drawTriangle = (s0, s1, s2, d0, d1, d2) => {
@@ -488,7 +485,7 @@ async function renderProfile(canvas, profile) {
       : normalizedId.includes('armr') ? baseRightArmLayers
       : normalizedId.includes('torso') ? baseTorsoLayers
       : baseTorsoLayers;
-    target.push({ layer, filter: filterFor(layer.tintSlot || 'A') });
+    target.push({ layer, filter: filterFor(layer.tintSlot || 'A'), layerPart: 'body' });
   }
   for (const group of [torsoCosmetic, armCosmetic]) {
     if (!group) continue;
@@ -496,7 +493,7 @@ async function renderProfile(canvas, profile) {
     if (!groupLayers.length) continue;
     for (const layer of groupLayers) {
       const target = group?.slot === 'torso' ? torsoClothingLayers : overwearLayers;
-      target.push({ layer, filter: filterFor(group.tintSlot || 'A') });
+      target.push({ layer, filter: filterFor(group.tintSlot || 'A'), layerPart: group?.slot === 'torso' ? 'torsoCosmetic' : 'armCosmetic' });
     }
   }
 
@@ -515,7 +512,7 @@ async function renderProfile(canvas, profile) {
   const hoodPauldronLayers = []; // hood then pauldron
   const hatOverLayers    = [];  // hat front when hoodLayering=over (default)
 
-  const pushToTarget = (group, target) => {
+  const pushToTarget = (group, target, layerPart = 'cosmetic') => {
     if (!group || hiddenCosmeticGroups?.has(group)) return;
     const groupLayers = resolveOptionLayers(group, resolvedFighter);
     if (!groupLayers.length) return;
@@ -523,7 +520,7 @@ async function renderProfile(canvas, profile) {
       const key = layer.paletteColorKey;
       const layerTintSlot = (!key || key === 'A') ? group.tintSlot
         : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
-      target.push({ layer, filter: filterFor(layerTintSlot), group });
+      target.push({ layer, filter: filterFor(layerTintSlot), group, layerPart });
     }
   };
 
@@ -537,15 +534,15 @@ async function renderProfile(canvas, profile) {
           const key = layer.paletteColorKey;
           const layerTintSlot = (!key || key === 'A') ? group.tintSlot
             : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
-          preBackLayers.push({ layer, filter: filterFor(layerTintSlot), group });
+          preBackLayers.push({ layer, filter: filterFor(layerTintSlot), group, layerPart: 'hairBack' });
         }
       }
     }
-    pushToTarget(hairSideL, sideLeftLayers);
-    pushToTarget(facialHair, facialHairLayers);
-    pushToTarget(eyes, eyesLayers);
-    pushToTarget(hairFront, frontHairLayers);
-    pushToTarget(hairSide, rightSideHairLayers);
+    pushToTarget(hairSideL, sideLeftLayers, 'hairSideL');
+    pushToTarget(facialHair, facialHairLayers, 'facialHair');
+    pushToTarget(eyes, eyesLayers, 'eyes');
+    pushToTarget(hairFront, frontHairLayers, 'hairFront');
+    pushToTarget(hairSide, rightSideHairLayers, 'hairSide');
     if (hat) {
       const groupLayers = resolveOptionLayers(hat, resolvedFighter);
       for (const layer of groupLayers) {
@@ -553,12 +550,12 @@ async function renderProfile(canvas, profile) {
           const key = layer.paletteColorKey;
           const layerTintSlot = (!key || key === 'A') ? hat.tintSlot
             : (hat.tintSlot ? `${hat.tintSlot}_${key}` : null);
-          (hatIsUnderHood ? hatUnderLayers : hatOverLayers).push({ layer, filter: filterFor(layerTintSlot), group: hat });
+          (hatIsUnderHood ? hatUnderLayers : hatOverLayers).push({ layer, filter: filterFor(layerTintSlot), group: hat, layerPart: 'hat' });
         }
       }
     }
-    pushToTarget(hood, hoodPauldronLayers);
-    pushToTarget(pauldron, hoodPauldronLayers);
+    pushToTarget(hood, hoodPauldronLayers, 'hood');
+    pushToTarget(pauldron, hoodPauldronLayers, 'pauldron');
   } else {
     // Legacy single-slot hair
     const legacyGroups = [hair, eyes, facialHair, hat];
@@ -570,7 +567,12 @@ async function renderProfile(canvas, profile) {
         const key = layer.paletteColorKey;
         const layerTintSlot = (!key || key === 'A') ? group.tintSlot
           : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
-        (layer.pos === 'back' ? preBackLayers : frontHairLayers).push({ layer, filter: filterFor(layerTintSlot), group });
+        (layer.pos === 'back' ? preBackLayers : frontHairLayers).push({
+          layer,
+          filter: filterFor(layerTintSlot),
+          group,
+          layerPart: layer.pos === 'back' ? 'hairBack' : (group?.id?.includes('eye') ? 'eyes' : group?.id?.includes('facial') ? 'facialHair' : 'hairFront'),
+        });
       }
     }
   }
@@ -644,10 +646,10 @@ async function renderProfile(canvas, profile) {
   const meshEnabled = Array.isArray(breathingPoints) && breathingGridCols > 1 && breathingGridRows > 1;
 
   const drawLayers = (layerList) => {
-    for (const { layer, filter } of layerList) {
+    for (const { layer, filter, layerPart } of layerList) {
       const img = imgMap.get(layer.url);
       if (!img) continue;
-      const applyMesh = meshEnabled && !['head','headOverlay','eyes','facialHair','hairFront','hairBack','hairSide','hairSideL','hood','hat'].includes(layer.part);
+      const applyMesh = meshEnabled && !['head','headOverlay','eyes','facialHair','hairFront','hairBack','hairSide','hairSideL','hood','hat'].includes(layerPart);
       if (applyMesh) drawPortraitLayerWithMesh(ctx, img, resolveXform(layer), filter, breathingPoints, breathingGridCols, breathingGridRows);
       else drawPortraitLayer(ctx, img, resolveXform(layer), filter);
     }
