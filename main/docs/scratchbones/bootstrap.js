@@ -1054,10 +1054,18 @@ import { createLayerManager } from './ui/layerManager.js';
         if (player.eliminated) continue;
         const paid = transferToBank(player.id, state.ante);
         if (paid <= 0) continue;
-        render();
-        await animateCoinTransferCluster({ fromAnchor: walletCoinRowAnchorForPlayer(player.id), toAnchor: tablePotPileAnchor(), transferAmount: paid, durationMs: CONFIG.transferAnimation.anteMs });
-        await sleep(CONFIG.transferAnimation.multiAnteSettleDelayMs);
         state.tablePot += paid;
+        render();
+        const fromAnchor = walletCoinRowAnchorForPlayer(player.id);
+        const toAnchor = tablePotPileAnchor();
+        if (!fromAnchor || !toAnchor) {
+          console.warn('[chip-transfer] ante skip: unresolved anchor selector', {
+            fromSelector: `[data-wallet-coin-row-anchor="${Number(player.id)}"]`,
+            toSelector: '[data-table-pot-pile-anchor]'
+          });
+        }
+        await animateCoinTransferCluster({ fromAnchor, toAnchor, transferAmount: paid, durationMs: CONFIG.transferAnimation.anteMs });
+        await sleep(CONFIG.transferAnimation.multiAnteSettleDelayMs);
         render();
         totalPaid += paid;
         addLog(`${seatLabel(player)} antes ${paid} chip${paid === 1 ? '' : 's'} to the table pot.`);
@@ -2201,9 +2209,17 @@ import { createLayerManager } from './ui/layerManager.js';
       const player = state.players[playerIndex];
       if (player.eliminated || player.hand.length !== 0) return false;
       const totalWon = state.tablePot;
-      state.tablePot = 0;
+      const fromAnchor = tablePotPileAnchor();
       render();
-      await animateCoinTransferCluster({ fromAnchor: tablePotPileAnchor(), toAnchor: walletCoinRowAnchorForPlayer(playerIndex), transferAmount: totalWon, durationMs: CONFIG.transferAnimation.clearPayoutMs });
+      const toAnchor = walletCoinRowAnchorForPlayer(playerIndex);
+      if (!fromAnchor || !toAnchor) {
+        console.warn('[chip-transfer] clear payout skip: unresolved anchor selector', {
+          fromSelector: '[data-table-pot-pile-anchor]',
+          toSelector: `[data-wallet-coin-row-anchor="${Number(playerIndex)}"]`
+        });
+      }
+      await animateCoinTransferCluster({ fromAnchor, toAnchor, transferAmount: totalWon, durationMs: CONFIG.transferAnimation.clearPayoutMs });
+      state.tablePot = 0;
       player.chips += totalWon;
       player.clears += 1;
       state.stats.totalClears += 1;
