@@ -1612,7 +1612,7 @@ import { createLayerManager } from './ui/layerManager.js';
         return;
       }
       clearChallengeIntro();
-      SCRATCHBONES_AUDIO.playChallengeStart();
+      SCRATCHBONES_AUDIO.playChallengeLiarBurst();
       SCRATCHBONES_AUDIO.startChallengeMusic();
       addLog(`${seatLabel(challengerIndex)} challenges ${seatLabel(challengedIndex)}.`);
       const challenger = state.players[challengerIndex];
@@ -2250,8 +2250,16 @@ import { createLayerManager } from './ui/layerManager.js';
         });
       }
       await animateCoinTransferCluster({ fromAnchor, toAnchor, transferAmount: totalWon, durationMs: CONFIG.transferAnimation.clearPayoutMs });
+      const walletChipCountBeforeReceipt = player.chips;
       state.tablePot = 0;
       player.chips += totalWon;
+      SCRATCHBONES_AUDIO.playChipReceiptBurst({
+        chipCount: totalWon,
+        usePreReceiptCount: CONFIG.audio?.payoutBurst?.pitchCountMode !== 'postIncrement',
+        spacingMinMs: CONFIG.audio?.payoutBurst?.spacingMinMs,
+        spacingMaxMs: CONFIG.audio?.payoutBurst?.spacingMaxMs,
+        walletChipCountBeforeReceipt,
+      });
       player.clears += 1;
       state.stats.totalClears += 1;
       addLog(`${seatLabel(player)} clears their hand and collects the ${totalWon} chip${totalWon === 1 ? '' : 's'} table pot.`);

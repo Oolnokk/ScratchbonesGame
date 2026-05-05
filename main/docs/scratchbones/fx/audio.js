@@ -240,6 +240,35 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
         challengeBgmActive = false;
         playNextPlaylistTrack();
       }
+
+      function calcChipReceiptPlaybackRate(chipCount) {
+        const n = Number(chipCount);
+        if (!Number.isFinite(n) || n <= 1) return 0.5;
+        return 0.5 + 0.5 * ((n - 1) / 9);
+      }
+      function playChipReceiptBurst({ chipCount = 0, spacingMinMs, spacingMaxMs, usePreReceiptCount = true, walletChipCountBeforeReceipt = 0 } = {}) {
+        const burstCfg = cfg.payoutBurst || {};
+        if (burstCfg.enabled === false) return;
+        const clips = Array.isArray(burstCfg.jingles) ? burstCfg.jingles.filter((url) => isUrl(url)) : [];
+        const total = Math.max(0, Math.floor(Number(chipCount) || 0));
+        if (!clips.length || total <= 0) return;
+        const minMs = Math.max(0, Number(spacingMinMs ?? burstCfg.spacingMinMs) || 0);
+        const maxMs = Math.max(minMs, Number(spacingMaxMs ?? burstCfg.spacingMaxMs) || minMs);
+        const priorChips = Math.max(0, Number(walletChipCountBeforeReceipt) || 0);
+        let cumulativeDelayMs = 0;
+        for (let i = 0; i < total; i += 1) {
+          const clipUrl = clips[Math.floor(Math.random() * clips.length)];
+          const walletChipsForRate = usePreReceiptCount ? (priorChips + i) : (priorChips + i + 1);
+          playSfxDelayed({
+            url: clipUrl,
+            pitch: calcChipReceiptPlaybackRate(walletChipsForRate),
+            tempo: 1,
+            volume: 1,
+          }, cumulativeDelayMs);
+          const span = maxMs - minMs;
+          cumulativeDelayMs += minMs + (span > 0 ? Math.random() * span : 0);
+        }
+      }
       function playLerpComplete({ durationMs = 0, cardIndex = 0, staggerMs = 0 } = {}) {
         const entry = cfg.movement?.lerpComplete;
         if (!entry || !isUrl(entry.url)) return;
@@ -255,7 +284,9 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
         playMovement(type) { playSfx(cfg.movement?.[type]); },
         playLerpComplete,
         playChallengeStart() { playSfx(cfg.challenge?.start); },
+        playChallengeLiarBurst() { playSfx(cfg.challenge?.liarBurst || cfg.challenge?.start); },
         playChallengeEnd() { playSfx(cfg.challenge?.end); },
+        playChipReceiptBurst,
         startPlaylist,
         startChallengeMusic,
         stopChallengeMusic,

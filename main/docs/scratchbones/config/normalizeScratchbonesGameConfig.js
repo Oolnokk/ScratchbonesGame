@@ -578,6 +578,13 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         musicFadeMs: rawGameConfig.assets?.audio?.musicFadeMs ?? 280,
         movement: rawGameConfig.assets?.audio?.movement || {},
         challenge: rawGameConfig.assets?.audio?.challenge || {},
+        payoutBurst: {
+          enabled: rawGameConfig.assets?.audio?.payoutBurst?.enabled !== false,
+          jingles: Array.isArray(rawGameConfig.assets?.audio?.payoutBurst?.jingles) ? rawGameConfig.assets.audio.payoutBurst.jingles : [],
+          spacingMinMs: rawGameConfig.assets?.audio?.payoutBurst?.spacingMinMs ?? 30,
+          spacingMaxMs: rawGameConfig.assets?.audio?.payoutBurst?.spacingMaxMs ?? 70,
+          pitchCountMode: rawGameConfig.assets?.audio?.payoutBurst?.pitchCountMode === 'postIncrement' ? 'postIncrement' : 'preIncrement',
+        },
         bgm: {
           playlist: Array.isArray(rawGameConfig.assets?.audio?.bgm?.playlist) ? rawGameConfig.assets.audio.bgm.playlist : [],
           challenge: rawGameConfig.assets?.audio?.bgm?.challenge || '',

@@ -1513,7 +1513,19 @@ window.SCRATCHBONES_CONFIG = {
         },
         "challenge": {
           "start": { "url": "./docs/assets/audio/sfx/tablesounds/boneclack1.m4a", "pitch": 1.0, "tempo": 1.0, "volume": 1.0 },
+          "liarBurst": { "url": "./docs/assets/audio/sfx/challenge/liarburst.mp3", "pitch": 1.0, "tempo": 1.0, "volume": 1.0 },
           "end": { "url": "./docs/assets/audio/sfx/tablesounds/boneclack1.m4a", "pitch": 1.0, "tempo": 1.0, "volume": 1.0 }
+        },
+        "payoutBurst": {
+          "enabled": true,
+          "jingles": [
+            "./docs/assets/audio/sfx/chips/coinjingle1.mp3",
+            "./docs/assets/audio/sfx/chips/coinjingle2.mp3",
+            "./docs/assets/audio/sfx/chips/coinjingle3.mp3"
+          ],
+          "spacingMinMs": 30,
+          "spacingMaxMs": 70,
+          "pitchCountMode": "preIncrement"
         },
         "bgm": {
           "playlist": [
