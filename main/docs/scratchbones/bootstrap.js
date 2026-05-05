@@ -2255,9 +2255,9 @@ import { createLayerManager } from './ui/layerManager.js';
       player.chips += totalWon;
       SCRATCHBONES_AUDIO.playChipReceiptBurst({
         chipCount: totalWon,
-        usePreReceiptCount: CONFIG.audio?.payoutBurst?.pitchCountMode !== 'postIncrement',
-        spacingMinMs: CONFIG.audio?.payoutBurst?.spacingMinMs,
-        spacingMaxMs: CONFIG.audio?.payoutBurst?.spacingMaxMs,
+        usePreReceiptCount: CONFIG.assets?.audio?.payoutBurst?.pitchCountMode !== 'postIncrement',
+        spacingMinMs: CONFIG.assets?.audio?.payoutBurst?.spacingMinMs,
+        spacingMaxMs: CONFIG.assets?.audio?.payoutBurst?.spacingMaxMs,
         walletChipCountBeforeReceipt,
       });
       player.clears += 1;
@@ -5810,12 +5810,24 @@ import { createLayerManager } from './ui/layerManager.js';
           : basePanelTitle;
         if (!projectionUiState.lastSelectedProjId) {
           const hueOff = (window.SCRATCHBONES_CONFIG?.clothingHueOffset) ?? 0;
+          const satOff = (window.SCRATCHBONES_CONFIG?.clothingSatOffset) ?? 0;
+          const lightOff = (window.SCRATCHBONES_CONFIG?.clothingLightOffset) ?? 0;
           varsPanelBody.innerHTML = `
             <div class="projVarHint">Global settings — select an outlined element to edit its vars.</div>
             <label class="projVarRow">
               <span class="projVarLabel">clothing hue offset</span>
               <input class="projVarInput" data-global-setting="clothingHueOffset" data-kind="number" type="number" step="1" value="${hueOff}">
               <input class="projVarInput" data-global-setting="clothingHueOffset" data-kind="range"  type="range"  min="-180" max="180" step="1" value="${hueOff}">
+            </label>
+            <label class="projVarRow">
+              <span class="projVarLabel">clothing saturation offset</span>
+              <input class="projVarInput" data-global-setting="clothingSatOffset" data-kind="number" type="number" step="0.01" value="${satOff}">
+              <input class="projVarInput" data-global-setting="clothingSatOffset" data-kind="range"  type="range"  min="-1" max="1" step="0.01" value="${satOff}">
+            </label>
+            <label class="projVarRow">
+              <span class="projVarLabel">clothing lightness offset</span>
+              <input class="projVarInput" data-global-setting="clothingLightOffset" data-kind="number" type="number" step="0.01" value="${lightOff}">
+              <input class="projVarInput" data-global-setting="clothingLightOffset" data-kind="range"  type="range"  min="-1" max="1" step="0.01" value="${lightOff}">
             </label>`;
           return;
         }

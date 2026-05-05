@@ -148,6 +148,10 @@
     { id: 'mat:leather:dark',    label: 'Dark Leather',  group: 'leather', color: { h:-113, s:  0.49, v: -0.62 } }, // #4B3621
     { id: 'mat:leather:cognac',  label: 'Cognac',        group: 'leather', color: { h:-137, s:  0.61, v: -0.23 } }, // #9A463D
     { id: 'mat:leather:cream',   label: 'Cream Leather', group: 'leather', color: { h:-104, s: -0.28, v:  0.23 } }, // #F5DEB3
+    { id: 'mat:leather:umber',   label: 'Umber',         group: 'leather', color: { h:-117, s:  0.72, v: -0.56 } }, // #6B4A2F
+    { id: 'mat:leather:bark',    label: 'Bark Brown',    group: 'leather', color: { h:-121, s:  0.58, v: -0.64 } }, // #5A3D2B
+    { id: 'mat:leather:peat',    label: 'Peat',          group: 'leather', color: { h:-126, s:  0.41, v: -0.72 } }, // #47362C
+    { id: 'mat:leather:moss',    label: 'Mossed Hide',   group: 'leather', color: { h:-86,  s:  0.36, v: -0.60 } }, // #4E4A31
 
     // ── Fur — natural animal-pelt tones ─────────────────────────────────────
     { id: 'mat:fur:snow',     label: 'Snow White',   group: 'fur', color: { h:   0, s: -0.95, v:  0.27 } }, // #FFFAFA

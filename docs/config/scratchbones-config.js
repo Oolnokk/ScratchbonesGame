@@ -5,6 +5,12 @@ window.SCRATCHBONES_CONFIG = {
   // Example: wsUrl: 'wss://mustang-walk-schematic.ngrok-free.dev',
   wsUrl: 'wss://mustang-walk-schematic.ngrok-free.dev',
 
+
+  // Global clothing color tuning offsets.
+  clothingHueOffset: 0,
+  clothingSatOffset: 0,
+  clothingLightOffset: 0,
+
   game: {
     "debug": {
       "enabled": true,
@@ -1519,9 +1525,9 @@ window.SCRATCHBONES_CONFIG = {
         "payoutBurst": {
           "enabled": true,
           "jingles": [
-            "./docs/assets/audio/sfx/chips/coinjingle1.mp3",
-            "./docs/assets/audio/sfx/chips/coinjingle2.mp3",
-            "./docs/assets/audio/sfx/chips/coinjingle3.mp3"
+            "./docs/assets/audio/sfx/tablesounds/coinjingle1.mp3",
+            "./docs/assets/audio/sfx/tablesounds/coinjingle2.mp3",
+            "./docs/assets/audio/sfx/tablesounds/coinjingle3.mp3"
           ],
           "spacingMinMs": 30,
           "spacingMaxMs": 70,
