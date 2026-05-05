@@ -1,5 +1,6 @@
 const WebSocket = require('ws');
 const crypto = require('crypto');
+const { normalizePlayerLoadout, normalizeKhymeryyanPayload, occupantPayload, filterStateForSeat } = require('./utils');
 
 const PORT = process.env.PORT || 8080;
 const wss = new WebSocket.Server({ port: PORT });
@@ -15,58 +16,6 @@ function send(ws, obj) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(obj));
   }
-}
-
-function normalizePlayerLoadout(loadout) {
-  return Array.isArray(loadout) ? loadout.map(id => String(id || '').trim()).filter(Boolean).slice(0, 12) : [];
-}
-
-function normalizeKhymeryyanPayload(payload) {
-  if (!payload || typeof payload !== 'object') return null;
-  const name = String(payload.name || '').trim().slice(0, 32);
-  return {
-    id: payload.id ? String(payload.id).slice(0, 64) : null,
-    name: name || null,
-    appearance: payload.appearance && typeof payload.appearance === 'object' ? payload.appearance : null,
-    equippedCosmetics: Array.isArray(payload.equippedCosmetics) ? payload.equippedCosmetics.map(String).slice(0, 24) : [],
-    appliedDyes: payload.appliedDyes && typeof payload.appliedDyes === 'object' ? payload.appliedDyes : {},
-    trickBoneLoadout: normalizePlayerLoadout(payload.trickBoneLoadout || payload.playerLoadout),
-  };
-}
-
-function occupantPayload(seatId, name, appearance, playerLoadout, khymeryyan) {
-  return {
-    seatId,
-    name,
-    appearance: appearance ?? khymeryyan?.appearance ?? null,
-    playerLoadout: playerLoadout || khymeryyan?.trickBoneLoadout || [],
-    khymeryyan: khymeryyan ?? null,
-  };
-}
-
-function filterStateForSeat(fullState, seatId) {
-  if (!fullState) return fullState;
-  return {
-    ...fullState,
-    humanSeat: seatId,
-    selectedCardIds: [],
-    players: fullState.players.map(p =>
-      p.id === seatId
-        ? p
-        : { ...p, hand: (p.hand || []).map(() => ({ hidden: true })) }
-    ),
-    pile: (fullState.pile || []).map(play => ({
-      ...play,
-      cards: (play.cards || []).map(() => ({ hidden: true })),
-    })),
-    challengeWindow: fullState.challengeWindow ? {
-      ...fullState.challengeWindow,
-      lastPlay: fullState.challengeWindow.lastPlay ? {
-        ...fullState.challengeWindow.lastPlay,
-        cards: (fullState.challengeWindow.lastPlay.cards || []).map(() => ({ hidden: true })),
-      } : null,
-    } : null,
-  };
 }
 
 wss.on('connection', ws => {

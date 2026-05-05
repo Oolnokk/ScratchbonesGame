@@ -1,0 +1,8 @@
+{
+  "name": "scratchbones-game",
+  "version": "1.0.0",
+  "description": "Scratchbones bluff card game",
+  "scripts": {
+    "test": "node --test tests/server-utils.test.js tests/name-generator.test.js tests/account.test.js"
+  }
+}
