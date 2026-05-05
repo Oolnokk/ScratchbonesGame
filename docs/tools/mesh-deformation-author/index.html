@@ -348,6 +348,7 @@
 </div><!-- #main -->
 
 <script src="./config.js"></script>
+<script src="../../js/portrait-utils.js"></script>
 
 <script>
 /* =================================================================
@@ -394,6 +395,7 @@ let animSpeed = TOOL_CONFIG.animation?.defaultSpeedSeconds || 0.8;
 let poseDurations = [];
 let previewMode = TOOL_CONFIG.avatarPreview?.defaultMode || 'avatar';
 let avatarImg = null;
+let portraitCosmetics = null;
 let lastTime  = 0;
 
 // ── Pointer interaction ──────────────────────────────────────────
@@ -1202,18 +1204,51 @@ selPreviewModeEl.addEventListener('change', async () => { previewMode = selPrevi
 btnRandomAvatar.addEventListener('click', async () => { await buildAvatarPreview(true); render(); });
 
 async function buildAvatarPreview(randomize = false) {
-  if (!speciesData || !selGender || !speciesData[selGender]) return;
-  const layers = speciesData[selGender].portraitBodyLayers || [];
-  if (!layers.length) return;
-  const cv = document.createElement('canvas'); cv.width = CS; cv.height = CS;
-  const c = cv.getContext('2d');
-  const order = randomize ? [...layers].sort(() => Math.random() - 0.5) : layers;
-  for (const layer of order) {
-    const img = await new Promise((resolve) => { const i=new Image(); i.onload=()=>resolve(i); i.onerror=()=>resolve(null); i.src=ASSETS_BASE + layer.url; });
-    if (!img) continue;
-    const fit = getImageLayout(img);
-    c.drawImage(img, fit.ox, fit.oy, fit.dw, fit.dh);
+  if (!speciesData || !selGender) return;
+  if (!window.loadPortraitCosmetics || !window.renderPortraitProfile || !window.randomPortraitProfileSeeded) {
+    setStatus('⚠ portrait-utils is unavailable; cannot build full NPC avatar preview.');
+    return;
   }
+
+  if (!portraitCosmetics) {
+    portraitCosmetics = await window.loadPortraitCosmetics('../../config/');
+  }
+
+  const {
+    hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions,
+    hatOptions, hoodOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender,
+    allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter,
+    conditionalCosmeticsByFighter, randomizationRulesByFighter
+  } = portraitCosmetics;
+
+  const fighters = (window.getPortraitFighters?.() || []).filter((f) => f.gender === selGender && f.speciesId === selSpeciesId);
+  if (!fighters.length) {
+    setStatus('⚠ No portrait fighter entries available for selected species/gender.');
+    return;
+  }
+
+  const rng = randomize ? Math.random : (() => 0.42);
+  const profile = window.randomPortraitProfileSeeded(
+    rng,
+    fighters,
+    hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions,
+    eyesOptions, facialHairOptions,
+    bodyColorRangesByGender,
+    allowedCosmeticsByFighter,
+    hatOptions,
+    hoodOptions,
+    cosmeticWeightsByFighter,
+    torsoPortraitOptions,
+    armPortraitOptions,
+    forcedCosmeticsByFighter,
+    conditionalCosmeticsByFighter,
+    randomizationRulesByFighter
+  );
+
+  const cv = document.createElement('canvas');
+  cv.width = CS;
+  cv.height = CS;
+  await window.renderPortraitProfile(cv, profile);
   avatarImg = cv;
 }
 
