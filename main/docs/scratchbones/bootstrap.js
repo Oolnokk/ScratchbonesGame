@@ -564,7 +564,9 @@ import { createLayerManager } from './ui/layerManager.js';
       return document.querySelector(`[data-wallet-coin-row-anchor="${playerId}"]`);
     }
     function tablePotPileAnchor() {
-      return document.querySelector('[data-pot-pile-anchor], [data-proj-id="claim-pool-pile"]');
+      const persistentAnchor = document.querySelector('[data-pot-pile-anchor]');
+      if (persistentAnchor) return persistentAnchor;
+      return document.querySelector('[data-proj-id="claim-pool-pile"]');
     }
     function renderSeatCoinRow(player) {
       const transferCoins = coinsForTransferAmount(player?.chips, MAX_WALLET_ICONS_PER_SEAT);
@@ -583,13 +585,13 @@ import { createLayerManager } from './ui/layerManager.js';
       const spreadXPx = Math.max(10, Number(TABLE_POOL_DISPLAY.spreadXPx) || 84);
       const spreadYPx = Math.max(8, Number(TABLE_POOL_DISPLAY.spreadYPx) || 28);
       const offsetYPx = Number(TABLE_POOL_DISPLAY.offsetYPx) || 2;
-      if (!breakdown.length) return '';
       const transferCoins = coinsForTransferAmount(chipCount, pileMaxIcons);
       const overflow = transferCoins.overflow;
       const visibleIcons = transferCoins.visibleTierIds;
+      const hasVisiblePile = breakdown.length > 0;
       const baseSeed = Math.round(Number(pileSeedInput) || 0) >>> 0;
       const pileSeed = (baseSeed ^ ((Math.round(Number(chipCount) || 0) * 2654435761) >>> 0)) >>> 0;
-      const pileHtml = visibleIcons.map((tierId, index) => {
+      const pileHtml = hasVisiblePile ? visibleIcons.map((tierId, index) => {
         const localSeed = (((pileSeed + (index + 1) * 1013904223) >>> 0) % 10000) / 10000;
         const localSeedB = (((pileSeed + (index + 1) * 1664525) >>> 0) % 10000) / 10000;
         const xPx = (localSeed - 0.5) * spreadXPx * 2;
@@ -597,8 +599,8 @@ import { createLayerManager } from './ui/layerManager.js';
         const rotateDeg = (localSeedB - 0.5) * 46;
         const z = 1 + index;
         return `<img class="tablePoolCoin" data-stake-tier-id="${escapeHtml(tierId)}" src="${escapeHtml(stakeCoinSrcForTier(tierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tierId)} coin" style="position:absolute;left:50%;top:50%;width:${coinSizePx}px;height:${coinSizePx}px;object-fit:contain;transform:translate(calc(-50% + ${xPx.toFixed(1)}px),calc(-50% + ${yPx.toFixed(1)}px)) rotate(${rotateDeg.toFixed(1)}deg);filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));z-index:${z};">`;
-      }).join('');
-      const overflowHtml = overflow > 0 ? `<span class="tablePoolOverflow" style="position:absolute;right:6px;bottom:2px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : '';
+      }).join('') : '';
+      const overflowHtml = hasVisiblePile && overflow > 0 ? `<span class="tablePoolOverflow" style="position:absolute;right:6px;bottom:2px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : '';
       return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" data-pot-pile-anchor style="position:absolute;left:${(anchorXPct * 100).toFixed(3)}%;top:calc(${(anchorYPct * 100).toFixed(3)}% + ${offsetYPx.toFixed(1)}px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
