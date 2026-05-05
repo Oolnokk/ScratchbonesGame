@@ -707,16 +707,16 @@ function drawDeformedMeshImage(img, pts) {
       const i11 = (r + 1) * gridCols + c + 1;
 
       // Source corners (neutral canvas-space positions)
-      const s00 = [neutral[i00][0] * CS, neutral[i00][1] * CS];
-      const s10 = [neutral[i10][0] * CS, neutral[i10][1] * CS];
-      const s01 = [neutral[i01][0] * CS, neutral[i01][1] * CS];
-      const s11 = [neutral[i11][0] * CS, neutral[i11][1] * CS];
+      const s00 = [ox + neutral[i00][0] * dw, oy + neutral[i00][1] * dh];
+      const s10 = [ox + neutral[i10][0] * dw, oy + neutral[i10][1] * dh];
+      const s01 = [ox + neutral[i01][0] * dw, oy + neutral[i01][1] * dh];
+      const s11 = [ox + neutral[i11][0] * dw, oy + neutral[i11][1] * dh];
 
       // Destination corners (deformed canvas-space positions)
-      const d00 = [pts[i00][0] * CS, pts[i00][1] * CS];
-      const d10 = [pts[i10][0] * CS, pts[i10][1] * CS];
-      const d01 = [pts[i01][0] * CS, pts[i01][1] * CS];
-      const d11 = [pts[i11][0] * CS, pts[i11][1] * CS];
+      const d00 = [ox + pts[i00][0] * dw, oy + pts[i00][1] * dh];
+      const d10 = [ox + pts[i10][0] * dw, oy + pts[i10][1] * dh];
+      const d01 = [ox + pts[i01][0] * dw, oy + pts[i01][1] * dh];
+      const d11 = [ox + pts[i11][0] * dw, oy + pts[i11][1] * dh];
 
       // Upper-left triangle: 00 → 10 → 01
       drawImageTriangle(img, ox, oy, dw, dh, s00, s10, s01, d00, d10, d01);
