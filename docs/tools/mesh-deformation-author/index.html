@@ -706,13 +706,13 @@ function drawDeformedMeshImage(img, pts) {
       const i01 = (r + 1) * gridCols + c;
       const i11 = (r + 1) * gridCols + c + 1;
 
-      // Source corners (neutral canvas-space positions)
+      // Source corners (neutral mesh positions in full-canvas space)
       const s00 = [neutral[i00][0] * CS, neutral[i00][1] * CS];
       const s10 = [neutral[i10][0] * CS, neutral[i10][1] * CS];
       const s01 = [neutral[i01][0] * CS, neutral[i01][1] * CS];
       const s11 = [neutral[i11][0] * CS, neutral[i11][1] * CS];
 
-      // Destination corners (deformed canvas-space positions)
+      // Destination corners (deformed mesh positions in full-canvas space)
       const d00 = [pts[i00][0] * CS, pts[i00][1] * CS];
       const d10 = [pts[i10][0] * CS, pts[i10][1] * CS];
       const d01 = [pts[i01][0] * CS, pts[i01][1] * CS];
