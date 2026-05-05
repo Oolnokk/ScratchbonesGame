@@ -1519,9 +1519,9 @@ window.SCRATCHBONES_CONFIG = {
         "payoutBurst": {
           "enabled": true,
           "jingles": [
-            "./docs/assets/audio/sfx/chips/coinjingle1.mp3",
-            "./docs/assets/audio/sfx/chips/coinjingle2.mp3",
-            "./docs/assets/audio/sfx/chips/coinjingle3.mp3"
+            "./docs/assets/audio/sfx/tablesounds/coinjingle1.mp3",
+            "./docs/assets/audio/sfx/tablesounds/coinjingle2.mp3",
+            "./docs/assets/audio/sfx/tablesounds/coinjingle3.mp3"
           ],
           "spacingMinMs": 30,
           "spacingMaxMs": 70,
