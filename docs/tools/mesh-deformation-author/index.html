@@ -264,24 +264,30 @@
         <select id="sel-gender"><option value="">— select species first —</option></select>
       </div>
       <div class="field">
+        <label>Preview source</label>
+        <select id="sel-preview-mode"><option value="avatar">Full avatar (NPC generated)</option><option value="layer">Single body layer</option></select>
+      </div>
+      <div class="field">
         <label>Reference body layer</label>
         <select id="sel-layer"><option value="">— select species/gender —</option></select>
       </div>
+      <button id="btn-random-avatar" class="btn-sec">🎲 Generate NPC Avatar</button>
     </div>
 
     <!-- Animation type -->
     <div class="ps">
-      <div class="ps-title">Animation Type</div>
-      <div class="field">
-        <label>Type</label>
-        <select id="sel-anim">
-          <!-- Options populated from ANIM_DEFS at init -->
-        </select>
+      <div class="ps-title">Animation Settings</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Keyframe count</label>
+          <input type="number" id="inp-pose-count" value="4" min="2" max="12" />
+        </div>
+        <div class="field">
+          <label>Default duration (sec)</label>
+          <input type="number" id="inp-speed" value="0.8" min="0.1" max="10" step="0.1" />
+        </div>
       </div>
-      <div class="field">
-        <label>Preview speed (seconds per transition)</label>
-        <input type="number" id="inp-speed" value="0.8" min="0.1" max="10" step="0.1" style="width:72px;" />
-      </div>
+      <button id="btn-apply-keyframes" class="btn-sec">Apply keyframe count</button>
     </div>
 
     <!-- Poses -->
@@ -341,6 +347,9 @@
 
 </div><!-- #main -->
 
+<script src="./config.js"></script>
+<script src="../../js/portrait-utils.js"></script>
+
 <script>
 /* =================================================================
    MESH DEFORMATION AUTHOR
@@ -350,35 +359,12 @@
 'use strict';
 
 // ── Paths (relative to docs/tools/mesh-deformation-author/) ──────
-const SPECIES_INDEX_URL = '../../config/species/index.json';
-const CONFIG_BASE       = '../../config/species/';
-const ASSETS_BASE       = '../../assets/';
-
-// ── Animation type definitions ───────────────────────────────────
-const ANIM_DEFS = {
-  breathing: {
-    label:  'Breathing',
-    count:  2,
-    labels: ['breath-in', 'breath-out']
-  },
-  wriggle: {
-    label:  'Wriggle',
-    count:  5,
-    labels: ['wriggle-1', 'wriggle-2', 'wriggle-3', 'wriggle-4', 'wriggle-5']
-  },
-  rollshoulders: {
-    label:  'Roll Shoulders',
-    count:  3,
-    labels: ['roll-1', 'roll-2', 'roll-3']
-  }
-};
-
-// ── Canvas size (internal, logical pixels) ───────────────────────
-const CS = 512;
-
-// ── Interaction constants ────────────────────────────────────────
-// Maximum pixel distance from a mesh point that counts as a hit
-const POINT_CLICK_THRESHOLD = 18;
+const TOOL_CONFIG = window.MESH_DEFORMATION_AUTHOR_CONFIG || {};
+const SPECIES_INDEX_URL = TOOL_CONFIG.speciesIndexUrl;
+const CONFIG_BASE = TOOL_CONFIG.configBase;
+const ASSETS_BASE = TOOL_CONFIG.assetsBase;
+const CS = TOOL_CONFIG.canvasSize || 512;
+const POINT_CLICK_THRESHOLD = TOOL_CONFIG.pointClickThreshold || 18;
 
 // ── State ────────────────────────────────────────────────────────
 let speciesList = [];   // [{ speciesId, label, path }]
@@ -386,9 +372,9 @@ let speciesData = null; // parsed species JSON for selected species
 
 let selSpeciesId = '';
 let selGender    = '';
-let selAnimType  = 'breathing';
-let gridCols     = 4;
-let gridRows     = 4;
+let poseCount = TOOL_CONFIG.animation?.defaultPoseCount || 4;
+let gridCols = TOOL_CONFIG.grid?.defaultCols || 4;
+let gridRows = TOOL_CONFIG.grid?.defaultRows || 4;
 
 // poses[i] = { label: string, points: [[nx, ny], ...] }
 // points are normalized [0..1] coordinates
@@ -405,7 +391,11 @@ let bgImg = null;
 let previewOn = false;
 let rafId     = null;
 let animT     = 0;
-let animSpeed = 0.8;  // seconds per transition
+let animSpeed = TOOL_CONFIG.animation?.defaultSpeedSeconds || 0.8;
+let poseDurations = [];
+let previewMode = TOOL_CONFIG.avatarPreview?.defaultMode || 'avatar';
+let avatarImg = null;
+let portraitCosmetics = null;
 let lastTime  = 0;
 
 // ── Pointer interaction ──────────────────────────────────────────
@@ -419,8 +409,8 @@ const canvas     = document.getElementById('mc');
 const ctx        = canvas.getContext('2d');
 const selSpecies = document.getElementById('sel-species');
 const selGenderEl = document.getElementById('sel-gender');
+const selPreviewModeEl = document.getElementById('sel-preview-mode');
 const selLayerEl  = document.getElementById('sel-layer');
-const selAnimEl   = document.getElementById('sel-anim');
 const inpSpeed    = document.getElementById('inp-speed');
 const inpCols     = document.getElementById('inp-cols');
 const inpRows     = document.getElementById('inp-rows');
@@ -433,20 +423,15 @@ const btnCopyPrev    = document.getElementById('btn-copy-prev');
 const btnClearLocks  = document.getElementById('btn-clear-locks');
 const btnExport   = document.getElementById('btn-export');
 const btnImport   = document.getElementById('btn-import');
+const btnRandomAvatar = document.getElementById('btn-random-avatar');
+const inpPoseCount = document.getElementById('inp-pose-count');
+const btnApplyKeyframes = document.getElementById('btn-apply-keyframes');
 
 // =================================================================
 // INITIALISATION
 // =================================================================
 async function init() {
-  // Populate animation type dropdown from ANIM_DEFS (single source of truth)
-  selAnimEl.innerHTML = '';
-  Object.entries(ANIM_DEFS).forEach(([key, def]) => {
-    const opt = document.createElement('option');
-    opt.value = key;
-    opt.textContent = def.label + ' (' + def.count + ' poses)';
-    selAnimEl.appendChild(opt);
-  });
-  selAnimEl.value = selAnimType;
+  inpPoseCount.value = String(poseCount);
 
   try {
     const resp = await fetch(SPECIES_INDEX_URL);
@@ -509,6 +494,7 @@ async function loadSpecies(speciesId) {
 
     refreshLayerOptions();
     await loadDefaultBgImage();
+    await buildAvatarPreview();
 
     btnExport.disabled = !(selSpeciesId && selGender);
   } catch (err) {
@@ -581,12 +567,12 @@ function getNeutralPoints() {
 
 /** Create fresh poses for the selected animation type. */
 function initPoses() {
-  const def     = ANIM_DEFS[selAnimType];
   const neutral = getNeutralPoints();
-  poses = def.labels.map(lbl => ({
-    label:  lbl,
+  poses = Array.from({ length: poseCount }, (_, i) => ({
+    label: `pose-${i + 1}`,
     points: neutral.map(p => [p[0], p[1]])
   }));
+  poseDurations = Array.from({ length: poseCount }, () => animSpeed);
   curPoseIdx = 0;
 }
 
@@ -613,8 +599,17 @@ function buildPoseList() {
     });
     inp.addEventListener('click', e => e.stopPropagation());
 
+    const dur = document.createElement('input');
+    dur.type = 'number';
+    dur.min = '0.1'; dur.max = '10'; dur.step = '0.1';
+    dur.value = String(poseDurations[i] || animSpeed);
+    dur.style.width = '56px';
+    dur.addEventListener('change', (e) => { poseDurations[i] = Math.max(0.1, parseFloat(e.target.value) || animSpeed); });
+    dur.addEventListener('click', e => e.stopPropagation());
+
     row.appendChild(num);
     row.appendChild(inp);
+    row.appendChild(dur);
     row.addEventListener('click', () => selectPose(i));
     poseListEl.appendChild(row);
   });
@@ -738,16 +733,16 @@ function render(interpPts) {
 
   const pts = interpPts || poses[curPoseIdx]?.points;
 
-  // Background image (dimmed to 55% so mesh is legible)
-  if (bgImg) {
+  const activeImg = previewMode === 'avatar' ? avatarImg : bgImg;
+  if (activeImg) {
     if (pts && pts.length > 0) {
-      drawDeformedMeshImage(bgImg, pts);
+      drawDeformedMeshImage(activeImg, pts);
     } else {
       // No pose data yet — draw the image flat as a fallback
       ctx.save();
       ctx.globalAlpha = 0.55;
-      const { ox, oy, dw, dh } = getImageLayout(bgImg);
-      ctx.drawImage(bgImg, ox, oy, dw, dh);
+      const { ox, oy, dw, dh } = getImageLayout(activeImg);
+      ctx.drawImage(activeImg, ox, oy, dw, dh);
       ctx.restore();
     }
   } else {
@@ -998,11 +993,11 @@ function animLoop(now) {
 
   const dt  = (now - lastTime) / 1000;
   lastTime  = now;
-  animT     = (animT + dt / animSpeed) % poses.length;
-
   const fromI = Math.floor(animT) % poses.length;
-  const toI   = (fromI + 1) % poses.length;
-  const t     = animT - Math.floor(animT);
+  const dur = Math.max(0.1, poseDurations[fromI] || animSpeed);
+  animT = animT + dt / dur;
+  const toI   = (Math.floor(animT) + 1) % poses.length;
+  const t = animT - Math.floor(animT);
   // Ken Perlin's smoothstep (3t² − 2t³) — ease-in/ease-out between keyframes
   const st = t * t * (3 - 2 * t);
 
@@ -1027,12 +1022,12 @@ function exportJSON() {
   }
 
   const data = {
-    speciesId:     selSpeciesId,
-    gender:        selGender,
-    animationType: selAnimType,
+    speciesId: selSpeciesId,
+    gender: selGender,
     gridCols:      gridCols,
     gridRows:      gridRows,
     locked:        locked.slice(),
+    poseDurations: poseDurations.slice(),
     poses:         poses.map(p => ({
       label:  p.label,
       points: p.points.map(([x, y]) => [
@@ -1042,7 +1037,7 @@ function exportJSON() {
     }))
   };
 
-  const filename = selSpeciesId + '_' + selGender + '_' + selAnimType + '.json';
+  const filename = selSpeciesId + '_' + selGender + '_emote.json';
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -1073,17 +1068,16 @@ function importJSON() {
 }
 
 function loadData(data) {
-  if (!data.speciesId || !data.gender || !data.animationType ||
-      !Array.isArray(data.poses)) {
+  if (!data.speciesId || !data.gender || !Array.isArray(data.poses)) {
     alert('Invalid mesh deformation JSON — missing required fields.');
     return;
   }
 
   selSpeciesId = data.speciesId;
   selGender    = data.gender;
-  selAnimType  = data.animationType;
-  gridCols     = data.gridCols || 4;
-  gridRows     = data.gridRows || 4;
+  poseCount = data.poses.length;
+  gridCols = data.gridCols || 4;
+  gridRows = data.gridRows || 4;
 
   const ptCount = gridCols * gridRows;
   locked = Array.isArray(data.locked)
@@ -1100,7 +1094,7 @@ function loadData(data) {
 
   // Sync UI controls
   selSpecies.value  = selSpeciesId;
-  selAnimEl.value   = selAnimType;
+  inpPoseCount.value = poseCount;
   inpCols.value     = gridCols;
   inpRows.value     = gridRows;
 
@@ -1110,7 +1104,9 @@ function loadData(data) {
   // Attempt to load species data and image in background
   loadSpecies(selSpeciesId).catch(() => {});
 
-  setStatus('Imported: ' + selSpeciesId + '_' + selGender + '_' + selAnimType + '.json');
+  poseDurations = Array.isArray(data.poseDurations) ? data.poseDurations.slice(0, poseCount) : Array.from({ length: poseCount }, () => animSpeed);
+  while (poseDurations.length < poseCount) poseDurations.push(animSpeed);
+  setStatus('Imported: ' + selSpeciesId + '_' + selGender + '_emote.json');
 }
 
 // =================================================================
@@ -1130,6 +1126,7 @@ selGenderEl.addEventListener('change', async () => {
   selGender = selGenderEl.value;
   refreshLayerOptions();
   await loadDefaultBgImage();
+  await buildAvatarPreview();
   render();
   btnExport.disabled = !(selSpeciesId && selGender);
 });
@@ -1138,14 +1135,6 @@ selLayerEl.addEventListener('change', async () => {
   if (selLayerEl.value) await loadBgImage(selLayerEl.value);
 });
 
-selAnimEl.addEventListener('change', () => {
-  if (previewOn) stopPreview();
-  selAnimType = selAnimEl.value;
-  initPoses();
-  buildPoseList();
-  render();
-  setStatus('Switched to ' + ANIM_DEFS[selAnimType].label + ' animation.');
-});
 
 btnPreview.addEventListener('click', togglePreview);
 
@@ -1198,6 +1187,69 @@ btnImport.addEventListener('click', importJSON);
 // =================================================================
 function setStatus(msg) {
   statusEl.textContent = msg;
+}
+
+
+btnApplyKeyframes.addEventListener('click', () => {
+  const min = TOOL_CONFIG.animation?.minPoseCount || 2;
+  const max = TOOL_CONFIG.animation?.maxPoseCount || 12;
+  poseCount = Math.max(min, Math.min(max, parseInt(inpPoseCount.value) || poseCount));
+  inpPoseCount.value = String(poseCount);
+  initPoses();
+  buildPoseList();
+  render();
+});
+
+selPreviewModeEl.addEventListener('change', async () => { previewMode = selPreviewModeEl.value; await buildAvatarPreview(); render(); });
+btnRandomAvatar.addEventListener('click', async () => { await buildAvatarPreview(true); render(); });
+
+async function buildAvatarPreview(randomize = false) {
+  if (!speciesData || !selGender) return;
+  if (!window.loadPortraitCosmetics || !window.renderPortraitProfile || !window.randomPortraitProfileSeeded) {
+    setStatus('⚠ portrait-utils is unavailable; cannot build full NPC avatar preview.');
+    return;
+  }
+
+  if (!portraitCosmetics) {
+    portraitCosmetics = await window.loadPortraitCosmetics('../../config/');
+  }
+
+  const {
+    hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions,
+    hatOptions, hoodOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender,
+    allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter,
+    conditionalCosmeticsByFighter, randomizationRulesByFighter
+  } = portraitCosmetics;
+
+  const fighters = (window.getPortraitFighters?.() || []).filter((f) => f.gender === selGender && f.speciesId === selSpeciesId);
+  if (!fighters.length) {
+    setStatus('⚠ No portrait fighter entries available for selected species/gender.');
+    return;
+  }
+
+  const rng = randomize ? Math.random : (() => 0.42);
+  const profile = window.randomPortraitProfileSeeded(
+    rng,
+    fighters,
+    hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions,
+    eyesOptions, facialHairOptions,
+    bodyColorRangesByGender,
+    allowedCosmeticsByFighter,
+    hatOptions,
+    hoodOptions,
+    cosmeticWeightsByFighter,
+    torsoPortraitOptions,
+    armPortraitOptions,
+    forcedCosmeticsByFighter,
+    conditionalCosmeticsByFighter,
+    randomizationRulesByFighter
+  );
+
+  const cv = document.createElement('canvas');
+  cv.width = CS;
+  cv.height = CS;
+  await window.renderPortraitProfile(cv, profile);
+  avatarImg = cv;
 }
 
 // =================================================================

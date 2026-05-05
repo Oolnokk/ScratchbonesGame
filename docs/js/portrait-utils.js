@@ -1315,3 +1315,7 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
 window.setPortraitConfig = setPortraitConfig;
 window.getPortraitFighters = () => FIGHTERS;
 window.getPortraitXformPreset = getPortraitXformPreset;
+
+window.loadPortraitCosmetics = loadPortraitCosmetics;
+window.renderPortraitProfile = renderProfile;
+window.randomPortraitProfileSeeded = randomProfileSeeded;
