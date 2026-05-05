@@ -2121,7 +2121,12 @@ import { createLayerManager } from './ui/layerManager.js';
         } else {
           state.stats.failedChallenges += 1;
           addLog(`Challenge fails. ${state.players[challengedId].name} was truthful.`);
-          await applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId);
+          const trapTransferResult = await applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId);
+          if (trapTransferResult?.pendingSelection) {
+            state.betting = null;
+            showRevealCinematic(challengerId, challengedId, play, success, null);
+            return;
+          }
         }
         addLog(`${seatLabel(winner)} wins ${netGain} net chip${netGain === 1 ? '' : 's'} from the challenge.`);
         state.betting = null;
@@ -2691,29 +2696,36 @@ import { createLayerManager } from './ui/layerManager.js';
       if (Number.isInteger(resumePlayerIndex)) void continueAfterNoChallenge(resumePlayerIndex);
     }
     async function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
-      if (!play.cards.some((card) => card.trickType === 'trap')) return;
+      if (!play.cards.some((card) => card.trickType === 'trap')) return null;
       if (isHumanSeat(challengedId)) {
         const maxCount = Math.min(play.cards.length, state.players[state.humanSeat].hand.length);
         if (maxCount <= 0) {
           addLog('Trap Bone fizzles: no cards available to offload.');
-          return;
+          return null;
         }
-        state.trapSelection = { challengerId, maxCount };
+        state.trapSelection = {
+          challengerId,
+          challengedId,
+          winnerId: challengedId,
+          maxCount,
+          resumeAfterChallenge: true,
+        };
         state.selectedCardIds.clear();
         render();
-        return;
+        return { pendingSelection: true };
       }
       let moved = [];
       const selectedCardIds = humanPickTrapCardIds(challengedId, play.cards.length);
       if (Array.isArray(selectedCardIds)) moved = transferSpecificCardsBetweenHands(challengedId, challengerId, selectedCardIds);
       if (!moved.length) moved = transferCardsBetweenHands(challengedId, challengerId, play.cards.length);
-      if (!moved.length) return;
+      if (!moved.length) return null;
       await animateCardTransferBatch({ cards: moved, fromKind: isHumanSeat(challengedId) ? 'hand' : 'seatHand', fromPlayerId: challengedId, toKind: isHumanSeat(challengerId) ? 'hand' : 'seatHand', toPlayerId: challengerId, arcMode: !isHumanSeat(challengedId) && !isHumanSeat(challengerId) ? 'inward' : 'auto' });
       addLog(`Trap Bone triggers: ${seatLabel(challengedId)} transfers ${moved.length} card${moved.length === 1 ? '' : 's'} to ${seatLabel(challengerId)}.`);
+      return null;
     }
     async function resolvePendingTrapSelection() {
       if (!state.trapSelection) return;
-      const { challengerId, maxCount } = state.trapSelection;
+      const { challengerId, challengedId, winnerId, maxCount, resumeAfterChallenge } = state.trapSelection;
       const selectedIds = [...state.selectedCardIds].slice(0, maxCount);
       let moved = transferSpecificCardsBetweenHands(state.humanSeat, challengerId, selectedIds);
       if (!moved.length) moved = transferCardsBetweenHands(state.humanSeat, challengerId, maxCount);
@@ -2722,6 +2734,10 @@ import { createLayerManager } from './ui/layerManager.js';
       state.selectedCardIds.clear();
       state.trapSelection = null;
       render();
+      if (resumeAfterChallenge) {
+        const resumeWinnerId = Number.isInteger(winnerId) ? winnerId : challengedId;
+        if (Number.isInteger(resumeWinnerId)) void concludeChallengeFlow(resumeWinnerId);
+      }
     }
     async function applyPunishTransferOnSuccessfulChallenge(play, challengerId, challengedId) {
       if (!state.players[challengerId]?.trickPunishActive) return;
