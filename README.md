@@ -53,3 +53,8 @@ defaults to `1`, and the configured `clothingSlots`/repair preference ensure
 NPC-generated portraits are guaranteed at least one visible clothing article.
 This guard only applies to NPC profile generation; human portraits continue to
 use their saved or selected appearance without forced clothing.
+## Trick bone loadouts
+
+Scratchbones now builds trick bones from player loadouts instead of a fixed deck-wide trick count. Each player brings a configured six-slot trick bone loadout; duplicates are allowed. At the start of each fresh deck, every active player's loadout is added to the shared deck before shuffling and dealing. Trick bones are not placed directly into their owner's hand, so any player can be dealt another player's preferred Smuggle, Trap, or Punish bones.
+
+The default trick-bone unlocks, six-slot default loadout, per-trick metadata, and NPC trick archetype weights live in `docs/config/scratchbones-config.js` under `game.trickBones`.

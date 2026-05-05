@@ -23,14 +23,40 @@ window.SCRATCHBONES_CONFIG = {
       "copiesPerRank": 4,
       "handSize": 10,
       "wildCount": 10,
-      "trickCardCounts": {
-        "smuggle": 2,
-        "trap": 2,
-        "punish": 2
-      },
       "playerCount": 4,
       "humanNames": [
         "You"
+      ]
+    },
+
+    "trickBones": {
+      "defaultUnlocked": ["smuggle", "trap", "punish"],
+      "defaultLoadout": ["smuggle", "trap", "punish", "smuggle", "trap", "punish"],
+      "loadoutSize": 6,
+      "definitions": {
+        "smuggle": {
+          "id": "smuggle",
+          "label": "Smuggle Bone",
+          "description": "Move a selected card to another player when the table allows a smuggle reaction.",
+          "wild": false
+        },
+        "trap": {
+          "id": "trap",
+          "label": "Trap Bone",
+          "description": "A reactive wild trick bone that can spring during a challenge.",
+          "wild": true
+        },
+        "punish": {
+          "id": "punish",
+          "label": "Punish Bone",
+          "description": "Arm a punishment before a betting decision to pressure the next claim.",
+          "wild": false
+        }
+      },
+      "npcArchetypes": [
+        { "id": "balanced", "weight": 3, "loadoutWeights": { "smuggle": 1, "trap": 1, "punish": 1 } },
+        { "id": "trickster", "weight": 2, "loadoutWeights": { "smuggle": 2, "trap": 2, "punish": 1 } },
+        { "id": "enforcer", "weight": 2, "loadoutWeights": { "smuggle": 1, "trap": 1, "punish": 2 } }
       ]
     },
     "nameGeneration": {

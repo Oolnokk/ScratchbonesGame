@@ -486,7 +486,10 @@ import { createLayerManager } from './ui/layerManager.js';
     const AI_CONFIG = SCRATCHBONES_GAME.ai || {};
     const START_HAND_SIZE = SCRATCHBONES_GAME.deck.handSize; // Used by: dealing fresh hands at match start and after a clear.
     const WILD_COUNT = SCRATCHBONES_GAME.deck.wildCount; // Used by: deck construction and bluff validation.
-    const TRICK_CARD_COUNTS = SCRATCHBONES_GAME.deck.trickCardCounts || {};
+    const TRICK_BONES = SCRATCHBONES_GAME.trickBones || {};
+    const TRICK_BONE_DEFINITIONS = TRICK_BONES.definitions || {};
+    const TRICK_BONE_LOADOUT_SIZE = Math.max(1, Number(TRICK_BONES.loadoutSize) || 6);
+    const DEFAULT_TRICK_BONE_LOADOUT = Array.isArray(TRICK_BONES.defaultLoadout) ? TRICK_BONES.defaultLoadout : [];
     const RANK_COUNT = SCRATCHBONES_GAME.deck.rankCount;
     const COPIES_PER_RANK = SCRATCHBONES_GAME.deck.copiesPerRank;
     const PLAYER_NAMES = SCRATCHBONES_GAME.deck.humanNames; // Optional authored names; Mao-ao generation is the fallback for any seat.
@@ -620,7 +623,64 @@ import { createLayerManager } from './ui/layerManager.js';
       }
       return arr;
     }
-    function createDeck() {
+    function normalizeTrickBoneLoadout(loadout) {
+      const validIds = new Set(Object.keys(TRICK_BONE_DEFINITIONS));
+      const source = Array.isArray(loadout) ? loadout : DEFAULT_TRICK_BONE_LOADOUT;
+      const result = [];
+      for (const rawId of source) {
+        const id = String(rawId || '').trim();
+        if (validIds.has(id)) result.push(id);
+        if (result.length >= TRICK_BONE_LOADOUT_SIZE) break;
+      }
+      for (const rawId of DEFAULT_TRICK_BONE_LOADOUT) {
+        if (result.length >= TRICK_BONE_LOADOUT_SIZE) break;
+        const id = String(rawId || '').trim();
+        if (validIds.has(id)) result.push(id);
+      }
+      return result.slice(0, TRICK_BONE_LOADOUT_SIZE);
+    }
+
+    function weightedChoice(entries) {
+      const total = entries.reduce((sum, entry) => sum + Math.max(0, Number(entry.weight) || 0), 0);
+      if (total <= 0) return entries[0]?.value ?? null;
+      let roll = rand() * total;
+      for (const entry of entries) {
+        roll -= Math.max(0, Number(entry.weight) || 0);
+        if (roll <= 0) return entry.value;
+      }
+      return entries[entries.length - 1]?.value ?? null;
+    }
+
+    function generateNpcTrickLoadout() {
+      const archetypes = Array.isArray(TRICK_BONES.npcArchetypes) ? TRICK_BONES.npcArchetypes : [];
+      const archetype = weightedChoice(archetypes.map(a => ({ value: a, weight: a.weight }))) || archetypes[0];
+      const weights = archetype?.loadoutWeights || {};
+      const entries = Object.entries(weights).map(([id, weight]) => ({ value: id, weight })).filter(entry => TRICK_BONE_DEFINITIONS[entry.value]);
+      const loadout = [];
+      for (let i = 0; i < TRICK_BONE_LOADOUT_SIZE; i += 1) {
+        const id = weightedChoice(entries);
+        if (id) loadout.push(id);
+      }
+      return normalizeTrickBoneLoadout(loadout);
+    }
+
+    function activeTrickLoadouts(players = state.players) {
+      return (players || [])
+        .filter(player => player && !player.eliminated)
+        .map(player => normalizeTrickBoneLoadout(player.playerLoadout));
+    }
+
+    function trickCountsFromLoadouts(loadouts) {
+      const counts = {};
+      for (const loadout of loadouts || []) {
+        for (const rawId of normalizeTrickBoneLoadout(loadout)) {
+          counts[rawId] = (counts[rawId] || 0) + 1;
+        }
+      }
+      return counts;
+    }
+
+    function createDeck(players = state.players) {
       const deck = [];
       let id = 1;
       for (let rank = 1; rank <= RANK_COUNT; rank++) {
@@ -629,14 +689,10 @@ import { createLayerManager } from './ui/layerManager.js';
         }
       }
       for (let i = 0; i < WILD_COUNT; i++) deck.push({ id: id++, rank: null, wild: true });
-      const trickSpecs = [
-        { key: 'smuggle', count: Number(TRICK_CARD_COUNTS.smuggle) || 0 },
-        { key: 'trap', count: Number(TRICK_CARD_COUNTS.trap) || 0 },
-        { key: 'punish', count: Number(TRICK_CARD_COUNTS.punish) || 0 },
-      ];
-      for (const spec of trickSpecs) {
-        for (let i = 0; i < Math.max(0, spec.count); i++) {
-          deck.push({ id: id++, rank: null, wild: spec.key === 'trap', trickType: spec.key });
+      for (const loadout of activeTrickLoadouts(players)) {
+        for (const trickType of loadout) {
+          const definition = TRICK_BONE_DEFINITIONS[trickType] || {};
+          deck.push({ id: id++, rank: null, wild: definition.wild === true, trickType });
         }
       }
       return shuffle(deck);
@@ -648,21 +704,19 @@ import { createLayerManager } from './ui/layerManager.js';
       return a.rank - b.rank || a.id - b.id;
     }
 
-    function deckCompositionSnapshot() {
+    function deckCompositionSnapshot(players = state.players) {
       const rankCounts = {};
       for (let rank = 1; rank <= RANK_COUNT; rank += 1) {
         rankCounts[rank] = Math.max(0, Number(COPIES_PER_RANK) || 0);
       }
-      const trickCounts = {
-        smuggle: Math.max(0, Number(TRICK_CARD_COUNTS.smuggle) || 0),
-        trap: Math.max(0, Number(TRICK_CARD_COUNTS.trap) || 0),
-        punish: Math.max(0, Number(TRICK_CARD_COUNTS.punish) || 0),
-      };
-      const wildCount = Math.max(0, Number(WILD_COUNT) || 0);
+      const loadouts = activeTrickLoadouts(players);
+      const trickCounts = trickCountsFromLoadouts(loadouts);
+      const wildCount = Math.max(0, Number(WILD_COUNT) || 0)
+        + Object.entries(trickCounts).reduce((sum, [trickType, count]) => sum + (TRICK_BONE_DEFINITIONS[trickType]?.wild ? count : 0), 0);
       const totalCards = Object.values(rankCounts).reduce((sum, count) => sum + count, 0)
-        + wildCount
+        + Math.max(0, Number(WILD_COUNT) || 0)
         + Object.values(trickCounts).reduce((sum, count) => sum + count, 0);
-      return { totalCards, rankCounts, trickCounts, wildCount };
+      return { totalCards, rankCounts, trickCounts, wildCount, playerLoadouts: loadouts };
     }
     function resolveSeatName(index, generatedName) {
       const configuredName = PLAYER_NAMES[index] || (index === 0 ? PLAYER_NAMES[0] : null);
@@ -674,6 +728,7 @@ import { createLayerManager } from './ui/layerManager.js';
       const humanSeats = Array.isArray(session.humanSeats) ? new Set(session.humanSeats) : new Set([0]);
       const playerNames = session.playerNames || {};
       const playerAppearances = session.playerAppearances || {};
+      const playerLoadouts = session.playerLoadouts || {};
       const mode = session.mode || 'pve';
       // PvP: all seats are human — total equals human count, no AI fills.
       // PvE / PvPvE: full configured table; AI occupies remaining seats.
@@ -684,6 +739,7 @@ import { createLayerManager } from './ui/layerManager.js';
         const sessionName = playerNames[index];
         const name = isHuman && sessionName ? sessionName : resolveSeatName(index, aiIdentity.name);
         const appearance = isHuman ? (playerAppearances[index] ?? null) : null;
+        const playerLoadout = isHuman ? normalizeTrickBoneLoadout(playerLoadouts[index]) : generateNpcTrickLoadout();
         return {
           id: index,
           name,
@@ -698,6 +754,7 @@ import { createLayerManager } from './ui/layerManager.js';
           personality: isHuman ? null : aiIdentity.personality,
           reads: {},
           appearance,
+          playerLoadout,
         };
       });
     }
@@ -722,6 +779,7 @@ import { createLayerManager } from './ui/layerManager.js';
           lastAction: p.lastAction,
           clears: p.clears,
           profile: p.profile || null,
+          playerLoadout: normalizeTrickBoneLoadout(p.playerLoadout),
         })),
         currentTurn: state.currentTurn,
         leaderIndex: state.leaderIndex,

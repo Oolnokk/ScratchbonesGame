@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 8080;
 const wss = new WebSocket.Server({ port: PORT });
 
-// rooms: Map<code, { host, hostSeatId, hostName, hostAppearance, clients: Map<seatId, {ws, name, appearance}>, lastState }>
+// rooms: Map<code, { host, hostSeatId, hostName, hostAppearance, hostLoadout, clients: Map<seatId, {ws, name, appearance, playerLoadout}>, lastState }>
 const rooms = new Map();
 
 function makeCode() {
@@ -15,6 +15,10 @@ function send(ws, obj) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(obj));
   }
+}
+
+function normalizePlayerLoadout(loadout) {
+  return Array.isArray(loadout) ? loadout.map(id => String(id || '').trim()).filter(Boolean).slice(0, 12) : [];
 }
 
 function filterStateForSeat(fullState, seatId) {
@@ -63,6 +67,7 @@ wss.on('connection', ws => {
         hostSeatId: 0,
         hostName,
         hostAppearance: msg.playerAppearance ?? null,
+        hostLoadout: normalizePlayerLoadout(msg.playerLoadout),
         clients: new Map(),
         lastState: null,
         totalSeats: Math.max(2, Math.min(4, Number(msg.totalSeats) || 2)),
@@ -90,7 +95,8 @@ wss.on('connection', ws => {
 
       const playerName = String(msg.playerName || `Player ${seat + 1}`).slice(0, 32);
       const playerAppearance = msg.playerAppearance ?? null;
-      room.clients.set(seat, { ws, name: playerName, appearance: playerAppearance });
+      const playerLoadout = normalizePlayerLoadout(msg.playerLoadout);
+      room.clients.set(seat, { ws, name: playerName, appearance: playerAppearance, playerLoadout });
       roomCode = code;
       role = 'client';
       seatId = seat;
@@ -104,8 +110,8 @@ wss.on('connection', ws => {
 
       // Notify host — include per-seat appearances so host can pass them into the session
       const occupants = [
-        { seatId: room.hostSeatId, name: room.hostName, appearance: room.hostAppearance ?? null },
-        ...[...room.clients.entries()].map(([s, { name, appearance }]) => ({ seatId: s, name, appearance })),
+        { seatId: room.hostSeatId, name: room.hostName, appearance: room.hostAppearance ?? null, playerLoadout: room.hostLoadout || [] },
+        ...[...room.clients.entries()].map(([s, { name, appearance, playerLoadout }]) => ({ seatId: s, name, appearance, playerLoadout: playerLoadout || [] })),
       ];
       send(room.host, { type: 'player-joined', seatId, playerName, occupants });
       return;

@@ -42,9 +42,9 @@ Short answer: **mostly yes for your own character, conditionally yes for other p
    - shows equipped-by-category and owned/filterable dyes
    - writes via `applyDye(dyeId, tintKey)` and `removeDye(tintKey)`
 3. Lobby preview (`buildPreviewProfile`) builds a profile from species/gender + saved cosmetics/body colors, then overlays account equip/dyes.
-4. Multiplayer join/create sends `getFullAppearance()` including `equippedCosmetics` + `appliedDyes` through websocket payload.
-5. Relay stores per-seat `appearance` and forwards occupants to host.
-6. Host injects per-seat appearances into `SCRATCHBONES_SESSION.playerAppearances`.
+4. Multiplayer join/create sends `getFullKhymeryyan()` session data: appearance details (`equippedCosmetics` + `appliedDyes`) plus the player's trick-bone loadout through the websocket payload.
+5. Relay stores per-seat `appearance` and `playerLoadout`, then forwards occupants to host.
+6. Host injects per-seat appearances into `SCRATCHBONES_SESSION.playerAppearances` and per-seat trick loadouts into `SCRATCHBONES_SESSION.playerLoadouts`.
 7. In game bootstrap:
    - creates human base profile from `player.appearance`
    - applies equipped cosmetics from `player.appearance.equippedCosmetics` (or local fallback)
