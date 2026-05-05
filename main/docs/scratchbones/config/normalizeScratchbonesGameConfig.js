@@ -137,6 +137,18 @@ function normalizeStringMap(value, fallback) {
     .filter(([key, mapValue]) => key && mapValue));
 }
 
+const DEFAULT_CANDLELIGHT_CONFIG = {
+  sourceReferenceWidthPx: 1920,
+  sourceReferenceHeightPx: 1080,
+  sources: [
+    { xPct: 61 / 1920, yPct: 360 / 1080, intensity: 0.77, radiusMultiplier: 1, flickerSpeed: 4.17, turbulence: 1 },
+  ],
+  radiusRefPx: 1200,
+  thevmenuOpacity: 0.2,
+  thevmenuLayerZIndex: 2147483647,
+  thevmenuOccluderSelectors: ['#aiSidebar', '.humanSeatZone', '.turnSpotlight', '.claimCluster'],
+};
+
 const DEFAULT_LAYER_MANAGER_CONFIG = {
   enabled: true,
   hostZIndex: 45,
@@ -524,7 +536,10 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       },
       lighting: {
         ...(rawGameConfig.layout?.lighting || {}),
-        candlelight: { ...(rawGameConfig.layout?.lighting?.candlelight || {}) },
+        candlelight: {
+          ...DEFAULT_CANDLELIGHT_CONFIG,
+          ...(rawGameConfig.layout?.lighting?.candlelight || {}),
+        },
       },
       layerManager: (() => {
         const rawLayerManager = rawGameConfig.layout?.layerManager || {};
