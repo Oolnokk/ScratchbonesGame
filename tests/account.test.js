@@ -404,48 +404,163 @@ describe('trick-bone loadout', () => {
 // ── Dye API ───────────────────────────────────────────────────────────────────
 
 describe('dye API', () => {
-  it('getDyeCatalog returns a non-empty array', () => {
+  const starterIds = [
+    'dye:CLOTH:dusty_red',
+    'dye:CLOTH:dusty_red_orange',
+    'dye:CLOTH:dusty_orange',
+    'dye:CLOTH:dusty_yellow_orange',
+    'dye:CLOTH:dusty_yellow',
+    'dye:CLOTH:dusty_yellow_green',
+    'dye:CLOTH:dusty_green',
+    'dye:CLOTH:dusty_green_blue',
+    'dye:CLOTH:dusty_blue',
+    'dye:CLOTH:dusty_blue_indigo',
+    'dye:CLOTH:dusty_indigo',
+    'dye:CLOTH:dusty_indigo_violet',
+    'dye:CLOTH:dusty_violet',
+    'dye:CLOTH:silver',
+    'dye:CLOTH:gray',
+    'dye:CLOTH:cream',
+    'dye:CLOTH:brown',
+  ];
+
+  function catalog(acc) {
+    return toPlain(acc.getDyeCatalog());
+  }
+
+  it('systematic dye catalog has the requested counts and no black/onyx entries', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
-    acc.createAccount('X');
-    const catalog = acc.getDyeCatalog();
-    assert.ok(Array.isArray(catalog));
-    assert.ok(catalog.length > 0);
+    const dyes = catalog(acc);
+    assert.equal(dyes.length, 123);
+    assert.equal(dyes.filter(d => !d.neutral).length, 117);
+    assert.equal(dyes.filter(d => d.neutral).length, 6);
+    assert.equal(dyes.some(d => d.label === 'Black'), false);
+    assert.equal(dyes.some(d => d.id.toLowerCase().includes('black')), false);
+    assert.equal(dyes.some(d => d.id.toLowerCase().includes('onyx')), false);
+    assert.equal(new Set(dyes.map(d => d.id)).size, dyes.length);
+    assert.equal(new Set(dyes.map(d => d.label)).size, dyes.length);
   });
 
-  it('all starter dyes are owned by default', () => {
+  it('chromatic and neutral dyes expose required rendering and metadata fields', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
-    acc.createAccount('X');
-    for (const dye of acc.getDyeCatalog()) {
-      assert.equal(acc.isDyeOwned(dye.id), true, `Starter dye "${dye.id}" should be owned`);
+    const dyes = catalog(acc);
+    for (const dye of dyes.filter(d => !d.neutral)) {
+      for (const key of ['id', 'label', 'group', 'dyeSlot', 'variant', 'hueFamily', 'hueAngle', 'saturationPercent', 'brightnessPercent', 'hex', 'color']) {
+        assert.notEqual(dye[key], undefined, `${dye.id} missing ${key}`);
+      }
+      assert.ok(dye.dyeCategory || dye.hueFamily);
+    }
+    for (const dye of dyes.filter(d => d.neutral)) {
+      for (const key of ['id', 'label', 'hex', 'color']) {
+        assert.notEqual(dye[key], undefined, `${dye.id} missing ${key}`);
+      }
+      assert.equal(dye.neutral, true);
     }
   });
 
-  it('applyDye sets the dye for the given tint key', () => {
+  it('new accounts start with exactly the 17 configured starter dyes', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
-    const ok = acc.applyDye('dye:CLOTH:red', 'CLOTH');
-    assert.equal(ok, true);
-    assert.equal(acc.getAppliedDyes().CLOTH, 'dye:CLOTH:red');
+    assert.deepEqual(toPlain(acc.getOwnedDyes()).sort(), starterIds.slice().sort());
+    assert.equal(acc.getOwnedDyes().length, 17);
+    for (const id of starterIds.filter(id => id.includes(':dusty_'))) assert.equal(acc.isDyeOwned(id), true);
+    for (const id of ['dye:CLOTH:silver', 'dye:CLOTH:gray', 'dye:CLOTH:cream', 'dye:CLOTH:brown']) assert.equal(acc.isDyeOwned(id), true);
+    assert.equal(acc.isDyeOwned('dye:CLOTH:white'), false);
+    assert.equal(acc.isDyeOwned('dye:CLOTH:charcoal'), false);
+    assert.equal(acc.isDyeOwned('dye:CLOTH:black'), false);
   });
 
-  it('applyDye returns false for an unowned dye', () => {
-    const { ScratchbonesAccount: acc } = makeSandbox();
-    acc.createAccount('X');
-    const ok = acc.applyDye('nonexistent_dye', 'CLOTH');
-    assert.equal(ok, false);
+  it('normalization migrates and removes legacy dye ids without duplicating ownership', () => {
+    const sandbox = makeSandbox();
+    sandbox.localStorage.setItem('sb_account_v1', JSON.stringify({
+      bronze: 30,
+      ownedDyes: ['dye:CLOTH:black', 'dye:CLOTH:scarlet', 'dye:CLOTH:scarlet', 'dye:CLOTH:not_real'],
+      khymeryyans: [{ id: 'kh-1', name: 'Old', appliedDyes: { CLOTH: 'dye:CLOTH:scarlet', HAT: 'dye:CLOTH:not_real' } }],
+      activeKhymeryyanId: 'kh-1',
+    }));
+    const { ScratchbonesAccount: acc } = sandbox;
+    acc.load();
+    const owned = toPlain(acc.getOwnedDyes());
+    assert.equal(owned.includes('dye:CLOTH:black'), false);
+    assert.equal(owned.includes('dye:CLOTH:charcoal'), true);
+    assert.equal(owned.includes('dye:CLOTH:pure_red'), true);
+    assert.equal(owned.filter(id => id === 'dye:CLOTH:pure_red').length, 1);
+    assert.equal(owned.includes('dye:CLOTH:not_real'), false);
+    assert.equal(acc.getAppliedDyes().CLOTH, 'dye:CLOTH:pure_red');
+    assert.equal(acc.getAppliedDyes().HAT, undefined);
   });
 
-  it('applyDye returns false for a missing tintKey', () => {
+  it('mystery pools overlap correctly and exclude neutral/achievement dyes', () => {
+    const { ScratchbonesAccount: acc } = makeSandbox();
+    const poolIdsFor = (id) => catalog(acc).find(d => d.id === id).mysteryPools;
+    assert.deepEqual(poolIdsFor('dye:CLOTH:pure_red_orange').sort(), ['orange', 'red']);
+    assert.deepEqual(poolIdsFor('dye:CLOTH:pure_yellow_green').sort(), ['green', 'yellow']);
+    assert.deepEqual(poolIdsFor('dye:CLOTH:pure_blue_indigo').sort(), ['blue', 'indigo']);
+    assert.deepEqual(poolIdsFor('dye:CLOTH:pure_indigo_violet').sort(), ['indigo', 'violet']);
+    for (const item of acc.getMysteryDyeShopCatalog()) {
+      const poolDyes = toPlain(acc.getMysteryDyePoolRemaining(item.poolId));
+      assert.equal(poolDyes.some(d => d.neutral), false);
+      assert.equal(poolDyes.some(d => d.id === 'dye:CLOTH:white'), false);
+      assert.equal(poolDyes.some(d => d.id === 'dye:CLOTH:charcoal'), false);
+    }
+  });
+
+  it('buyMysteryDye deducts bronze and grants exactly one unowned dye from the pool', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
-    const ok = acc.applyDye('dye:CLOTH:red', '');
-    assert.equal(ok, false);
+    const beforeBronze = acc.getBronze();
+    const beforeOwned = new Set(acc.getOwnedDyes());
+    const beforeRemaining = toPlain(acc.getMysteryDyePoolRemaining('red')).map(d => d.id);
+    const result = toPlain(acc.buyMysteryDye('red'));
+    assert.equal(result.ok, true);
+    assert.equal(acc.getBronze(), beforeBronze - acc.MYSTERY_DYE_PRICE);
+    assert.equal(beforeOwned.has(result.dyeId), false);
+    assert.equal(beforeRemaining.includes(result.dyeId), true);
+    assert.equal(acc.isDyeOwned(result.dyeId), true);
+    assert.equal(acc.getOwnedDyes().length, beforeOwned.size + 1);
+  });
+
+  it('buyMysteryDye never grants duplicates', () => {
+    const { ScratchbonesAccount: acc } = makeSandbox();
+    acc.createAccount('X');
+    acc.addBronze(1000);
+    const granted = new Set();
+    while (!acc.isMysteryDyePoolComplete('violet')) {
+      const result = toPlain(acc.buyMysteryDye('violet'));
+      assert.equal(result.ok, true);
+      assert.equal(granted.has(result.dyeId), false);
+      granted.add(result.dyeId);
+    }
+  });
+
+  it('buyMysteryDye returns structured failures for insufficient bronze and completed pools', () => {
+    const { ScratchbonesAccount: acc } = makeSandbox();
+    acc.createAccount('X');
+    acc.spendBronze(acc.getBronze());
+    assert.deepEqual(toPlain(acc.buyMysteryDye('red')), { ok: false, error: 'Not enough Bronze' });
+    acc.addBronze(1000);
+    while (!acc.isMysteryDyePoolComplete('red')) {
+      const result = acc.buyMysteryDye('red');
+      assert.equal(result.ok, true);
+    }
+    assert.deepEqual(toPlain(acc.buyMysteryDye('red')), { ok: false, error: 'Pool complete' });
+    const status = toPlain(acc.getMysteryDyePoolStatus('red'));
+    assert.equal(status.complete, true);
+    assert.equal(status.remaining, 0);
+  });
+
+  it('applyDye sets owned systematic dyes and rejects unowned systematic dyes', () => {
+    const { ScratchbonesAccount: acc } = makeSandbox();
+    acc.createAccount('X');
+    assert.equal(acc.applyDye('dye:CLOTH:dusty_red', 'CLOTH'), true);
+    assert.equal(acc.getAppliedDyes().CLOTH, 'dye:CLOTH:dusty_red');
+    assert.equal(acc.applyDye('dye:CLOTH:pure_red', 'CLOTH'), false);
   });
 
   it('removeDye removes the dye from the applied slot', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
-    acc.applyDye('dye:CLOTH:red', 'CLOTH');
+    acc.applyDye('dye:CLOTH:dusty_red', 'CLOTH');
     acc.removeDye('CLOTH');
     assert.equal(acc.getAppliedDyes().CLOTH, undefined);
   });
