@@ -58,23 +58,47 @@ import { createTutorial } from './tutorial.js';
       }
     }
     applyRootCssCustomProperties(SCRATCHBONES_GAME.cssRootVars);
-    ensureTrickSymbolStyles();
-
-    function ensureTrickSymbolStyles() {
-      if (document.getElementById('scratchbones-trick-symbol-styles')) return;
+    function injectPunishBoneSpinStyles() {
+      if (typeof document === 'undefined' || document.getElementById('scratchbones-punish-bone-spin-styles')) return;
       const styleEl = document.createElement('style');
-      styleEl.id = 'scratchbones-trick-symbol-styles';
+      styleEl.id = 'scratchbones-punish-bone-spin-styles';
       styleEl.textContent = `
-        .trickDeckInfo { display: flex; flex-direction: column; align-items: center; gap: var(--layout-trick-info-gap); margin-top: var(--layout-trick-info-margin-top); pointer-events: none; }
-        .trickDeckInfoTitle { font-weight: 700; letter-spacing: var(--layout-trick-info-letter-spacing); color: var(--accent-2); text-align: center; }
-        .trickDeckInfoRows { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--layout-trick-info-gap); max-width: var(--layout-trick-info-max-width); }
-        .trickDeckInfoItem { display: inline-flex; align-items: center; gap: var(--layout-trick-info-item-gap); color: var(--text); white-space: nowrap; }
-        .trickSymbolContainer { display: inline-flex; align-items: center; justify-content: center; width: var(--layout-trick-info-glyph-size); height: var(--layout-trick-info-glyph-size); flex: 0 0 var(--layout-trick-info-glyph-size); }
-        .trickSymbolImg { width: 100%; height: 100%; object-fit: contain; display: block; filter: var(--layout-trick-symbol-filter); }
-        .trickSymbolImg.trick-symbol-missing { display: none; }
+        .punishBoneSpinShell {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .punishBoneSpinArt {
+          transform-origin: center center;
+          will-change: transform, filter;
+        }
+        #betPunishToggleBtn[data-punish-armed="true"]:not(:disabled) .punishBoneSpinArt {
+          animation: punishBoneTopSpin var(--punish-bone-spin-duration) linear infinite;
+        }
+        @keyframes punishBoneTopSpin {
+          0% {
+            transform: rotate(var(--punish-bone-spin-start-rotation)) scaleX(1) translateZ(0);
+            filter: blur(0) drop-shadow(0 0 0 var(--warning));
+          }
+          50% {
+            transform: rotate(var(--punish-bone-spin-mid-rotation)) scaleX(var(--punish-bone-spin-scale-x-min)) translateZ(0);
+            filter: blur(var(--punish-bone-spin-blur)) drop-shadow(0 0 var(--punish-bone-spin-shadow-blur) var(--warning));
+          }
+          100% {
+            transform: rotate(var(--punish-bone-spin-end-rotation)) scaleX(1) translateZ(0);
+            filter: blur(0) drop-shadow(0 0 0 var(--warning));
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          #betPunishToggleBtn[data-punish-armed="true"]:not(:disabled) .punishBoneSpinArt {
+            animation-duration: var(--punish-bone-spin-reduced-motion-duration);
+            filter: drop-shadow(0 0 var(--punish-bone-spin-shadow-blur) var(--warning));
+          }
+        }
       `;
       document.head.appendChild(styleEl);
     }
+    injectPunishBoneSpinStyles();
     const authoredEditorState = {
       selectedId: null,
       selectedSubId: null,
@@ -4474,7 +4498,8 @@ import { createTutorial } from './tutorial.js';
       const renderPunishToggleButton = (locked) => {
         if (!state.betting?.punishAvailable) return '';
         const punishArt = resolveScratchbone2DAsset({ trickType: 'punish', rank: null, wild: false }, { flipped: false });
-        return `<button class="secondary" id="betPunishToggleBtn" ${locked ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:8px;border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};"><img src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:var(--layout-punish-button-card-width);height:var(--layout-punish-button-card-height);object-fit:contain;border-radius:4px;">${state.betting.punishArmed ? 'Punish Armed' : 'Arm Punish'}</button>`;
+        const punishArmed = state.betting.punishArmed === true;
+        return `<button class="secondary" id="betPunishToggleBtn" data-punish-armed="${punishArmed ? 'true' : 'false'}" ${locked ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:8px;border-color:${punishArmed ? 'var(--warning)' : 'var(--line)'};background:${punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${punishArmed ? 'var(--bg)' : 'var(--text)'};"><span class="punishBoneSpinShell"><img class="punishBoneSpinArt" src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:34px;height:48px;object-fit:contain;border-radius:4px;"></span>${punishArmed ? 'Punish Armed' : 'Arm Punish'}</button>`;
       };
       const renderStakeVisual = () => `
         <div class="stakeVisualPanel">
@@ -4525,7 +4550,8 @@ import { createTutorial } from './tutorial.js';
       const renderCinematicPunishCenterButton = () => {
         if (!clusterCinematicActive || cinematicPhase !== 'betting' || !bettingActorHuman || !state.betting?.punishAvailable) return '';
         const punishArt = resolveScratchbone2DAsset({ trickType: 'punish', rank: null, wild: false }, { flipped: false });
-        return `<div class="fit-target fit-0" data-proj-id="challenge-prompt" style="z-index:78;display:flex;align-items:center;justify-content:center;pointer-events:none;"><button class="secondary" id="betPunishToggleBtn" ${state.betting.actionInFlight ? 'disabled' : ''} style="pointer-events:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:190px;min-height:210px;border-width:3px;border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};"><img src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:var(--layout-cinematic-punish-button-card-width);height:var(--layout-cinematic-punish-button-card-height);object-fit:contain;border-radius:6px;"><span style="font-weight:700;">${state.betting.punishArmed ? 'Punish Armed' : 'Arm Punish Bone'}</span></button></div>`;
+        const punishArmed = state.betting.punishArmed === true;
+        return `<div class="fit-target fit-0" data-proj-id="challenge-prompt" style="z-index:78;display:flex;align-items:center;justify-content:center;pointer-events:none;"><button class="secondary" id="betPunishToggleBtn" data-punish-armed="${punishArmed ? 'true' : 'false'}" ${state.betting.actionInFlight ? 'disabled' : ''} style="pointer-events:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:190px;min-height:210px;border-width:3px;border-color:${punishArmed ? 'var(--warning)' : 'var(--line)'};background:${punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${punishArmed ? 'var(--bg)' : 'var(--text)'};"><span class="punishBoneSpinShell"><img class="punishBoneSpinArt" src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:96px;height:136px;object-fit:contain;border-radius:6px;"></span><span style="font-weight:700;">${punishArmed ? 'Punish Armed' : 'Arm Punish Bone'}</span></button></div>`;
       };
       app.innerHTML = `
         <div class="topbar" data-proj-id="topbar">
