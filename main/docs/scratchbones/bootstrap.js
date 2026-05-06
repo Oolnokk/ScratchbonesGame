@@ -1025,6 +1025,10 @@ import { createLayerManager } from './ui/layerManager.js';
       const remainingOpponents = alivePlayers().filter(p => p.id !== declarerId && !hasConcededThisRound(p.id));
       if (remainingOpponents.length > 0) return false;
       addLog(`Everyone else concedes the claim. ${seatLabel(state.players[declarerId])} wins the round uncontested.`);
+      showScreenBurst('Uncontested!', {
+        anchorEl: walletCoinRowAnchorForPlayer(declarerId),
+        colorClass: 'burst-win',
+      });
       openNewRound(declarerId);
       return true;
     }
@@ -1759,6 +1763,11 @@ import { createLayerManager } from './ui/layerManager.js';
       player.lastAction = 'Out of chips';
       addLog(logMessage || `${seatLabel(player)} is out of chips and eliminated.`);
       if (state.currentTurn === playerIndex) state.currentTurn = nextAliveIndex(playerIndex);
+      showScreenBurst('OUT!', {
+        anchorEl: walletCoinRowAnchorForPlayer(playerIndex),
+        colorClass: 'burst-out',
+        fontSizeRem: 3.2,
+      });
       return checkGameOverBySurvivors();
     }
     function maybeAutoRevealAfterMatchedBet() {
@@ -2272,8 +2281,17 @@ import { createLayerManager } from './ui/layerManager.js';
       player.clears += 1;
       state.stats.totalClears += 1;
       addLog(`${seatLabel(player)} clears their hand and collects the ${totalWon} chip${totalWon === 1 ? '' : 's'} table pot.`);
+      showScreenBurst('Clear!', {
+        anchorEl: walletCoinRowAnchorForPlayer(playerIndex),
+        colorClass: 'burst-win',
+        fontSizeRem: 3.0,
+      });
       state.ante += Math.max(1, Number(CONFIG.anteIncrement) || 1);
       addLog(`The ante rises to ${state.ante} chip${state.ante === 1 ? '' : 's'}.`);
+      showScreenBurst(`Ante ↑ ${state.ante}`, {
+        anchorEl: tablePotPileAnchor(),
+        colorClass: 'burst-ante',
+      });
       let ended = false;
       for (const p of state.players) {
         if (eliminateIfNeeded(p.id, `${seatLabel(p)} is out of chips after the clear payout.`)) ended = true;
@@ -2333,6 +2351,11 @@ import { createLayerManager } from './ui/layerManager.js';
         setBanner(winnerIsHuman ? 'You win. Everyone else ran out of chips.' : `${seatLabel(survivors[0])} wins. Everyone else ran out of chips.`, 'good');
         addLog(state.banner);
         render();
+        showScreenBurst(winnerIsHuman ? 'YOU WIN!' : `${seatFirstName(survivors[0])} WINS!`, {
+          colorClass: winnerIsHuman ? 'burst-win' : 'burst-raise',
+          fontSizeRem: 4.2,
+          durationMs: 3800,
+        });
         return true;
       }
       return false;
@@ -2911,6 +2934,38 @@ import { createLayerManager } from './ui/layerManager.js';
       shell.appendChild(inner);
       cluster.appendChild(shell);
       setTimeout(() => { if (shell.parentNode) shell.remove(); }, durationMs + 100);
+    }
+    // ── Reusable screen-space burst text ──────────────────────────────────────
+    // Spawns a cinBurst-animated text pop anchored to an element or viewport point.
+    // opts: { anchorEl, colorClass, fontSizeRem, durationMs, fontFamily }
+    function showScreenBurst(text, opts = {}) {
+      const { anchorEl, colorClass = 'burst-win', fontSizeRem, durationMs, fontFamily } = opts;
+      let cx, cy;
+      if (anchorEl) {
+        const rect = anchorEl.getBoundingClientRect();
+        cx = rect.left + rect.width / 2;
+        cy = rect.top + rect.height / 2;
+      } else {
+        cx = window.innerWidth / 2;
+        cy = window.innerHeight / 2;
+      }
+      const burstDurationCss = durationMs
+        ? `${(durationMs / 1000).toFixed(2)}s`
+        : 'var(--layout-cinematic-burst-duration, 2.1s)';
+      const removeAfterMs = durationMs
+        ? Math.round(durationMs * 1.4)
+        : 2940; // 2.1s default duration × 1400
+      const shell = document.createElement('div');
+      shell.style.cssText = `position:fixed;left:${cx.toFixed(1)}px;top:${cy.toFixed(1)}px;pointer-events:none;z-index:10050;`;
+      const inner = document.createElement('div');
+      inner.className = `cin-action-burst ${colorClass}`;
+      inner.textContent = text;
+      inner.style.animation = `cinBurst ${burstDurationCss} both`;
+      if (fontSizeRem) inner.style.fontSize = `${fontSizeRem}rem`;
+      if (fontFamily) inner.style.fontFamily = fontFamily;
+      shell.appendChild(inner);
+      document.body.appendChild(shell);
+      setTimeout(() => { if (shell.parentNode) shell.remove(); }, removeAfterMs);
     }
     function startChallengeTimer({ durationMs = CHALLENGE_TIMER_SECS * 1000, onExpire = null } = {}) {
       clearChallengeTimer();
