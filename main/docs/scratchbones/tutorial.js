@@ -11,7 +11,7 @@
 //
 // Usage:
 //   import { createTutorial } from './tutorial.js';
-//   const tut = createTutorial({ onDone: () => { unpauseGame(); } });
+//   const tut = createTutorial({ getContext: () => ({ isHumanTurn: true }), onDone: () => { unpauseGame(); } });
 //   tut.show();   // builds overlay if needed and renders step 0
 //   tut.hide();   // hides without calling onDone (e.g. page hidden)
 
@@ -20,7 +20,7 @@
 //   id      – stable identifier (not displayed)
 //   target  – function returning one or more candidate HTMLElements to spotlight
 //   title   – heading text shown in the panel
-//   text    – body explanation shown in the panel
+//   text    – body explanation shown in the panel; may be a string or (ctx) => string
 const TUTORIAL_STEPS = [
   {
     id: 'welcome',
@@ -88,7 +88,7 @@ const TUTORIAL_STEPS = [
 ];
 
 // ── createTutorial ─────────────────────────────────────────────────────────────
-export function createTutorial({ onDone, gameConfig } = {}) {
+export function createTutorial({ onDone, gameConfig, getContext } = {}) {
   const tutorialConfig = gameConfig?.tutorial || {};
   const ringPadPx = Math.max(0, Number(tutorialConfig.ringPadPx) || 0);
   const minVisibleAreaRatio = Math.min(1, Math.max(0, Number(tutorialConfig.minVisibleAreaRatio) || 0));
@@ -315,13 +315,15 @@ export function createTutorial({ onDone, gameConfig } = {}) {
     if (index < 0 || index >= steps.length) return;
     currentStep = index;
     const step = steps[index];
+    const context = typeof getContext === 'function' ? getContext() : {};
     const targetEl = resolveTarget(step);
+    const body = typeof step.text === 'function' ? step.text(context) : step.text;
 
     positionRing(targetEl);
     positionPanel(targetEl);
 
     if (titleEl) titleEl.textContent = step.title;
-    if (textEl) textEl.textContent = step.text;
+    if (textEl) textEl.textContent = body;
     if (counterEl) counterEl.textContent = `${index + 1} / ${steps.length}`;
 
     const isLast = index === steps.length - 1;
