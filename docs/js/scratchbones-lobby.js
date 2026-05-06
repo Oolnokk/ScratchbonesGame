@@ -273,6 +273,7 @@
 
   // Collections: which slot's dye panel is open (null | 'hat' | 'torso' | 'overwear')
   let _activeDyeSlot = null;
+  let _lastMysteryDyeResult = null;
 
   // ── Helpers ────────────────────────────────────────────────
 
@@ -750,18 +751,20 @@
             </div>`;
         };
         let dyeRows = '';
+        const categoriesById = new Map(dyeCategories.map(category => [category.id, category]));
+        const sortDyes = (list) => [...list].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
         if (equippedMaterial === 'cloth' && dyeCategories.length) {
           dyeRows = dyeCategories.map(category => {
-            const categoryDyes = dyesForSlot.filter(d => d.dyeCategory === category.id);
+            const categoryDyes = sortDyes(dyesForSlot.filter(d => d.dyeCategory === category.id));
             if (!categoryDyes.length) return '';
             return `
               <div class="sb-dye-category" style="margin:7px 0 3px;font-size:0.74em;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);">${esc(category.label)}</div>
               ${categoryDyes.map(dyeRowHtml).join('')}`;
           }).join('');
-          const uncategorizedDyes = dyesForSlot.filter(d => !d.dyeCategory || !dyeCategories.some(category => category.id === d.dyeCategory));
+          const uncategorizedDyes = sortDyes(dyesForSlot.filter(d => !d.dyeCategory || !categoriesById.has(d.dyeCategory)));
           if (uncategorizedDyes.length) dyeRows += uncategorizedDyes.map(dyeRowHtml).join('');
         } else {
-          dyeRows = dyesForSlot.map(dyeRowHtml).join('');
+          dyeRows = sortDyes(dyesForSlot).map(dyeRowHtml).join('');
         }
         if (!dyeRows) dyeRows = '<div class="sb-muted" style="font-size:0.8em;">No dyes owned.</div>';
         const clearBtns = slot.tintKeys.filter(k => appliedDyes[k]).map((k, i) =>
@@ -813,6 +816,7 @@
       if (score(item) > score(prev)) dedupedMap.set(key, item);
     }
     const catalog = [...dedupedMap.values()];
+    const mysteryCatalog = acc?.getMysteryDyeShopCatalog ? acc.getMysteryDyeShopCatalog() : [];
     const categories = [...new Set(catalog.map(c => c.category))];
     const equippedIds = new Set(acc?.getEquippedCosmetics?.() || []);
     const isEquippedGroup = (item) => {
@@ -825,6 +829,33 @@
     };
 
     let rows = '';
+    if (mysteryCatalog.length) {
+      rows += `<div class="sb-shop-cat">Mystery Dyes</div>`;
+      if (_lastMysteryDyeResult) {
+        const cls = _lastMysteryDyeResult.ok ? 'sb-shop-note' : 'sb-error';
+        const msg = _lastMysteryDyeResult.ok
+          ? `Received ${_lastMysteryDyeResult.dye?.label || _lastMysteryDyeResult.dyeId}!`
+          : _lastMysteryDyeResult.error;
+        rows += `<div class="${cls}" style="font-size:0.82em;margin:4px 0 8px;">${esc(msg)}</div>`;
+      }
+      for (const item of mysteryCatalog) {
+        const status = acc?.getMysteryDyePoolStatus ? acc.getMysteryDyePoolStatus(item.poolId) : null;
+        const remaining = status?.remaining ?? 0;
+        const complete = !!status?.complete;
+        const can = !complete && bronze >= item.price;
+        const btn = complete
+          ? `<button class="sb-shop-action equipped" disabled>Complete ✓</button>`
+          : `<button class="sb-shop-action buy${can ? '' : ' cant'}" data-action="buy-mystery-dye" data-pool-id="${esc(item.poolId)}"${can ? '' : ' disabled'}><span class="sb-coin">🪙</span>${item.price}</button>`;
+        rows += `
+          <div class="sb-shop-item">
+            <div class="sb-shop-info">
+              <div class="sb-shop-name">${esc(item.label)}</div>
+              <div class="sb-shop-desc">${esc(item.description)} ${remaining} remaining.</div>
+            </div>
+            ${btn}
+          </div>`;
+      }
+    }
     for (const cat of categories) {
       rows += `<div class="sb-shop-cat">${cap(cat)}</div>`;
       for (const item of catalog.filter(c => c.category === cat)) {
@@ -866,7 +897,7 @@
             <div class="sb-shop-note sb-muted" style="font-size:0.8em;padding-bottom:6px;">
               Showing items for ${esc(SPECIES_DATA[appearance.speciesId]?.label || appearance.speciesId)} (${esc(cap(appearance.gender))})
             </div>
-            <div class="sb-shop-list" style="max-height:52dvh;">${rows || '<div class="sb-muted">No items available.</div>'}</div>
+            <div class="sb-shop-list" style="max-height:52dvh;display:flex;flex-direction:column;gap:6px;">${rows || '<div class="sb-muted">No items available.</div>'}</div>
           </div>
         </div>
       </div>`;
@@ -1270,9 +1301,10 @@
         const { action, id } = btn.dataset;
         const acc = window.ScratchbonesAccount;
         if (!acc) return;
-        if (action === 'buy') acc.buyCosmetic(id);
-        else if (action === 'equip') acc.equipCosmetic(id);
-        else if (action === 'unequip') acc.unequipCosmetic(id);
+        if (action === 'buy') { _lastMysteryDyeResult = null; acc.buyCosmetic(id); }
+        else if (action === 'equip') { _lastMysteryDyeResult = null; acc.equipCosmetic(id); }
+        else if (action === 'unequip') { _lastMysteryDyeResult = null; acc.unequipCosmetic(id); }
+        else if (action === 'buy-mystery-dye') _lastMysteryDyeResult = acc.buyMysteryDye(btn.dataset.poolId);
         render();
       });
     });

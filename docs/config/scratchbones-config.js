@@ -176,168 +176,316 @@ window.SCRATCHBONES_CONFIG = {
     },
     "dyes": {
       "swatchBase": "#7dc89a",
+      // Mystery dye purchases use this single config value through ScratchbonesAccount.
+      "mysteryDyePrice": 10,
+      "hueFamilies": [
+        { "id": "red", "label": "Red", "abbreviation": "R", "hueAngle": 0 },
+        { "id": "red_orange", "label": "Red-Orange", "abbreviation": "R/O", "hueAngle": 15 },
+        { "id": "orange", "label": "Orange", "abbreviation": "O", "hueAngle": 30 },
+        { "id": "yellow_orange", "label": "Yellow-Orange", "abbreviation": "O/Y", "hueAngle": 45 },
+        { "id": "yellow", "label": "Yellow", "abbreviation": "Y", "hueAngle": 60 },
+        { "id": "yellow_green", "label": "Yellow-Green", "abbreviation": "Y/G", "hueAngle": 90 },
+        { "id": "green", "label": "Green", "abbreviation": "G", "hueAngle": 120 },
+        { "id": "green_blue", "label": "Green-Blue", "abbreviation": "G/B", "hueAngle": 180 },
+        { "id": "blue", "label": "Blue", "abbreviation": "B", "hueAngle": 240 },
+        { "id": "blue_indigo", "label": "Blue-Indigo", "abbreviation": "B/I", "hueAngle": 255 },
+        { "id": "indigo", "label": "Indigo", "abbreviation": "I", "hueAngle": 270 },
+        { "id": "indigo_violet", "label": "Indigo-Violet", "abbreviation": "I/V", "hueAngle": 285 },
+        { "id": "violet", "label": "Violet", "abbreviation": "V", "hueAngle": 300 }
+      ],
+      "variants": [
+        { "id": "pure", "label": "Pure", "saturationPercent": 100, "brightnessPercent": 100 },
+        { "id": "bright", "label": "Bright", "saturationPercent": 60, "brightnessPercent": 100 },
+        { "id": "pale", "label": "Pale", "saturationPercent": 30, "brightnessPercent": 100 },
+        { "id": "deep", "label": "Deep", "saturationPercent": 100, "brightnessPercent": 55 },
+        { "id": "muted", "label": "Muted", "saturationPercent": 60, "brightnessPercent": 55 },
+        { "id": "dusty", "label": "Dusty", "saturationPercent": 30, "brightnessPercent": 55 },
+        { "id": "shadow", "label": "Shadow", "saturationPercent": 100, "brightnessPercent": 35 },
+        { "id": "dark_muted", "label": "Dark Muted", "saturationPercent": 60, "brightnessPercent": 35 },
+        { "id": "smoky", "label": "Smoky", "saturationPercent": 30, "brightnessPercent": 35 }
+      ],
+      "neutrals": [
+        { "id": "white", "label": "White", "hex": "#FFFFFF", "acquisition": "achievement", "unlockSource": "achievement_future" },
+        { "id": "silver", "label": "Silver", "hex": "#C0C0C0", "acquisition": "starter" },
+        { "id": "gray", "label": "Gray", "hex": "#808080", "acquisition": "starter" },
+        { "id": "charcoal", "label": "Charcoal", "hex": "#333333", "acquisition": "achievement", "unlockSource": "achievement_future" },
+        { "id": "cream", "label": "Cream", "hex": "#FFF0CC", "acquisition": "starter" },
+        { "id": "brown", "label": "Brown", "hex": "#7A4A24", "acquisition": "starter" }
+      ],
       "categories": [
-        { "id": "reds", "label": "Reds" },
-        { "id": "oranges", "label": "Oranges" },
-        { "id": "yellows", "label": "Yellows" },
-        { "id": "greens", "label": "Greens" },
-        { "id": "blues", "label": "Blues" },
-        { "id": "purples", "label": "Purples" }
+        { "id": "red", "label": "Red" },
+        { "id": "red_orange", "label": "Red-Orange" },
+        { "id": "orange", "label": "Orange" },
+        { "id": "yellow_orange", "label": "Yellow-Orange" },
+        { "id": "yellow", "label": "Yellow" },
+        { "id": "yellow_green", "label": "Yellow-Green" },
+        { "id": "green", "label": "Green" },
+        { "id": "green_blue", "label": "Green-Blue" },
+        { "id": "blue", "label": "Blue" },
+        { "id": "blue_indigo", "label": "Blue-Indigo" },
+        { "id": "indigo", "label": "Indigo" },
+        { "id": "indigo_violet", "label": "Indigo-Violet" },
+        { "id": "violet", "label": "Violet" },
+        { "id": "neutral", "label": "Neutral" }
       ],
-      "catalog": [
-          // Color offsets are fitted against swatchBase with the runtime CSS filter
-          // pipeline: hue-rotate(...) saturate(...) brightness(...).
-          // The trailing hex comments are the intended rendered reference colors.
-          // ── Cloth dyes — full range ─────────────────────────────────────────────
-          { id: 'dye:CLOTH:red',       label: 'Jade',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: 16.355, s:  1.963, v: -0.293 } }, // #00A86B
-          { id: 'dye:CLOTH:orange',    label: 'Teal',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 40.732, s:  2.030, v: -0.442 } }, // #008080
-          { id: 'dye:CLOTH:yellow',    label: 'Azure',    group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 78.750, s:  3.875, v: -0.395 } }, // #007FFF
-          { id: 'dye:CLOTH:green',     label: 'Amethyst', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:136.976, s:  1.187, v: -0.335 } }, // #9966CC
-          { id: 'dye:CLOTH:blue',      label: 'Crimson',  group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-152.370, s:  5.913, v: -0.638 } }, // #DC143C
-          { id: 'dye:CLOTH:purple',    label: 'Amber',    group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-82.997, s:  2.086, v:  0.056 } }, // #FFBF00
-          { id: 'dye:CLOTH:brown',     label: 'Moss',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:-56.084, s:  0.114, v: -0.192 } }, // #8A9A5B
-          { id: 'dye:CLOTH:black',     label: 'Onyx',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h: 58.358, s: -0.847, v: -0.693 } }, // #353839
-          { id: 'dye:CLOTH:white',     label: 'Mist',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:102.276, s: -0.853, v:  0.097 } }, // #C4C6D0
-          { id: 'dye:CLOTH:grey',      label: 'Sage',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:-27.535, s: -0.300, v: -0.192 } }, // #7D9B76
-          { id: 'dye:CLOTH:navy',      label: 'Navy',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:111.144, s: 36.505, v: -0.949 } }, // #000080
-          { id: 'dye:CLOTH:scarlet',   label: 'Scarlet',  group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-129.831, s:  6.039, v: -0.558 } }, // #FF2400
-          { id: 'dye:CLOTH:gold',      label: 'Gold',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-77.146, s:  1.999, v:  0.150 } }, // #FFD700
-          { id: 'dye:CLOTH:violet',    label: 'Violet',   group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:137.079, s: 13.385, v: -0.747 } }, // #8000FF
-          { id: 'dye:CLOTH:forest',    label: 'Forest',   group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:-19.383, s:  1.847, v: -0.397 } }, // #228B22
-          { id: 'dye:CLOTH:ivory',     label: 'Ivory',    group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-68.856, s: -0.839, v:  0.405 } }, // #FFFFF0
-          { id: 'dye:CLOTH:wine',      label: 'Wine',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-146.926, s:  1.489, v: -0.658 } }, // #722F37
-          { id: 'dye:CLOTH:cobalt',    label: 'Cobalt',   group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 85.263, s:  4.788, v: -0.651 } }, // #0047AB
-          // Earth & brown additions
-          { id: 'dye:CLOTH:saddlebrown', label: 'Brown',  group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-108.181, s:  2.093, v: -0.556 } }, // #8B4513
-          { id: 'dye:CLOTH:rust',      label: 'Rust',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-117.536, s:  3.087, v: -0.522 } }, // #B7410E
-          { id: 'dye:CLOTH:sand',      label: 'Sand',     group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-95.767, s: -0.188, v:  0.015 } }, // #D2B48C
-          { id: 'dye:CLOTH:sienna',    label: 'Sienna',   group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-115.928, s:  1.496, v: -0.469 } }, // #A0522D
-
-          // Reds additions
-          { id: 'dye:CLOTH:carmine', label: 'Carmine', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-149.647, s:  9.151, v: -0.814 } }, // #960018
-          { id: 'dye:CLOTH:vermilion', label: 'Vermilion', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-134.100, s:  3.015, v: -0.451 } }, // #E34234
-          { id: 'dye:CLOTH:rose', label: 'Rose', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-172.739, s:  8.304, v: -0.649 } }, // #FF007F
-          { id: 'dye:CLOTH:ruby', label: 'Ruby', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-164.588, s:  6.011, v: -0.631 } }, // #E0115F
-          { id: 'dye:CLOTH:brick', label: 'Brick', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-148.145, s:  2.297, v: -0.470 } }, // #CB4154
-          { id: 'dye:CLOTH:garnet', label: 'Garnet', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-138.265, s:  1.189, v: -0.630 } }, // #733635
-          { id: 'dye:CLOTH:poppy', label: 'Poppy', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-139.268, s:  3.828, v: -0.456 } }, // #FF3838
-          { id: 'dye:CLOTH:currant', label: 'Currant', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-163.591, s:  8.437, v: -0.818 } }, // #8A0032
-          { id: 'dye:CLOTH:claret', label: 'Claret', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-157.812, s:  3.950, v: -0.739 } }, // #7F1734
-          { id: 'dye:CLOTH:coral_red', label: 'Coral Red', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'reds', color: { h:-139.268, s:  3.355, v: -0.421 } }, // #FF4040
-          // Oranges additions
-          { id: 'dye:CLOTH:tangerine', label: 'Tangerine', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-97.469, s:  2.491, v: -0.189 } }, // #F28500
-          { id: 'dye:CLOTH:persimmon', label: 'Persimmon', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-111.766, s:  3.320, v: -0.374 } }, // #EC5800
-          { id: 'dye:CLOTH:apricot', label: 'Apricot', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-110.210, s: -0.283, v:  0.181 } }, // #FBCEB1
-          { id: 'dye:CLOTH:burnt_orange', label: 'Burnt Orange', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-108.181, s:  3.052, v: -0.424 } }, // #CC5500
-          { id: 'dye:CLOTH:pumpkin', label: 'Pumpkin', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-109.334, s:  2.422, v: -0.228 } }, // #FF7518
-          { id: 'dye:CLOTH:ochre', label: 'Ochre', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-101.407, s:  1.712, v: -0.276 } }, // #CC7722
-          { id: 'dye:CLOTH:copperleaf', label: 'Copperleaf', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-121.258, s:  0.792, v: -0.334 } }, // #B66A50
-          { id: 'dye:CLOTH:marigold', label: 'Marigold', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-90.461, s:  1.616, v: -0.071 } }, // #EAA221
-          { id: 'dye:CLOTH:flame', label: 'Flame', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-119.176, s:  2.552, v: -0.372 } }, // #E25822
-          { id: 'dye:CLOTH:cantaloupe', label: 'Cantaloupe', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'oranges', color: { h:-95.091, s:  1.571, v: -0.026 } }, // #FFA62B
-          // Yellows additions
-          { id: 'dye:CLOTH:lemon', label: 'Lemon', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-71.947, s:  0.956, v:  0.297 } }, // #FFF44F
-          { id: 'dye:CLOTH:saffron', label: 'Saffron', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-82.599, s:  1.323, v:  0.082 } }, // #F4C430
-          { id: 'dye:CLOTH:citrine', label: 'Citrine', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-73.488, s:  1.812, v:  0.095 } }, // #E4D00A
-          { id: 'dye:CLOTH:honey', label: 'Honey', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-82.664, s:  1.906, v:  0.076 } }, // #FFC30B
-          { id: 'dye:CLOTH:maize', label: 'Maize', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-73.660, s:  0.759, v:  0.266 } }, // #FBEC5D
-          { id: 'dye:CLOTH:mustard', label: 'Mustard', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-80.717, s:  0.813, v:  0.202 } }, // #FFDB58
-          { id: 'dye:CLOTH:butter', label: 'Butter', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-79.080, s: -0.260, v:  0.326 } }, // #FFF1B5
-          { id: 'dye:CLOTH:flax', label: 'Flax', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-77.724, s:  0.208, v:  0.202 } }, // #EEDC82
-          { id: 'dye:CLOTH:canary', label: 'Canary', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-68.856, s:  0.121, v:  0.370 } }, // #FFFF99
-          { id: 'dye:CLOTH:dandelion', label: 'Dandelion', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'yellows', color: { h:-72.763, s:  1.297, v:  0.192 } }, // #F0E130
-          // Greens additions
-          { id: 'dye:CLOTH:emerald', label: 'Emerald', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: -3.147, s:  0.754, v: -0.067 } }, // #50C878
-          { id: 'dye:CLOTH:malachite', label: 'Malachite', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: -2.868, s:  2.104, v: -0.092 } }, // #0BDA51
-          { id: 'dye:CLOTH:viridian', label: 'Viridian', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: 19.460, s:  0.297, v: -0.367 } }, // #40826D
-          { id: 'dye:CLOTH:fern', label: 'Fern', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:-29.737, s:  0.384, v: -0.402 } }, // #4F7942
-          { id: 'dye:CLOTH:olive', label: 'Olive', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:-68.856, s:  1.934, v: -0.343 } }, // #808000
-          { id: 'dye:CLOTH:mint', label: 'Mint', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:-19.383, s:  0.350, v:  0.249 } }, // #98FF98
-          { id: 'dye:CLOTH:pine', label: 'Pine', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: 35.447, s:  1.937, v: -0.476 } }, // #01796F
-          { id: 'dye:CLOTH:laurel', label: 'Laurel', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:-38.531, s: -0.580, v: -0.002 } }, // #A9BA9D
-          { id: 'dye:CLOTH:shamrock', label: 'Shamrock', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h: 14.343, s:  1.982, v: -0.337 } }, // #009E60
-          { id: 'dye:CLOTH:seafoam', label: 'Seafoam', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'greens', color: { h:  5.681, s: -0.253, v:  0.158 } }, // #9FE2BF
-          // Blues additions
-          { id: 'dye:CLOTH:sapphire', label: 'Sapphire', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 87.041, s:  3.897, v: -0.583 } }, // #0F52BA
-          { id: 'dye:CLOTH:cerulean', label: 'Cerulean', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 59.416, s:  2.520, v: -0.446 } }, // #007BA7
-          { id: 'dye:CLOTH:sky', label: 'Sky', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 61.521, s:  0.085, v:  0.068 } }, // #87CEEB
-          { id: 'dye:CLOTH:indigo', label: 'Indigo', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h:140.991, s: 12.343, v: -0.860 } }, // #4B0082
-          { id: 'dye:CLOTH:lapis', label: 'Lapis', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 78.593, s:  1.777, v: -0.509 } }, // #26619C
-          { id: 'dye:CLOTH:turquoise', label: 'Turquoise', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 34.356, s:  0.956, v:  0.045 } }, // #40E0D0
-          { id: 'dye:CLOTH:prussian', label: 'Prussian', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 71.243, s:  3.182, v: -0.773 } }, // #003153
-          { id: 'dye:CLOTH:cornflower', label: 'Cornflower', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 89.579, s:  1.067, v: -0.198 } }, // #6495ED
-          { id: 'dye:CLOTH:steel', label: 'Steel', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 74.913, s:  0.888, v: -0.331 } }, // #4682B4
-          { id: 'dye:CLOTH:aegean', label: 'Aegean', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'blues', color: { h: 80.112, s:  1.593, v: -0.646 } }, // #1F456E
-          // Purples additions
-          { id: 'dye:CLOTH:lavender', label: 'Lavender', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:141.413, s:  0.697, v: -0.200 } }, // #B57EDC
-          { id: 'dye:CLOTH:plum', label: 'Plum', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:165.936, s:  1.252, v: -0.507 } }, // #8E4585
-          { id: 'dye:CLOTH:mauve', label: 'Mauve', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:142.566, s:  0.078, v:  0.062 } }, // #E0B0FF
-          { id: 'dye:CLOTH:orchid', label: 'Orchid', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:162.164, s:  1.159, v: -0.215 } }, // #DA70D6
-          { id: 'dye:CLOTH:byzantium', label: 'Byzantium', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:168.801, s:  2.132, v: -0.666 } }, // #702963
-          { id: 'dye:CLOTH:mulberry', label: 'Mulberry', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:-174.987, s:  1.701, v: -0.415 } }, // #C54B8C
-          { id: 'dye:CLOTH:lilac', label: 'Lilac', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:160.617, s: -0.350, v: -0.044 } }, // #C8A2C8
-          { id: 'dye:CLOTH:grape', label: 'Grape', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:138.895, s:  3.687, v: -0.624 } }, // #6F2DA8
-          { id: 'dye:CLOTH:periwinkle', label: 'Periwinkle', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:111.144, s: -0.332, v:  0.149 } }, // #CCCCFF
-          { id: 'dye:CLOTH:eggplant', label: 'Eggplant', group: 'cloth', dyeSlot: 'CLOTH', dyeCategory: 'purples', color: { h:-173.852, s:  0.063, v: -0.600 } }, // #614051
-
-          // ── Rigid fiber — natural plant-fiber tones (used by kasas) ─────────────
-          { id: 'mat:rigid_fiber:straw',  label: 'Straw',        group: 'rigid_fiber', color: { h:-81.565, s: -0.069, v:  0.153 } }, // #E4D191
-          { id: 'mat:rigid_fiber:reed',   label: 'Dried Reed',   group: 'rigid_fiber', color: { h:-91.607, s:  0.366, v: -0.129 } }, // #BF9A5C
-          { id: 'mat:rigid_fiber:pale',   label: 'Pale Fiber',   group: 'rigid_fiber', color: { h:-84.444, s: -0.499, v:  0.108 } }, // #D4C8A8
-          { id: 'mat:rigid_fiber:tawny',  label: 'Tawny Reed',   group: 'rigid_fiber', color: { h:-90.165, s:  0.686, v: -0.310 } }, // #9C7A3C
-          { id: 'mat:rigid_fiber:shadow', label: 'Shadow Fiber', group: 'rigid_fiber', color: { h:-103.782, s: -0.291, v: -0.448 } }, // #736151
-          { id: 'mat:rigid_fiber:marsh',  label: 'Marsh Reed',   group: 'rigid_fiber', color: { h:-49.397, s: -0.147, v: -0.168 } }, // #8B9E6C
-
-          // ── Metal — pre-iron-age metals and alloys ───────────────────────────────
-          { id: 'mat:metal:copper',    label: 'Copper',    group: 'metal', color: { h:-102.923, s:  1.214, v: -0.308 } }, // #B87333
-          { id: 'mat:metal:bronze',    label: 'Bronze',    group: 'metal', color: { h:-101.667, s:  1.344, v: -0.236 } }, // #CD7F32
-          { id: 'mat:metal:tin',       label: 'Tin',       group: 'metal', color: { h:  0.000, s: -1.000, v:  0.195 } }, // #D8D8D8
-          { id: 'mat:metal:gold',      label: 'Gold',      group: 'metal', color: { h:-77.146, s:  1.999, v:  0.150 } }, // #FFD700
-          { id: 'mat:metal:silver',    label: 'Silver',    group: 'metal', color: { h:  0.000, s: -1.000, v:  0.062 } }, // #C0C0C0
-          { id: 'mat:metal:electrum',  label: 'Electrum',  group: 'metal', color: { h:-81.999, s:  1.100, v: -0.036 } }, // #D4AF37
-
-          // ── Wood — natural and exotic timbers (bronzewood = ironwood) ────────────
-          { id: 'mat:wood:oak',        label: 'Oak',         group: 'wood', color: { h:-87.791, s:  0.786, v: -0.056 } }, // #D4A84B
-          { id: 'mat:wood:walnut',     label: 'Dark Walnut', group: 'wood', color: { h:-109.071, s:  1.474, v: -0.681 } }, // #5C3317
-          { id: 'mat:wood:cedar',      label: 'Cedar',       group: 'wood', color: { h:-99.434, s:  1.633, v: -0.285 } }, // #C47722
-          { id: 'mat:wood:ebony',      label: 'Ebony',       group: 'wood', color: { h:-105.326, s:  2.872, v: -0.816 } }, // #3E1C00
-          { id: 'mat:wood:bronzewood', label: 'Bronzewood',  group: 'wood', color: { h:-98.626, s:  0.446, v: -0.307 } }, // #A0784A
-          { id: 'mat:wood:birch',      label: 'Birch',       group: 'wood', color: { h:-88.658, s: -0.569, v:  0.278 } }, // #F5E6C8
-
-          // ── Chitin — insect/crustacean carapace tones ────────────────────────────
-          { id: 'mat:chitin:amber',    label: 'Amber',       group: 'chitin', color: { h:-94.694, s:  1.315, v: -0.162 } }, // #D49030
-          { id: 'mat:chitin:horn',     label: 'Horn',        group: 'chitin', color: { h:-90.461, s:  0.110, v: -0.270 } }, // #9A8257
-          { id: 'mat:chitin:dark',     label: 'Dark Chitin', group: 'chitin', color: { h:-109.546, s:  0.350, v: -0.746 } }, // #3D2B1F
-          { id: 'mat:chitin:sandy',    label: 'Sandy',       group: 'chitin', color: { h:-92.677, s: -0.203, v:  0.005 } }, // #CDB38A
-          { id: 'mat:chitin:night',    label: 'Night',       group: 'chitin', color: { h:105.457, s: -0.477, v: -0.760 } }, // #2A2B33
-
-          // ── Leather — tanned hide tones ──────────────────────────────────────────
-          { id: 'mat:leather:tan',     label: 'Natural Tan',   group: 'leather', color: { h:-95.767, s: -0.188, v:  0.015 } }, // #D2B48C
-          { id: 'mat:leather:saddle',  label: 'Saddle Brown',  group: 'leather', color: { h:-108.181, s:  2.093, v: -0.556 } }, // #8B4513
-          { id: 'mat:leather:chestnut',label: 'Chestnut',      group: 'leather', color: { h:-127.977, s:  1.469, v: -0.530 } }, // #954535
-          { id: 'mat:leather:dark',    label: 'Dark Leather',  group: 'leather', color: { h:-101.407, s:  0.540, v: -0.685 } }, // #4B3621
-          { id: 'mat:leather:cognac',  label: 'Cognac',        group: 'leather', color: { h:-132.956, s:  1.406, v: -0.517 } }, // #9A463D
-          { id: 'mat:leather:cream',   label: 'Cream Leather', group: 'leather', color: { h:-89.751, s: -0.352, v:  0.238 } }, // #F5DEB3
-          { id: 'mat:leather:umber',   label: 'Umber',         group: 'leather', color: { h:-105.457, s:  0.573, v: -0.563 } }, // #6B4A2F
-          { id: 'mat:leather:bark',    label: 'Bark Brown',    group: 'leather', color: { h:-110.940, s:  0.476, v: -0.636 } }, // #5A3D2B
-          { id: 'mat:leather:peat',    label: 'Peat',          group: 'leather', color: { h:-111.971, s: -0.017, v: -0.685 } }, // #47362C
-          { id: 'mat:leather:moss',    label: 'Mossed Hide',   group: 'leather', color: { h:-76.050, s: -0.017, v: -0.596 } }, // #4E4A31
-
-          // ── Fur — natural animal-pelt tones ─────────────────────────────────────
-          { id: 'mat:fur:snow',     label: 'Snow White',   group: 'fur', color: { h:-139.268, s: -0.952, v:  0.389 } }, // #FFFAFA
-          { id: 'mat:fur:cream',    label: 'Cream',        group: 'fur', color: { h:-79.744, s: -0.752, v:  0.326 } }, // #F5F0DC
-          { id: 'mat:fur:tawny',    label: 'Tawny',        group: 'fur', color: { h:-108.333, s:  1.088, v: -0.260 } }, // #C87941
-          { id: 'mat:fur:russet',   label: 'Russet',       group: 'fur', color: { h:-119.011, s:  1.968, v: -0.531 } }, // #9B4523
-          { id: 'mat:fur:grey',     label: 'Wolf Grey',    group: 'fur', color: { h:  0.000, s: -1.000, v: -0.292 } }, // #808080
-          { id: 'mat:fur:midnight', label: 'Midnight',     group: 'fur', color: { h:  0.000, s: -1.000, v: -0.845 } }, // #1C1C1C
-
-          // ── Bamboo — cane tones ──────────────────────────────────────────────────
-          { id: 'mat:bamboo:green',  label: 'Green Bamboo',  group: 'bamboo', color: { h:-19.383, s:  0.724, v: -0.421 } }, // #3D7A3D
-          { id: 'mat:bamboo:aged',   label: 'Aged Bamboo',   group: 'bamboo', color: { h:-93.204, s: -0.048, v:  0.014 } }, // #D4B483
-          { id: 'mat:bamboo:young',  label: 'Young Bamboo',  group: 'bamboo', color: { h:-44.747, s:  0.407, v: -0.069 } }, // #8DB85C
-          { id: 'mat:bamboo:black',  label: 'Black Bamboo',  group: 'bamboo', color: { h:-56.293, s: -0.541, v: -0.751 } }, // #2C2E26
-          { id: 'mat:bamboo:smoked', label: 'Smoked Bamboo', group: 'bamboo', color: { h:-97.001, s: -0.030, v: -0.347 } }, // #8B7355
+      "mysteryPools": [
+        { "id": "red", "shopId": "mystery_dye_red", "label": "Red Mystery Dye", "hueFamilies": ["Red", "Red-Orange"], "description": "Grants one unowned Red or Red-Orange dye." },
+        { "id": "orange", "shopId": "mystery_dye_orange", "label": "Orange Mystery Dye", "hueFamilies": ["Red-Orange", "Orange", "Yellow-Orange"], "description": "Grants one unowned Red-Orange, Orange, or Yellow-Orange dye." },
+        { "id": "yellow", "shopId": "mystery_dye_yellow", "label": "Yellow Mystery Dye", "hueFamilies": ["Yellow-Orange", "Yellow", "Yellow-Green"], "description": "Grants one unowned Yellow-Orange, Yellow, or Yellow-Green dye." },
+        { "id": "green", "shopId": "mystery_dye_green", "label": "Green Mystery Dye", "hueFamilies": ["Yellow-Green", "Green", "Green-Blue"], "description": "Grants one unowned Yellow-Green, Green, or Green-Blue dye." },
+        { "id": "blue", "shopId": "mystery_dye_blue", "label": "Blue Mystery Dye", "hueFamilies": ["Green-Blue", "Blue", "Blue-Indigo"], "description": "Grants one unowned Green-Blue, Blue, or Blue-Indigo dye." },
+        { "id": "indigo", "shopId": "mystery_dye_indigo", "label": "Indigo Mystery Dye", "hueFamilies": ["Blue-Indigo", "Indigo", "Indigo-Violet"], "description": "Grants one unowned Blue-Indigo, Indigo, or Indigo-Violet dye." },
+        { "id": "violet", "shopId": "mystery_dye_violet", "label": "Violet Mystery Dye", "hueFamilies": ["Indigo-Violet", "Violet"], "description": "Grants one unowned Indigo-Violet or Violet dye." }
       ],
+      "starterDyeIds": [
+        "dye:CLOTH:dusty_red",
+        "dye:CLOTH:dusty_red_orange",
+        "dye:CLOTH:dusty_orange",
+        "dye:CLOTH:dusty_yellow_orange",
+        "dye:CLOTH:dusty_yellow",
+        "dye:CLOTH:dusty_yellow_green",
+        "dye:CLOTH:dusty_green",
+        "dye:CLOTH:dusty_green_blue",
+        "dye:CLOTH:dusty_blue",
+        "dye:CLOTH:dusty_blue_indigo",
+        "dye:CLOTH:dusty_indigo",
+        "dye:CLOTH:dusty_indigo_violet",
+        "dye:CLOTH:dusty_violet",
+        "dye:CLOTH:silver",
+        "dye:CLOTH:gray",
+        "dye:CLOTH:cream",
+        "dye:CLOTH:brown"
+      ],
+      "legacyDyeMigrations": {
+        "dye:CLOTH:red": "dye:CLOTH:deep_green",
+        "dye:CLOTH:orange": "dye:CLOTH:deep_green_blue",
+        "dye:CLOTH:yellow": "dye:CLOTH:pure_blue",
+        "dye:CLOTH:green": "dye:CLOTH:bright_indigo_violet",
+        "dye:CLOTH:blue": "dye:CLOTH:deep_red",
+        "dye:CLOTH:purple": "dye:CLOTH:bright_yellow_orange",
+        "dye:CLOTH:brown": "dye:CLOTH:muted_yellow_green",
+        "dye:CLOTH:black": "dye:CLOTH:charcoal",
+        "dye:CLOTH:white": "dye:CLOTH:silver",
+        "dye:CLOTH:grey": "dye:CLOTH:gray",
+        "dye:CLOTH:navy": "dye:CLOTH:shadow_blue",
+        "dye:CLOTH:scarlet": "dye:CLOTH:pure_red",
+        "dye:CLOTH:gold": "dye:CLOTH:bright_yellow",
+        "dye:CLOTH:violet": "dye:CLOTH:pure_violet",
+        "dye:CLOTH:forest": "dye:CLOTH:deep_green",
+        "dye:CLOTH:ivory": "dye:CLOTH:cream",
+        "dye:CLOTH:wine": "dye:CLOTH:shadow_red",
+        "dye:CLOTH:cobalt": "dye:CLOTH:deep_blue",
+        "dye:CLOTH:saddlebrown": "dye:CLOTH:brown",
+        "dye:CLOTH:rust": "dye:CLOTH:deep_orange",
+        "dye:CLOTH:sand": "dye:CLOTH:pale_yellow_orange",
+        "dye:CLOTH:sienna": "dye:CLOTH:muted_orange",
+        "dye:CLOTH:carmine": "dye:CLOTH:shadow_red",
+        "dye:CLOTH:vermilion": "dye:CLOTH:bright_red_orange",
+        "dye:CLOTH:rose": "dye:CLOTH:bright_violet",
+        "dye:CLOTH:ruby": "dye:CLOTH:deep_red",
+        "dye:CLOTH:brick": "dye:CLOTH:muted_red_orange",
+        "dye:CLOTH:garnet": "dye:CLOTH:shadow_red",
+        "dye:CLOTH:poppy": "dye:CLOTH:pure_red_orange",
+        "dye:CLOTH:currant": "dye:CLOTH:dark_muted_red",
+        "dye:CLOTH:claret": "dye:CLOTH:deep_red",
+        "dye:CLOTH:coral_red": "dye:CLOTH:bright_red_orange",
+        "dye:CLOTH:tangerine": "dye:CLOTH:pure_orange",
+        "dye:CLOTH:persimmon": "dye:CLOTH:bright_orange",
+        "dye:CLOTH:apricot": "dye:CLOTH:pale_orange",
+        "dye:CLOTH:burnt_orange": "dye:CLOTH:deep_orange",
+        "dye:CLOTH:pumpkin": "dye:CLOTH:muted_orange",
+        "dye:CLOTH:ochre": "dye:CLOTH:muted_yellow_orange",
+        "dye:CLOTH:copperleaf": "dye:CLOTH:muted_orange",
+        "dye:CLOTH:marigold": "dye:CLOTH:bright_yellow_orange",
+        "dye:CLOTH:flame": "dye:CLOTH:pure_red_orange",
+        "dye:CLOTH:cantaloupe": "dye:CLOTH:pale_orange",
+        "dye:CLOTH:lemon": "dye:CLOTH:pure_yellow",
+        "dye:CLOTH:saffron": "dye:CLOTH:bright_yellow_orange",
+        "dye:CLOTH:citrine": "dye:CLOTH:bright_yellow",
+        "dye:CLOTH:honey": "dye:CLOTH:muted_yellow_orange",
+        "dye:CLOTH:maize": "dye:CLOTH:pale_yellow",
+        "dye:CLOTH:mustard": "dye:CLOTH:muted_yellow",
+        "dye:CLOTH:butter": "dye:CLOTH:pale_yellow",
+        "dye:CLOTH:flax": "dye:CLOTH:pale_yellow_orange",
+        "dye:CLOTH:canary": "dye:CLOTH:bright_yellow",
+        "dye:CLOTH:dandelion": "dye:CLOTH:pure_yellow",
+        "dye:CLOTH:emerald": "dye:CLOTH:bright_green",
+        "dye:CLOTH:malachite": "dye:CLOTH:deep_green",
+        "dye:CLOTH:viridian": "dye:CLOTH:muted_green_blue",
+        "dye:CLOTH:fern": "dye:CLOTH:muted_green",
+        "dye:CLOTH:olive": "dye:CLOTH:dark_muted_yellow_green",
+        "dye:CLOTH:mint": "dye:CLOTH:pale_green",
+        "dye:CLOTH:pine": "dye:CLOTH:shadow_green",
+        "dye:CLOTH:laurel": "dye:CLOTH:dusty_green",
+        "dye:CLOTH:shamrock": "dye:CLOTH:bright_green",
+        "dye:CLOTH:seafoam": "dye:CLOTH:pale_green_blue",
+        "dye:CLOTH:sapphire": "dye:CLOTH:deep_blue",
+        "dye:CLOTH:cerulean": "dye:CLOTH:bright_blue",
+        "dye:CLOTH:sky": "dye:CLOTH:pale_blue",
+        "dye:CLOTH:indigo": "dye:CLOTH:deep_indigo",
+        "dye:CLOTH:lapis": "dye:CLOTH:muted_blue",
+        "dye:CLOTH:turquoise": "dye:CLOTH:bright_green_blue",
+        "dye:CLOTH:prussian": "dye:CLOTH:shadow_blue",
+        "dye:CLOTH:cornflower": "dye:CLOTH:pale_blue",
+        "dye:CLOTH:steel": "dye:CLOTH:muted_blue",
+        "dye:CLOTH:aegean": "dye:CLOTH:dark_muted_blue",
+        "dye:CLOTH:lavender": "dye:CLOTH:pale_violet",
+        "dye:CLOTH:plum": "dye:CLOTH:muted_violet",
+        "dye:CLOTH:mauve": "dye:CLOTH:pale_indigo_violet",
+        "dye:CLOTH:orchid": "dye:CLOTH:bright_indigo_violet",
+        "dye:CLOTH:byzantium": "dye:CLOTH:deep_violet",
+        "dye:CLOTH:mulberry": "dye:CLOTH:muted_violet",
+        "dye:CLOTH:lilac": "dye:CLOTH:pale_violet",
+        "dye:CLOTH:grape": "dye:CLOTH:deep_indigo_violet",
+        "dye:CLOTH:periwinkle": "dye:CLOTH:pale_blue_indigo",
+        "dye:CLOTH:eggplant": "dye:CLOTH:dark_muted_violet"
+      },
+      "catalog": (() => {
+        const baseHex = "#7dc89a";
+        const hueFamilies = [
+          { id: "red", label: "Red", hueAngle: 0 },
+          { id: "red_orange", label: "Red-Orange", hueAngle: 15 },
+          { id: "orange", label: "Orange", hueAngle: 30 },
+          { id: "yellow_orange", label: "Yellow-Orange", hueAngle: 45 },
+          { id: "yellow", label: "Yellow", hueAngle: 60 },
+          { id: "yellow_green", label: "Yellow-Green", hueAngle: 90 },
+          { id: "green", label: "Green", hueAngle: 120 },
+          { id: "green_blue", label: "Green-Blue", hueAngle: 180 },
+          { id: "blue", label: "Blue", hueAngle: 240 },
+          { id: "blue_indigo", label: "Blue-Indigo", hueAngle: 255 },
+          { id: "indigo", label: "Indigo", hueAngle: 270 },
+          { id: "indigo_violet", label: "Indigo-Violet", hueAngle: 285 },
+          { id: "violet", label: "Violet", hueAngle: 300 }
+        ];
+        const variants = [
+          { id: "pure", label: "Pure", saturationPercent: 100, brightnessPercent: 100 },
+          { id: "bright", label: "Bright", saturationPercent: 60, brightnessPercent: 100 },
+          { id: "pale", label: "Pale", saturationPercent: 30, brightnessPercent: 100 },
+          { id: "deep", label: "Deep", saturationPercent: 100, brightnessPercent: 55 },
+          { id: "muted", label: "Muted", saturationPercent: 60, brightnessPercent: 55 },
+          { id: "dusty", label: "Dusty", saturationPercent: 30, brightnessPercent: 55 },
+          { id: "shadow", label: "Shadow", saturationPercent: 100, brightnessPercent: 35 },
+          { id: "dark_muted", label: "Dark Muted", saturationPercent: 60, brightnessPercent: 35 },
+          { id: "smoky", label: "Smoky", saturationPercent: 30, brightnessPercent: 35 }
+        ];
+        const neutrals = [
+          { id: "white", label: "White", hex: "#FFFFFF", acquisition: "achievement", unlockSource: "achievement_future" },
+          { id: "silver", label: "Silver", hex: "#C0C0C0", acquisition: "starter" },
+          { id: "gray", label: "Gray", hex: "#808080", acquisition: "starter" },
+          { id: "charcoal", label: "Charcoal", hex: "#333333", acquisition: "achievement", unlockSource: "achievement_future" },
+          { id: "cream", label: "Cream", hex: "#FFF0CC", acquisition: "starter" },
+          { id: "brown", label: "Brown", hex: "#7A4A24", acquisition: "starter" }
+        ];
+        const poolFamilies = {
+          red: ["Red", "Red-Orange"],
+          orange: ["Red-Orange", "Orange", "Yellow-Orange"],
+          yellow: ["Yellow-Orange", "Yellow", "Yellow-Green"],
+          green: ["Yellow-Green", "Green", "Green-Blue"],
+          blue: ["Green-Blue", "Blue", "Blue-Indigo"],
+          indigo: ["Blue-Indigo", "Indigo", "Indigo-Violet"],
+          violet: ["Indigo-Violet", "Violet"]
+        };
+        function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+        function hexToRgb(hex) {
+          const value = String(hex).replace(/^#/, "");
+          return {
+            r: parseInt(value.slice(0, 2), 16),
+            g: parseInt(value.slice(2, 4), 16),
+            b: parseInt(value.slice(4, 6), 16)
+          };
+        }
+        function rgbToHex(r, g, b) {
+          return "#" + [r, g, b].map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("").toUpperCase();
+        }
+        function hsvToRgb(h, sPercent, vPercent) {
+          const hNorm = ((Number(h) % 360) + 360) % 360;
+          const s = clamp(sPercent, 0, 100) / 100;
+          const v = clamp(vPercent, 0, 100) / 100;
+          const c = v * s;
+          const x = c * (1 - Math.abs(((hNorm / 60) % 2) - 1));
+          const m = v - c;
+          let r1 = 0, g1 = 0, b1 = 0;
+          if (hNorm < 60) [r1, g1, b1] = [c, x, 0];
+          else if (hNorm < 120) [r1, g1, b1] = [x, c, 0];
+          else if (hNorm < 180) [r1, g1, b1] = [0, c, x];
+          else if (hNorm < 240) [r1, g1, b1] = [0, x, c];
+          else if (hNorm < 300) [r1, g1, b1] = [x, 0, c];
+          else [r1, g1, b1] = [c, 0, x];
+          return { r: (r1 + m) * 255, g: (g1 + m) * 255, b: (b1 + m) * 255 };
+        }
+        function rgbToHsv({ r, g, b }) {
+          const rn = r / 255, gn = g / 255, bn = b / 255;
+          const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+          const delta = max - min;
+          let h = 0;
+          if (delta !== 0 && max === rn) h = 60 * (((gn - bn) / delta) % 6);
+          else if (delta !== 0 && max === gn) h = 60 * (((bn - rn) / delta) + 2);
+          else if (delta !== 0) h = 60 * (((rn - gn) / delta) + 4);
+          if (h < 0) h += 360;
+          return { h, s: max === 0 ? 0 : delta / max, v: max };
+        }
+        function hueDelta(from, to) {
+          let delta = ((to - from + 540) % 360) - 180;
+          return Number(delta.toFixed(3));
+        }
+        function colorOffsetsForHex(hex) {
+          const base = rgbToHsv(hexToRgb(baseHex));
+          const target = rgbToHsv(hexToRgb(hex));
+          return {
+            h: hueDelta(base.h, target.h),
+            s: Number((base.s ? (target.s / base.s) - 1 : target.s).toFixed(3)),
+            v: Number((base.v ? (target.v / base.v) - 1 : target.v - 1).toFixed(3))
+          };
+        }
+        const catalog = [];
+        hueFamilies.forEach((family, familyIndex) => {
+          variants.forEach((variant, variantIndex) => {
+            const rgb = hsvToRgb(family.hueAngle, variant.saturationPercent, variant.brightnessPercent);
+            const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+            const label = variant.label + " " + family.label;
+            const mysteryPools = Object.entries(poolFamilies)
+              .filter(([, families]) => families.includes(family.label))
+              .map(([poolId]) => poolId);
+            catalog.push({
+              id: "dye:CLOTH:" + variant.id + "_" + family.id,
+              label,
+              group: "cloth",
+              dyeSlot: "CLOTH",
+              dyeCategory: family.id,
+              color: colorOffsetsForHex(hex),
+              hueFamily: family.label,
+              hueFamilyId: family.id,
+              hueAngle: family.hueAngle,
+              variant: variant.label,
+              variantId: variant.id,
+              saturationPercent: variant.saturationPercent,
+              brightnessPercent: variant.brightnessPercent,
+              hex,
+              neutral: false,
+              acquisition: variant.id === "dusty" ? "starter" : "mystery",
+              mysteryPools,
+              sortOrder: familyIndex * variants.length + variantIndex
+            });
+          });
+        });
+        neutrals.forEach((neutral, index) => {
+          catalog.push({
+            id: "dye:CLOTH:" + neutral.id,
+            label: neutral.label,
+            group: "cloth",
+            dyeSlot: "CLOTH",
+            dyeCategory: "neutral",
+            color: colorOffsetsForHex(neutral.hex),
+            hex: neutral.hex,
+            neutral: true,
+            acquisition: neutral.acquisition,
+            unlockSource: neutral.unlockSource,
+            mysteryPools: [],
+            sortOrder: hueFamilies.length * variants.length + index
+          });
+        });
+        return catalog;
+      })()
     },
     "chips": {
       "starting": 30,

@@ -86,10 +86,15 @@
   const CONFIG_DYES = window.SCRATCHBONES_CONFIG?.game?.dyes || {};
   const DYE_CATALOG = Array.isArray(CONFIG_DYES.catalog) ? CONFIG_DYES.catalog : [];
   const DYE_CATEGORIES = Array.isArray(CONFIG_DYES.categories) ? CONFIG_DYES.categories : [];
+  const DYE_BY_ID = new Map(DYE_CATALOG.map(dye => [dye.id, dye]));
+  const DYE_MIGRATIONS = CONFIG_DYES.legacyDyeMigrations || {};
+  const MYSTERY_DYE_POOLS = Array.isArray(CONFIG_DYES.mysteryPools) ? CONFIG_DYES.mysteryPools : [];
+  // Mystery dye purchases read the price from config so UI and account logic stay in sync.
+  const MYSTERY_DYE_PRICE = Math.max(0, Math.floor(Number(CONFIG_DYES.mysteryDyePrice) || 10));
 
-
-  // Starter dyes given to every new account
-  const STARTER_DYE_IDS = DYE_CATALOG.map(d => d.id);
+  // Starter dyes given to every new and migrated account.
+  const STARTER_DYE_IDS = (Array.isArray(CONFIG_DYES.starterDyeIds) ? CONFIG_DYES.starterDyeIds : [])
+    .filter(id => DYE_BY_ID.has(id));
 
   function defaultAppearance() {
     return {
@@ -164,11 +169,40 @@
     };
   }
 
+  function migrateDyeId(id) {
+    const raw = String(id || '').trim();
+    if (!raw) return null;
+    const mapped = DYE_MIGRATIONS[raw] || raw;
+    // Legacy black/onyx IDs are allowed to migrate to Charcoal as a visual fallback;
+    // new players can only acquire Charcoal through future achievement unlocks.
+    return DYE_BY_ID.has(mapped) ? mapped : null;
+  }
+
+  function normalizeDyeIdArray(arr) {
+    const seen = new Set();
+    const result = [];
+    if (!Array.isArray(arr)) return result;
+    for (const rawId of arr) {
+      const mapped = migrateDyeId(rawId);
+      if (mapped && !seen.has(mapped)) {
+        seen.add(mapped);
+        result.push(mapped);
+      }
+    }
+    return result;
+  }
+
   function normalizeAppliedDyes(rawDyes) {
     const source = rawDyes || {};
     const dyeValuesAreObjects = Object.values(source).some(v => v !== null && typeof v === 'object');
     const hasBodyChannels = ['A', 'B', 'C'].some(ch => ch in source);
-    return (dyeValuesAreObjects || hasBodyChannels) ? {} : { ...source };
+    if (dyeValuesAreObjects || hasBodyChannels) return {};
+    const result = {};
+    for (const [slot, rawId] of Object.entries(source)) {
+      const mapped = migrateDyeId(rawId);
+      if (mapped) result[slot] = mapped;
+    }
+    return result;
   }
 
   function migrateAppearanceCosmeticIds(appearance) {
@@ -244,12 +278,13 @@
     acc.unlockedCosmetics = migrateIdArray(acc.unlockedCosmetics || []);
     acc.unlockedTrickBones = normalizeUnlockedTrickBones(acc.unlockedTrickBones);
 
-    if (!acc.ownedDyes || !acc.ownedDyes.length) {
-      acc.ownedDyes = [...STARTER_DYE_IDS];
-    } else {
-      const currentOwned = new Set(acc.ownedDyes);
-      const newDyes = STARTER_DYE_IDS.filter(id => !currentOwned.has(id));
-      if (newDyes.length) acc.ownedDyes = [...acc.ownedDyes, ...newDyes];
+    acc.ownedDyes = normalizeDyeIdArray(acc.ownedDyes || []);
+    const currentOwned = new Set(acc.ownedDyes);
+    for (const starterId of STARTER_DYE_IDS) {
+      if (!currentOwned.has(starterId)) {
+        currentOwned.add(starterId);
+        acc.ownedDyes.push(starterId);
+      }
     }
 
     if (Array.isArray(parsed.khymeryyans)) {
@@ -584,9 +619,10 @@
     const acc = getAccount();
     const active = getActiveKhymeryyanRef();
     if (!active) return false;
-    if (!(acc.ownedDyes || []).includes(dyeId)) return false;
-    if (!DYE_CATALOG.find(d => d.id === dyeId)) return false;
-    active.appliedDyes = { ...(active.appliedDyes || {}), [tintKey]: dyeId };
+    const normalizedDyeId = migrateDyeId(dyeId);
+    if (!normalizedDyeId) return false;
+    if (!(acc.ownedDyes || []).includes(normalizedDyeId)) return false;
+    active.appliedDyes = { ...(active.appliedDyes || {}), [tintKey]: normalizedDyeId };
     save();
     return true;
   }
@@ -597,6 +633,110 @@
     active.appliedDyes = { ...(active.appliedDyes || {}) };
     delete active.appliedDyes[dyeSlot];
     save();
+  }
+
+  function getMysteryPoolConfig(poolId) {
+    return MYSTERY_DYE_POOLS.find(pool => pool.id === poolId || pool.shopId === poolId) || null;
+  }
+
+  function getMysteryDyePoolDyes(poolId) {
+    const pool = getMysteryPoolConfig(poolId);
+    if (!pool) return [];
+    const families = new Set(pool.hueFamilies || []);
+    return DYE_CATALOG.filter(dye => {
+      if (!dye || dye.neutral) return false;
+      if (dye.acquisition === 'achievement' || dye.unlockSource === 'achievement_future') return false;
+      if (!families.has(dye.hueFamily)) return false;
+      return Array.isArray(dye.mysteryPools) ? dye.mysteryPools.includes(pool.id) : true;
+    });
+  }
+
+  function getMysteryDyePoolRemaining(poolId) {
+    const owned = new Set(getAccount().ownedDyes || []);
+    return getMysteryDyePoolDyes(poolId).filter(dye => !owned.has(dye.id));
+  }
+
+  function isMysteryDyePoolComplete(poolId) {
+    const pool = getMysteryPoolConfig(poolId);
+    return !!pool && getMysteryDyePoolRemaining(pool.id).length === 0;
+  }
+
+  function getMysteryDyePoolStatus(poolId) {
+    const pool = getMysteryPoolConfig(poolId);
+    if (!pool) return { ok: false, error: 'Unknown pool' };
+    const dyes = getMysteryDyePoolDyes(pool.id);
+    const remaining = getMysteryDyePoolRemaining(pool.id);
+    return {
+      ok: true,
+      poolId: pool.id,
+      label: pool.label,
+      total: dyes.length,
+      owned: dyes.length - remaining.length,
+      remaining: remaining.length,
+      complete: remaining.length === 0,
+    };
+  }
+
+  function getMysteryDyeShopCatalog() {
+    return MYSTERY_DYE_POOLS.map(pool => ({
+      id: pool.shopId || `mystery_dye_${pool.id}`,
+      label: pool.label,
+      price: MYSTERY_DYE_PRICE,
+      category: 'dye',
+      poolId: pool.id,
+      description: pool.description,
+      complete: isMysteryDyePoolComplete(pool.id),
+    }));
+  }
+
+  function chooseRandomUnownedDyeFromPool(poolId) {
+    const remaining = getMysteryDyePoolRemaining(poolId);
+    if (!remaining.length) return null;
+    return remaining[Math.floor(Math.random() * remaining.length)] || null;
+  }
+
+  function buyMysteryDye(poolId) {
+    const pool = getMysteryPoolConfig(poolId);
+    if (!pool) return { ok: false, error: 'Unknown pool' };
+    const dye = chooseRandomUnownedDyeFromPool(pool.id);
+    if (!dye) return { ok: false, error: 'Pool complete' };
+    const acc = getAccount();
+    if (acc.bronze < MYSTERY_DYE_PRICE) return { ok: false, error: 'Not enough Bronze' };
+    acc.bronze -= MYSTERY_DYE_PRICE;
+    if (!(acc.ownedDyes || []).includes(dye.id)) acc.ownedDyes.push(dye.id);
+    save();
+    return { ok: true, dyeId: dye.id, dye };
+  }
+
+  function validateDyeCatalog() {
+    const ids = DYE_CATALOG.map(dye => dye.id);
+    const labels = DYE_CATALOG.map(dye => dye.label);
+    const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+    const duplicateLabels = labels.filter((label, index) => labels.indexOf(label) !== index);
+    const chromaticCount = DYE_CATALOG.filter(dye => !dye.neutral).length;
+    const neutralCount = DYE_CATALOG.filter(dye => dye.neutral).length;
+    const completedMysteryPools = MYSTERY_DYE_POOLS
+      .map(pool => getMysteryDyePoolStatus(pool.id))
+      .filter(status => status.ok && status.complete)
+      .map(status => status.poolId);
+    return {
+      totalCatalogCount: DYE_CATALOG.length,
+      chromaticCount,
+      neutralCount,
+      starterDyeCount: STARTER_DYE_IDS.length,
+      duplicateIds,
+      duplicateLabels,
+      completedMysteryPools,
+      remainingByMysteryPool: Object.fromEntries(MYSTERY_DYE_POOLS.map(pool => [pool.id, getMysteryDyePoolRemaining(pool.id).length])),
+    };
+  }
+
+  function debugDyeState() {
+    return {
+      ...validateDyeCatalog(),
+      ownedDyeCount: getOwnedDyes().length,
+      ownedDyes: getOwnedDyes(),
+    };
   }
 
   // ── Shop helpers ───────────────────────────────────────────
@@ -659,9 +799,18 @@
     getAppliedDyes,
     applyDye,
     removeDye,
+    getMysteryDyeShopCatalog,
+    getMysteryDyePoolStatus,
+    getMysteryDyePoolRemaining,
+    isMysteryDyePoolComplete,
+    chooseRandomUnownedDyeFromPool,
+    buyMysteryDye,
+    validateDyeCatalog,
+    debugDyeState,
     getShopCatalog,
     getShopCatalogForAppearance,
     BRONZE_PASSIVE_MAX,
     BRONZE_PASSIVE_RATE_MS,
+    MYSTERY_DYE_PRICE,
   };
 })();
