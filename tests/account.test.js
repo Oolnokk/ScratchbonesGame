@@ -424,6 +424,53 @@ describe('dye API', () => {
     'dye:CLOTH:brown',
   ];
 
+
+  function hexToRgb(hex) {
+    const value = String(hex).replace(/^#/, '');
+    return {
+      r: parseInt(value.slice(0, 2), 16),
+      g: parseInt(value.slice(2, 4), 16),
+      b: parseInt(value.slice(4, 6), 16),
+    };
+  }
+
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function cssHueRotate({ r, g, b }, degrees) {
+    const radians = degrees * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    return {
+      r: (0.213 + 0.787 * cos - 0.213 * sin) * r + (0.715 - 0.715 * cos - 0.715 * sin) * g + (0.072 - 0.072 * cos + 0.928 * sin) * b,
+      g: (0.213 - 0.213 * cos + 0.143 * sin) * r + (0.715 + 0.285 * cos + 0.140 * sin) * g + (0.072 - 0.072 * cos - 0.283 * sin) * b,
+      b: (0.213 - 0.213 * cos - 0.787 * sin) * r + (0.715 - 0.715 * cos + 0.715 * sin) * g + (0.072 + 0.928 * cos + 0.072 * sin) * b,
+    };
+  }
+
+  function cssSaturate({ r, g, b }, amount) {
+    return {
+      r: (0.213 + 0.787 * amount) * r + (0.715 - 0.715 * amount) * g + (0.072 - 0.072 * amount) * b,
+      g: (0.213 - 0.213 * amount) * r + (0.715 + 0.285 * amount) * g + (0.072 - 0.072 * amount) * b,
+      b: (0.213 - 0.213 * amount) * r + (0.715 - 0.715 * amount) * g + (0.072 + 0.928 * amount) * b,
+    };
+  }
+
+  function renderDyeColor(baseHex, color) {
+    const base = hexToRgb(baseHex);
+    const saturated = cssSaturate(cssHueRotate(base, color.h), 1 + color.s);
+    return {
+      r: Math.round(clamp(saturated.r * (1 + color.v), 0, 255)),
+      g: Math.round(clamp(saturated.g * (1 + color.v), 0, 255)),
+      b: Math.round(clamp(saturated.b * (1 + color.v), 0, 255)),
+    };
+  }
+
+  function colorDistance(a, b) {
+    return Math.sqrt((a.r - b.r) ** 2 + (a.g - b.g) ** 2 + (a.b - b.b) ** 2);
+  }
+
   function catalog(acc) {
     return toPlain(acc.getDyeCatalog());
   }
@@ -456,6 +503,21 @@ describe('dye API', () => {
       }
       assert.equal(dye.neutral, true);
     }
+  });
+
+
+
+  it('fits every generated dye color against the actual CSS filter pipeline', () => {
+    const { ScratchbonesAccount: acc, SCRATCHBONES_CONFIG: config } = makeSandbox();
+    const baseHex = config.game.dyes.swatchBase;
+    for (const dye of catalog(acc)) {
+      const rendered = renderDyeColor(baseHex, dye.color);
+      const target = hexToRgb(dye.hex);
+      assert.ok(colorDistance(rendered, target) <= 3, `${dye.id} renders ${JSON.stringify(rendered)} instead of ${dye.hex}`);
+    }
+    const pureRed = catalog(acc).find(dye => dye.id === 'dye:CLOTH:pure_red');
+    assert.ok(pureRed.color.s > 5, 'pure red needs the fitted high saturate() value, not the old HSV-ratio offset');
+    assert.ok(pureRed.color.v < -0.5, 'pure red needs fitted brightness reduction for the CSS filter pipeline');
   });
 
   it('new accounts start with exactly the 17 configured starter dyes', () => {
