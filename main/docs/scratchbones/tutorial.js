@@ -26,7 +26,7 @@ const TUTORIAL_STEPS = [
     id: 'welcome',
     target: null,
     title: 'Welcome to Scratchbones!',
-    text: 'This walkthrough will walk you through the board before you play your first move. Use the arrows below to step back and forward through each element.',
+    text: 'This walkthrough will introduce you to the board before your first move. Use the arrows below to step back and forward through each element.',
   },
   {
     id: 'hand',
