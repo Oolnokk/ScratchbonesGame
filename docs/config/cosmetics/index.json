@@ -70,10 +70,7 @@
       "id": "appearance::Mao-ao_M::mao-ao_circled_eye_R",
       "path": "./appearance/mao-ao/circled_eye_R.json"
     },
-    {
-      "id": "appearance::Mao-ao_M::mao-ao_smooth_striped",
-      "path": "./appearance/mao-ao/smooth_striped.json"
-    },
+
     {
       "id": "appearance::Mao-ao_M::mao-ao_shoulder_length_drape",
       "path": "./appearance/mao-ao/shoulder_length_drape.json"
@@ -118,10 +115,7 @@
       "id": "appearance::Mao-ao_F::mao-ao_circled_eye_R",
       "path": "./appearance/mao-ao/circled_eye_R_f.json"
     },
-    {
-      "id": "appearance::Mao-ao_F::mao-ao_smooth_striped",
-      "path": "./appearance/mao-ao/smooth_striped.json"
-    },
+
     {
       "id": "appearance::Mao-ao_F::mao-ao_shoulder_length_drape",
       "path": "./appearance/mao-ao/shoulder_length_drape.json"
@@ -309,6 +303,22 @@
     {
       "id": "fine_hood",
       "path": "./fine_hood.json"
+    },
+    {
+      "id": "appearance::Engh-sho_M::engh_snowgoggles",
+      "path": "./appearance/engh-sho/snowgoggles.json"
+    },
+    {
+      "id": "appearance::Engh-sho_F::engh_snowgoggles",
+      "path": "./appearance/engh-sho/snowgoggles.json"
+    },
+    {
+      "id": "appearance::Engh-sho_M::engh_hairdefault-front",
+      "path": "./appearance/engh-sho/hairdefault-front.json"
+    },
+    {
+      "id": "appearance::Engh-sho_F::engh_hairdefault-front",
+      "path": "./appearance/engh-sho/hairdefault-front.json"
     }
   ]
 }
