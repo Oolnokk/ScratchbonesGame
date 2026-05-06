@@ -1063,7 +1063,7 @@ import { createLayerManager } from './ui/layerManager.js';
         if (!fromAnchor || !toAnchor) {
           console.warn('[chip-transfer] ante skip: unresolved anchor selector', {
             fromSelector: `[data-wallet-coin-row-anchor="${Number(player.id)}"]`,
-            toSelector: '[data-table-pot-pile-anchor]'
+            toSelector: '[data-pot-pile-anchor]'
           });
         }
         await animateCoinTransferCluster({ fromAnchor, toAnchor, transferAmount: paid, durationMs: CONFIG.transferAnimation.anteMs });
@@ -2249,12 +2249,12 @@ import { createLayerManager } from './ui/layerManager.js';
       const player = state.players[playerIndex];
       if (player.eliminated || player.hand.length !== 0) return false;
       const totalWon = state.tablePot;
-      const fromAnchor = tablePotPileAnchor();
       render();
+      const fromAnchor = tablePotPileAnchor();
       const toAnchor = walletCoinRowAnchorForPlayer(playerIndex);
       if (!fromAnchor || !toAnchor) {
         console.warn('[chip-transfer] clear payout skip: unresolved anchor selector', {
-          fromSelector: '[data-table-pot-pile-anchor]',
+          fromSelector: '[data-pot-pile-anchor]',
           toSelector: `[data-wallet-coin-row-anchor="${Number(playerIndex)}"]`
         });
       }
