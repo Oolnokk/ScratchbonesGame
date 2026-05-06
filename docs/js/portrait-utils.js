@@ -44,6 +44,7 @@ const _PORTRAIT_DEFAULTS = {
     {
       id:      'M',
       speciesId: 'mao_ao',
+      gender:  'male',
       label:   'Mao-ao (M)',
       headUrl: 'fightersprites/mao-ao-m/head_mint.png',
       bodyLayers: [
@@ -58,6 +59,7 @@ const _PORTRAIT_DEFAULTS = {
     {
       id:      'F',
       speciesId: 'mao_ao',
+      gender:  'female',
       label:   'Mao-ao (F)',
       headUrl: 'fightersprites/mao-ao-f/head.png',
       bodyLayers: [
@@ -892,6 +894,8 @@ async function loadPortraitCosmetics(configBase) {
             bodyColorRangesByGender[fighter.id] = genderData.bodyColorRanges;
             fighterPortraitOverrides[fighter.id] = {
               ...(fighterPortraitOverrides[fighter.id] || {}),
+              gender: genderKey,
+              speciesId: sData.speciesId,
               ...(genderData.headXform ? { headXform: genderData.headXform } : {}),
               ...(Array.isArray(genderData.portraitBodyLayers) ? {
                 bodyLayers: genderData.portraitBodyLayers.map(l => ({ ...normalizePortraitLayerXform(l), xformPreset: 'B' }))
@@ -937,6 +941,8 @@ async function loadPortraitCosmetics(configBase) {
       if (!override) return fighter;
       return normalizedFighterPortrait({
         ...fighter,
+        ...(override.gender    != null ? { gender:    override.gender    } : {}),
+        ...(override.speciesId != null ? { speciesId: override.speciesId } : {}),
         ...(override.headXform ? { headXform: override.headXform } : {}),
         ...(override.bodyLayers ? { bodyLayers: override.bodyLayers } : {}),
         ...(override.opacityMaskLayer ? { opacityMaskLayer: override.opacityMaskLayer } : {})
