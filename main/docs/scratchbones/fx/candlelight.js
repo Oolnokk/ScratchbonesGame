@@ -146,13 +146,13 @@
         backlit: {
           container: ['#aiSidebar', '.humanSeatZone', '.turnSpotlight'],
           avatar: ['.seatAvatarBox', '.turnSpotlightAvatar', '.cin-avatar'],
-          text: ['.seatName', '.seatMeta', '.seatStatus', '.turnSpotlightNameBar', '.cin-name'],
+          text: ['.seatName', '.seatMeta', '.seatChipBadge', '.seatChipBadgeIcon', '.seatStatus', '.turnSpotlightNameBar', '.cin-name'],
           sub: ['[data-stake-left-contribution-anchor]', '[data-stake-right-contribution-anchor]', '[data-stake-betting-choice-anchor]', '.stakeTierBtnRow'],
         },
         immuneCapable: {
           container: ['#aiSidebar', '.humanSeatZone', '.turnSpotlight'],
           avatar: ['.seatAvatarBox', '.turnSpotlightAvatar', '.cin-avatar'],
-          text: ['.seatName', '.seatMeta', '.seatStatus', '.turnSpotlightNameBar', '.cin-name'],
+          text: ['.seatName', '.seatMeta', '.seatChipBadge', '.seatChipBadgeIcon', '.seatStatus', '.turnSpotlightNameBar', '.cin-name'],
           sub: ['[data-stake-left-contribution-anchor]', '[data-stake-right-contribution-anchor]', '[data-stake-betting-choice-anchor]', '.stakeTierBtnRow'],
         },
       },
@@ -160,12 +160,12 @@
         'sidebar': {
           container: ['#aiSidebar'],
           avatar: ['#aiSidebar .seatAvatarBox'],
-          text: ['#aiSidebar .seatName', '#aiSidebar .seatMeta', '#aiSidebar .seatStatus'],
+          text: ['#aiSidebar .seatName', '#aiSidebar .seatMeta', '#aiSidebar .seatChipBadge', '#aiSidebar .seatChipBadgeIcon', '#aiSidebar .seatStatus'],
         },
         'human-seat-zone': {
           container: ['.humanSeatZone'],
           avatar: ['.humanSeatZone .seatAvatarBox'],
-          text: ['.humanSeatZone .seatName', '.humanSeatZone .seatMeta', '.humanSeatZone .seatStatus'],
+          text: ['.humanSeatZone .seatName', '.humanSeatZone .seatMeta', '.humanSeatZone .seatChipBadge', '.humanSeatZone .seatChipBadgeIcon', '.humanSeatZone .seatStatus'],
         },
         'turn-spotlight': {
           container: ['.turnSpotlight'],

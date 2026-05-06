@@ -497,7 +497,14 @@ window.SCRATCHBONES_CONFIG = {
           { "id": "tinmoon", "value": 5 },
           { "id": "eclipse", "value": 20 }
         ],
-        "maxIconsPerSeat": 18
+        "maxIconsPerSeat": 18,
+        "seatChipBadge": {
+          "coinTierId": "tinmoon",
+          "iconSizePx": 22,
+          "gapPx": 6,
+          "fontSizeRem": 0.82,
+          "color": "var(--text)"
+        }
       },
       "poolDisplay": {
         "maxIcons": 28,
@@ -507,7 +514,14 @@ window.SCRATCHBONES_CONFIG = {
         "spreadXPx": 84,
         "spreadYPx": 28,
         "offsetXPx": 100,
-        "offsetYPx": 2
+        "offsetYPx": 2,
+        "totalLabel": {
+          "rightPx": 8,
+          "bottomPx": 4,
+          "fontSizePx": 24,
+          "lineHeight": 1,
+          "color": "#ffffff"
+        }
       },
       "challengeStake": {
         "tiers": [
@@ -965,13 +979,13 @@ window.SCRATCHBONES_CONFIG = {
             "backlit": {
               "container": ["#aiSidebar", ".humanSeatZone", ".turnSpotlight"],
               "avatar": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar"],
-              "text": [".seatName", ".seatMeta", ".seatStatus", ".turnSpotlightNameBar", ".cin-name"],
+              "text": [".seatName", ".seatMeta", ".seatChipBadge", ".seatChipBadgeIcon", ".seatStatus", ".turnSpotlightNameBar", ".cin-name"],
               "sub": ["[data-stake-left-contribution-anchor]", "[data-stake-right-contribution-anchor]", "[data-stake-betting-choice-anchor]", ".stakeTierBtnRow"]
             },
             "immuneCapable": {
               "container": ["#aiSidebar", ".humanSeatZone", ".turnSpotlight"],
               "avatar": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar"],
-              "text": [".seatName", ".seatMeta", ".seatStatus", ".turnSpotlightNameBar", ".cin-name"],
+              "text": [".seatName", ".seatMeta", ".seatChipBadge", ".seatChipBadgeIcon", ".seatStatus", ".turnSpotlightNameBar", ".cin-name"],
               "sub": ["[data-stake-left-contribution-anchor]", "[data-stake-right-contribution-anchor]", "[data-stake-betting-choice-anchor]", ".stakeTierBtnRow"]
             }
           },
@@ -979,12 +993,12 @@ window.SCRATCHBONES_CONFIG = {
             "sidebar": {
               "container": ["#aiSidebar"],
               "avatar": ["#aiSidebar .seatAvatarBox"],
-              "text": ["#aiSidebar .seatName", "#aiSidebar .seatMeta", "#aiSidebar .seatStatus"]
+              "text": ["#aiSidebar .seatName", "#aiSidebar .seatMeta", "#aiSidebar .seatChipBadge", "#aiSidebar .seatChipBadgeIcon", "#aiSidebar .seatStatus"]
             },
             "human-seat-zone": {
               "container": [".humanSeatZone"],
               "avatar": [".humanSeatZone .seatAvatarBox"],
-              "text": [".humanSeatZone .seatName", ".humanSeatZone .seatMeta", ".humanSeatZone .seatStatus"]
+              "text": [".humanSeatZone .seatName", ".humanSeatZone .seatMeta", ".humanSeatZone .seatChipBadge", ".humanSeatZone .seatChipBadgeIcon", ".humanSeatZone .seatStatus"]
             },
             "turn-spotlight": {
               "container": [".turnSpotlight"],
@@ -1011,13 +1025,13 @@ window.SCRATCHBONES_CONFIG = {
             "backlit": {
               "container": ["#aiSidebar", ".humanSeatZone", ".turnSpotlight"],
               "avatar": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar"],
-              "text": [".seatName", ".seatMeta", ".seatStatus", ".turnSpotlightNameBar", ".cin-name"],
+              "text": [".seatName", ".seatMeta", ".seatChipBadge", ".seatChipBadgeIcon", ".seatStatus", ".turnSpotlightNameBar", ".cin-name"],
               "sub": ["[data-stake-left-contribution-anchor]", "[data-stake-right-contribution-anchor]", "[data-stake-betting-choice-anchor]", ".stakeTierBtnRow"]
             },
             "immuneCapable": {
               "container": ["#aiSidebar", ".humanSeatZone", ".turnSpotlight"],
               "avatar": [".seatAvatarBox", ".turnSpotlightAvatar", ".cin-avatar"],
-              "text": [".seatName", ".seatMeta", ".seatStatus", ".turnSpotlightNameBar", ".cin-name"],
+              "text": [".seatName", ".seatMeta", ".seatChipBadge", ".seatChipBadgeIcon", ".seatStatus", ".turnSpotlightNameBar", ".cin-name"],
               "sub": ["[data-stake-left-contribution-anchor]", "[data-stake-right-contribution-anchor]", "[data-stake-betting-choice-anchor]", ".stakeTierBtnRow"]
             }
           },
@@ -1025,12 +1039,12 @@ window.SCRATCHBONES_CONFIG = {
             "sidebar": {
               "container": ["#aiSidebar"],
               "avatar": ["#aiSidebar .seatAvatarBox"],
-              "text": ["#aiSidebar .seatName", "#aiSidebar .seatMeta", "#aiSidebar .seatStatus"]
+              "text": ["#aiSidebar .seatName", "#aiSidebar .seatMeta", "#aiSidebar .seatChipBadge", "#aiSidebar .seatChipBadgeIcon", "#aiSidebar .seatStatus"]
             },
             "human-seat-zone": {
               "container": [".humanSeatZone"],
               "avatar": [".humanSeatZone .seatAvatarBox"],
-              "text": [".humanSeatZone .seatName", ".humanSeatZone .seatMeta", ".humanSeatZone .seatStatus"]
+              "text": [".humanSeatZone .seatName", ".humanSeatZone .seatMeta", ".humanSeatZone .seatChipBadge", ".humanSeatZone .seatChipBadgeIcon", ".humanSeatZone .seatStatus"]
             },
             "turn-spotlight": {
               "container": [".turnSpotlight"],
@@ -1085,6 +1099,8 @@ window.SCRATCHBONES_CONFIG = {
             ".claimAvatarCinTags",
             ".seatName",
             ".seatMeta",
+            ".seatChipBadge",
+            ".seatChipBadgeIcon",
             ".seatStatus",
             ".turnSpotlightNameBar",
             ".cin-result-copy",
@@ -1106,6 +1122,8 @@ window.SCRATCHBONES_CONFIG = {
               ".claimAvatarCinTags",
               ".seatName",
               ".seatMeta",
+              ".seatChipBadge",
+              ".seatChipBadgeIcon",
               ".seatStatus",
               ".turnSpotlightNameBar",
               ".cin-result-copy",
@@ -1128,6 +1146,8 @@ window.SCRATCHBONES_CONFIG = {
               ".claimAvatarCinTags",
               ".seatName",
               ".seatMeta",
+              ".seatChipBadge",
+              ".seatChipBadgeIcon",
               ".seatStatus",
               ".turnSpotlightNameBar",
               ".cin-result-copy",
@@ -1150,6 +1170,8 @@ window.SCRATCHBONES_CONFIG = {
         "excludeDescendantSelectors": [
           ".seatName",
           ".seatMeta",
+          ".seatChipBadge",
+          ".seatChipBadgeIcon",
           ".seatStatus",
           ".seatAvatarBox",
           ".claimAvatarNameTag",
@@ -1168,6 +1190,8 @@ window.SCRATCHBONES_CONFIG = {
             "selectors": [
               ".seatName",
               ".seatMeta",
+              ".seatChipBadge",
+              ".seatChipBadgeIcon",
               ".seatStatus",
               ".turnSpotlightNameBar",
               ".cin-name",
@@ -1586,7 +1610,7 @@ window.SCRATCHBONES_CONFIG = {
               "--layout-seat-avatar-size",
               "--layout-sidebar-content-scale"
             ],
-            ".seatName, .seatMeta, .seatStatus, .seatSeed, .seatTags": [
+            ".seatName, .seatMeta, .seatChipBadge, .seatStatus, .seatSeed, .seatTags": [
               "--layout-sidebar-content-scale"
             ]
           },
@@ -1595,7 +1619,7 @@ window.SCRATCHBONES_CONFIG = {
               "--layout-seat-avatar-size",
               "--layout-sidebar-content-scale"
             ],
-            ".seatName, .seatMeta, .seatStatus, .seatSeed, .seatTags": [
+            ".seatName, .seatMeta, .seatChipBadge, .seatStatus, .seatSeed, .seatTags": [
               "--layout-sidebar-content-scale"
             ]
           },

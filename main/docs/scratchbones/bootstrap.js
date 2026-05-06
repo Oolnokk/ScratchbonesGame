@@ -529,6 +529,7 @@ import { createTutorial } from './tutorial.js';
       .filter((tier) => tier.id && tier.value > 0)
       .sort((a, b) => b.value - a.value);
     const MAX_WALLET_ICONS_PER_SEAT = Math.max(1, Number(CONFIG.walletDisplay.maxIconsPerSeat) || 18);
+    const SEAT_CHIP_BADGE = CONFIG.walletDisplay.seatChipBadge || {};
     const TABLE_POOL_DISPLAY = CONFIG.poolDisplay || {};
     function stakeCoinSrcForTier(tierId) {
       const fallback = STAKE_COIN_SRC[STAKE_COIN_FALLBACK_TIER_ID] || CONFIG.assets.cinematicTokenIconSrc;
@@ -576,6 +577,16 @@ import { createTutorial } from './tutorial.js';
       return `<div class="seatCoinRow" data-wallet-coin-row-anchor="${Number(player?.id ?? -1)}" style="display:flex;align-items:center;min-height:24px;padding-left:8px;margin:4px 0 2px;">${iconHtml}${transferCoins.overflow > 0 ? `<span class="seatCoinOverflow" style="margin-left:6px;font-size:.76rem;color:var(--muted);">+${transferCoins.overflow}</span>` : ''}</div>`;
     }
 
+    function renderSeatChipBadge(player) {
+      const chipCount = Math.max(0, Number(player?.chips) || 0);
+      const coinTierId = String(SEAT_CHIP_BADGE.coinTierId || STAKE_COIN_FALLBACK_TIER_ID);
+      const iconSizePx = Math.max(12, Number(SEAT_CHIP_BADGE.iconSizePx) || 22);
+      const gapPx = Math.max(0, Number(SEAT_CHIP_BADGE.gapPx) || 6);
+      const fontSizeRem = Math.max(0.5, Number(SEAT_CHIP_BADGE.fontSizeRem) || 0.82);
+      const color = String(SEAT_CHIP_BADGE.color || 'var(--text)');
+      return `<div class="seatChipBadge" style="display:inline-flex;align-items:center;gap:${gapPx}px;color:${escapeHtml(color)};font-size:${fontSizeRem}rem;font-weight:700;margin:3px 0 1px;"><img class="seatChipBadgeIcon" style="width:${iconSizePx}px;height:${iconSizePx}px;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));" src="${escapeHtml(stakeCoinSrcForTier(coinTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="Chip coin"><span class="seatChipBadgeCount">${chipCount}</span></div>`;
+    }
+
 
     function renderTablePoolPile(chipCount, pileSeedInput, anchorXPct, anchorYPct) {
       const breakdown = coinBreakdownForChips(chipCount);
@@ -585,6 +596,7 @@ import { createTutorial } from './tutorial.js';
       const coinSizePx = Math.max(16, Number(TABLE_POOL_DISPLAY.coinSizePx) || 30);
       const spreadXPx = Math.max(10, Number(TABLE_POOL_DISPLAY.spreadXPx) || 84);
       const spreadYPx = Math.max(8, Number(TABLE_POOL_DISPLAY.spreadYPx) || 28);
+      const offsetXPx = Number(TABLE_POOL_DISPLAY.offsetXPx) || 0;
       const offsetYPx = Number(TABLE_POOL_DISPLAY.offsetYPx) || 2;
       const transferCoins = coinsForTransferAmount(chipCount, pileMaxIcons);
       const overflow = transferCoins.overflow;
@@ -602,7 +614,15 @@ import { createTutorial } from './tutorial.js';
         return `<img class="tablePoolCoin" data-stake-tier-id="${escapeHtml(tierId)}" src="${escapeHtml(stakeCoinSrcForTier(tierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="${escapeHtml(tierId)} coin" style="position:absolute;left:50%;top:50%;width:${coinSizePx}px;height:${coinSizePx}px;object-fit:contain;transform:translate(calc(-50% + ${xPx.toFixed(1)}px),calc(-50% + ${yPx.toFixed(1)}px)) rotate(${rotateDeg.toFixed(1)}deg);filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));z-index:${z};">`;
       }).join('') : '';
       const overflowHtml = hasVisiblePile && overflow > 0 ? `<span class="tablePoolOverflow" style="position:absolute;right:6px;bottom:2px;font-size:.76rem;color:var(--muted);">+${overflow}</span>` : '';
-      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" data-pot-pile-anchor style="position:absolute;left:${(anchorXPct * 100).toFixed(3)}%;top:calc(${(anchorYPct * 100).toFixed(3)}% + ${offsetYPx.toFixed(1)}px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}</div></div>`;
+      const totalLabel = TABLE_POOL_DISPLAY.totalLabel || {};
+      const totalRightPx = Math.max(0, Number(totalLabel.rightPx) || 8);
+      const totalBottomPx = Math.max(0, Number(totalLabel.bottomPx) || 4);
+      const totalFontSizePx = Math.max(10, Number(totalLabel.fontSizePx) || 24);
+      const totalLineHeight = Math.max(0.5, Number(totalLabel.lineHeight) || 1);
+      const totalColor = String(totalLabel.color || '#ffffff');
+      const totalFontFamily = String(CONFIG.assets.claimClusterFontFamily || '"KhymeryyanRomanLetters+Numbers", serif').trim();
+      const totalHtml = `<div class="tablePoolTotal" data-claim-pool-total style="position:absolute;right:${totalRightPx}px;bottom:${totalBottomPx}px;font-family:${escapeHtml(totalFontFamily)};font-size:${totalFontSizePx}px;line-height:${totalLineHeight};color:${escapeHtml(totalColor)};text-shadow:0 2px 4px rgba(0,0,0,.85);z-index:${pileMaxIcons + 2};">${Math.max(0, Number(chipCount) || 0)}</div>`;
+      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" data-pot-pile-anchor style="position:absolute;left:calc(${(anchorXPct * 100).toFixed(3)}% + ${offsetXPx.toFixed(1)}px);top:calc(${(anchorYPct * 100).toFixed(3)}% + ${offsetYPx.toFixed(1)}px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}${totalHtml}</div></div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
     state.humanSeat = 0; // index of the currently active human player (hot-seat support)
@@ -4467,7 +4487,8 @@ import { createTutorial } from './tutorial.js';
             <div class="aiSeat ${p.eliminated ? 'eliminated' : ''}" data-proj-id="seat-${p.id}" data-ai-seat-id="${p.id}" style="${state.smuggleSelection ? `outline:2px solid ${state.smuggleSelection.selectedTargetId === p.id ? 'var(--warning)' : 'var(--text)'};cursor:pointer;` : (state.trapSelection && state.trapSelection.challengerId === p.id ? 'outline:2px solid var(--danger);' : '')}">
               <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
                 <div class="seatName">${escapeHtml(p.name)}</div>
-                <div class="seatMeta">Cards ${p.hand.length} · Chips ${p.chips} · Clears ${p.clears}</div>
+                <div class="seatMeta">Cards ${p.hand.length} · Clears ${p.clears}</div>
+                ${renderSeatChipBadge(p)}
                 ${renderSeatCoinRow(p)}
                 <div class="seatStatus">${p.lastAction}</div>
               </div>
@@ -4482,7 +4503,8 @@ import { createTutorial } from './tutorial.js';
           <div class="humanSeatCard ${player.eliminated ? 'eliminated' : ''}" data-proj-id="human-seat">
             <div class="seatInfo" data-proj-id="info-human" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
               <div class="seatName">${seatLabel(player)}</div>
-              <div class="seatMeta">Cards ${player.hand.length} · Chips ${player.chips} · Clears ${player.clears}</div>
+              <div class="seatMeta">Cards ${player.hand.length} · Clears ${player.clears}</div>
+              ${renderSeatChipBadge(player)}
               ${renderSeatCoinRow(player)}
               <div class="seatStatus">${player.lastAction}</div>
             </div>

@@ -166,7 +166,7 @@ const TUTORIAL_STEPS = [
   },
   {
     id: 'chips',
-    target: () => [document.querySelector('[data-proj-id="topbar"]')],
+    target: () => [document.querySelector('[data-proj-id="claim-pool-pile"]')],
   },
   {
     id: 'opponents',
