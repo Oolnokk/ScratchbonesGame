@@ -139,6 +139,78 @@ function summarizeClaimStep(ctx = {}) {
   return parts.join(' ');
 }
 
+
+function sortedTrickCountEntries(trickCounts = {}) {
+  return Object.entries(trickCounts || {})
+    .map(([trickType, count]) => [String(trickType || '').trim(), Math.max(0, Number(count) || 0)])
+    .filter(([trickType, count]) => trickType && count > 0)
+    .sort(([typeA], [typeB]) => normalizeTrickType(typeA).localeCompare(normalizeTrickType(typeB)));
+}
+
+function trickDefinitionLabel(gameConfig, trickType) {
+  const key = String(trickType || '').trim();
+  const label = String(gameConfig?.trickBones?.definitions?.[key]?.label || '').trim();
+  return label || `${normalizeTrickType(key)} Bone`;
+}
+
+function trickGlyphSrc(gameConfig, trickType) {
+  const key = String(trickType || '').trim();
+  return String(gameConfig?.assets?.trickGlyphSrc?.[key] || '').trim();
+}
+
+function appendTrickGlyph(container, gameConfig, trickType) {
+  const symbol = document.createElement('span');
+  symbol.className = 'tut-trick-symbol trickSymbolContainer';
+  symbol.dataset.trickSymbol = String(trickType || '').trim();
+  const src = trickGlyphSrc(gameConfig, trickType);
+  if (src) {
+    const img = document.createElement('img');
+    img.className = 'tut-trick-symbol-img trickSymbolImg';
+    img.src = src;
+    img.alt = `${normalizeTrickType(trickType)} trick symbol`;
+    img.loading = 'lazy';
+    img.addEventListener('error', () => {
+      img.classList.add('trick-symbol-missing');
+      img.setAttribute('aria-hidden', 'true');
+    }, { once: true });
+    symbol.appendChild(img);
+  }
+  container.appendChild(symbol);
+}
+
+function renderTutorialDeckTrickInfo({ context = {}, gameConfig } = {}) {
+  const entries = sortedTrickCountEntries(context.deckComposition?.trickCounts);
+  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'tut-trick-info';
+
+  const title = document.createElement('div');
+  title.className = 'tut-trick-info-title';
+  title.textContent = `This match deck has ${formatCount(total)} ${pluralize(total, 'Trick Bone')}.`;
+  wrapper.appendChild(title);
+
+  const rows = document.createElement('div');
+  rows.className = 'tut-trick-info-rows';
+  if (!entries.length) {
+    const empty = document.createElement('span');
+    empty.className = 'tut-trick-info-item';
+    empty.textContent = 'No Trick Bones are in this match deck.';
+    rows.appendChild(empty);
+  } else {
+    for (const [trickType, count] of entries) {
+      const item = document.createElement('span');
+      item.className = 'tut-trick-info-item';
+      appendTrickGlyph(item, gameConfig, trickType);
+      const label = document.createElement('span');
+      label.textContent = `${trickDefinitionLabel(gameConfig, trickType)} × ${count}`;
+      item.appendChild(label);
+      rows.appendChild(item);
+    }
+  }
+  wrapper.appendChild(rows);
+  return wrapper;
+}
+
 const TUTORIAL_STEPS = [
   {
     id: 'welcome',
@@ -167,6 +239,7 @@ const TUTORIAL_STEPS = [
   {
     id: 'chips',
     target: () => [document.querySelector('[data-proj-id="claim-pool-pile"]')],
+    extraContent: renderTutorialDeckTrickInfo,
   },
   {
     id: 'opponents',
@@ -212,10 +285,28 @@ export function createTutorial({ onDone, gameConfig, getContext } = {}) {
   let panelEl = null;
   let titleEl = null;
   let textEl = null;
+  let extraEl = null;
   let counterEl = null;
   let backBtnEl = null;
   let nextBtnEl = null;
   let resizeObserver = null;
+
+  function ensureTutorialTrickInfoStyles() {
+    if (document.getElementById('scratchbones-tutorial-trick-info-styles')) return;
+    const styleEl = document.createElement('style');
+    styleEl.id = 'scratchbones-tutorial-trick-info-styles';
+    styleEl.textContent = `
+      .tut-extra:empty { display: none; }
+      .tut-trick-info { display: flex; flex-direction: column; gap: var(--layout-trick-info-gap); margin-top: var(--layout-trick-info-margin-top); }
+      .tut-trick-info-title { color: var(--accent-2); font-weight: 700; letter-spacing: var(--layout-trick-info-letter-spacing); }
+      .tut-trick-info-rows { display: flex; flex-wrap: wrap; gap: var(--layout-trick-info-gap); }
+      .tut-trick-info-item { display: inline-flex; align-items: center; gap: var(--layout-trick-info-item-gap); }
+      .tut-trick-symbol { width: var(--layout-trick-info-glyph-size); height: var(--layout-trick-info-glyph-size); flex: 0 0 var(--layout-trick-info-glyph-size); }
+      .tut-trick-symbol-img { width: 100%; height: 100%; object-fit: contain; filter: var(--layout-trick-symbol-filter); }
+      .trick-symbol-missing { display: none; }
+    `;
+    document.head.appendChild(styleEl);
+  }
 
   // ── DOM construction ─────────────────────────────────────────────────────────
   function buildDom() {
@@ -231,6 +322,7 @@ export function createTutorial({ onDone, gameConfig, getContext } = {}) {
     overlayEl.setAttribute('role', 'dialog');
     overlayEl.setAttribute('aria-modal', 'true');
     overlayEl.setAttribute('aria-label', 'Scratchbones Tutorial');
+    ensureTutorialTrickInfoStyles();
 
     // Reuse children if already built (e.g. re-entrant call).
     backdropEl = overlayEl.querySelector('.tut-backdrop');
@@ -238,6 +330,7 @@ export function createTutorial({ onDone, gameConfig, getContext } = {}) {
     panelEl    = overlayEl.querySelector('.tut-panel');
     titleEl    = overlayEl.querySelector('.tut-title');
     textEl     = overlayEl.querySelector('.tut-text');
+    extraEl    = overlayEl.querySelector('.tut-extra');
     counterEl  = overlayEl.querySelector('.tut-counter');
     backBtnEl  = overlayEl.querySelector('.tut-btn-back');
     nextBtnEl  = overlayEl.querySelector('.tut-btn-next');
@@ -268,6 +361,9 @@ export function createTutorial({ onDone, gameConfig, getContext } = {}) {
     textEl = document.createElement('div');
     textEl.className = 'tut-text';
 
+    extraEl = document.createElement('div');
+    extraEl.className = 'tut-extra';
+
     const navEl = document.createElement('div');
     navEl.className = 'tut-nav';
 
@@ -291,6 +387,7 @@ export function createTutorial({ onDone, gameConfig, getContext } = {}) {
 
     panelEl.appendChild(headerEl);
     panelEl.appendChild(textEl);
+    panelEl.appendChild(extraEl);
     panelEl.appendChild(navEl);
 
     overlayEl.appendChild(backdropEl);
@@ -437,6 +534,13 @@ export function createTutorial({ onDone, gameConfig, getContext } = {}) {
 
     if (titleEl) titleEl.textContent = typeof stepCopy.title === 'string' ? stepCopy.title : '';
     if (textEl) textEl.textContent = body;
+    if (extraEl) {
+      extraEl.replaceChildren();
+      if (typeof step.extraContent === 'function') {
+        const extraContent = step.extraContent({ context, gameConfig });
+        if (extraContent instanceof Node) extraEl.appendChild(extraContent);
+      }
+    }
     if (counterEl) counterEl.textContent = `${index + 1} / ${steps.length}`;
 
     const isLast = index === steps.length - 1;

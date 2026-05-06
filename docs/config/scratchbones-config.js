@@ -682,14 +682,14 @@ window.SCRATCHBONES_CONFIG = {
           "referenceWidthPx": 86
         },
         "deckPlaceholderPx": {
-          "stackWidth": 68,
-          "stackHeight": 96,
+          "stackWidth": 136,
+          "stackHeight": 192,
           "labelGap": 10,
           "referenceCardWidthPx": 58,
           "cards": [
-            { "left": 16, "top": 12, "width": 58, "height": 84, "opacity": 0.55, "brightness": 0.82 },
-            { "left": 9, "top": 6, "width": 58, "height": 84, "opacity": 0.75, "brightness": 0.9 },
-            { "left": 2, "top": 0, "width": 58, "height": 84, "opacity": 1, "brightness": 1 }
+            { "left": 32, "top": 24, "width": 116, "height": 168, "opacity": 0.55, "brightness": 0.82 },
+            { "left": 18, "top": 12, "width": 116, "height": 168, "opacity": 0.75, "brightness": 0.9 },
+            { "left": 4, "top": 0, "width": 116, "height": 168, "opacity": 1, "brightness": 1 }
           ]
         }
       },
@@ -1792,10 +1792,12 @@ window.SCRATCHBONES_CONFIG = {
       "--layout-card-shadow-spread": "-2px",
       "--layout-card-shadow-alpha": "0.34",
       "--layout-card-contact-alpha": "0.2",
-      "--layout-trick-symbol-size": "34%",
-      "--layout-trick-symbol-inset-top": "8%",
-      "--layout-trick-symbol-inset-right": "8%",
-      "--layout-trick-symbol-opacity": "0.95",
+      "--layout-trick-info-glyph-size": "28px",
+      "--layout-trick-info-gap": "6px",
+      "--layout-trick-info-item-gap": "4px",
+      "--layout-trick-info-margin-top": "6px",
+      "--layout-trick-info-letter-spacing": "0.05em",
+      "--layout-trick-info-max-width": "220px",
       "--layout-trick-symbol-filter": "drop-shadow(0 1px 2px rgba(0,0,0,0.55))",
       "--layout-punish-button-card-width": "34px",
       "--layout-punish-button-card-height": "48px",
