@@ -496,5 +496,11 @@ export function createTutorial({ onDone, gameConfig, getContext } = {}) {
     if (overlayEl) overlayEl.style.display = 'none';
   }
 
-  return { show, hide, finish };
+  // ── Public: refresh ──────────────────────────────────────────────────────────
+  function refresh() {
+    if (!overlayEl || overlayEl.style.display === 'none') return;
+    renderStep(currentStep);
+  }
+
+  return { show, hide, finish, refresh };
 }

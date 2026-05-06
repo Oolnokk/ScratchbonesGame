@@ -4721,6 +4721,7 @@ import { createTutorial } from './tutorial.js';
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
       cardAnimator.animatePostRender();
       seatAvatarAnim.animatePostRender();
+      if (state.tutorialPaused) activeTutorial?.refresh?.();
       pushNetworkState();
     }
     function debugSnapshot() {
@@ -6298,6 +6299,8 @@ import { createTutorial } from './tutorial.js';
       };
     }
 
+    let activeTutorial = null;
+
     // Tutorial entry point: runs a normal PvE game but pauses it immediately
     // after the cards are dealt so the player can step through the UI walkthrough
     // before their first move.  `state.tutorialPaused` is cleared by the
@@ -6308,15 +6311,16 @@ import { createTutorial } from './tutorial.js';
       // startGame() has called render() and scheduleNextTurnOrCover().
       // Because tutorialPaused=true, the scheduler returned early — the board is
       // rendered and waiting.  Now show the tutorial overlay.
-      const tut = createTutorial({
+      activeTutorial = createTutorial({
         gameConfig: SCRATCHBONES_GAME,
         getContext: buildTutorialContext,
         onDone: () => {
           state.tutorialPaused = false;
+          activeTutorial = null;
           scheduleNextTurnOrCover();
         },
       });
-      tut.show();
+      activeTutorial.show();
     }
 
     // Expose all entry points so the lobby can call them.
