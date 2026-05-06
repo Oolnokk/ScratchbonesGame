@@ -81,9 +81,8 @@
   }
 
   // Dyes set a bodyColor slot (CLOTH, HAT, TORSO, …) to a specific tint.
-  // Colors are offsets applied to the mint base (#7dc89a) via hue-rotate/saturate/brightness.
-  // Hex values are the standard reference colors from the color name; offsets are computed
-  // from the mint base (H=143°, S_hsv=0.375, V_hsv=0.784).
+  // Colors are offsets applied to the configured swatch base by the same CSS filter
+  // pipeline used for lobby swatches and portrait canvas rendering.
   const CONFIG_DYES = window.SCRATCHBONES_CONFIG?.game?.dyes || {};
   const DYE_CATALOG = Array.isArray(CONFIG_DYES.catalog) ? CONFIG_DYES.catalog : [];
   const DYE_CATEGORIES = Array.isArray(CONFIG_DYES.categories) ? CONFIG_DYES.categories : [];
