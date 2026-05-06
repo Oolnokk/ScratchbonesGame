@@ -6231,6 +6231,73 @@ import { createTutorial } from './tutorial.js';
       if (net?.isHost()) net.on('action', handleNetworkAction);
     }
 
+    function buildTutorialContext() {
+      const humanSeat = state.humanSeat;
+      const humanHand = state.players[humanSeat]?.hand || [];
+      const selectedCardIds = state.selectedCardIds instanceof Set ? state.selectedCardIds : new Set();
+      const copyCard = (card) => card ? {
+        id: card.id,
+        suit: card.suit,
+        rank: card.rank,
+        wild: card.wild === true,
+        trickType: card.trickType || null,
+      } : null;
+      const copyPlay = (play) => play ? {
+        playerIndex: play.playerIndex,
+        declaredRank: play.declaredRank,
+        truthful: play.truthful === true,
+        actualSummary: play.actualSummary || '',
+        cards: (play.cards || []).map(copyCard).filter(Boolean),
+      } : null;
+      const latestPlay = state.betting?.play || state.challengeWindow?.lastPlay || state.pile.at(-1) || null;
+      return {
+        humanSeat,
+        currentTurn: state.currentTurn,
+        isHumanTurn: state.currentTurn === humanSeat,
+        hand: humanHand.map(copyCard).filter(Boolean),
+        selectedCards: humanHand.filter((card) => selectedCardIds.has(card.id)).map(copyCard).filter(Boolean),
+        declaredRank: state.declaredRank,
+        pileCount: (state.pile || []).length,
+        latestPlay: copyPlay(latestPlay),
+        tablePot: state.tablePot ?? 0,
+        challengeWindow: state.challengeWindow ? {
+          lastPlay: copyPlay(state.challengeWindow.lastPlay),
+          challengerOptions: [...(state.challengeWindow.challengerOptions || [])],
+          backupCandidates: [...(state.challengeWindow.backupCandidates || [])],
+        } : null,
+        betting: state.betting ? {
+          play: copyPlay(state.betting.play),
+          challengerId: state.betting.challengerId,
+          challengedId: state.betting.challengedId,
+          currentActorId: state.betting.currentActorId,
+          currentTierId: state.betting.currentTierId,
+          currentTierValue: state.betting.currentTierValue,
+          displayedTierId: state.betting.displayedTierId,
+          displayedTierValue: state.betting.displayedTierValue,
+          contributions: { ...(state.betting.contributions || {}) },
+          challengerHasRaised: state.betting.challengerHasRaised === true,
+          challengedHasRaised: state.betting.challengedHasRaised === true,
+          phase: state.betting.phase || null,
+          pendingAutoReveal: state.betting.pendingAutoReveal === true,
+          actionInFlight: state.betting.actionInFlight === true,
+          punishArmed: state.betting.punishArmed === true,
+          punishAvailable: state.betting.punishAvailable === true,
+        } : null,
+        opponentSummaries: (state.players || [])
+          .filter((player) => player.id !== humanSeat)
+          .map((player) => ({
+            id: player.id,
+            name: player.name,
+            chips: player.chips,
+            handCount: (player.hand || []).length,
+            eliminated: player.eliminated === true,
+            isHuman: player.isHuman === true,
+            lastAction: player.lastAction || '',
+            clears: player.clears || 0,
+          })),
+      };
+    }
+
     // Tutorial entry point: runs a normal PvE game but pauses it immediately
     // after the cards are dealt so the player can step through the UI walkthrough
     // before their first move.  `state.tutorialPaused` is cleared by the
@@ -6243,6 +6310,7 @@ import { createTutorial } from './tutorial.js';
       // rendered and waiting.  Now show the tutorial overlay.
       const tut = createTutorial({
         gameConfig: SCRATCHBONES_GAME,
+        getContext: buildTutorialContext,
         onDone: () => {
           state.tutorialPaused = false;
           scheduleNextTurnOrCover();
