@@ -102,6 +102,44 @@ function summarizeSelectedCards(selectedCards = []) {
   return ` ${formatCount(count)} ${pluralize(count, 'card is', 'cards are')} currently selected.`;
 }
 
+function hasDeclaredRank(declaredRank) {
+  return declaredRank !== null && declaredRank !== undefined && declaredRank !== '';
+}
+
+function summarizeClaimStep(ctx = {}) {
+  const latestPlay = ctx.latestPlay || null;
+  const declaredRank = hasDeclaredRank(ctx.declaredRank)
+    ? ctx.declaredRank
+    : latestPlay?.declaredRank;
+  const pileCount = Number.isInteger(ctx.pileCount) ? ctx.pileCount : 0;
+  const parts = [];
+
+  if (!latestPlay && !hasDeclaredRank(declaredRank)) {
+    parts.push('The table is empty. The first player to play cards will set the claim rank for the round.');
+  } else {
+    if (hasDeclaredRank(declaredRank)) {
+      parts.push(`This round is locked to ${declaredRank}. Every later claim must use that same rank.`);
+    }
+
+    if (latestPlay) {
+      const cardCount = Array.isArray(latestPlay.cards) ? latestPlay.cards.length : 0;
+      const playRank = hasDeclaredRank(latestPlay.declaredRank) ? latestPlay.declaredRank : declaredRank;
+      const rankText = hasDeclaredRank(playRank) ? ` as ${playRank}` : '';
+      parts.push(`The latest claim added ${formatCount(cardCount)} face-down ${pluralize(cardCount, 'card')}${rankText}.`);
+    }
+  }
+
+  if (pileCount > 0) {
+    parts.push(`The pile now has ${formatCount(pileCount)} ${pluralize(pileCount, 'claim')}.`);
+  }
+
+  if (ctx.challengeWindow) {
+    parts.push('A challenge window is open, so the player can challenge the latest claim if they think it is a bluff.');
+  }
+
+  return parts.join(' ');
+}
+
 const TUTORIAL_STEPS = [
   {
     id: 'welcome',
@@ -131,7 +169,7 @@ const TUTORIAL_STEPS = [
       document.querySelector('.tableViewCards'),
     ],
     title: 'The Claim Display',
-    text: 'The centre of the table shows the active claim: the declared rank and how many cards were played face-down. Once a rank is declared, every player this round must play cards and declare that same rank.',
+    text: summarizeClaimStep,
   },
   {
     id: 'chips',
