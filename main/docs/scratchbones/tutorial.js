@@ -21,6 +21,87 @@
 //   target  – function returning one or more candidate HTMLElements to spotlight
 //   title   – heading text shown in the panel
 //   text    – body explanation shown in the panel; may be a string or (ctx) => string
+
+function pluralize(count, singular, plural = `${singular}s`) {
+  return count === 1 ? singular : plural;
+}
+
+function formatCount(count) {
+  const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  return Number.isInteger(count) && count >= 0 && count < words.length ? words[count] : String(count);
+}
+
+function joinList(items) {
+  if (!items.length) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')}, and ${items.at(-1)}`;
+}
+
+function normalizeTrickType(trickType) {
+  return String(trickType || '')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function formatCardName(card) {
+  if (!card) return 'Unknown Card';
+  if (card.trickType) return `${normalizeTrickType(card.trickType)} Bone`;
+  if (card.wild === true) return 'Wild';
+  if (card.rank !== null && card.rank !== undefined && card.rank !== '') return String(card.rank);
+  return 'Unknown Card';
+}
+
+export function countRanks(hand = []) {
+  return hand.reduce((counts, card) => {
+    if (!card || card.wild === true || card.rank === null || card.rank === undefined || card.rank === '') return counts;
+    const rank = String(card.rank);
+    return { ...counts, [rank]: (counts[rank] || 0) + 1 };
+  }, {});
+}
+
+function summarizeRankCounts(hand = []) {
+  const counts = countRanks(hand);
+  const rankEntries = Object.entries(counts).sort(([rankA], [rankB]) => Number(rankA) - Number(rankB));
+  if (!rankEntries.length) return 'You have no ranked cards';
+  const rankParts = rankEntries.map(([rank, count]) => `${formatCount(count)} ${rank}${count === 1 ? '' : 's'}`);
+  return `You have ${joinList(rankParts)}`;
+}
+
+export function summarizeTrickBones(hand = []) {
+  const counts = hand.reduce((tricks, card) => {
+    if (!card?.trickType) return tricks;
+    const name = formatCardName(card);
+    return { ...tricks, [name]: (tricks[name] || 0) + 1 };
+  }, {});
+  const trickEntries = Object.entries(counts).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
+  if (!trickEntries.length) return '';
+  const trickParts = trickEntries.map(([name, count]) => `${formatCount(count)} ${pluralize(count, name)}`);
+  const total = trickEntries.reduce((sum, [, count]) => sum + count, 0);
+  return `${formatCount(total)} ${pluralize(total, 'Trick Bone')} present: ${joinList(trickParts)}`;
+}
+
+export function summarizeHand(hand = []) {
+  const cards = Array.isArray(hand) ? hand : [];
+  const totalCards = cards.length;
+  const wildCount = cards.filter((card) => card?.wild === true).length;
+  const pieces = [
+    `Your hand has ${formatCount(totalCards)} ${pluralize(totalCards, 'card')}`,
+    summarizeRankCounts(cards),
+    `${formatCount(wildCount)} ${pluralize(wildCount, 'Wild card')}`,
+  ];
+  const trickSummary = summarizeTrickBones(cards);
+  if (trickSummary) pieces.push(trickSummary);
+  return `${pieces.join('. ')}.`;
+}
+
+function summarizeSelectedCards(selectedCards = []) {
+  const count = Array.isArray(selectedCards) ? selectedCards.length : 0;
+  if (!count) return '';
+  return ` ${formatCount(count)} ${pluralize(count, 'card is', 'cards are')} currently selected.`;
+}
+
 const TUTORIAL_STEPS = [
   {
     id: 'welcome',
@@ -32,7 +113,7 @@ const TUTORIAL_STEPS = [
     id: 'hand',
     target: () => [document.querySelector('[data-proj-id="hand"]')],
     title: 'Your Hand',
-    text: 'These are your cards. Each card shows a rank from 1 to 10. Wild cards (W) match any rank. Tap a card to select it — you can select multiple — then choose a declared rank and press Play.',
+    text: (ctx = {}) => `${summarizeHand(ctx.hand)}${summarizeSelectedCards(ctx.selectedCards)} Tap a card to select it — you can select multiple — then choose a declared rank and press Play.`,
   },
   {
     id: 'trick-bones',
