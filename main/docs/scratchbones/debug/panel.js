@@ -30,7 +30,18 @@ function ensureDebugPanelDom() {
     debugPanel.style.border = '1px solid #555';
     debugPanel.style.zIndex = '2147483647';
     debugPanel.style.setProperty('display', 'none', 'important');
-    debugPanel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #444;"><strong>Debug Log</strong><button id="_dbgCopyBtn" type="button">Copy</button></div><div id="_dbgBody" style="height:calc(100% - 38px);overflow:auto;padding:8px;font:12px/1.3 monospace;white-space:pre-wrap;"></div>';
+    debugPanel.innerHTML =
+      '<div id="_dbgPanelHead" style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid #444;">' +
+        '<strong>Debug Log</strong>' +
+        '<div id="_dbgFilters" style="display:flex;gap:5px;align-items:center;flex:1;justify-content:center;">' +
+          '<label style="font-size:11px;cursor:pointer;display:flex;gap:3px;align-items:center;"><input type="checkbox" data-flt="debug" checked> dbg</label>' +
+          '<label style="font-size:11px;cursor:pointer;display:flex;gap:3px;align-items:center;"><input type="checkbox" data-flt="log" checked> log</label>' +
+          '<label style="font-size:11px;cursor:pointer;display:flex;gap:3px;align-items:center;"><input type="checkbox" data-flt="warn" checked> warn</label>' +
+          '<label style="font-size:11px;cursor:pointer;display:flex;gap:3px;align-items:center;"><input type="checkbox" data-flt="error" checked> err</label>' +
+        '</div>' +
+        '<button id="_dbgCopyBtn" type="button">Copy</button>' +
+      '</div>' +
+      '<div id="_dbgBody" style="height:calc(100% - 38px);overflow:auto;padding:8px;font:12px/1.3 monospace;white-space:pre-wrap;"></div>';
     document.body.appendChild(debugPanel);
   }
 }
@@ -51,6 +62,19 @@ function copyDebugLogsToClipboard() {
   if (!btn) return;
   btn.textContent = 'Copied!';
   setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+}
+
+function initDebugFilters() {
+  const panel = document.getElementById('_dbgPanel');
+  if (!panel) return;
+  const checkboxes = panel.querySelectorAll('#_dbgFilters [data-flt]');
+  checkboxes.forEach((cb) => {
+    if (cb.dataset.bound === 'true') return;
+    cb.dataset.bound = 'true';
+    cb.addEventListener('change', () => {
+      panel.classList.toggle(`hide-${cb.dataset.flt}`, !cb.checked);
+    });
+  });
 }
 
 function initDebugPanelUi() {
@@ -88,6 +112,7 @@ function initDebugPanelUi() {
     copyBtn.dataset.bound = 'true';
     copyBtn.addEventListener('click', copyDebugLogsToClipboard);
   }
+  initDebugFilters();
 }
 
 export function initDebugPanelInterceptor() {

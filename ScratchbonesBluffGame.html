@@ -1818,9 +1818,25 @@
       line-height: 1.5;
     }
     ._dl { word-break: break-word; padding: 1px 0; }
+    ._dl-debug{ color: #8ab4c8; }
     ._dl-log  { color: #c8bfaf; }
     ._dl-warn { color: #e6b84a; }
     ._dl-error{ color: #e05555; }
+    /* ── Debug log category filters ──────────────────────────── */
+    #_dbgFilters {
+      display: flex; gap: 5px; align-items: center; flex: 1;
+      justify-content: center;
+    }
+    ._dbgFlt {
+      font-size: 0.62rem; color: rgba(200,150,80,0.70);
+      display: flex; align-items: center; gap: 3px; cursor: pointer;
+      user-select: none;
+    }
+    ._dbgFlt input { cursor: pointer; accent-color: #c89952; }
+    #_dbgPanel.hide-debug ._dl-debug { display: none; }
+    #_dbgPanel.hide-log   ._dl-log   { display: none; }
+    #_dbgPanel.hide-warn  ._dl-warn  { display: none; }
+    #_dbgPanel.hide-error ._dl-error { display: none; }
     /* ── Projection mapping mode ─────────────────────────────── */
     #projMapBtn {
       position: fixed;
@@ -2531,10 +2547,10 @@
   <div id="sb-lobby" style="display:none;"></div>
   <!-- Hot-seat cover — shown when passing device between human players -->
   <div id="sb-cover" style="display:none;"></div>
-  <!-- Tutorial overlay — managed by tutorial.js, built lazily on first show() -->
-  <div id="sb-tutorial-overlay" style="display:none;"></div>
   <div id="authoredRoot">
     <div id="app">
+      <!-- Tutorial overlay — managed by tutorial.js, built lazily on first show() -->
+      <div id="sb-tutorial-overlay" style="display:none;"></div>
     </div>
     <div id="authoredOverlay"></div>
   </div>
@@ -2613,6 +2629,12 @@
   <div id="_dbgPanel" hidden aria-hidden="true">
     <div id="_dbgPanelHead">
       <span>DEBUG LOG</span>
+      <div id="_dbgFilters" aria-label="Log level filters">
+        <label class="_dbgFlt"><input type="checkbox" data-flt="debug" checked> dbg</label>
+        <label class="_dbgFlt"><input type="checkbox" data-flt="log" checked> log</label>
+        <label class="_dbgFlt"><input type="checkbox" data-flt="warn" checked> warn</label>
+        <label class="_dbgFlt"><input type="checkbox" data-flt="error" checked> err</label>
+      </div>
       <button id="_dbgCopyBtn">Copy</button>
     </div>
     <div id="_dbgBody"></div>
