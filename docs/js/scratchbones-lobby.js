@@ -585,6 +585,7 @@
           <button class="sb-btn-ghost" id="sb-shop-btn">Shop</button>
           <button class="sb-btn-ghost" id="sb-online-btn">Play Online</button>
           ${adBtn}
+          <button class="sb-btn-ghost" id="sb-tutorial-btn">Tutorial</button>
           <button class="sb-btn-primary" id="sb-start-btn">Start Game</button>
         </div>
       </div>`;
@@ -1055,6 +1056,7 @@
 
     // Main screen
     document.getElementById('sb-start-btn')?.addEventListener('click', startGame);
+    document.getElementById('sb-tutorial-btn')?.addEventListener('click', startTutorialGame);
     document.getElementById('sb-appearance-btn')?.addEventListener('click', openAppearanceEditor);
     document.getElementById('sb-collections-btn')?.addEventListener('click', () => { _screen = 'collections'; render(); });
     document.getElementById('sb-trick-loadout-btn')?.addEventListener('click', () => { _screen = 'trick-loadout'; render(); });
@@ -1501,6 +1503,37 @@
     hide();
     if (_scratchbonesReady && window.scratchbonesStartGame) {
       void window.scratchbonesStartGame().catch(e => console.error('[lobby] startOfflineGame error', e));
+    }
+  }
+
+  function startTutorialGame() {
+    if (!window.ScratchbonesAccount?.isCreated()) return;
+    const khymeryyan = getFullKhymeryyan();
+    const username = khymeryyan?.name || 'Player';
+    const ap = getFullAppearance();
+    const totalPlayers = 4;
+    const humanSeat = 0;
+    const playerNames = { [humanSeat]: username };
+    const playerAppearances = { [humanSeat]: ap };
+    const playerLoadouts = { [humanSeat]: getLocalPlayerLoadout() };
+    let npcIndex = 0;
+    for (let seat = 0; seat < totalPlayers; seat++) {
+      if (seat !== humanSeat) {
+        playerNames[seat] = NPC_NAMES[npcIndex % NPC_NAMES.length];
+        npcIndex++;
+      }
+    }
+    window.SCRATCHBONES_SESSION = {
+      mode: 'pve',
+      humanSeats: [humanSeat],
+      playerNames,
+      playerAppearances,
+      playerLoadouts,
+    };
+    _postGameMessage = '';
+    hide();
+    if (_scratchbonesReady && window.scratchbonesStartTutorial) {
+      void window.scratchbonesStartTutorial().catch(e => console.error('[lobby] startTutorialGame error', e));
     }
   }
 
