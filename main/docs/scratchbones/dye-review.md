@@ -8,14 +8,14 @@
   - Neutral dyes: **6** (`White`, `Silver`, `Gray`, `Charcoal`, `Cream`, `Brown`).
 - There is no `Black`, `Onyx`, or black-equivalent dye ID in the active catalog.
 - `White` and `Charcoal` exist for future achievement paths and are excluded from mystery dye pools.
-- Each generated dye keeps an intended `hex` reference color, but its runtime `color` offsets are fitted against the actual `hue-rotate(...) saturate(...) brightness(...)` CSS/canvas filter pipeline used by portraits and swatches. The offsets are intentionally not simple HSV deltas from the mint swatch base.
+- Each generated dye keeps an intended `hex` reference color, and its runtime `color` offsets are precomputed fitted values for the actual `hue-rotate(...) saturate(...) brightness(...)` CSS/canvas filter pipeline used by portraits and swatches. The offsets are intentionally not simple HSV deltas from the mint swatch base, and config loading does not rerun the optimizer.
 
 ## End-to-end dye/avatar variable path
 
 1. `docs/config/scratchbones-config.js` defines:
    - systematic hue family and variant metadata,
    - the mint `swatchBase` (`#7dc89a`),
-   - the generated dye catalog, whose `hex` targets are converted into fitted `{ h, s, v }` filter offsets,
+   - the generated dye catalog, whose `hex` targets reference precomputed fitted `{ h, s, v }` filter offsets,
    - starter dye IDs,
    - mystery dye pool definitions,
    - the mystery dye price,
@@ -54,7 +54,7 @@ Pools intentionally overlap on in-between hue families. Pools include Dusty chro
 - no Black/Onyx active catalog entries,
 - unique dye IDs and labels,
 - required chromatic/neutral metadata and rendering fields,
-- generated dye offsets against the actual CSS filter pipeline,
+- precomputed generated dye offsets against the actual CSS filter pipeline,
 - exact starter dye ownership,
 - legacy dye migration/removal behavior,
 - mystery pool overlap and exclusions,

@@ -341,7 +341,6 @@ window.SCRATCHBONES_CONFIG = {
         "dye:CLOTH:eggplant": "dye:CLOTH:dark_muted_violet"
       },
       "catalog": (() => {
-        const baseHex = "#7dc89a";
         const hueFamilies = [
           { id: "red", label: "Red", hueAngle: 0 },
           { id: "red_orange", label: "Red-Orange", hueAngle: 15 },
@@ -386,14 +385,6 @@ window.SCRATCHBONES_CONFIG = {
           violet: ["Indigo-Violet", "Violet"]
         };
         function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
-        function hexToRgb(hex) {
-          const value = String(hex).replace(/^#/, "");
-          return {
-            r: parseInt(value.slice(0, 2), 16),
-            g: parseInt(value.slice(2, 4), 16),
-            b: parseInt(value.slice(4, 6), 16)
-          };
-        }
         function rgbToHex(r, g, b) {
           return "#" + [r, g, b].map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("").toUpperCase();
         }
@@ -413,98 +404,134 @@ window.SCRATCHBONES_CONFIG = {
           else [r1, g1, b1] = [c, 0, x];
           return { r: (r1 + m) * 255, g: (g1 + m) * 255, b: (b1 + m) * 255 };
         }
-        // Match the portrait/swatch runtime exactly: hue-rotate(...) saturate(...) brightness(...).
-        // These helpers fit filter offsets for each target hex instead of using HSV deltas,
-        // because CSS filter math needs much higher saturation and lower brightness for reds.
-        function cssHueRotate({ r, g, b }, degrees) {
-          const radians = degrees * Math.PI / 180;
-          const cos = Math.cos(radians);
-          const sin = Math.sin(radians);
-          return {
-            r: (0.213 + 0.787 * cos - 0.213 * sin) * r + (0.715 - 0.715 * cos - 0.715 * sin) * g + (0.072 - 0.072 * cos + 0.928 * sin) * b,
-            g: (0.213 - 0.213 * cos + 0.143 * sin) * r + (0.715 + 0.285 * cos + 0.140 * sin) * g + (0.072 - 0.072 * cos - 0.283 * sin) * b,
-            b: (0.213 - 0.213 * cos - 0.787 * sin) * r + (0.715 - 0.715 * cos + 0.715 * sin) * g + (0.072 + 0.928 * cos + 0.072 * sin) * b
-          };
-        }
-        function cssSaturate({ r, g, b }, amount) {
-          return {
-            r: (0.213 + 0.787 * amount) * r + (0.715 - 0.715 * amount) * g + (0.072 - 0.072 * amount) * b,
-            g: (0.213 - 0.213 * amount) * r + (0.715 + 0.285 * amount) * g + (0.072 - 0.072 * amount) * b,
-            b: (0.213 - 0.213 * amount) * r + (0.715 - 0.715 * amount) * g + (0.072 + 0.928 * amount) * b
-          };
-        }
-        function cssFilterRgb(hue, saturation, brightness) {
-          const saturated = cssSaturate(cssHueRotate(baseRgb, hue), saturation);
-          return {
-            r: clamp(saturated.r * brightness, 0, 255),
-            g: clamp(saturated.g * brightness, 0, 255),
-            b: clamp(saturated.b * brightness, 0, 255)
-          };
-        }
-        function colorError(rgb, target) {
-          return (rgb.r - target.r) ** 2 + (rgb.g - target.g) ** 2 + (rgb.b - target.b) ** 2;
-        }
-        function lumaRgb({ r, g, b }) {
-          const y = 0.213 * r + 0.715 * g + 0.072 * b;
-          return { r: y, g: y, b: y };
-        }
-        function bestCssFilterForHue(hue, target) {
-          const rotated = cssHueRotate(baseRgb, hue);
-          const gray = lumaRgb(rotated);
-          const chroma = {
-            r: rotated.r - gray.r,
-            g: rotated.g - gray.g,
-            b: rotated.b - gray.b
-          };
-          const grayGray = gray.r ** 2 + gray.g ** 2 + gray.b ** 2;
-          const grayChroma = gray.r * chroma.r + gray.g * chroma.g + gray.b * chroma.b;
-          const chromaChroma = chroma.r ** 2 + chroma.g ** 2 + chroma.b ** 2;
-          const grayTarget = gray.r * target.r + gray.g * target.g + gray.b * target.b;
-          const chromaTarget = chroma.r * target.r + chroma.g * target.g + chroma.b * target.b;
-          const determinant = grayGray * chromaChroma - grayChroma ** 2;
-          let brightness = 1;
-          let saturation = 1;
-          if (Math.abs(determinant) > 1e-9) {
-            brightness = (grayTarget * chromaChroma - chromaTarget * grayChroma) / determinant;
-            const saturatedBrightness = (grayGray * chromaTarget - grayChroma * grayTarget) / determinant;
-            saturation = brightness ? saturatedBrightness / brightness : 0;
-          }
-          brightness = clamp(brightness, 0, 2);
-          saturation = clamp(saturation, 0, 40);
-          return {
-            hue,
-            saturation,
-            brightness,
-            error: colorError(cssFilterRgb(hue, saturation, brightness), target)
-          };
-        }
-        function fittedCssFilterOffsetsForHex(hex) {
-          const target = hexToRgb(hex);
-          let best = { error: Infinity, hue: 0, saturation: 1, brightness: 1 };
-          for (let hue = -180; hue <= 180; hue += 1) {
-            const candidate = bestCssFilterForHue(hue, target);
-            if (candidate.error < best.error) best = candidate;
-          }
-          [0.1, 0.01, 0.001].forEach((step) => {
-            let improved = true;
-            while (improved) {
-              improved = false;
-              [-1, 1].forEach((direction) => {
-                const candidate = bestCssFilterForHue(clamp(best.hue + direction * step, -180, 180), target);
-                if (candidate.error + 1e-9 < best.error) {
-                  best = candidate;
-                  improved = true;
-                }
-              });
-            }
-          });
-          return {
-            h: Number(best.hue.toFixed(3)),
-            s: Number((best.saturation - 1).toFixed(3)),
-            v: Number((best.brightness - 1).toFixed(3))
-          };
-        }
-        const baseRgb = hexToRgb(baseHex);
+        // Precomputed offline from the portrait/swatch filter fitter for the CSS chain:
+        // hue-rotate(...) saturate(...) brightness(...). Keeping these values static avoids
+        // running the expensive optimizer every time this config is evaluated.
+        const fittedColors = {
+          "dye:CLOTH:pure_red": { h: -139.268, s: 10.2, v: -0.699 },
+          "dye:CLOTH:bright_red": { h: -139.268, s: 1.712, v: -0.255 },
+          "dye:CLOTH:pale_red": { h: -139.268, s: -0.071, v: 0.08 },
+          "dye:CLOTH:deep_red": { h: -139.268, s: 10.2, v: -0.835 },
+          "dye:CLOTH:muted_red": { h: -139.268, s: 1.712, v: -0.591 },
+          "dye:CLOTH:dusty_red": { h: -139.268, s: -0.063, v: -0.408 },
+          "dye:CLOTH:shadow_red": { h: -139.268, s: 10.2, v: -0.895 },
+          "dye:CLOTH:dark_muted_red": { h: -139.268, s: 1.674, v: -0.738 },
+          "dye:CLOTH:smoky_red": { h: -139.268, s: -0.049, v: -0.625 },
+          "dye:CLOTH:pure_red_orange": { h: -121.565, s: 4.392, v: -0.446 },
+          "dye:CLOTH:bright_red_orange": { h: -121.77, s: 1.003, v: -0.105 },
+          "dye:CLOTH:pale_red_orange": { h: -121.642, s: -0.229, v: 0.155 },
+          "dye:CLOTH:deep_red_orange": { h: -121.642, s: 4.403, v: -0.697 },
+          "dye:CLOTH:muted_red_orange": { h: -121.642, s: 1, v: -0.508 },
+          "dye:CLOTH:dusty_red_orange": { h: -120.708, s: -0.228, v: -0.365 },
+          "dye:CLOTH:shadow_red_orange": { h: -121.862, s: 4.436, v: -0.808 },
+          "dye:CLOTH:dark_muted_red_orange": { h: -122.01, s: 0.986, v: -0.687 },
+          "dye:CLOTH:smoky_red_orange": { h: -120.916, s: -0.217, v: -0.597 },
+          "dye:CLOTH:pure_orange": { h: -101.25, s: 2.654, v: -0.193 },
+          "dye:CLOTH:bright_orange": { h: -101.145, s: 0.686, v: 0.049 },
+          "dye:CLOTH:pale_orange": { h: -101.407, s: -0.286, v: 0.23 },
+          "dye:CLOTH:deep_orange": { h: -101.407, s: 2.661, v: -0.558 },
+          "dye:CLOTH:muted_orange": { h: -101.407, s: 0.688, v: -0.425 },
+          "dye:CLOTH:dusty_orange": { h: -101.407, s: -0.281, v: -0.325 },
+          "dye:CLOTH:shadow_orange": { h: -100.957, s: 2.64, v: -0.717 },
+          "dye:CLOTH:dark_muted_orange": { h: -102.167, s: 0.677, v: -0.636 },
+          "dye:CLOTH:smoky_orange": { h: -99.925, s: -0.272, v: -0.57 },
+          "dye:CLOTH:pure_yellow_orange": { h: -82.997, s: 2.085, v: 0.056 },
+          "dye:CLOTH:bright_yellow_orange": { h: -82.826, s: 0.632, v: 0.2 },
+          "dye:CLOTH:pale_yellow_orange": { h: -82.933, s: -0.256, v: 0.305 },
+          "dye:CLOTH:deep_yellow_orange": { h: -82.933, s: 2.084, v: -0.42 },
+          "dye:CLOTH:muted_yellow_orange": { h: -82.933, s: 0.632, v: -0.342 },
+          "dye:CLOTH:dusty_yellow_orange": { h: -82.156, s: -0.247, v: -0.282 },
+          "dye:CLOTH:shadow_yellow_orange": { h: -82.749, s: 2.08, v: -0.63 },
+          "dye:CLOTH:dark_muted_yellow_orange": { h: -82.624, s: 0.618, v: -0.58 },
+          "dye:CLOTH:smoky_yellow_orange": { h: -81.138, s: -0.234, v: -0.542 },
+          "dye:CLOTH:pure_yellow": { h: -68.856, s: 1.933, v: 0.309 },
+          "dye:CLOTH:bright_yellow": { h: -68.856, s: 0.707, v: 0.35 },
+          "dye:CLOTH:pale_yellow": { h: -68.856, s: -0.171, v: 0.381 },
+          "dye:CLOTH:deep_yellow": { h: -68.856, s: 1.933, v: -0.281 },
+          "dye:CLOTH:muted_yellow": { h: -68.856, s: 0.707, v: -0.259 },
+          "dye:CLOTH:dusty_yellow": { h: -68.856, s: -0.166, v: -0.242 },
+          "dye:CLOTH:shadow_yellow": { h: -68.856, s: 1.933, v: -0.543 },
+          "dye:CLOTH:dark_muted_yellow": { h: -68.856, s: 0.693, v: -0.529 },
+          "dye:CLOTH:smoky_yellow": { h: -68.856, s: -0.156, v: -0.518 },
+          "dye:CLOTH:pure_yellow_green": { h: -43.128, s: 2.137, v: 0.16 },
+          "dye:CLOTH:bright_yellow_green": { h: -43.196, s: 0.732, v: 0.26 },
+          "dye:CLOTH:pale_yellow_green": { h: -43.024, s: -0.188, v: 0.336 },
+          "dye:CLOTH:deep_yellow_green": { h: -43.024, s: 2.14, v: -0.364 },
+          "dye:CLOTH:muted_yellow_green": { h: -43.024, s: 0.733, v: -0.308 },
+          "dye:CLOTH:dusty_yellow_green": { h: -43.024, s: -0.182, v: -0.267 },
+          "dye:CLOTH:shadow_yellow_green": { h: -43.32, s: 2.133, v: -0.595 },
+          "dye:CLOTH:dark_muted_yellow_green": { h: -42.528, s: 0.723, v: -0.561 },
+          "dye:CLOTH:smoky_yellow_green": { h: -44.002, s: -0.175, v: -0.534 },
+          "dye:CLOTH:pure_green": { h: -19.383, s: 3.135, v: 0.009 },
+          "dye:CLOTH:bright_green": { h: -19.383, s: 1.14, v: 0.17 },
+          "dye:CLOTH:pale_green": { h: -19.383, s: -0.037, v: 0.291 },
+          "dye:CLOTH:deep_green": { h: -19.383, s: 3.135, v: -0.446 },
+          "dye:CLOTH:muted_green": { h: -19.383, s: 1.14, v: -0.358 },
+          "dye:CLOTH:dusty_green": { h: -19.383, s: -0.03, v: -0.292 },
+          "dye:CLOTH:shadow_green": { h: -19.383, s: 3.135, v: -0.648 },
+          "dye:CLOTH:dark_muted_green": { h: -19.383, s: 1.121, v: -0.591 },
+          "dye:CLOTH:smoky_green": { h: -19.383, s: -0.018, v: -0.55 },
+          "dye:CLOTH:pure_green_blue": { h: 40.732, s: 2.031, v: 0.111 },
+          "dye:CLOTH:bright_green_blue": { h: 40.732, s: 0.641, v: 0.231 },
+          "dye:CLOTH:pale_green_blue": { h: 40.732, s: -0.241, v: 0.322 },
+          "dye:CLOTH:deep_green_blue": { h: 40.732, s: 2.031, v: -0.39 },
+          "dye:CLOTH:muted_green_blue": { h: 40.732, s: 0.641, v: -0.324 },
+          "dye:CLOTH:dusty_green_blue": { h: 40.732, s: -0.236, v: -0.275 },
+          "dye:CLOTH:shadow_green_blue": { h: 40.732, s: 2.031, v: -0.612 },
+          "dye:CLOTH:dark_muted_green_blue": { h: 40.732, s: 0.627, v: -0.57 },
+          "dye:CLOTH:smoky_green_blue": { h: 40.732, s: -0.226, v: -0.539 },
+          "dye:CLOTH:pure_blue": { h: 111.144, s: 36.783, v: -0.898 },
+          "dye:CLOTH:bright_blue": { h: 111.144, s: 2.683, v: -0.374 },
+          "dye:CLOTH:pale_blue": { h: 111.144, s: 0.121, v: 0.021 },
+          "dye:CLOTH:deep_blue": { h: 111.144, s: 36.783, v: -0.944 },
+          "dye:CLOTH:muted_blue": { h: 111.144, s: 2.683, v: -0.657 },
+          "dye:CLOTH:dusty_blue": { h: 111.144, s: 0.131, v: -0.441 },
+          "dye:CLOTH:shadow_blue": { h: 111.144, s: 36.783, v: -0.965 },
+          "dye:CLOTH:dark_muted_blue": { h: 111.144, s: 2.621, v: -0.78 },
+          "dye:CLOTH:smoky_blue": { h: 111.144, s: 0.149, v: -0.646 },
+          "dye:CLOTH:pure_blue_indigo": { h: 123.759, s: 19.581, v: -0.823 },
+          "dye:CLOTH:bright_blue_indigo": { h: 123.622, s: 2.263, v: -0.33 },
+          "dye:CLOTH:pale_blue_indigo": { h: 123.707, s: 0.041, v: 0.043 },
+          "dye:CLOTH:deep_blue_indigo": { h: 123.707, s: 19.617, v: -0.903 },
+          "dye:CLOTH:muted_blue_indigo": { h: 123.707, s: 2.261, v: -0.632 },
+          "dye:CLOTH:dusty_blue_indigo": { h: 124.333, s: 0.048, v: -0.428 },
+          "dye:CLOTH:shadow_blue_indigo": { h: 123.56, s: 19.723, v: -0.939 },
+          "dye:CLOTH:dark_muted_blue_indigo": { h: 123.46, s: 2.216, v: -0.764 },
+          "dye:CLOTH:smoky_blue_indigo": { h: 124.194, s: 0.064, v: -0.638 },
+          "dye:CLOTH:pure_indigo": { h: 137.079, s: 13.414, v: -0.747 },
+          "dye:CLOTH:bright_indigo": { h: 137.148, s: 2.049, v: -0.284 },
+          "dye:CLOTH:pale_indigo": { h: 136.976, s: 0.018, v: 0.066 },
+          "dye:CLOTH:deep_indigo": { h: 136.976, s: 13.445, v: -0.862 },
+          "dye:CLOTH:muted_indigo": { h: 136.976, s: 2.051, v: -0.607 },
+          "dye:CLOTH:dusty_indigo": { h: 136.976, s: 0.026, v: -0.416 },
+          "dye:CLOTH:shadow_indigo": { h: 137.272, s: 13.357, v: -0.911 },
+          "dye:CLOTH:dark_muted_indigo": { h: 136.478, s: 2.01, v: -0.749 },
+          "dye:CLOTH:smoky_indigo": { h: 137.95, s: 0.042, v: -0.63 },
+          "dye:CLOTH:pure_indigo_violet": { h: 149.568, s: 10.696, v: -0.673 },
+          "dye:CLOTH:bright_indigo_violet": { h: 149.693, s: 2.015, v: -0.239 },
+          "dye:CLOTH:pale_indigo_violet": { h: 149.615, s: 0.047, v: 0.088 },
+          "dye:CLOTH:deep_indigo_violet": { h: 149.615, s: 10.689, v: -0.82 },
+          "dye:CLOTH:muted_indigo_violet": { h: 149.615, s: 2.015, v: -0.582 },
+          "dye:CLOTH:dusty_indigo_violet": { h: 150.181, s: 0.059, v: -0.403 },
+          "dye:CLOTH:shadow_indigo_violet": { h: 149.749, s: 10.668, v: -0.886 },
+          "dye:CLOTH:dark_muted_indigo_violet": { h: 149.839, s: 1.974, v: -0.732 },
+          "dye:CLOTH:smoky_indigo_violet": { h: 150.93, s: 0.078, v: -0.621 },
+          "dye:CLOTH:pure_violet": { h: 160.617, s: 9.373, v: -0.598 },
+          "dye:CLOTH:bright_violet": { h: 160.617, s: 2.107, v: -0.194 },
+          "dye:CLOTH:pale_violet": { h: 160.617, s: 0.12, v: 0.11 },
+          "dye:CLOTH:deep_violet": { h: 160.617, s: 9.373, v: -0.779 },
+          "dye:CLOTH:muted_violet": { h: 160.617, s: 2.107, v: -0.558 },
+          "dye:CLOTH:dusty_violet": { h: 160.617, s: 0.129, v: -0.391 },
+          "dye:CLOTH:shadow_violet": { h: 160.617, s: 9.373, v: -0.86 },
+          "dye:CLOTH:dark_muted_violet": { h: 160.617, s: 2.066, v: -0.717 },
+          "dye:CLOTH:smoky_violet": { h: 160.617, s: 0.145, v: -0.614 },
+          "dye:CLOTH:white": { h: -178, s: -1, v: 0.411 },
+          "dye:CLOTH:silver": { h: -178, s: -1, v: 0.062 },
+          "dye:CLOTH:gray": { h: -180, s: -1, v: -0.292 },
+          "dye:CLOTH:charcoal": { h: -171, s: -1, v: -0.718 },
+          "dye:CLOTH:cream": { h: -85.901, s: -0.522, v: 0.331 },
+          "dye:CLOTH:brown": { h: -106.121, s: 1.187, v: -0.549 }
+        };
         const catalog = [];
         hueFamilies.forEach((family, familyIndex) => {
           variants.forEach((variant, variantIndex) => {
@@ -520,7 +547,7 @@ window.SCRATCHBONES_CONFIG = {
               group: "cloth",
               dyeSlot: "CLOTH",
               dyeCategory: family.id,
-              color: fittedCssFilterOffsetsForHex(hex),
+              color: { ...fittedColors["dye:CLOTH:" + variant.id + "_" + family.id] },
               hueFamily: family.label,
               hueFamilyId: family.id,
               hueAngle: family.hueAngle,
@@ -543,7 +570,7 @@ window.SCRATCHBONES_CONFIG = {
             group: "cloth",
             dyeSlot: "CLOTH",
             dyeCategory: "neutral",
-            color: fittedCssFilterOffsetsForHex(neutral.hex),
+            color: { ...fittedColors["dye:CLOTH:" + neutral.id] },
             hex: neutral.hex,
             neutral: true,
             acquisition: neutral.acquisition,
