@@ -81,9 +81,8 @@
   }
 
   // Dyes set a bodyColor slot (CLOTH, HAT, TORSO, …) to a specific tint.
-  // Colors are offsets applied to the configured mint base via the same CSS filter
-  // pipeline used by lobby swatches and portrait canvas rendering:
-  // hue-rotate(...) saturate(...) brightness(...).
+  // Colors are offsets applied to the configured swatch base by the same CSS filter
+  // pipeline used for lobby swatches and portrait canvas rendering.
   const CONFIG_DYES = window.SCRATCHBONES_CONFIG?.game?.dyes || {};
   const DYE_CATALOG = Array.isArray(CONFIG_DYES.catalog) ? CONFIG_DYES.catalog : [];
   const DYE_CATEGORIES = Array.isArray(CONFIG_DYES.categories) ? CONFIG_DYES.categories : [];
