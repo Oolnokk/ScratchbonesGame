@@ -7,6 +7,7 @@ import { initDebugPanelInterceptor } from './debug/panel.js';
 import { initCandleLight } from './fx/candlelight.js';
 import { initTrickBoneGlow } from './fx/trickBoneGlow.js';
 import { createLayerManager } from './ui/layerManager.js';
+import { createTutorial } from './tutorial.js';
 
     initDebugPanelInterceptor();
     const DEBUG_ENABLED = true;
@@ -605,6 +606,7 @@ import { createLayerManager } from './ui/layerManager.js';
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
     state.humanSeat = 0; // index of the currently active human player (hot-seat support)
+    state.tutorialPaused = false; // set true while the tutorial overlay is showing
     const layoutDiagnostics = createLayoutDiagnosticsState();
    function mulberry32(a) {
       return function() {
@@ -935,6 +937,7 @@ import { createLayerManager } from './ui/layerManager.js';
     }
 
     function scheduleNextTurnOrCover() {
+      if (state.tutorialPaused) return;
       if (!isHumanSeat(state.currentTurn)) {
         scheduleAiTurn();
       }
@@ -1272,6 +1275,7 @@ import { createLayerManager } from './ui/layerManager.js';
       render();
     }
     function humanPlay() {
+      if (state.tutorialPaused) return;
       if (state.betting) return;
       const cards = selectedCards();
       const declaredRank = Number(document.getElementById('declareRank').value);
@@ -1289,6 +1293,7 @@ import { createLayerManager } from './ui/layerManager.js';
       performPlay(state.humanSeat, cards.map(c => c.id), declaredRank);
     }
     function humanConcedeRound() {
+      if (state.tutorialPaused) return;
       if (state.gameOver || state.currentTurn !== state.humanSeat || state.challengeWindow || state.betting) return;
       if (state.declaredRank === null) {
         setBanner('You can only concede after a declaration exists.', 'warn');
@@ -1584,6 +1589,7 @@ import { createLayerManager } from './ui/layerManager.js';
       }
     }
     function humanChallenge() {
+      if (state.tutorialPaused) return;
       if (!state.challengeWindow || state.gameOver || state.betting) return;
       const target = state.challengeWindow.lastPlay.playerIndex;
       if (target === state.humanSeat) return;
@@ -1592,6 +1598,7 @@ import { createLayerManager } from './ui/layerManager.js';
       startChallenge(state.humanSeat, target);
     }
     function humanAcceptNoChallenge() {
+      if (state.tutorialPaused) return;
       if (!state.challengeWindow || state.gameOver || state.betting) return;
       const target = state.challengeWindow.lastPlay.playerIndex;
       traceAction('local.accept-no-challenge', { seat: state.humanSeat, target });
@@ -2660,12 +2667,15 @@ import { createLayerManager } from './ui/layerManager.js';
       }
     }
     function humanBetAction(action) {
+      if (state.tutorialPaused) return;
       void resolveBetAction(state.humanSeat, action).catch(e => console.error('[betting] humanBetAction error', e));
     }
     function humanOpenTierSelected(tierId) {
+      if (state.tutorialPaused) return;
       void resolveBetAction(state.humanSeat, { type: 'open-tier', tierId }).catch(e => console.error('[betting] humanOpenTierSelected error', e));
     }
     function humanRaiseTierSelected(tierId) {
+      if (state.tutorialPaused) return;
       void resolveBetAction(state.humanSeat, { type: 'raise-tier', tierId }).catch(e => console.error('[betting] humanRaiseTierSelected error', e));
     }
     function transferCardsBetweenHands(fromId, toId, limit) {
@@ -6166,8 +6176,28 @@ import { createLayerManager } from './ui/layerManager.js';
       if (net?.isHost()) net.on('action', handleNetworkAction);
     }
 
-    // Expose both entry points so the lobby can call them.
+    // Tutorial entry point: runs a normal PvE game but pauses it immediately
+    // after the cards are dealt so the player can step through the UI walkthrough
+    // before their first move.  `state.tutorialPaused` is cleared by the
+    // tutorial's onDone callback, which also restarts the turn scheduler.
+    async function startTutorialGame() {
+      state.tutorialPaused = true;
+      await startGameWithNetwork();
+      // startGame() has called render() and scheduleNextTurnOrCover().
+      // Because tutorialPaused=true, the scheduler returned early — the board is
+      // rendered and waiting.  Now show the tutorial overlay.
+      const tut = createTutorial({
+        onDone: () => {
+          state.tutorialPaused = false;
+          scheduleNextTurnOrCover();
+        },
+      });
+      tut.show();
+    }
+
+    // Expose all entry points so the lobby can call them.
     window.scratchbonesStartGame = startGameWithNetwork;
+    window.scratchbonesStartTutorial = startTutorialGame;
     window.scratchbonesStartClient = startClient;
     window.dispatchEvent(new CustomEvent('scratchbones:ready'));
     // Auto-start only when the lobby system is absent (dev/standalone mode).
