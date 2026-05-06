@@ -118,6 +118,17 @@ const DEFAULT_CSS_ROOT_VARS = {
   '--layout-card-shadow-spread': '-2px',
   '--layout-card-shadow-alpha': '0.34',
   '--layout-card-contact-alpha': '0.2',
+  '--layout-trick-info-glyph-size': '28px',
+  '--layout-trick-info-gap': '6px',
+  '--layout-trick-info-item-gap': '4px',
+  '--layout-trick-info-margin-top': '6px',
+  '--layout-trick-info-letter-spacing': '0.05em',
+  '--layout-trick-info-max-width': '220px',
+  '--layout-trick-symbol-filter': 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))',
+  '--layout-punish-button-card-width': '34px',
+  '--layout-punish-button-card-height': '48px',
+  '--layout-cinematic-punish-button-card-width': '96px',
+  '--layout-cinematic-punish-button-card-height': '136px',
 };
 
 const DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG = {
@@ -681,6 +692,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       },
       claimRankGlyphTemplateSrc: rawGameConfig.assets?.symbols?.claimRankGlyphTemplateSrc ?? './docs/assets/symbols/boneglyph{rank}.png',
       claimMultiplyGlyphSrc: rawGameConfig.assets?.symbols?.claimMultiplyGlyphSrc ?? './docs/assets/symbols/multglyph.png',
+      trickGlyphSrc: normalizeStringMap(rawGameConfig.assets?.symbols?.trickGlyphSrc, DEFAULT_TRICK_GLYPH_SRC),
       cinematicTokenIconSrc: rawGameConfig.assets?.hud?.cinematicTokenIconSrc ?? './docs/assets/hud/coin_tinmoon.png',
       stakeTierCoinSrc: rawGameConfig.assets?.hud?.stakeTierCoinSrc ?? { sun: './docs/assets/hud/coin_sun.png', tinmoon: './docs/assets/hud/coin_tinmoon.png', eclipse: './docs/assets/hud/coin_eclipse.png' },
       claimClusterFontFamily: rawGameConfig.assets?.hud?.claimClusterFontFamily ?? '"KhymeryyanRomanLetters+Numbers", serif',

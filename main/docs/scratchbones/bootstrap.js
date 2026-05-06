@@ -2913,6 +2913,42 @@ import { createTutorial } from './tutorial.js';
     function rankAssetFromTemplate(template, rank) {
       return String(template || '').replaceAll('{rank}', String(rank));
     }
+    function resolveTrickBoneSymbolAsset(trickType) {
+      const key = String(trickType || '').trim();
+      if (!key) return null;
+      const src = String(SCRATCHBONES_GAME.assets?.trickGlyphSrc?.[key] || '').trim();
+      return src || null;
+    }
+    function renderTrickBoneSymbolContainer(trickType, { className = '' } = {}) {
+      const key = String(trickType || '').trim();
+      if (!key) return '';
+      const src = resolveTrickBoneSymbolAsset(key);
+      const extraClass = String(className || '').trim();
+      return `<span class="trickSymbolContainer${extraClass ? ` ${escapeHtml(extraClass)}` : ''}" data-trick-symbol="${escapeHtml(key)}">${src ? `<img class="trickSymbolImg" src="${escapeHtml(src)}" alt="${escapeHtml(key)} trick symbol" loading="lazy" data-optional-symbol="true">` : ''}</span>`;
+    }
+    function trickBoneDisplayLabel(trickType) {
+      const key = String(trickType || '').trim();
+      const configuredLabel = String(TRICK_BONE_DEFINITIONS[key]?.label || '').trim();
+      if (configuredLabel) return configuredLabel;
+      return key
+        .replace(/[_-]+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+    }
+    function sortedTrickCountEntries(trickCounts = {}) {
+      return Object.entries(trickCounts || {})
+        .map(([trickType, count]) => [String(trickType || '').trim(), Math.max(0, Number(count) || 0)])
+        .filter(([trickType, count]) => trickType && count > 0)
+        .sort(([typeA], [typeB]) => trickBoneDisplayLabel(typeA).localeCompare(trickBoneDisplayLabel(typeB)));
+    }
+    function renderTrickDeckInfo(composition = deckCompositionSnapshot()) {
+      const entries = sortedTrickCountEntries(composition?.trickCounts);
+      const total = entries.reduce((sum, [, count]) => sum + count, 0);
+      const rows = entries.length
+        ? entries.map(([trickType, count]) => `<span class="trickDeckInfoItem">${renderTrickBoneSymbolContainer(trickType)}<span>${escapeHtml(trickBoneDisplayLabel(trickType))} × ${count}</span></span>`).join('')
+        : '<span class="trickDeckInfoItem">No Trick Bones</span>';
+      return `<div class="trickDeckInfo" data-trick-deck-info="true"><div class="trickDeckInfoTitle tiny">Deck Trick Bones: ${total}</div><div class="trickDeckInfoRows tiny">${rows}</div></div>`;
+    }
     function formatChallengePrompt(lastPlay) {
       return SCRATCHBONES_GAME.uiText.challengePromptTemplate
         .replaceAll('{seat}', seatLabel(lastPlay.playerIndex))
@@ -2981,6 +3017,14 @@ import { createTutorial } from './tutorial.js';
       await cardAssetPreloadPromise;
     }
     function wireScratchboneImageFallbacks(root = document) {
+      root.querySelectorAll('img[data-optional-symbol="true"]').forEach(img => {
+        if (img.dataset.optionalSymbolWired === 'true') return;
+        img.dataset.optionalSymbolWired = 'true';
+        img.addEventListener('error', () => {
+          img.classList.add('trick-symbol-missing');
+          img.setAttribute('aria-hidden', 'true');
+        }, { once: true });
+      });
       root.querySelectorAll('img[data-fallback-src]').forEach(img => {
         const fallbackSrc = img.getAttribute('data-fallback-src');
         if (!fallbackSrc || img.dataset.fallbackApplied === 'true') return;
@@ -4233,7 +4277,7 @@ import { createTutorial } from './tutorial.js';
         cardEl.style.height = `${(height * deckScale).toFixed(3)}px`;
       });
       const deckLabelGap = Number(deckPlaceholderConfig.labelGap);
-      const deckLabel = app.querySelector('.tableDeckPlaceholder .tiny');
+      const deckLabel = app.querySelector('.tableDeckPlaceholder .tableDeckLabel');
       if (deckLabel && deckLabelGap > 0) deckLabel.style.marginTop = `${(deckLabelGap * deckScale).toFixed(3)}px`;
     }
 
@@ -4572,7 +4616,8 @@ import { createTutorial } from './tutorial.js';
               }).join('');
             })()}
           </div>
-          <div class="tiny" style="font-weight:700;letter-spacing:.08em;">DECK</div>
+          <div class="tiny tableDeckLabel" style="font-weight:700;letter-spacing:.08em;">DECK</div>
+          ${renderTrickDeckInfo(deckCompositionSnapshot())}
         </div>
         </div>
         <div class="tableViewHeader">
@@ -6330,6 +6375,7 @@ import { createTutorial } from './tutorial.js';
           challengerOptions: [...(state.challengeWindow.challengerOptions || [])],
           backupCandidates: [...(state.challengeWindow.backupCandidates || [])],
         } : null,
+        deckComposition: deckCompositionSnapshot(),
         betting: state.betting ? {
           play: copyPlay(state.betting.play),
           challengerId: state.betting.challengerId,

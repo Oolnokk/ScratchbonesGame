@@ -758,14 +758,14 @@ window.SCRATCHBONES_CONFIG = {
           "referenceWidthPx": 86
         },
         "deckPlaceholderPx": {
-          "stackWidth": 68,
-          "stackHeight": 96,
+          "stackWidth": 136,
+          "stackHeight": 192,
           "labelGap": 10,
           "referenceCardWidthPx": 58,
           "cards": [
-            { "left": 16, "top": 12, "width": 58, "height": 84, "opacity": 0.55, "brightness": 0.82 },
-            { "left": 9, "top": 6, "width": 58, "height": 84, "opacity": 0.75, "brightness": 0.9 },
-            { "left": 2, "top": 0, "width": 58, "height": 84, "opacity": 1, "brightness": 1 }
+            { "left": 32, "top": 24, "width": 116, "height": 168, "opacity": 0.55, "brightness": 0.82 },
+            { "left": 18, "top": 12, "width": 116, "height": 168, "opacity": 0.75, "brightness": 0.9 },
+            { "left": 4, "top": 0, "width": 116, "height": 168, "opacity": 1, "brightness": 1 }
           ]
         }
       },
@@ -1867,7 +1867,18 @@ window.SCRATCHBONES_CONFIG = {
       "--layout-card-shadow-blur": "12px",
       "--layout-card-shadow-spread": "-2px",
       "--layout-card-shadow-alpha": "0.34",
-      "--layout-card-contact-alpha": "0.2"
+      "--layout-card-contact-alpha": "0.2",
+      "--layout-trick-info-glyph-size": "28px",
+      "--layout-trick-info-gap": "6px",
+      "--layout-trick-info-item-gap": "4px",
+      "--layout-trick-info-margin-top": "6px",
+      "--layout-trick-info-letter-spacing": "0.05em",
+      "--layout-trick-info-max-width": "220px",
+      "--layout-trick-symbol-filter": "drop-shadow(0 1px 2px rgba(0,0,0,0.55))",
+      "--layout-punish-button-card-width": "34px",
+      "--layout-punish-button-card-height": "48px",
+      "--layout-cinematic-punish-button-card-width": "96px",
+      "--layout-cinematic-punish-button-card-height": "136px"
     },
     "uiText": {
       "initialBanner": "Open a round by selecting one or more cards, then declare a number.",
@@ -1900,7 +1911,12 @@ window.SCRATCHBONES_CONFIG = {
       },
       "symbols": {
         "claimRankGlyphTemplateSrc": "./docs/assets/symbols/boneglyph{rank}.png",
-        "claimMultiplyGlyphSrc": "./docs/assets/symbols/multglyph.png"
+        "claimMultiplyGlyphSrc": "./docs/assets/symbols/multglyph.png",
+        "trickGlyphSrc": {
+          "smuggle": "./docs/assets/symbols/smuggleglyph.png",
+          "trap": "./docs/assets/symbols/trapglyph.png",
+          "punish": "./docs/assets/symbols/punishglyph.png"
+        }
       },
       "hud": {
         "cinematicTokenIconSrc": "./docs/assets/hud/coin_tinmoon.png",
