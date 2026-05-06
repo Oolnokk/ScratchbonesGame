@@ -141,7 +141,61 @@ const DEFAULT_TUTORIAL_CONFIG = {
   ringPadPx: 9,
   minVisibleAreaRatio: 0.55,
   panelEdgePaddingPx: 20,
+  steps: {
+    welcome: {
+      title: 'Welcome to Scratchbones!',
+      text: 'This walkthrough will introduce you to the board before your first move. Use the arrows below to step back and forward through each element.',
+    },
+    hand: {
+      title: 'Your Hand',
+      text: '{summary} Tap a card to select it — you can select multiple — then choose a declared rank and press Play.',
+    },
+    'trick-bones': {
+      title: 'Trick Bone Cards',
+      text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: move one of your cards to another player\'s hand.\nTrap Bone: a wild card that can spring during a challenge.\nPunish Bone: arm a punishment before a betting decision to pressure your opponent.',
+    },
+    claim: {
+      title: 'The Claim Display',
+      text: '{summary}',
+    },
+    chips: {
+      title: 'Chips & The Pot',
+      text: 'Chips are how you win. Everyone antes up at the start of each round, growing the pot. Winning a challenge earns you chips from your opponent — but calling a wrong bluff costs you.',
+    },
+    opponents: {
+      title: 'Your Opponents',
+      text: 'Your AI opponents sit in the sidebar. Watch their chip counts and hand sizes. If you believe the last player was bluffing their declared rank, challenge them before you pass your turn!',
+    },
+    controls: {
+      title: 'Your Actions',
+      text: 'Select cards from your hand, choose a declared rank, and press Play. You can Concede (costs 1 chip) to skip without playing. During a challenge window, press Challenge if you think the last claim was a bluff, or Let Pass to accept it.',
+    },
+    log: {
+      title: 'Event Log',
+      text: 'Recent game events appear here. Use it to track what everyone has been playing and spot bluffing patterns over the course of a match.',
+    },
+    ready: {
+      title: "You're Ready!",
+      text: 'You know the board — the tutorial pauses are now off. Good luck, and may the bones favour you.',
+    },
+  },
 };
+
+function normalizeTutorialStepCopy(rawStep, defaultStep) {
+  const raw = rawStep && typeof rawStep === 'object' && !Array.isArray(rawStep) ? rawStep : {};
+  return {
+    title: typeof raw.title === 'string' ? raw.title : defaultStep.title,
+    text: typeof raw.text === 'string' ? raw.text : defaultStep.text,
+  };
+}
+
+function normalizeTutorialSteps(rawSteps) {
+  const raw = rawSteps && typeof rawSteps === 'object' && !Array.isArray(rawSteps) ? rawSteps : {};
+  return Object.fromEntries(Object.entries(DEFAULT_TUTORIAL_CONFIG.steps).map(([stepId, defaultStep]) => [
+    stepId,
+    normalizeTutorialStepCopy(raw[stepId], defaultStep),
+  ]));
+}
 
 function finiteNumberOrDefault(value, fallback) {
   const numeric = Number(value);
@@ -368,6 +422,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       ringPadPx: Math.max(0, finiteNumberOrDefault(rawGameConfig.tutorial?.ringPadPx, DEFAULT_TUTORIAL_CONFIG.ringPadPx)),
       minVisibleAreaRatio: Math.min(1, Math.max(0, finiteNumberOrDefault(rawGameConfig.tutorial?.minVisibleAreaRatio, DEFAULT_TUTORIAL_CONFIG.minVisibleAreaRatio))),
       panelEdgePaddingPx: Math.max(0, finiteNumberOrDefault(rawGameConfig.tutorial?.panelEdgePaddingPx, DEFAULT_TUTORIAL_CONFIG.panelEdgePaddingPx)),
+      steps: normalizeTutorialSteps(rawGameConfig.tutorial?.steps),
     },
     trickBones: {
       defaultUnlocked: defaultUnlockedTrickBones,
