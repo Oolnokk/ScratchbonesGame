@@ -137,6 +137,17 @@ function normalizeStringMap(value, fallback) {
     .filter(([key, mapValue]) => key && mapValue));
 }
 
+const DEFAULT_TUTORIAL_CONFIG = {
+  ringPadPx: 9,
+  minVisibleAreaRatio: 0.55,
+  panelEdgePaddingPx: 20,
+};
+
+function finiteNumberOrDefault(value, fallback) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
 const DEFAULT_LAYER_MANAGER_CONFIG = {
   enabled: true,
   hostZIndex: 45,
@@ -352,6 +363,11 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       wildCount: rawGameConfig.deck?.wildCount ?? 10,
       playerCount: rawGameConfig.deck?.playerCount ?? 4,
       humanNames: rawGameConfig.deck?.humanNames ?? ['You'],
+    },
+    tutorial: {
+      ringPadPx: Math.max(0, finiteNumberOrDefault(rawGameConfig.tutorial?.ringPadPx, DEFAULT_TUTORIAL_CONFIG.ringPadPx)),
+      minVisibleAreaRatio: Math.min(1, Math.max(0, finiteNumberOrDefault(rawGameConfig.tutorial?.minVisibleAreaRatio, DEFAULT_TUTORIAL_CONFIG.minVisibleAreaRatio))),
+      panelEdgePaddingPx: Math.max(0, finiteNumberOrDefault(rawGameConfig.tutorial?.panelEdgePaddingPx, DEFAULT_TUTORIAL_CONFIG.panelEdgePaddingPx)),
     },
     trickBones: {
       defaultUnlocked: defaultUnlockedTrickBones,

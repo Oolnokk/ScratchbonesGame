@@ -18,7 +18,7 @@
 // ── Step definitions ───────────────────────────────────────────────────────────
 // Each step has:
 //   id      – stable identifier (not displayed)
-//   target  – function returning an HTMLElement to spotlight (or null)
+//   target  – function returning one or more candidate HTMLElements to spotlight
 //   title   – heading text shown in the panel
 //   text    – body explanation shown in the panel
 const TUTORIAL_STEPS = [
@@ -30,50 +30,52 @@ const TUTORIAL_STEPS = [
   },
   {
     id: 'hand',
-    target: () => document.querySelector('[data-proj-id="hand"]'),
+    target: () => [document.querySelector('[data-proj-id="hand"]')],
     title: 'Your Hand',
     text: 'These are your cards. Each card shows a rank from 1 to 10. Wild cards (W) match any rank. Tap a card to select it — you can select multiple — then choose a declared rank and press Play.',
   },
   {
     id: 'trick-bones',
-    target: () =>
-      document.querySelector('[data-proj-id="hand"] [data-trick-glow]') ||
+    target: () => [
+      document.querySelector('[data-proj-id="hand"] [data-trick-glow]'),
       document.querySelector('[data-proj-id="hand"]'),
+    ],
     title: 'Trick Bone Cards',
     text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: move one of your cards to another player\'s hand.\nTrap Bone: a wild card that can spring during a challenge.\nPunish Bone: arm a punishment before a betting decision to pressure your opponent.',
   },
   {
     id: 'claim',
-    target: () => document.querySelector('[data-proj-id="claim-cluster"]'),
+    target: () => [
+      document.querySelector('[data-proj-id="claim-cluster"]'),
+      document.querySelector('.tableViewCards'),
+    ],
     title: 'The Claim Display',
     text: 'The centre of the table shows the active claim: the declared rank and how many cards were played face-down. Once a rank is declared, every player this round must play cards and declare that same rank.',
   },
   {
     id: 'chips',
-    target: () => document.querySelector('[data-proj-id="topbar"]'),
+    target: () => [document.querySelector('[data-proj-id="topbar"]')],
     title: 'Chips & The Pot',
     text: 'Chips are how you win. Everyone antes up at the start of each round, growing the pot. Winning a challenge earns you chips from your opponent — but calling a wrong bluff costs you.',
   },
   {
     id: 'opponents',
-    target: () => document.querySelector('[data-proj-id="sidebar"]'),
+    target: () => [document.querySelector('[data-proj-id="sidebar"]')],
     title: 'Your Opponents',
     text: 'Your AI opponents sit in the sidebar. Watch their chip counts and hand sizes. If you believe the last player was bluffing their declared rank, challenge them before you pass your turn!',
   },
   {
     id: 'controls',
-    target: () =>
-      document.querySelector('[data-proj-id="controls"]') ||
+    target: () => [
+      document.querySelector('[data-proj-id="controls"]'),
       document.querySelector('[data-proj-id="challenge-prompt"]'),
+    ],
     title: 'Your Actions',
     text: 'Select cards from your hand, choose a declared rank, and press Play. You can Concede (costs 1 chip) to skip without playing. During a challenge window, press Challenge if you think the last claim was a bluff, or Let Pass to accept it.',
   },
   {
     id: 'log',
-    target: () => {
-      const el = document.querySelector('[data-proj-id="log"]');
-      return el && el.offsetParent !== null ? el : null;
-    },
+    target: () => [document.querySelector('[data-proj-id="log"]')],
     title: 'Event Log',
     text: 'Recent game events appear here. Use it to track what everyone has been playing and spot bluffing patterns over the course of a match.',
   },
@@ -86,7 +88,11 @@ const TUTORIAL_STEPS = [
 ];
 
 // ── createTutorial ─────────────────────────────────────────────────────────────
-export function createTutorial({ onDone } = {}) {
+export function createTutorial({ onDone, gameConfig } = {}) {
+  const tutorialConfig = gameConfig?.tutorial || {};
+  const ringPadPx = Math.max(0, Number(tutorialConfig.ringPadPx) || 0);
+  const minVisibleAreaRatio = Math.min(1, Math.max(0, Number(tutorialConfig.minVisibleAreaRatio) || 0));
+  const panelEdgePaddingPx = Math.max(0, Number(tutorialConfig.panelEdgePaddingPx) || 0);
   let currentStep = 0;
   let overlayEl = null;
   let backdropEl = null;
@@ -105,9 +111,10 @@ export function createTutorial({ onDone } = {}) {
     if (!overlayEl) {
       overlayEl = document.createElement('div');
       overlayEl.id = 'sb-tutorial-overlay';
-      const mountPoint = document.getElementById('app') || document.body;
-      mountPoint.appendChild(overlayEl);
+      document.body.appendChild(overlayEl);
     }
+
+    if (overlayEl.parentNode !== document.body) document.body.appendChild(overlayEl);
 
     overlayEl.setAttribute('role', 'dialog');
     overlayEl.setAttribute('aria-modal', 'true');
@@ -180,10 +187,73 @@ export function createTutorial({ onDone } = {}) {
   }
 
   // ── Target resolution ────────────────────────────────────────────────────────
+  function normalizeTargetCandidates(rawTarget) {
+    if (!rawTarget) return [];
+    if (rawTarget instanceof Element) return [rawTarget];
+    if (typeof NodeList !== 'undefined' && rawTarget instanceof NodeList) return [...rawTarget];
+    if (Array.isArray(rawTarget)) return rawTarget.flatMap((entry) => normalizeTargetCandidates(entry));
+    return [];
+  }
+
+  function intersectRects(a, b) {
+    const left = Math.max(a.left, b.left);
+    const top = Math.max(a.top, b.top);
+    const right = Math.min(a.right, b.right);
+    const bottom = Math.min(a.bottom, b.bottom);
+    return {
+      left,
+      top,
+      right,
+      bottom,
+      width: Math.max(0, right - left),
+      height: Math.max(0, bottom - top),
+    };
+  }
+
+  function clippedVisibleRect(targetEl) {
+    if (!targetEl || !targetEl.isConnected) return null;
+    const rect = targetEl.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+
+    let visibleRect = intersectRects(rect, {
+      left: 0,
+      top: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+    });
+
+    let parentEl = targetEl.parentElement;
+    while (parentEl && parentEl !== document.body && visibleRect.width && visibleRect.height) {
+      const style = window.getComputedStyle(parentEl);
+      const clipsX = /auto|scroll|hidden|clip/.test(style.overflowX || '');
+      const clipsY = /auto|scroll|hidden|clip/.test(style.overflowY || '');
+      if (clipsX || clipsY) {
+        const parentRect = parentEl.getBoundingClientRect();
+        visibleRect = intersectRects(visibleRect, parentRect);
+      }
+      parentEl = parentEl.parentElement;
+    }
+
+    return visibleRect.width && visibleRect.height ? visibleRect : null;
+  }
+
+  function isVisibleTutorialTarget(targetEl) {
+    if (!targetEl || !targetEl.isConnected) return false;
+    const style = window.getComputedStyle(targetEl);
+    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+    const rect = targetEl.getBoundingClientRect();
+    const visibleRect = clippedVisibleRect(targetEl);
+    if (!visibleRect) return false;
+    const totalArea = rect.width * rect.height;
+    const visibleArea = visibleRect.width * visibleRect.height;
+    return totalArea > 0 && (visibleArea / totalArea) >= minVisibleAreaRatio;
+  }
+
   function resolveTarget(step) {
     if (!step.target) return null;
     try {
-      return step.target();
+      const candidates = normalizeTargetCandidates(step.target());
+      return candidates.find((candidate) => isVisibleTutorialTarget(candidate)) || null;
     } catch {
       return null;
     }
@@ -191,26 +261,24 @@ export function createTutorial({ onDone } = {}) {
 
   // ── Ring positioning ─────────────────────────────────────────────────────────
   // The ring is positioned with CSS `position: fixed` coordinates derived from
-  // getBoundingClientRect() — the overlay itself is also `position: fixed` so
-  // these values map 1:1 to the overlay's coordinate space.
-  const RING_PAD = 9; // extra pixels around the target element
-
+  // the clipped visible portion of getBoundingClientRect(). The overlay is
+  // reparented to <body> so transformed game layout containers cannot offset it.
   function positionRing(targetEl) {
     if (!ringEl) return;
     if (!targetEl) {
       ringEl.style.display = 'none';
       return;
     }
-    const rect = targetEl.getBoundingClientRect();
-    if (!rect.width && !rect.height) {
+    const rect = clippedVisibleRect(targetEl);
+    if (!rect?.width || !rect?.height) {
       ringEl.style.display = 'none';
       return;
     }
     ringEl.style.display = 'block';
-    ringEl.style.left = `${rect.left - RING_PAD}px`;
-    ringEl.style.top = `${rect.top - RING_PAD}px`;
-    ringEl.style.width = `${rect.width + RING_PAD * 2}px`;
-    ringEl.style.height = `${rect.height + RING_PAD * 2}px`;
+    ringEl.style.left = `${rect.left - ringPadPx}px`;
+    ringEl.style.top = `${rect.top - ringPadPx}px`;
+    ringEl.style.width = `${rect.width + ringPadPx * 2}px`;
+    ringEl.style.height = `${rect.height + ringPadPx * 2}px`;
   }
 
   // ── Panel positioning ────────────────────────────────────────────────────────
@@ -220,19 +288,24 @@ export function createTutorial({ onDone } = {}) {
   function positionPanel(targetEl) {
     if (!panelEl) return;
     if (targetEl) {
-      const rect = targetEl.getBoundingClientRect();
+      const rect = clippedVisibleRect(targetEl);
+      if (!rect) {
+        panelEl.style.top = 'auto';
+        panelEl.style.bottom = `${panelEdgePaddingPx}px`;
+        return;
+      }
       const midY = rect.top + rect.height / 2;
       const vh = window.innerHeight;
       if (midY > vh * 0.50) {
         panelEl.style.bottom = 'auto';
-        panelEl.style.top = '20px';
+        panelEl.style.top = `${panelEdgePaddingPx}px`;
       } else {
         panelEl.style.top = 'auto';
-        panelEl.style.bottom = '20px';
+        panelEl.style.bottom = `${panelEdgePaddingPx}px`;
       }
     } else {
       panelEl.style.top = 'auto';
-      panelEl.style.bottom = '20px';
+      panelEl.style.bottom = `${panelEdgePaddingPx}px`;
     }
   }
 

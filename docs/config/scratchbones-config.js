@@ -447,6 +447,11 @@ window.SCRATCHBONES_CONFIG = {
       "challengeRandomNudgeMax": 0.16,
       "bettingConfidenceSuspicionWeight": 0.55
     },
+    "tutorial": {
+      "ringPadPx": 9,
+      "minVisibleAreaRatio": 0.55,
+      "panelEdgePaddingPx": 20
+    },
     "layout": {
       "mode": "authored",
       "animation": {
