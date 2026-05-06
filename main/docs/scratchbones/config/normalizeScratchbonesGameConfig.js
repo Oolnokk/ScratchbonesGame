@@ -12,6 +12,7 @@ const DEFAULT_AUTHORED_BOXES = {
 const DEFAULT_PUNISH_BONE_SPIN_CONFIG = {
   spinDurationMs: 720,
   reducedMotionSpinDurationMs: 7200,
+  rotationTurns: 1,
   blurPx: 1.4,
   scaleXMin: 0.56,
   shadowBlurPx: 12,
@@ -147,6 +148,7 @@ function normalizePunishBoneSpinConfig(value) {
   return {
     spinDurationMs: normalizeFiniteNumber(source.spinDurationMs, DEFAULT_PUNISH_BONE_SPIN_CONFIG.spinDurationMs, { min: 40 }),
     reducedMotionSpinDurationMs: normalizeFiniteNumber(source.reducedMotionSpinDurationMs, DEFAULT_PUNISH_BONE_SPIN_CONFIG.reducedMotionSpinDurationMs, { min: 40 }),
+    rotationTurns: normalizeFiniteNumber(source.rotationTurns, DEFAULT_PUNISH_BONE_SPIN_CONFIG.rotationTurns, { min: 0.25 }),
     blurPx: normalizeFiniteNumber(source.blurPx, DEFAULT_PUNISH_BONE_SPIN_CONFIG.blurPx, { min: 0 }),
     scaleXMin: normalizeFiniteNumber(source.scaleXMin, DEFAULT_PUNISH_BONE_SPIN_CONFIG.scaleXMin, { min: 0.05, max: 1 }),
     shadowBlurPx: normalizeFiniteNumber(source.shadowBlurPx, DEFAULT_PUNISH_BONE_SPIN_CONFIG.shadowBlurPx, { min: 0 }),
@@ -713,6 +715,9 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         ...(rawGameConfig.cssRootVars || {}),
         '--punish-bone-spin-duration': `${punishBoneSpin.spinDurationMs}ms`,
         '--punish-bone-spin-reduced-motion-duration': `${punishBoneSpin.reducedMotionSpinDurationMs}ms`,
+        '--punish-bone-spin-start-rotation': '0turn',
+        '--punish-bone-spin-mid-rotation': `${punishBoneSpin.rotationTurns / 2}turn`,
+        '--punish-bone-spin-end-rotation': `${punishBoneSpin.rotationTurns}turn`,
         '--punish-bone-spin-blur': `${punishBoneSpin.blurPx}px`,
         '--punish-bone-spin-scale-x-min': String(punishBoneSpin.scaleXMin),
         '--punish-bone-spin-shadow-blur': `${punishBoneSpin.shadowBlurPx}px`,

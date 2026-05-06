@@ -76,13 +76,17 @@ import { createTutorial } from './tutorial.js';
           animation: punishBoneTopSpin var(--punish-bone-spin-duration) linear infinite;
         }
         @keyframes punishBoneTopSpin {
-          0%, 100% {
-            transform: rotate(0turn) scaleX(1) translateZ(0);
+          0% {
+            transform: rotate(var(--punish-bone-spin-start-rotation)) scaleX(1) translateZ(0);
             filter: blur(0) drop-shadow(0 0 0 var(--warning));
           }
           50% {
-            transform: rotate(0.5turn) scaleX(var(--punish-bone-spin-scale-x-min)) translateZ(0);
+            transform: rotate(var(--punish-bone-spin-mid-rotation)) scaleX(var(--punish-bone-spin-scale-x-min)) translateZ(0);
             filter: blur(var(--punish-bone-spin-blur)) drop-shadow(0 0 var(--punish-bone-spin-shadow-blur) var(--warning));
+          }
+          100% {
+            transform: rotate(var(--punish-bone-spin-end-rotation)) scaleX(1) translateZ(0);
+            filter: blur(0) drop-shadow(0 0 0 var(--warning));
           }
         }
         @media (prefers-reduced-motion: reduce) {

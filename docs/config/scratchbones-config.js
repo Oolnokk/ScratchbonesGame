@@ -700,6 +700,7 @@ window.SCRATCHBONES_CONFIG = {
       "punishBoneSpin": {
         "spinDurationMs": 720,
         "reducedMotionSpinDurationMs": 7200,
+        "rotationTurns": 1,
         "blurPx": 1.4,
         "scaleXMin": 0.56,
         "shadowBlurPx": 12
