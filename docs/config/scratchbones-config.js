@@ -1791,7 +1791,16 @@ window.SCRATCHBONES_CONFIG = {
       "--layout-card-shadow-blur": "12px",
       "--layout-card-shadow-spread": "-2px",
       "--layout-card-shadow-alpha": "0.34",
-      "--layout-card-contact-alpha": "0.2"
+      "--layout-card-contact-alpha": "0.2",
+      "--layout-trick-symbol-size": "34%",
+      "--layout-trick-symbol-inset-top": "8%",
+      "--layout-trick-symbol-inset-right": "8%",
+      "--layout-trick-symbol-opacity": "0.95",
+      "--layout-trick-symbol-filter": "drop-shadow(0 1px 2px rgba(0,0,0,0.55))",
+      "--layout-punish-button-card-width": "34px",
+      "--layout-punish-button-card-height": "48px",
+      "--layout-cinematic-punish-button-card-width": "96px",
+      "--layout-cinematic-punish-button-card-height": "136px"
     },
     "uiText": {
       "initialBanner": "Open a round by selecting one or more cards, then declare a number.",
@@ -1824,7 +1833,12 @@ window.SCRATCHBONES_CONFIG = {
       },
       "symbols": {
         "claimRankGlyphTemplateSrc": "./docs/assets/symbols/boneglyph{rank}.png",
-        "claimMultiplyGlyphSrc": "./docs/assets/symbols/multglyph.png"
+        "claimMultiplyGlyphSrc": "./docs/assets/symbols/multglyph.png",
+        "trickGlyphSrc": {
+          "smuggle": "./docs/assets/symbols/smuggleglyph.png",
+          "trap": "./docs/assets/symbols/trapglyph.png",
+          "punish": "./docs/assets/symbols/punishglyph.png"
+        }
       },
       "hud": {
         "cinematicTokenIconSrc": "./docs/assets/hud/coin_tinmoon.png",

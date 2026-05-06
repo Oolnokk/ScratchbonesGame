@@ -9,6 +9,12 @@ const DEFAULT_AUTHORED_BOXES = {
   challengePrompt: { x: 960, y: 699, width: 280, height: 140 },
 };
 
+const DEFAULT_TRICK_GLYPH_SRC = {
+  smuggle: './docs/assets/symbols/smuggleglyph.png',
+  trap: './docs/assets/symbols/trapglyph.png',
+  punish: './docs/assets/symbols/punishglyph.png',
+};
+
 const DEFAULT_CSS_ROOT_VARS = {
   '--bg': '#15110f',
   '--bg2': '#221917',
@@ -109,6 +115,15 @@ const DEFAULT_CSS_ROOT_VARS = {
   '--layout-card-shadow-spread': '-2px',
   '--layout-card-shadow-alpha': '0.34',
   '--layout-card-contact-alpha': '0.2',
+  '--layout-trick-symbol-size': '34%',
+  '--layout-trick-symbol-inset-top': '8%',
+  '--layout-trick-symbol-inset-right': '8%',
+  '--layout-trick-symbol-opacity': '0.95',
+  '--layout-trick-symbol-filter': 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))',
+  '--layout-punish-button-card-width': '34px',
+  '--layout-punish-button-card-height': '48px',
+  '--layout-cinematic-punish-button-card-width': '96px',
+  '--layout-cinematic-punish-button-card-height': '136px',
 };
 
 const DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG = {
@@ -653,6 +668,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       },
       claimRankGlyphTemplateSrc: rawGameConfig.assets?.symbols?.claimRankGlyphTemplateSrc ?? './docs/assets/symbols/boneglyph{rank}.png',
       claimMultiplyGlyphSrc: rawGameConfig.assets?.symbols?.claimMultiplyGlyphSrc ?? './docs/assets/symbols/multglyph.png',
+      trickGlyphSrc: normalizeStringMap(rawGameConfig.assets?.symbols?.trickGlyphSrc, DEFAULT_TRICK_GLYPH_SRC),
       cinematicTokenIconSrc: rawGameConfig.assets?.hud?.cinematicTokenIconSrc ?? './docs/assets/hud/coin_tinmoon.png',
       stakeTierCoinSrc: rawGameConfig.assets?.hud?.stakeTierCoinSrc ?? { sun: './docs/assets/hud/coin_sun.png', tinmoon: './docs/assets/hud/coin_tinmoon.png', eclipse: './docs/assets/hud/coin_eclipse.png' },
       claimClusterFontFamily: rawGameConfig.assets?.hud?.claimClusterFontFamily ?? '"KhymeryyanRomanLetters+Numbers", serif',
