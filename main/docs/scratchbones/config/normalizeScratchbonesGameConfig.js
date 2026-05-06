@@ -339,6 +339,12 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
 };
 
 
+const DEFAULT_TRICK_GLYPH_SRC = {
+  smuggle: './docs/assets/symbols/smuggleglyph.png',
+  trap: './docs/assets/symbols/trapglyph.png',
+  punish: './docs/assets/symbols/punishglyph.png',
+};
+
 const DEFAULT_TRICK_BONE_DEFINITIONS = {
   smuggle: { id: 'smuggle', label: 'Smuggle Bone', description: 'When your Smuggle claim passes without challenge, its non-Smuggle claimed cards leave the table and go into another player\'s hand; human Smuggle users choose the target seat.', wild: false },
   trap: { id: 'trap', label: 'Trap Bone', description: 'If your challenged Trap claim is truthful and the challenge fails, transfer up to the claim size from your hand to the challenger; human defenders choose cards with state.trapSelection.', wild: true },
