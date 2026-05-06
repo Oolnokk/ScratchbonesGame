@@ -19,8 +19,7 @@
 // Each step has:
 //   id      – stable identifier (not displayed)
 //   target  – function returning one or more candidate HTMLElements to spotlight
-//   title   – heading text shown in the panel
-//   text    – body explanation shown in the panel; may be a string or (ctx) => string
+//   dynamicSummary – optional function returning live context text for config templates
 
 function pluralize(count, singular, plural = `${singular}s`) {
   return count === 1 ? singular : plural;
@@ -144,14 +143,11 @@ const TUTORIAL_STEPS = [
   {
     id: 'welcome',
     target: null,
-    title: 'Welcome to Scratchbones!',
-    text: 'This walkthrough will introduce you to the board before your first move. Use the arrows below to step back and forward through each element.',
   },
   {
     id: 'hand',
     target: () => [document.querySelector('[data-proj-id="hand"]')],
-    title: 'Your Hand',
-    text: (ctx = {}) => `${summarizeHand(ctx.hand)}${summarizeSelectedCards(ctx.selectedCards)} Tap a card to select it — you can select multiple — then choose a declared rank and press Play.`,
+    dynamicSummary: (ctx = {}) => `${summarizeHand(ctx.hand)}${summarizeSelectedCards(ctx.selectedCards)}`,
   },
   {
     id: 'trick-bones',
@@ -159,8 +155,6 @@ const TUTORIAL_STEPS = [
       document.querySelector('[data-proj-id="hand"] [data-trick-glow]'),
       document.querySelector('[data-proj-id="hand"]'),
     ],
-    title: 'Trick Bone Cards',
-    text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: move one of your cards to another player\'s hand.\nTrap Bone: a wild card that can spring during a challenge.\nPunish Bone: arm a punishment before a betting decision to pressure your opponent.',
   },
   {
     id: 'claim',
@@ -168,20 +162,15 @@ const TUTORIAL_STEPS = [
       document.querySelector('[data-proj-id="claim-cluster"]'),
       document.querySelector('.tableViewCards'),
     ],
-    title: 'The Claim Display',
-    text: summarizeClaimStep,
+    dynamicSummary: summarizeClaimStep,
   },
   {
     id: 'chips',
     target: () => [document.querySelector('[data-proj-id="topbar"]')],
-    title: 'Chips & The Pot',
-    text: 'Chips are how you win. Everyone antes up at the start of each round, growing the pot. Winning a challenge earns you chips from your opponent — but calling a wrong bluff costs you.',
   },
   {
     id: 'opponents',
     target: () => [document.querySelector('[data-proj-id="sidebar"]')],
-    title: 'Your Opponents',
-    text: 'Your AI opponents sit in the sidebar. Watch their chip counts and hand sizes. If you believe the last player was bluffing their declared rank, challenge them before you pass your turn!',
   },
   {
     id: 'controls',
@@ -189,22 +178,26 @@ const TUTORIAL_STEPS = [
       document.querySelector('[data-proj-id="controls"]'),
       document.querySelector('[data-proj-id="challenge-prompt"]'),
     ],
-    title: 'Your Actions',
-    text: 'Select cards from your hand, choose a declared rank, and press Play. You can Concede (costs 1 chip) to skip without playing. During a challenge window, press Challenge if you think the last claim was a bluff, or Let Pass to accept it.',
   },
   {
     id: 'log',
     target: () => [document.querySelector('[data-proj-id="log"]')],
-    title: 'Event Log',
-    text: 'Recent game events appear here. Use it to track what everyone has been playing and spot bluffing patterns over the course of a match.',
   },
   {
     id: 'ready',
     target: null,
-    title: "You're Ready!",
-    text: "You know the board — the tutorial pauses are now off. Good luck, and may the bones favour you.",
   },
 ];
+
+function resolveTutorialBody(step, stepCopy, context) {
+  const configuredText = typeof stepCopy?.text === 'string' ? stepCopy.text : '';
+  if (typeof step.dynamicSummary !== 'function') return configuredText;
+
+  const summary = String(step.dynamicSummary(context) || '').trim();
+  if (!summary) return configuredText.replace('{summary}', '').trim();
+  if (configuredText.includes('{summary}')) return configuredText.replaceAll('{summary}', summary).trim();
+  return `${summary} ${configuredText}`.trim();
+}
 
 // ── createTutorial ─────────────────────────────────────────────────────────────
 export function createTutorial({ onDone, gameConfig, getContext } = {}) {
@@ -434,14 +427,15 @@ export function createTutorial({ onDone, gameConfig, getContext } = {}) {
     if (index < 0 || index >= steps.length) return;
     currentStep = index;
     const step = steps[index];
+    const stepCopy = tutorialConfig.steps?.[step.id] || {};
     const context = typeof getContext === 'function' ? getContext() : {};
     const targetEl = resolveTarget(step);
-    const body = typeof step.text === 'function' ? step.text(context) : step.text;
+    const body = resolveTutorialBody(step, stepCopy, context);
 
     positionRing(targetEl);
     positionPanel(targetEl);
 
-    if (titleEl) titleEl.textContent = step.title;
+    if (titleEl) titleEl.textContent = typeof stepCopy.title === 'string' ? stepCopy.title : '';
     if (textEl) textEl.textContent = body;
     if (counterEl) counterEl.textContent = `${index + 1} / ${steps.length}`;
 
