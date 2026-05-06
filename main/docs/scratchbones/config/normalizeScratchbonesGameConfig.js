@@ -152,7 +152,7 @@ const DEFAULT_TUTORIAL_CONFIG = {
     },
     'trick-bones': {
       title: 'Trick Bone Cards',
-      text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: move one of your cards to another player\'s hand.\nTrap Bone: a wild card that can spring during a challenge.\nPunish Bone: arm a punishment before a betting decision to pressure your opponent.',
+      text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: when your claim passes without challenge, every non-Smuggle claimed card leaves the table and goes into another player\'s hand; human Smuggle users choose the target seat.\nTrap Bone: if your challenged Trap claim is truthful and the challenge fails, transfer up to the claim size from your hand to the challenger; human defenders choose cards with the Trap selection.\nPunish Bone: during challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.',
     },
     claim: {
       title: 'The Claim Display',
@@ -302,9 +302,9 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
 
 
 const DEFAULT_TRICK_BONE_DEFINITIONS = {
-  smuggle: { id: 'smuggle', label: 'Smuggle Bone', description: 'Move a selected card to another player when the table allows a smuggle reaction.', wild: false },
-  trap: { id: 'trap', label: 'Trap Bone', description: 'A reactive wild trick bone that can spring during a challenge.', wild: true },
-  punish: { id: 'punish', label: 'Punish Bone', description: 'Arm a punishment before a betting decision to pressure the next claim.', wild: false },
+  smuggle: { id: 'smuggle', label: 'Smuggle Bone', description: 'When your Smuggle claim passes without challenge, its non-Smuggle claimed cards leave the table and go into another player\'s hand; human Smuggle users choose the target seat.', wild: false },
+  trap: { id: 'trap', label: 'Trap Bone', description: 'If your challenged Trap claim is truthful and the challenge fails, transfer up to the claim size from your hand to the challenger; human defenders choose cards with state.trapSelection.', wild: true },
+  punish: { id: 'punish', label: 'Punish Bone', description: 'During challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.', wild: false },
 };
 
 function repeatIdsFromCounts(counts = {}) {

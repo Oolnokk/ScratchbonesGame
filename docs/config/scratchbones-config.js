@@ -43,19 +43,19 @@ window.SCRATCHBONES_CONFIG = {
         "smuggle": {
           "id": "smuggle",
           "label": "Smuggle Bone",
-          "description": "Move a selected card to another player when the table allows a smuggle reaction.",
+          "description": "When your Smuggle claim passes without challenge, its non-Smuggle claimed cards leave the table and go into another player's hand; human Smuggle users choose the target seat.",
           "wild": false
         },
         "trap": {
           "id": "trap",
           "label": "Trap Bone",
-          "description": "A reactive wild trick bone that can spring during a challenge.",
+          "description": "If your challenged Trap claim is truthful and the challenge fails, transfer up to the claim size from your hand to the challenger; human defenders choose cards with state.trapSelection.",
           "wild": true
         },
         "punish": {
           "id": "punish",
           "label": "Punish Bone",
-          "description": "Arm a punishment before a betting decision to pressure the next claim.",
+          "description": "During challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.",
           "wild": false
         }
       },
