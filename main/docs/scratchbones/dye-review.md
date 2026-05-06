@@ -8,12 +8,14 @@
   - Neutral dyes: **6** (`White`, `Silver`, `Gray`, `Charcoal`, `Cream`, `Brown`).
 - There is no `Black`, `Onyx`, or black-equivalent dye ID in the active catalog.
 - `White` and `Charcoal` exist for future achievement paths and are excluded from mystery dye pools.
+- Each generated dye keeps an intended `hex` reference color, but its runtime `color` offsets are fitted against the actual `hue-rotate(...) saturate(...) brightness(...)` CSS/canvas filter pipeline used by portraits and swatches. The offsets are intentionally not simple HSV deltas from the mint swatch base.
 
 ## End-to-end dye/avatar variable path
 
 1. `docs/config/scratchbones-config.js` defines:
    - systematic hue family and variant metadata,
-   - the generated dye catalog,
+   - the mint `swatchBase` (`#7dc89a`),
+   - the generated dye catalog, whose `hex` targets are converted into fitted `{ h, s, v }` filter offsets,
    - starter dye IDs,
    - mystery dye pool definitions,
    - the mystery dye price,
@@ -28,10 +30,10 @@
 4. Legacy dye IDs are migrated through `legacyDyeMigrations`; invalid/removed IDs are dropped.
    - Legacy `dye:CLOTH:black` maps to `dye:CLOTH:charcoal` only as a safe visual fallback for old saves.
    - New players do not receive or purchase `Charcoal`; it remains future-achievement metadata.
-5. Collections UI (`docs/js/scratchbones-lobby.js`) reads only owned dyes for normal dye selection, sorts by hue family and variant, and renders swatches from each dye's `color` offsets.
+5. Collections UI (`docs/js/scratchbones-lobby.js`) reads only owned dyes for normal dye selection, sorts by hue family and variant, and renders swatches from the mint base plus each dye's fitted `color` offsets.
 6. Shop UI reads `ScratchbonesAccount.getMysteryDyeShopCatalog()` and shows seven mobile-visible mystery dye items.
 7. `buyMysteryDye(poolId)` deducts the configured bronze price, grants exactly one unowned eligible chromatic dye from that pool, and returns the granted dye.
-8. Multiplayer appearance payloads continue to pass `appliedDyes` as dye IDs; game bootstrap resolves those IDs against the same catalog and applies `dye.color` to portrait/body color slots.
+8. Multiplayer appearance payloads continue to pass `appliedDyes` as dye IDs; game bootstrap resolves those IDs against the same catalog and applies the fitted `dye.color` offsets to portrait/body color slots, where `docs/js/portrait-utils.js` turns them into the same `hue-rotate(...) saturate(...) brightness(...)` filter chain.
 
 ## Mystery dye pools
 
@@ -52,6 +54,7 @@ Pools intentionally overlap on in-between hue families. Pools include Dusty chro
 - no Black/Onyx active catalog entries,
 - unique dye IDs and labels,
 - required chromatic/neutral metadata and rendering fields,
+- generated dye offsets against the actual CSS filter pipeline,
 - exact starter dye ownership,
 - legacy dye migration/removal behavior,
 - mystery pool overlap and exclusions,

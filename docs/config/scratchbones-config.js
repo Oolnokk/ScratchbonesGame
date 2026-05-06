@@ -413,30 +413,98 @@ window.SCRATCHBONES_CONFIG = {
           else [r1, g1, b1] = [c, 0, x];
           return { r: (r1 + m) * 255, g: (g1 + m) * 255, b: (b1 + m) * 255 };
         }
-        function rgbToHsv({ r, g, b }) {
-          const rn = r / 255, gn = g / 255, bn = b / 255;
-          const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
-          const delta = max - min;
-          let h = 0;
-          if (delta !== 0 && max === rn) h = 60 * (((gn - bn) / delta) % 6);
-          else if (delta !== 0 && max === gn) h = 60 * (((bn - rn) / delta) + 2);
-          else if (delta !== 0) h = 60 * (((rn - gn) / delta) + 4);
-          if (h < 0) h += 360;
-          return { h, s: max === 0 ? 0 : delta / max, v: max };
-        }
-        function hueDelta(from, to) {
-          let delta = ((to - from + 540) % 360) - 180;
-          return Number(delta.toFixed(3));
-        }
-        function colorOffsetsForHex(hex) {
-          const base = rgbToHsv(hexToRgb(baseHex));
-          const target = rgbToHsv(hexToRgb(hex));
+        // Match the portrait/swatch runtime exactly: hue-rotate(...) saturate(...) brightness(...).
+        // These helpers fit filter offsets for each target hex instead of using HSV deltas,
+        // because CSS filter math needs much higher saturation and lower brightness for reds.
+        function cssHueRotate({ r, g, b }, degrees) {
+          const radians = degrees * Math.PI / 180;
+          const cos = Math.cos(radians);
+          const sin = Math.sin(radians);
           return {
-            h: hueDelta(base.h, target.h),
-            s: Number((base.s ? (target.s / base.s) - 1 : target.s).toFixed(3)),
-            v: Number((base.v ? (target.v / base.v) - 1 : target.v - 1).toFixed(3))
+            r: (0.213 + 0.787 * cos - 0.213 * sin) * r + (0.715 - 0.715 * cos - 0.715 * sin) * g + (0.072 - 0.072 * cos + 0.928 * sin) * b,
+            g: (0.213 - 0.213 * cos + 0.143 * sin) * r + (0.715 + 0.285 * cos + 0.140 * sin) * g + (0.072 - 0.072 * cos - 0.283 * sin) * b,
+            b: (0.213 - 0.213 * cos - 0.787 * sin) * r + (0.715 - 0.715 * cos + 0.715 * sin) * g + (0.072 + 0.928 * cos + 0.072 * sin) * b
           };
         }
+        function cssSaturate({ r, g, b }, amount) {
+          return {
+            r: (0.213 + 0.787 * amount) * r + (0.715 - 0.715 * amount) * g + (0.072 - 0.072 * amount) * b,
+            g: (0.213 - 0.213 * amount) * r + (0.715 + 0.285 * amount) * g + (0.072 - 0.072 * amount) * b,
+            b: (0.213 - 0.213 * amount) * r + (0.715 - 0.715 * amount) * g + (0.072 + 0.928 * amount) * b
+          };
+        }
+        function cssFilterRgb(hue, saturation, brightness) {
+          const saturated = cssSaturate(cssHueRotate(baseRgb, hue), saturation);
+          return {
+            r: clamp(saturated.r * brightness, 0, 255),
+            g: clamp(saturated.g * brightness, 0, 255),
+            b: clamp(saturated.b * brightness, 0, 255)
+          };
+        }
+        function colorError(rgb, target) {
+          return (rgb.r - target.r) ** 2 + (rgb.g - target.g) ** 2 + (rgb.b - target.b) ** 2;
+        }
+        function lumaRgb({ r, g, b }) {
+          const y = 0.213 * r + 0.715 * g + 0.072 * b;
+          return { r: y, g: y, b: y };
+        }
+        function bestCssFilterForHue(hue, target) {
+          const rotated = cssHueRotate(baseRgb, hue);
+          const gray = lumaRgb(rotated);
+          const chroma = {
+            r: rotated.r - gray.r,
+            g: rotated.g - gray.g,
+            b: rotated.b - gray.b
+          };
+          const grayGray = gray.r ** 2 + gray.g ** 2 + gray.b ** 2;
+          const grayChroma = gray.r * chroma.r + gray.g * chroma.g + gray.b * chroma.b;
+          const chromaChroma = chroma.r ** 2 + chroma.g ** 2 + chroma.b ** 2;
+          const grayTarget = gray.r * target.r + gray.g * target.g + gray.b * target.b;
+          const chromaTarget = chroma.r * target.r + chroma.g * target.g + chroma.b * target.b;
+          const determinant = grayGray * chromaChroma - grayChroma ** 2;
+          let brightness = 1;
+          let saturation = 1;
+          if (Math.abs(determinant) > 1e-9) {
+            brightness = (grayTarget * chromaChroma - chromaTarget * grayChroma) / determinant;
+            const saturatedBrightness = (grayGray * chromaTarget - grayChroma * grayTarget) / determinant;
+            saturation = brightness ? saturatedBrightness / brightness : 0;
+          }
+          brightness = clamp(brightness, 0, 2);
+          saturation = clamp(saturation, 0, 40);
+          return {
+            hue,
+            saturation,
+            brightness,
+            error: colorError(cssFilterRgb(hue, saturation, brightness), target)
+          };
+        }
+        function fittedCssFilterOffsetsForHex(hex) {
+          const target = hexToRgb(hex);
+          let best = { error: Infinity, hue: 0, saturation: 1, brightness: 1 };
+          for (let hue = -180; hue <= 180; hue += 1) {
+            const candidate = bestCssFilterForHue(hue, target);
+            if (candidate.error < best.error) best = candidate;
+          }
+          [0.1, 0.01, 0.001].forEach((step) => {
+            let improved = true;
+            while (improved) {
+              improved = false;
+              [-1, 1].forEach((direction) => {
+                const candidate = bestCssFilterForHue(clamp(best.hue + direction * step, -180, 180), target);
+                if (candidate.error + 1e-9 < best.error) {
+                  best = candidate;
+                  improved = true;
+                }
+              });
+            }
+          });
+          return {
+            h: Number(best.hue.toFixed(3)),
+            s: Number((best.saturation - 1).toFixed(3)),
+            v: Number((best.brightness - 1).toFixed(3))
+          };
+        }
+        const baseRgb = hexToRgb(baseHex);
         const catalog = [];
         hueFamilies.forEach((family, familyIndex) => {
           variants.forEach((variant, variantIndex) => {
@@ -452,7 +520,7 @@ window.SCRATCHBONES_CONFIG = {
               group: "cloth",
               dyeSlot: "CLOTH",
               dyeCategory: family.id,
-              color: colorOffsetsForHex(hex),
+              color: fittedCssFilterOffsetsForHex(hex),
               hueFamily: family.label,
               hueFamilyId: family.id,
               hueAngle: family.hueAngle,
@@ -475,7 +543,7 @@ window.SCRATCHBONES_CONFIG = {
             group: "cloth",
             dyeSlot: "CLOTH",
             dyeCategory: "neutral",
-            color: colorOffsetsForHex(neutral.hex),
+            color: fittedCssFilterOffsetsForHex(neutral.hex),
             hex: neutral.hex,
             neutral: true,
             acquisition: neutral.acquisition,
