@@ -40,7 +40,7 @@ const TUTORIAL_STEPS = [
       document.querySelector('[data-proj-id="hand"] [data-trick-glow]') ||
       document.querySelector('[data-proj-id="hand"]'),
     title: 'Trick Bone Cards',
-    text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: move one of your cards to another player's hand.\nTrap Bone: a wild card that can spring during a challenge.\nPunish Bone: arm a punishment before a betting decision to pressure your opponent.',
+    text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: move one of your cards to another player\'s hand.\nTrap Bone: a wild card that can spring during a challenge.\nPunish Bone: arm a punishment before a betting decision to pressure your opponent.',
   },
   {
     id: 'claim',
