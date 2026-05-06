@@ -9,6 +9,14 @@ const DEFAULT_AUTHORED_BOXES = {
   challengePrompt: { x: 960, y: 699, width: 280, height: 140 },
 };
 
+const DEFAULT_PUNISH_BONE_SPIN_CONFIG = {
+  spinDurationMs: 720,
+  reducedMotionSpinDurationMs: 7200,
+  blurPx: 1.4,
+  scaleXMin: 0.56,
+  shadowBlurPx: 12,
+};
+
 const DEFAULT_CSS_ROOT_VARS = {
   '--bg': '#15110f',
   '--bg2': '#221917',
@@ -126,6 +134,23 @@ const DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG = {
 function normalizeStringArray(value, fallback) {
   const source = Array.isArray(value) ? value : fallback;
   return source.map((item) => String(item || '').trim()).filter(Boolean);
+}
+
+function normalizeFiniteNumber(value, fallback, { min = -Infinity, max = Infinity } = {}) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function normalizePunishBoneSpinConfig(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    spinDurationMs: normalizeFiniteNumber(source.spinDurationMs, DEFAULT_PUNISH_BONE_SPIN_CONFIG.spinDurationMs, { min: 40 }),
+    reducedMotionSpinDurationMs: normalizeFiniteNumber(source.reducedMotionSpinDurationMs, DEFAULT_PUNISH_BONE_SPIN_CONFIG.reducedMotionSpinDurationMs, { min: 40 }),
+    blurPx: normalizeFiniteNumber(source.blurPx, DEFAULT_PUNISH_BONE_SPIN_CONFIG.blurPx, { min: 0 }),
+    scaleXMin: normalizeFiniteNumber(source.scaleXMin, DEFAULT_PUNISH_BONE_SPIN_CONFIG.scaleXMin, { min: 0.05, max: 1 }),
+    shadowBlurPx: normalizeFiniteNumber(source.shadowBlurPx, DEFAULT_PUNISH_BONE_SPIN_CONFIG.shadowBlurPx, { min: 0 }),
+  };
 }
 
 function normalizeStringMap(value, fallback) {
@@ -601,6 +626,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       cinematic: {
         enableLegacyBoxedBranch: rawGameConfig.layout?.cinematic?.enableLegacyBoxedBranch === true,
       },
+      punishBoneSpin: normalizePunishBoneSpinConfig(rawGameConfig.layout?.punishBoneSpin),
       authored: {
         enabled: rawGameConfig.layout?.authored?.enabled !== false,
         designWidthPx: Number(rawGameConfig.layout?.authored?.designWidthPx) || 1600,
@@ -680,10 +706,18 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       },
       coinFallbackTierId: rawGameConfig.assets?.hud?.coinFallbackTierId ?? 'tinmoon',
     },
-    cssRootVars: {
-      ...DEFAULT_CSS_ROOT_VARS,
-      ...(rawGameConfig.cssRootVars || {}),
-    },
+    cssRootVars: (() => {
+      const punishBoneSpin = normalizePunishBoneSpinConfig(rawGameConfig.layout?.punishBoneSpin);
+      return {
+        ...DEFAULT_CSS_ROOT_VARS,
+        ...(rawGameConfig.cssRootVars || {}),
+        '--punish-bone-spin-duration': `${punishBoneSpin.spinDurationMs}ms`,
+        '--punish-bone-spin-reduced-motion-duration': `${punishBoneSpin.reducedMotionSpinDurationMs}ms`,
+        '--punish-bone-spin-blur': `${punishBoneSpin.blurPx}px`,
+        '--punish-bone-spin-scale-x-min': String(punishBoneSpin.scaleXMin),
+        '--punish-bone-spin-shadow-blur': `${punishBoneSpin.shadowBlurPx}px`,
+      };
+    })(),
   };
 }
 
