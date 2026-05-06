@@ -2954,7 +2954,7 @@ import { createLayerManager } from './ui/layerManager.js';
         : 'var(--layout-cinematic-burst-duration, 2.1s)';
       const removeAfterMs = durationMs
         ? Math.round(durationMs * 1.4)
-        : Math.max(1000, Math.round((Number(getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration').replace('s', '')) || 2.1) * 1400));
+        : 2940; // 2.1s default duration × 1400
       const shell = document.createElement('div');
       shell.style.cssText = `position:fixed;left:${cx.toFixed(1)}px;top:${cy.toFixed(1)}px;pointer-events:none;z-index:10050;`;
       const inner = document.createElement('div');
