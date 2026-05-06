@@ -241,6 +241,8 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
       selectors: [
         '.seatName',
         '.seatMeta',
+        '.seatChipBadge',
+        '.seatChipBadgeIcon',
         '.seatStatus',
         '.turnSpotlightNameBar',
         '.cin-name',
@@ -450,6 +452,13 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       walletDisplay: {
         tiers: rawGameConfig.chips?.walletDisplay?.tiers ?? rawGameConfig.chips?.challengeStake?.tiers ?? [{ id: 'sun', value: 1 }, { id: 'tinmoon', value: 5 }, { id: 'eclipse', value: 20 }],
         maxIconsPerSeat: Math.max(1, Number(rawGameConfig.chips?.walletDisplay?.maxIconsPerSeat) || 18),
+        seatChipBadge: {
+          coinTierId: String(rawGameConfig.chips?.walletDisplay?.seatChipBadge?.coinTierId || 'tinmoon'),
+          iconSizePx: Math.max(12, Number(rawGameConfig.chips?.walletDisplay?.seatChipBadge?.iconSizePx) || 22),
+          gapPx: Math.max(0, Number(rawGameConfig.chips?.walletDisplay?.seatChipBadge?.gapPx) || 6),
+          fontSizeRem: Math.max(0.5, Number(rawGameConfig.chips?.walletDisplay?.seatChipBadge?.fontSizeRem) || 0.82),
+          color: String(rawGameConfig.chips?.walletDisplay?.seatChipBadge?.color || 'var(--text)'),
+        },
       },
       poolDisplay: {
         maxIcons: Math.max(1, Number(rawGameConfig.chips?.poolDisplay?.maxIcons) || 28),
@@ -458,7 +467,15 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         coinSizePx: Math.max(16, Number(rawGameConfig.chips?.poolDisplay?.coinSizePx) || 30),
         spreadXPx: Math.max(10, Number(rawGameConfig.chips?.poolDisplay?.spreadXPx) || 84),
         spreadYPx: Math.max(8, Number(rawGameConfig.chips?.poolDisplay?.spreadYPx) || 28),
+        offsetXPx: Number(rawGameConfig.chips?.poolDisplay?.offsetXPx) || 0,
         offsetYPx: Number(rawGameConfig.chips?.poolDisplay?.offsetYPx) || 2,
+        totalLabel: {
+          rightPx: Math.max(0, Number(rawGameConfig.chips?.poolDisplay?.totalLabel?.rightPx) || 8),
+          bottomPx: Math.max(0, Number(rawGameConfig.chips?.poolDisplay?.totalLabel?.bottomPx) || 4),
+          fontSizePx: Math.max(10, Number(rawGameConfig.chips?.poolDisplay?.totalLabel?.fontSizePx) || 24),
+          lineHeight: Math.max(0.5, Number(rawGameConfig.chips?.poolDisplay?.totalLabel?.lineHeight) || 1),
+          color: String(rawGameConfig.chips?.poolDisplay?.totalLabel?.color || '#ffffff'),
+        },
       },
       challengeStakeTiers: rawGameConfig.chips?.challengeStake?.tiers ?? [{ id: 'sun', value: 1 }, { id: 'tinmoon', value: 5 }, { id: 'eclipse', value: 20 }],
       challengeStakeAnimation: {
