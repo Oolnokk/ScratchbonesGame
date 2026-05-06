@@ -66,7 +66,7 @@
           "layers": {
             "back": {
               "image": {
-                "url": "./assets/cosmetics/clothes/overwear/portrait/tankanbodywrap_mao-ao.png"
+                "url": "./assets/cosmetics/clothes/overwear/portrait/tankanbodywrap_mao-ao_f.png"
               },
               "spriteStyle": {
                 "base": {
@@ -145,6 +145,32 @@
             "back": {
               "image": {
                 "url": "./assets/cosmetics/clothes/overwear/portrait/tankanwrap_kenk_f.png"
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "torso": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "engh-sho_female": {
+      "parts": {
+        "torso": {
+          "layers": {
+            "back": {
+              "image": {
+                "url": "./assets/cosmetics/clothes/overwear/portrait/tankanbodywrap_engh_f.png"
               },
               "spriteStyle": {
                 "base": {

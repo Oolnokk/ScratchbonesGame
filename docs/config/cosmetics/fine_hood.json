@@ -261,6 +261,102 @@
           }
         }
       }
+    },
+    "engh-sho_male": {
+      "parts": {
+        "head": {
+          "layers": {
+            "front": {
+              "layerRole": "base",
+              "image": {
+                "url": "./assets/cosmetics/clothes/hood/engh_finehood_base_m.png",
+                "colors": ["A"]
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "head": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            },
+            "front_trim": {
+              "layerRole": "trim",
+              "image": {
+                "url": "./assets/cosmetics/clothes/hood/engh_finehood_trim_m.png",
+                "colors": ["B"]
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "head": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "engh-sho_female": {
+      "parts": {
+        "head": {
+          "layers": {
+            "front": {
+              "layerRole": "base",
+              "image": {
+                "url": "./assets/cosmetics/clothes/hood/engh_finehood_base_f.png",
+                "colors": ["A"]
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "head": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            },
+            "front_trim": {
+              "layerRole": "trim",
+              "image": {
+                "url": "./assets/cosmetics/clothes/hood/engh_finehood_trim_f.png",
+                "colors": ["B"]
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "head": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

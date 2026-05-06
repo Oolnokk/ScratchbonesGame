@@ -1,11 +1,11 @@
 {
-  "speciesId": "mao-ao",
-  "label": "Mao-ao",
+  "speciesId": "engh-sho",
+  "label": "Engh-sho",
   "male": {
-    "headSprite": "fightersprites/mao-ao-m/head_mint.png",
+    "headSprite": "fightersprites/engh-sho-m/head.png",
     "headUrLayers": [
       {
-        "url": "fightersprites/mao-ao-m/untinted_regions/ur-head.png",
+        "url": "fightersprites/engh-sho-m/untinted_regions/ur-head.png",
         "renderOrder": "topLayer"
       }
     ],
@@ -16,9 +16,8 @@
       "sy": 1.14
     },
     "allowedCosmetics": [
-      "appearance::Mao-ao_M::mao-ao_circled_eyes",
-      "appearance::Mao-ao_M::mao-ao_circled_eye_L",
-      "appearance::Mao-ao_M::mao-ao_circled_eye_R",
+      "appearance::Engh-sho_M::engh_snowgoggles",
+      "appearance::Engh-sho_M::engh_hairdefault-front",
       "appearance::Mao-ao_M::mao-ao_forwardtuft_short",
       "appearance::Mao-ao_M::mao-ao_forwardtuft_long",
       "appearance::Mao-ao_M::mao-ao_tuft",
@@ -35,10 +34,22 @@
       "appearance::hat::riverlandskasa_wide",
       "fine_hood",
       "tankan_tunic",
-      "bandolier1",
-      "tankan_bodywrap"
+      "bandolier1"
+    ],
+    "conditionalCosmetics": [
+      {
+        "slot": "hairFront",
+        "cosmeticId": "engh_hairdefault-front",
+        "conditions": {
+          "hairFront": "none"
+        }
+      }
     ],
     "cosmeticWeights": {
+      "eyes": {
+        "none": 0,
+        "engh_snowgoggles": 100
+      },
       "hat": {
         "none": 30,
         "basic_headband": 30,
@@ -50,10 +61,11 @@
         "fine_hood": 20
       },
       "hairFront": {
-        "none": 5,
+        "none": 0,
+        "engh_hairdefault-front": 0,
         "tuft": 30,
-        "forwardtuft_long": 30,
-        "forwardtuft_short": 30
+        "forwardtuft_long": 35,
+        "forwardtuft_short": 35
       },
       "hairBack": {
         "none": 50,
@@ -69,6 +81,10 @@
       "hairSideL": {
         "none": 60,
         "braid-L": 40
+      },
+      "facialHair": {
+        "none": 65,
+        "wildbeard": 35
       }
     },
     "bodyColorRanges": {
@@ -178,7 +194,7 @@
     "portraitBodyLayers": [
       {
         "id": "armL",
-        "url": "portraitsprites/arm-L_mao-ao_m.png",
+        "url": "portraitsprites/arm_L_engh_m.png",
         "tintSlot": "A",
         "pos": "back",
         "xform": {
@@ -191,7 +207,7 @@
       },
       {
         "id": "torso",
-        "url": "portraitsprites/torso_mao-ao_m.png",
+        "url": "portraitsprites/torso_engh_m.png",
         "tintSlot": "A",
         "pos": "back",
         "xform": {
@@ -204,7 +220,7 @@
       },
       {
         "id": "armR",
-        "url": "portraitsprites/arm-R_mao-ao_m.png",
+        "url": "portraitsprites/arm_R_engh_m.png",
         "tintSlot": "A",
         "pos": "front",
         "xform": {
@@ -232,15 +248,10 @@
         "basic_headband": {
           "hideSlots": []
         },
-        "riverlandskasa_low": {
-          "hideSlots": [
-            "hairFront",
-            "hairBack",
-            "hairSide",
-            "hairSideL"
-          ]
+        "leather_headband": {
+          "hideSlots": []
         },
-        "riverlandskasa_tight": {
+        "riverlandskasa_low": {
           "hideSlots": [
             "hairFront",
             "hairBack",
@@ -290,10 +301,10 @@
     }
   },
   "female": {
-    "headSprite": "fightersprites/mao-ao-f/head.png",
+    "headSprite": "fightersprites/engh-sho-f/head.png",
     "headUrLayers": [
       {
-        "url": "fightersprites/mao-ao-f/untinted_regions/ur-head.png",
+        "url": "fightersprites/engh-sho-f/untinted_regions/ur-head.png",
         "renderOrder": "topLayer"
       }
     ],
@@ -304,15 +315,14 @@
       "sy": 1.14
     },
     "allowedCosmetics": [
-      "appearance::Mao-ao_F::mao-ao_circled_eyes_f",
-      "appearance::Mao-ao_F::mao-ao_circled_eye_L",
-      "appearance::Mao-ao_F::mao-ao_circled_eye_R",
+      "appearance::Engh-sho_F::engh_snowgoggles",
+      "appearance::Engh-sho_F::engh_hairdefault-front",
       "appearance::Mao-ao_F::mao-ao_forwardtuft_short",
       "appearance::Mao-ao_F::mao-ao_forwardtuft_long",
       "appearance::Mao-ao_F::mao-ao_tuft",
-      "appearance::Mao-ao_F::mao-ao_splayedknot_medium",
       "appearance::Mao-ao_F::mao-ao_shoulder_length_drape",
       "appearance::Mao-ao_F::mao-ao_long_ponytail",
+      "appearance::Mao-ao_F::mao-ao_splayedknot_medium",
       "appearance::Mao-ao_F::mao-ao_braid-L",
       "appearance::Mao-ao_F::mao-ao_braid-R",
       "appearance::Mao-ao_F::mao-ao_braidcluster-R",
@@ -325,7 +335,20 @@
       "bandolier1",
       "tankan_bodywrap"
     ],
+    "conditionalCosmetics": [
+      {
+        "slot": "hairFront",
+        "cosmeticId": "engh_hairdefault-front",
+        "conditions": {
+          "hairFront": "none"
+        }
+      }
+    ],
     "cosmeticWeights": {
+      "eyes": {
+        "none": 0,
+        "engh_snowgoggles": 100
+      },
       "hat": {
         "none": 65,
         "basic_headband": 28,
@@ -337,10 +360,11 @@
         "fine_hood": 20
       },
       "hairFront": {
-        "none": 5,
+        "none": 0,
+        "engh_hairdefault-front": 0,
         "tuft": 30,
-        "forwardtuft_long": 30,
-        "forwardtuft_short": 30
+        "forwardtuft_long": 35,
+        "forwardtuft_short": 35
       },
       "hairBack": {
         "none": 50,
@@ -358,19 +382,6 @@
         "braid-L": 40
       }
     },
-    "disallowedCosmeticCombos": [
-      {
-        "conditions": {
-          "hairFront": "none",
-          "hairSide": "none",
-          "hairBack": "none"
-        },
-        "repairSlots": [
-          "hairSide",
-          "hairBack"
-        ]
-      }
-    ],
     "bodyColorRanges": {
       "A": {
         "minH": -85,
@@ -478,7 +489,7 @@
     "portraitBodyLayers": [
       {
         "id": "armL",
-        "url": "portraitsprites/arm-L_mao-ao_f.png",
+        "url": "portraitsprites/arm_L_engh_f.png",
         "tintSlot": "A",
         "pos": "back",
         "xform": {
@@ -491,7 +502,7 @@
       },
       {
         "id": "torso",
-        "url": "portraitsprites/torso_mao-ao_f.png",
+        "url": "portraitsprites/torso_engh_f.png",
         "tintSlot": "A",
         "pos": "back",
         "xform": {
@@ -504,7 +515,7 @@
       },
       {
         "id": "armR",
-        "url": "portraitsprites/arm-R_mao-ao_f.png",
+        "url": "portraitsprites/arm_R_engh_f.png",
         "tintSlot": "A",
         "pos": "front",
         "xform": {
@@ -532,15 +543,10 @@
         "basic_headband": {
           "hideSlots": []
         },
-        "riverlandskasa_low": {
-          "hideSlots": [
-            "hairFront",
-            "hairBack",
-            "hairSide",
-            "hairSideL"
-          ]
+        "leather_headband": {
+          "hideSlots": []
         },
-        "riverlandskasa_tight": {
+        "riverlandskasa_low": {
           "hideSlots": [
             "hairFront",
             "hairBack",
