@@ -6242,6 +6242,7 @@ import { createTutorial } from './tutorial.js';
       // Because tutorialPaused=true, the scheduler returned early — the board is
       // rendered and waiting.  Now show the tutorial overlay.
       const tut = createTutorial({
+        gameConfig: SCRATCHBONES_GAME,
         onDone: () => {
           state.tutorialPaused = false;
           scheduleNextTurnOrCover();
