@@ -58,6 +58,23 @@ import { createTutorial } from './tutorial.js';
       }
     }
     applyRootCssCustomProperties(SCRATCHBONES_GAME.cssRootVars);
+    ensureTrickSymbolStyles();
+
+    function ensureTrickSymbolStyles() {
+      if (document.getElementById('scratchbones-trick-symbol-styles')) return;
+      const styleEl = document.createElement('style');
+      styleEl.id = 'scratchbones-trick-symbol-styles';
+      styleEl.textContent = `
+        .trickDeckInfo { display: flex; flex-direction: column; align-items: center; gap: var(--layout-trick-info-gap); margin-top: var(--layout-trick-info-margin-top); pointer-events: none; }
+        .trickDeckInfoTitle { font-weight: 700; letter-spacing: var(--layout-trick-info-letter-spacing); color: var(--accent-2); text-align: center; }
+        .trickDeckInfoRows { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--layout-trick-info-gap); max-width: var(--layout-trick-info-max-width); }
+        .trickDeckInfoItem { display: inline-flex; align-items: center; gap: var(--layout-trick-info-item-gap); color: var(--text); white-space: nowrap; }
+        .trickSymbolContainer { display: inline-flex; align-items: center; justify-content: center; width: var(--layout-trick-info-glyph-size); height: var(--layout-trick-info-glyph-size); flex: 0 0 var(--layout-trick-info-glyph-size); }
+        .trickSymbolImg { width: 100%; height: 100%; object-fit: contain; display: block; filter: var(--layout-trick-symbol-filter); }
+        .trickSymbolImg.trick-symbol-missing { display: none; }
+      `;
+      document.head.appendChild(styleEl);
+    }
     const authoredEditorState = {
       selectedId: null,
       selectedSubId: null,
@@ -2872,6 +2889,42 @@ import { createTutorial } from './tutorial.js';
     function rankAssetFromTemplate(template, rank) {
       return String(template || '').replaceAll('{rank}', String(rank));
     }
+    function resolveTrickBoneSymbolAsset(trickType) {
+      const key = String(trickType || '').trim();
+      if (!key) return null;
+      const src = String(SCRATCHBONES_GAME.assets?.trickGlyphSrc?.[key] || '').trim();
+      return src || null;
+    }
+    function renderTrickBoneSymbolContainer(trickType, { className = '' } = {}) {
+      const key = String(trickType || '').trim();
+      if (!key) return '';
+      const src = resolveTrickBoneSymbolAsset(key);
+      const extraClass = String(className || '').trim();
+      return `<span class="trickSymbolContainer${extraClass ? ` ${escapeHtml(extraClass)}` : ''}" data-trick-symbol="${escapeHtml(key)}">${src ? `<img class="trickSymbolImg" src="${escapeHtml(src)}" alt="${escapeHtml(key)} trick symbol" loading="lazy" data-optional-symbol="true">` : ''}</span>`;
+    }
+    function trickBoneDisplayLabel(trickType) {
+      const key = String(trickType || '').trim();
+      const configuredLabel = String(TRICK_BONE_DEFINITIONS[key]?.label || '').trim();
+      if (configuredLabel) return configuredLabel;
+      return key
+        .replace(/[_-]+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+    }
+    function sortedTrickCountEntries(trickCounts = {}) {
+      return Object.entries(trickCounts || {})
+        .map(([trickType, count]) => [String(trickType || '').trim(), Math.max(0, Number(count) || 0)])
+        .filter(([trickType, count]) => trickType && count > 0)
+        .sort(([typeA], [typeB]) => trickBoneDisplayLabel(typeA).localeCompare(trickBoneDisplayLabel(typeB)));
+    }
+    function renderTrickDeckInfo(composition = deckCompositionSnapshot()) {
+      const entries = sortedTrickCountEntries(composition?.trickCounts);
+      const total = entries.reduce((sum, [, count]) => sum + count, 0);
+      const rows = entries.length
+        ? entries.map(([trickType, count]) => `<span class="trickDeckInfoItem">${renderTrickBoneSymbolContainer(trickType)}<span>${escapeHtml(trickBoneDisplayLabel(trickType))} × ${count}</span></span>`).join('')
+        : '<span class="trickDeckInfoItem">No Trick Bones</span>';
+      return `<div class="trickDeckInfo" data-trick-deck-info="true"><div class="trickDeckInfoTitle tiny">Deck Trick Bones: ${total}</div><div class="trickDeckInfoRows tiny">${rows}</div></div>`;
+    }
     function formatChallengePrompt(lastPlay) {
       return SCRATCHBONES_GAME.uiText.challengePromptTemplate
         .replaceAll('{seat}', seatLabel(lastPlay.playerIndex))
@@ -2940,6 +2993,14 @@ import { createTutorial } from './tutorial.js';
       await cardAssetPreloadPromise;
     }
     function wireScratchboneImageFallbacks(root = document) {
+      root.querySelectorAll('img[data-optional-symbol="true"]').forEach(img => {
+        if (img.dataset.optionalSymbolWired === 'true') return;
+        img.dataset.optionalSymbolWired = 'true';
+        img.addEventListener('error', () => {
+          img.classList.add('trick-symbol-missing');
+          img.setAttribute('aria-hidden', 'true');
+        }, { once: true });
+      });
       root.querySelectorAll('img[data-fallback-src]').forEach(img => {
         const fallbackSrc = img.getAttribute('data-fallback-src');
         if (!fallbackSrc || img.dataset.fallbackApplied === 'true') return;
@@ -4192,7 +4253,7 @@ import { createTutorial } from './tutorial.js';
         cardEl.style.height = `${(height * deckScale).toFixed(3)}px`;
       });
       const deckLabelGap = Number(deckPlaceholderConfig.labelGap);
-      const deckLabel = app.querySelector('.tableDeckPlaceholder .tiny');
+      const deckLabel = app.querySelector('.tableDeckPlaceholder .tableDeckLabel');
       if (deckLabel && deckLabelGap > 0) deckLabel.style.marginTop = `${(deckLabelGap * deckScale).toFixed(3)}px`;
     }
 
@@ -4413,7 +4474,7 @@ import { createTutorial } from './tutorial.js';
       const renderPunishToggleButton = (locked) => {
         if (!state.betting?.punishAvailable) return '';
         const punishArt = resolveScratchbone2DAsset({ trickType: 'punish', rank: null, wild: false }, { flipped: false });
-        return `<button class="secondary" id="betPunishToggleBtn" ${locked ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:8px;border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};"><img src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:34px;height:48px;object-fit:contain;border-radius:4px;">${state.betting.punishArmed ? 'Punish Armed' : 'Arm Punish'}</button>`;
+        return `<button class="secondary" id="betPunishToggleBtn" ${locked ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:8px;border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};"><img src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:var(--layout-punish-button-card-width);height:var(--layout-punish-button-card-height);object-fit:contain;border-radius:4px;">${state.betting.punishArmed ? 'Punish Armed' : 'Arm Punish'}</button>`;
       };
       const renderStakeVisual = () => `
         <div class="stakeVisualPanel">
@@ -4447,7 +4508,6 @@ import { createTutorial } from './tutorial.js';
                    ${humanCanRaise ? renderStakeTierButtons('raise') : ''}
                    ${renderPunishToggleButton(state.betting.actionInFlight)}
                    <button class="danger" id="betFoldBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Fold</button>`}
-              ${state.betting.punishAvailable ? `<button class="secondary" id="betPunishToggleBtn" ${state.betting.actionInFlight ? 'disabled' : ''} style="border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};">Punish Bone ${state.betting.punishArmed ? 'Armed' : 'Off'}</button>` : ''}
             ` : `<div class="tiny">${seatLabel(state.betting.currentActorId)} is deciding the next betting action.</div>`}
             ${bettingActorHuman && state.betting.phase === 'opening' ? `<button class="danger" id="betFoldBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Fold</button>` : ''}
           </div>
@@ -4465,7 +4525,7 @@ import { createTutorial } from './tutorial.js';
       const renderCinematicPunishCenterButton = () => {
         if (!clusterCinematicActive || cinematicPhase !== 'betting' || !bettingActorHuman || !state.betting?.punishAvailable) return '';
         const punishArt = resolveScratchbone2DAsset({ trickType: 'punish', rank: null, wild: false }, { flipped: false });
-        return `<div class="fit-target fit-0" data-proj-id="challenge-prompt" style="z-index:78;display:flex;align-items:center;justify-content:center;pointer-events:none;"><button class="secondary" id="betPunishToggleBtn" ${state.betting.actionInFlight ? 'disabled' : ''} style="pointer-events:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:190px;min-height:210px;border-width:3px;border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};"><img src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:96px;height:136px;object-fit:contain;border-radius:6px;"><span style="font-weight:700;">${state.betting.punishArmed ? 'Punish Armed' : 'Arm Punish Bone'}</span></button></div>`;
+        return `<div class="fit-target fit-0" data-proj-id="challenge-prompt" style="z-index:78;display:flex;align-items:center;justify-content:center;pointer-events:none;"><button class="secondary" id="betPunishToggleBtn" ${state.betting.actionInFlight ? 'disabled' : ''} style="pointer-events:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:190px;min-height:210px;border-width:3px;border-color:${state.betting.punishArmed ? 'var(--warning)' : 'var(--line)'};background:${state.betting.punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${state.betting.punishArmed ? 'var(--bg)' : 'var(--text)'};"><img src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:var(--layout-cinematic-punish-button-card-width);height:var(--layout-cinematic-punish-button-card-height);object-fit:contain;border-radius:6px;"><span style="font-weight:700;">${state.betting.punishArmed ? 'Punish Armed' : 'Arm Punish Bone'}</span></button></div>`;
       };
       app.innerHTML = `
         <div class="topbar" data-proj-id="topbar">
@@ -4530,7 +4590,8 @@ import { createTutorial } from './tutorial.js';
               }).join('');
             })()}
           </div>
-          <div class="tiny" style="font-weight:700;letter-spacing:.08em;">DECK</div>
+          <div class="tiny tableDeckLabel" style="font-weight:700;letter-spacing:.08em;">DECK</div>
+          ${renderTrickDeckInfo(deckCompositionSnapshot())}
         </div>
         </div>
         <div class="tableViewHeader">
@@ -6288,6 +6349,7 @@ import { createTutorial } from './tutorial.js';
           challengerOptions: [...(state.challengeWindow.challengerOptions || [])],
           backupCandidates: [...(state.challengeWindow.backupCandidates || [])],
         } : null,
+        deckComposition: deckCompositionSnapshot(),
         betting: state.betting ? {
           play: copyPlay(state.betting.play),
           challengerId: state.betting.challengerId,
