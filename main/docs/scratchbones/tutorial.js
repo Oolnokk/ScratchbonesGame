@@ -101,24 +101,28 @@ export function createTutorial({ onDone } = {}) {
 
   // ── DOM construction ─────────────────────────────────────────────────────────
   function buildDom() {
-    if (document.getElementById('sb-tutorial-overlay')) {
-      overlayEl = document.getElementById('sb-tutorial-overlay');
-      backdropEl = overlayEl.querySelector('.tut-backdrop');
-      ringEl = overlayEl.querySelector('.tut-ring');
-      panelEl = overlayEl.querySelector('.tut-panel');
-      titleEl = overlayEl.querySelector('.tut-title');
-      textEl = overlayEl.querySelector('.tut-text');
-      counterEl = overlayEl.querySelector('.tut-counter');
-      backBtnEl = overlayEl.querySelector('.tut-btn-back');
-      nextBtnEl = overlayEl.querySelector('.tut-btn-next');
-      return;
+    overlayEl = document.getElementById('sb-tutorial-overlay');
+    if (!overlayEl) {
+      overlayEl = document.createElement('div');
+      overlayEl.id = 'sb-tutorial-overlay';
+      const mountPoint = document.getElementById('app') || document.body;
+      mountPoint.appendChild(overlayEl);
     }
 
-    overlayEl = document.createElement('div');
-    overlayEl.id = 'sb-tutorial-overlay';
     overlayEl.setAttribute('role', 'dialog');
     overlayEl.setAttribute('aria-modal', 'true');
     overlayEl.setAttribute('aria-label', 'Scratchbones Tutorial');
+
+    // Reuse children if already built (e.g. re-entrant call).
+    backdropEl = overlayEl.querySelector('.tut-backdrop');
+    ringEl     = overlayEl.querySelector('.tut-ring');
+    panelEl    = overlayEl.querySelector('.tut-panel');
+    titleEl    = overlayEl.querySelector('.tut-title');
+    textEl     = overlayEl.querySelector('.tut-text');
+    counterEl  = overlayEl.querySelector('.tut-counter');
+    backBtnEl  = overlayEl.querySelector('.tut-btn-back');
+    nextBtnEl  = overlayEl.querySelector('.tut-btn-next');
+    if (backdropEl) return; // Already fully built.
 
     backdropEl = document.createElement('div');
     backdropEl.className = 'tut-backdrop';
@@ -173,8 +177,6 @@ export function createTutorial({ onDone } = {}) {
     overlayEl.appendChild(backdropEl);
     overlayEl.appendChild(ringEl);
     overlayEl.appendChild(panelEl);
-
-    document.body.appendChild(overlayEl);
   }
 
   // ── Target resolution ────────────────────────────────────────────────────────
