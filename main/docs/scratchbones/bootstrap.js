@@ -5284,7 +5284,7 @@ import { createTutorial } from './tutorial.js';
     }
     // Returns the horizontal scale component from CSS transform matrix/matrix3d values.
     function parseScaleXFromTransform(transformValue) {
-      const transform = String(transformValue || '').trim();
+      const transform = (transformValue || '').trim();
       if (!transform || transform === 'none') return 1;
       const matrix3dMatch = transform.match(/^matrix3d\((.+)\)$/);
       if (matrix3dMatch) {
@@ -5331,7 +5331,7 @@ import { createTutorial } from './tutorial.js';
     // Spawns one local emoji FX burst from the human avatar anchor.
     function spawnEmojiReactionFx(reactionId) {
       const app = document.getElementById('app');
-      const reaction = EMOJI_REACTION_CONFIG[String(reactionId || '').trim().toLowerCase()];
+      const reaction = EMOJI_REACTION_CONFIG[(reactionId || '').trim().toLowerCase()];
       if (!app || !reaction) return;
       const humanSeatCard = app.querySelector('.humanSeatCard');
       const avatarBox = humanSeatCard?.querySelector('.seatAvatarBox');

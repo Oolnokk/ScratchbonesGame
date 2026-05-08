@@ -606,6 +606,14 @@
       height: 78px;
       pointer-events: none;
       transform-origin: center center;
+      --emoji-kiss-drift-mid: 34px;
+      --emoji-kiss-drift-end: 76px;
+      --emoji-kiss-rise-mid: -108%;
+      --emoji-kiss-rise-end: -165%;
+      --emoji-disgust-drift-mid: 16px;
+      --emoji-disgust-drift-end: 58px;
+      --emoji-disgust-rise-mid: -88%;
+      --emoji-disgust-drop-end: 285%;
     }
     .emojiFxGlyph {
       position: absolute;
@@ -658,11 +666,11 @@
         opacity: 1;
       }
       60% {
-        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * 34px)), -108%) scale(1.36);
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * var(--emoji-kiss-drift-mid))), var(--emoji-kiss-rise-mid)) scale(1.36);
         opacity: 0.98;
       }
       100% {
-        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * 76px)), -165%) scale(1.82);
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * var(--emoji-kiss-drift-end))), var(--emoji-kiss-rise-end)) scale(1.82);
         opacity: 0;
       }
     }
@@ -676,11 +684,11 @@
         opacity: 1;
       }
       40% {
-        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * 16px)), -88%) scale(1.03);
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * var(--emoji-disgust-drift-mid))), var(--emoji-disgust-rise-mid)) scale(1.03);
         opacity: 1;
       }
       100% {
-        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * 58px)), 285%) scale(0.84);
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * var(--emoji-disgust-drift-end))), var(--emoji-disgust-drop-end)) scale(0.84);
         opacity: 0;
       }
     }
