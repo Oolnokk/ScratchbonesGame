@@ -400,6 +400,27 @@
     throw new Error('Could not generate a Slagothim name within the current phonology rules.');
   }
 
+  function buildEnghShoGivenName(rng, culture) {
+    return pickFromRng(rng, culture.enghShoRules.firstNameWordList);
+  }
+
+  function buildEnghShoSurname(rng, culture) {
+    const rules = culture.enghShoRules.surname;
+    const syllableCount = rules.syllables.min + Math.floor(rng() * (rules.syllables.max - rules.syllables.min + 1));
+    let result = '';
+    for (let i = 0; i < syllableCount - 1; i++) {
+      const onset = weightedPickValue(rng, rules.onsetConsonants, rules.onsetWeights);
+      const vowel = weightedPickValue(rng, rules.vowels, rules.vowelWeights);
+      const midCoda = rng() < rules.midCodaChance ? pickFromRng(rng, rules.midCodas) : '';
+      result += onset + vowel + midCoda;
+    }
+    const finalOnset = weightedPickValue(rng, rules.onsetConsonants, rules.onsetWeights);
+    const finalVowel = weightedPickValue(rng, rules.vowels, rules.vowelWeights);
+    const finalPlosive = weightedPickValue(rng, rules.finalPlosives, rules.finalPlosiveWeights);
+    result += finalOnset + finalVowel + finalPlosive;
+    return result;
+  }
+
   function buildSlagothimSurname(rng, culture) {
     const rules = culture.slagothimRules || {};
     const location = pickFromRng(rng, rules.locations || []);
@@ -410,6 +431,11 @@
     const resolvedCulture = culture || {};
     const numericSeed = hashStringToSeed(seedString);
     const rng = mulberry32(numericSeed);
+    if (resolvedCulture.enghShoRules) {
+      const firstName = buildEnghShoGivenName(rng, resolvedCulture);
+      const surname = buildEnghShoSurname(rng, resolvedCulture);
+      return [applyCasing(firstName, resolvedCulture.casing), applyCasing(surname, resolvedCulture.casing)].filter(Boolean).join(' ');
+    }
     if (resolvedCulture.slagothimRules) {
       const firstName = buildSlagothimGivenName(rng, resolvedCulture, gender);
       const surname = buildSlagothimSurname(rng, resolvedCulture);

@@ -316,19 +316,107 @@ describe('generateIdentityFromSeed — slagothim culture', () => {
   });
 });
 
+// ── engh_sho culture ──────────────────────────────────────────────────────────
+
+describe('generateIdentityFromSeed — engh_sho culture', () => {
+  const FINAL_PLOSIVES = ['p', 't', 'k', 'q', 'b', 'd', 'g', 'pp', 'tt', 'kk', 'qq', 'mp', 'nt', 'nk', 'lk', 'rk'];
+  const WORD_LIST = [
+    'acorn', 'ael', 'aestel', 'amber', 'amethyst', 'awl', 'bar', 'barb', 'bead', 'bean',
+    'bell', 'beryl', 'billet', 'bit', 'blade', 'bladelet', 'blank', 'block', 'bodkin', 'bone',
+    'borer', 'boss', 'brad', 'brooch', 'buckle', 'bud', 'burin', 'burr', 'button', 'cake',
+    'carnelian', 'catch', 'catchplate', 'chalcedony', 'chape', 'chisel', 'chip', 'clasp',
+    'coil', 'coin', 'comb', 'cone', 'core', 'counter', 'cramp', 'crucible', 'crystal', 'cube',
+    'cup', 'cupel', 'cylinder', 'die', 'disc', 'dowel', 'drop', 'dyse', 'earring', 'emerald',
+    'eyelet', 'farthing', 'ferrule', 'file', 'firestone', 'flan', 'flint', 'fork', 'garnet',
+    'gem', 'gim', 'gimstan', 'gouge', 'grain', 'graver', 'hasp', 'hinge', 'hobnail', 'hone',
+    'hook', 'hring', 'husk', 'hwirfel', 'ingot', 'jasper', 'jewel', 'kernel', 'key', 'knife',
+    'knob', 'knucklebone', 'lamp', 'leaf', 'link', 'lock', 'lodestone', 'loop', 'matrix',
+    'mirror', 'mount', 'naegl', 'nail', 'needle', 'nut', 'obol', 'onyx', 'opal', 'peg',
+    'pendant', 'pening', 'penny', 'pin', 'pinhead', 'pip', 'pit', 'plaque', 'plug', 'pod',
+    'point', 'preon', 'probe', 'punch', 'quartz', 'reed', 'rind', 'ring', 'rivet', 'rod',
+    'root', 'roundel', 'ruby', 'sapphire', 'sceat', 'sceatt', 'scraper', 'seed', 'shell',
+    'sherd', 'shuttle', 'sliver', 'socket', 'spatula', 'spindle', 'spinel', 'spool', 'spoon',
+    'sprig', 'stalk', 'stan', 'stem', 'sticca', 'stone', 'stud', 'styca', 'stylus', 'tablet',
+    'tack', 'tag', 'tally', 'terminal', 'tessera', 'thimble', 'thorn', 'tip', 'toggle',
+    'token', 'tooth', 'tube', 'twig', 'wedge', 'weight', 'whetstone', 'whorl', 'wire',
+  ];
+
+  it('produces a non-empty string', () => {
+    const name = ng.generateIdentityFromSeed('test-seed-001', 'male', 'engh_sho');
+    assert.equal(typeof name, 'string');
+    assert.ok(name.length > 0);
+  });
+
+  it('is deterministic — same seed always produces the same name', () => {
+    assert.equal(
+      ng.generateIdentityFromSeed('test-seed-001', 'male', 'engh_sho'),
+      ng.generateIdentityFromSeed('test-seed-001', 'male', 'engh_sho')
+    );
+  });
+
+  it('produces a two-part title-cased name', () => {
+    const name = ng.generateIdentityFromSeed('test-seed-001', 'male', 'engh_sho');
+    const parts = name.split(' ');
+    assert.equal(parts.length, 2, `Expected 2 parts, got: ${JSON.stringify(parts)}`);
+    for (const part of parts) {
+      assert.ok(/^[A-Z]/.test(part), `"${part}" should start with uppercase`);
+    }
+  });
+
+  it('first name is always drawn from the word list', () => {
+    for (let i = 0; i < 40; i++) {
+      const name = ng.generateIdentityFromSeed(`seed-${i}`, 'male', 'engh_sho');
+      const firstName = name.split(' ')[0].toLowerCase();
+      assert.ok(WORD_LIST.includes(firstName), `"${firstName}" is not in the word list (full name: "${name}")`);
+    }
+  });
+
+  it('surname always ends with a valid plosive', () => {
+    for (let i = 0; i < 40; i++) {
+      const name = ng.generateIdentityFromSeed(`seed-${i}`, 'male', 'engh_sho');
+      const surname = name.split(' ')[1].toLowerCase();
+      const endsWithPlosive = FINAL_PLOSIVES.some(p => surname.endsWith(p));
+      assert.ok(endsWithPlosive, `Surname "${surname}" does not end with a valid plosive (full name: "${name}")`);
+    }
+  });
+
+  it('produces variety across seeds', () => {
+    const surnames = new Set();
+    for (let i = 0; i < 20; i++) {
+      const name = ng.generateIdentityFromSeed(`seed-${i}`, 'male', 'engh_sho');
+      surnames.add(name.split(' ')[1]);
+    }
+    assert.ok(surnames.size >= 10, `Expected at least 10 distinct surnames from 20 seeds, got ${surnames.size}`);
+  });
+
+  it('gender does not affect the name (Engh-sho names are genderless)', () => {
+    const male   = ng.generateIdentityFromSeed('abc', 'male',   'engh_sho');
+    const female = ng.generateIdentityFromSeed('abc', 'female', 'engh_sho');
+    assert.equal(male, female);
+  });
+
+  it('known output for seed "test-seed-001"', () => {
+    assert.equal(ng.generateIdentityFromSeed('test-seed-001', 'male', 'engh_sho'), 'Cone Pansasak');
+  });
+
+  it('known output for seed "abc"', () => {
+    assert.equal(ng.generateIdentityFromSeed('abc', 'male', 'engh_sho'), 'Knucklebone Nutungaq');
+  });
+});
+
 // ── Cross-culture variety ─────────────────────────────────────────────────────
 
 describe('generateIdentityFromSeed — cross-culture variety', () => {
-  it('all three cultures produce distinct names for the same seed and gender', () => {
-    const names = ['mao_ao', 'kenkari', 'slagothim'].map(c =>
+  it('all four cultures produce distinct names for the same seed and gender', () => {
+    const names = ['mao_ao', 'kenkari', 'slagothim', 'engh_sho'].map(c =>
       ng.generateIdentityFromSeed('same-seed', 'male', c)
     );
-    assert.equal(new Set(names).size, 3, `All culture names should be unique: ${names}`);
+    assert.equal(new Set(names).size, 4, `All culture names should be unique: ${names}`);
   });
 
   it('produces names for multiple seeds without throwing', () => {
     const seeds = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'];
-    const cultures = ['mao_ao', 'kenkari', 'slagothim'];
+    const cultures = ['mao_ao', 'kenkari', 'slagothim', 'engh_sho'];
     const genders = ['male', 'female'];
     for (const seed of seeds) {
       for (const gender of genders) {

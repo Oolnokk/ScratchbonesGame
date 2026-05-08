@@ -165,7 +165,9 @@ window.SCRATCHBONES_CONFIG = {
           "mao_ao": "mao_ao",
           "mao-ao": "mao_ao",
           "kenkari": "kenkari",
-          "tletingan": "slagothim"
+          "tletingan": "slagothim",
+          "engh_sho": "engh_sho",
+          "engh-sho": "engh_sho"
         }
       },
       "cultures": {
@@ -260,6 +262,49 @@ window.SCRATCHBONES_CONFIG = {
             "slNameUsesSuffixChance": 0.2,
             "optionalBridgeVowelChance": 0.55,
             "mnClusterChance": 0.08
+          }
+        },
+        "engh_sho": {
+          "id": "engh_sho",
+          "displayName": "Engh-sho",
+          "casing": "title",
+          "enghShoRules": {
+            "firstNameWordList": [
+              "acorn", "ael", "aestel", "amber", "amethyst", "awl", "bar", "barb", "bead", "bean",
+              "bell", "beryl", "billet", "bit", "blade", "bladelet", "blank", "block", "bodkin", "bone",
+              "borer", "boss", "brad", "brooch", "buckle", "bud", "burin", "burr", "button", "cake",
+              "carnelian", "catch", "catchplate", "chalcedony", "chape", "chisel", "chip", "clasp",
+              "coil", "coin", "comb", "cone", "core", "counter", "cramp", "crucible", "crystal", "cube",
+              "cup", "cupel", "cylinder", "die", "disc", "dowel", "drop", "dyse", "earring", "emerald",
+              "eyelet", "farthing", "ferrule", "file", "firestone", "flan", "flint", "fork", "garnet",
+              "gem", "gim", "gimstan", "gouge", "grain", "graver", "hasp", "hinge", "hobnail", "hone",
+              "hook", "hring", "husk", "hwirfel", "ingot", "jasper", "jewel", "kernel", "key", "knife",
+              "knob", "knucklebone", "lamp", "leaf", "link", "lock", "lodestone", "loop", "matrix",
+              "mirror", "mount", "naegl", "nail", "needle", "nut", "obol", "onyx", "opal", "peg",
+              "pendant", "pening", "penny", "pin", "pinhead", "pip", "pit", "plaque", "plug", "pod",
+              "point", "preon", "probe", "punch", "quartz", "reed", "rind", "ring", "rivet", "rod",
+              "root", "roundel", "ruby", "sapphire", "sceat", "sceatt", "scraper", "seed", "shell",
+              "sherd", "shuttle", "sliver", "socket", "spatula", "spindle", "spinel", "spool", "spoon",
+              "sprig", "stalk", "stan", "stem", "sticca", "stone", "stud", "styca", "stylus", "tablet",
+              "tack", "tag", "tally", "terminal", "tessera", "thimble", "thorn", "tip", "toggle",
+              "token", "tooth", "tube", "twig", "wedge", "weight", "whetstone", "whorl", "wire"
+            ],
+            "surname": {
+              "syllables": { "min": 2, "max": 3 },
+              "onsetConsonants": ["n", "m", "k", "p", "t", "s", "v", "ng", "r", "l", "q", "h"],
+              "onsetWeights": { "n": 12, "m": 10, "k": 12, "p": 8, "t": 10, "s": 8, "v": 6, "ng": 5, "r": 8, "l": 7, "q": 7, "h": 5 },
+              "vowels": ["a", "i", "u"],
+              "vowelWeights": { "a": 14, "i": 10, "u": 10 },
+              "midCodas": ["n", "r", "l", "k", "ng"],
+              "midCodaChance": 0.45,
+              "finalPlosives": ["p", "t", "k", "q", "b", "d", "g", "pp", "tt", "kk", "qq", "mp", "nt", "nk", "lk", "rk"],
+              "finalPlosiveWeights": {
+                "p": 9, "t": 11, "k": 12, "q": 10,
+                "b": 3, "d": 3, "g": 4,
+                "pp": 6, "tt": 6, "kk": 7, "qq": 5,
+                "mp": 7, "nt": 7, "nk": 8, "lk": 5, "rk": 6
+              }
+            }
           }
         }
       }
