@@ -5349,11 +5349,9 @@ import { createTutorial } from './tutorial.js';
       const avatarCanvas = anchorEl === actorFloat
         ? actorCanvas
         : humanSeatCard?.querySelector('.seatAvatarBox canvas.seatPortrait');
-      // Host the fx layer on humanSeatZone (not humanSeatCard) so it isn't clipped
-      // by the overflow:hidden that enforceFitContainerBounds sets on humanSeatCard.
-      const fxHost = anchorEl === humanSeatCard
-        ? (humanSeatCard?.closest('.humanSeatZone') || humanSeatCard)
-        : anchorEl;
+      // Host the fx layer on #app so it isn't clipped by overflow on any
+      // intermediate ancestor (humanSeatCard, humanSeatZone, etc.).
+      const fxHost = app;
       const layer = ensureEmojiReactionLayer(fxHost);
       if (!anchorEl || !fxHost || !layer) return;
       const layerRect = layer.getBoundingClientRect();
