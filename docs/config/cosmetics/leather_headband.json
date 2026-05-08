@@ -2,7 +2,8 @@
   "slot": "hat",
   "hoodLayering": "under",
   "tags": [
-    "material:leather"
+    "material:leather",
+    "hood-layer:under"
   ],
   "colorRange": {
     "minH": -140,
@@ -54,8 +55,7 @@
         }
       }
     }
-  }
-,
+  },
   "speciesVariants": {
     "kenkari_male": {
       "parts": {

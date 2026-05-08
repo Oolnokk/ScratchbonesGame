@@ -50,5 +50,8 @@
       }
     }
   },
-  "portraitSlot": "eyes"
+  "portraitSlot": "eyes",
+  "tags": [
+    "layer:eye-accessory-above-under-hood-hat"
+  ]
 }
