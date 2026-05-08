@@ -173,8 +173,6 @@
     const raw = String(id || '').trim();
     if (!raw) return null;
     const mapped = DYE_MIGRATIONS[raw] || raw;
-    // Legacy black/onyx IDs are allowed to migrate to Charcoal as a visual fallback;
-    // new players can only acquire Charcoal through future achievement unlocks.
     return DYE_BY_ID.has(mapped) ? mapped : null;
   }
 

@@ -544,12 +544,42 @@ describe('dye API', () => {
     acc.load();
     const owned = toPlain(acc.getOwnedDyes());
     assert.equal(owned.includes('dye:CLOTH:black'), false);
-    assert.equal(owned.includes('dye:CLOTH:charcoal'), true);
+    assert.equal(owned.includes('dye:CLOTH:charcoal'), false);
+    assert.equal(owned.includes('dye:CLOTH:gray'), true);
     assert.equal(owned.includes('dye:CLOTH:pure_red'), true);
     assert.equal(owned.filter(id => id === 'dye:CLOTH:pure_red').length, 1);
     assert.equal(owned.includes('dye:CLOTH:not_real'), false);
     assert.equal(acc.getAppliedDyes().CLOTH, 'dye:CLOTH:pure_red');
     assert.equal(acc.getAppliedDyes().HAT, undefined);
+  });
+
+
+  it('legacy starter dye ids migrate only into configured starter dyes', () => {
+    const sandbox = makeSandbox();
+    sandbox.localStorage.setItem('sb_account_v1', JSON.stringify({
+      bronze: 30,
+      ownedDyes: [
+        'dye:CLOTH:red',
+        'dye:CLOTH:orange',
+        'dye:CLOTH:yellow',
+        'dye:CLOTH:green',
+        'dye:CLOTH:blue',
+        'dye:CLOTH:purple',
+        'dye:CLOTH:brown',
+        'dye:CLOTH:black',
+        'dye:CLOTH:white',
+        'dye:CLOTH:grey',
+      ],
+    }));
+    const { ScratchbonesAccount: acc } = sandbox;
+    acc.load();
+    const owned = toPlain(acc.getOwnedDyes());
+    assert.deepEqual(owned.sort(), starterIds.slice().sort());
+    assert.equal(owned.some(id => id.startsWith('dye:CLOTH:pure_')), false);
+    assert.equal(owned.some(id => id.startsWith('dye:CLOTH:bright_')), false);
+    assert.equal(owned.some(id => id.startsWith('dye:CLOTH:deep_')), false);
+    assert.equal(owned.includes('dye:CLOTH:white'), false);
+    assert.equal(owned.includes('dye:CLOTH:charcoal'), false);
   });
 
   it('mystery pools overlap correctly and exclude neutral/achievement dyes', () => {
