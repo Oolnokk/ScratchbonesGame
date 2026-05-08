@@ -5286,11 +5286,13 @@ import { createTutorial } from './tutorial.js';
       const matrix3dMatch = transform.match(/^matrix3d\((.+)\)$/);
       if (matrix3dMatch) {
         const parts = matrix3dMatch[1].split(',').map((value) => Number.parseFloat(value.trim()));
+        if (parts.length !== 16) return 1;
         return Number.isFinite(parts[0]) ? parts[0] : 1;
       }
       const matrixMatch = transform.match(/^matrix\((.+)\)$/);
       if (matrixMatch) {
         const parts = matrixMatch[1].split(',').map((value) => Number.parseFloat(value.trim()));
+        if (parts.length !== 6) return 1;
         return Number.isFinite(parts[0]) ? parts[0] : 1;
       }
       return 1;
