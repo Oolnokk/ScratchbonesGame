@@ -3980,6 +3980,30 @@ import { createTutorial } from './tutorial.js';
       const CLONE_LAYER_SYNC_FRAME_MS = 50;
       const snapshots = new Map();
       const activeClones = new Map();
+      // Reads layering config lazily so it can be used from any scope within
+      // this IIFE — including from startCloneLayeringTracker callbacks that
+      // close over the outer scope rather than the inner animatePostRender scope.
+      function syncCloneLayeringForSidebarBoundary(cloneEl) {
+        if (!(cloneEl instanceof Element)) return;
+        const cloneLayerCfg = SCRATCHBONES_GAME.layout?.animation?.cardCloneLayering || {};
+        const cloneZBelowLighting = Number.isFinite(Number(cloneLayerCfg.belowLightingZIndex)) ? Number(cloneLayerCfg.belowLightingZIndex) : 1;
+        const cloneZAboveLighting = Number.isFinite(Number(cloneLayerCfg.aboveLightingZIndex)) ? Number(cloneLayerCfg.aboveLightingZIndex) : 9999;
+        const cloneBoundarySelector = String(cloneLayerCfg.sidebarBoundarySelector || '#aiSidebar');
+        const sidebar = document.querySelector(cloneBoundarySelector);
+        if (!sidebar) {
+          cloneEl.style.zIndex = String(cloneZBelowLighting);
+          return;
+        }
+        const cloneRect = cloneEl.getBoundingClientRect();
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const intersectsSidebar = !(
+          cloneRect.right <= sidebarRect.left
+          || cloneRect.left >= sidebarRect.right
+          || cloneRect.bottom <= sidebarRect.top
+          || cloneRect.top >= sidebarRect.bottom
+        );
+        cloneEl.style.zIndex = String(intersectsSidebar ? cloneZAboveLighting : cloneZBelowLighting);
+      }
       function startCloneLayeringTracker(clone) {
         let lastSyncMs = 0;
         requestAnimationFrame(function trackCloneLayering(nowMs) {
@@ -4040,29 +4064,6 @@ import { createTutorial } from './tutorial.js';
         const base = animCfg.baseDurationMs;
         const FLY_MS = base;
         const FADE_MS = Math.round(base / animCfg.fadeInSpeed);
-        const cloneLayerCfg = animCfg.cardCloneLayering || {};
-        const cloneZBelowLighting = Number.isFinite(Number(cloneLayerCfg.belowLightingZIndex)) ? Number(cloneLayerCfg.belowLightingZIndex) : 1;
-        const cloneZAboveLighting = Number.isFinite(Number(cloneLayerCfg.aboveLightingZIndex)) ? Number(cloneLayerCfg.aboveLightingZIndex) : 9999;
-        const cloneBoundarySelector = String(cloneLayerCfg.sidebarBoundarySelector || '#aiSidebar');
-
-
-        function syncCloneLayeringForSidebarBoundary(cloneEl) {
-          if (!(cloneEl instanceof Element)) return;
-          const sidebar = document.querySelector(cloneBoundarySelector);
-          if (!sidebar) {
-            cloneEl.style.zIndex = String(cloneZBelowLighting);
-            return;
-          }
-          const cloneRect = cloneEl.getBoundingClientRect();
-          const sidebarRect = sidebar.getBoundingClientRect();
-          const intersectsSidebar = !(
-            cloneRect.right <= sidebarRect.left
-            || cloneRect.left >= sidebarRect.right
-            || cloneRect.bottom <= sidebarRect.top
-            || cloneRect.top >= sidebarRect.bottom
-          );
-          cloneEl.style.zIndex = String(intersectsSidebar ? cloneZAboveLighting : cloneZBelowLighting);
-        }
 
         // Determine if an opponent just played (for avatar-origin card flights)
         const latestPlay = state.betting?.play || state.challengeWindow?.lastPlay || state.pile.at(-1) || null;
@@ -4618,8 +4619,8 @@ import { createTutorial } from './tutorial.js';
               ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
             </div>
           `).join('')}
-          ${renderEmojiReactionPanel()}
         </div>
+        ${renderEmojiReactionPanel()}
         <div class="humanSeatZone fit-target fit-0" data-proj-id="human-seat-zone">
           <div class="humanSeatCard ${player.eliminated ? 'eliminated' : ''}" data-proj-id="human-seat">
             <div class="seatInfo" data-proj-id="info-human" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
@@ -5309,15 +5310,15 @@ import { createTutorial } from './tutorial.js';
       }).join('');
       return `<div class="emojiReactionPanel" data-proj-id="emoji-panel" aria-label="Emoji reactions">${buttonHtml}</div>`;
     }
-    // Creates or returns the layer used for local emoji FX on the human seat card.
-    function ensureEmojiReactionLayer(humanSeatCard) {
-      if (!humanSeatCard) return null;
-      let layer = humanSeatCard.querySelector('.emojiReactionFxLayer');
+    // Creates or returns the FX layer attached to the given anchor element.
+    function ensureEmojiReactionLayer(anchorEl) {
+      if (!anchorEl) return null;
+      let layer = anchorEl.querySelector(':scope > .emojiReactionFxLayer');
       if (!layer) {
         layer = document.createElement('div');
         layer.className = 'emojiReactionFxLayer';
         layer.setAttribute('aria-hidden', 'true');
-        humanSeatCard.appendChild(layer);
+        anchorEl.appendChild(layer);
       }
       return layer;
     }
@@ -5328,21 +5329,31 @@ import { createTutorial } from './tutorial.js';
       const scaleX = parseScaleXFromTransform(style.transform);
       return scaleX < 0;
     }
-    // Spawns one local emoji FX burst from the human avatar anchor.
+    // Spawns one emoji FX burst, preferring the visible claim-cluster actor float
+    // as the origin; falls back to the human seat card when the cluster is hidden.
     function spawnEmojiReactionFx(reactionId) {
       const app = document.getElementById('app');
       const reaction = EMOJI_REACTION_CONFIG[(reactionId || '').trim().toLowerCase()];
       if (!app || !reaction) return;
+      // Prefer claim-cluster actor avatar as the visual source when it is rendered.
+      const actorFloat = app.querySelector('.actorAvatarFloat');
+      const actorCanvas = actorFloat?.querySelector('canvas.seatPortrait');
       const humanSeatCard = app.querySelector('.humanSeatCard');
-      const avatarBox = humanSeatCard?.querySelector('.seatAvatarBox');
-      const avatarCanvas = avatarBox?.querySelector('canvas.seatPortrait');
-      const layer = ensureEmojiReactionLayer(humanSeatCard);
-      if (!humanSeatCard || !avatarBox || !layer) return;
+      const anchorEl = (actorFloat && actorCanvas && actorFloat.offsetParent !== null)
+        ? actorFloat
+        : humanSeatCard;
+      const avatarCanvas = anchorEl === actorFloat
+        ? actorCanvas
+        : humanSeatCard?.querySelector('.seatAvatarBox canvas.seatPortrait');
+      const layer = ensureEmojiReactionLayer(anchorEl);
+      if (!anchorEl || !layer) return;
       const layerRect = layer.getBoundingClientRect();
-      const avatarRect = avatarBox.getBoundingClientRect();
-      const driftDir = isSeatAvatarFlipped(avatarCanvas) ? 1 : -1;
-      const startX = (avatarRect.left - layerRect.left) + (avatarRect.width * EMOJI_REACTION_ORIGIN_X_RATIO);
-      const startY = (avatarRect.top - layerRect.top) + (avatarRect.height * EMOJI_REACTION_ORIGIN_Y_RATIO);
+      const anchorRect = anchorEl.getBoundingClientRect();
+      // When flipped (scaleX < 0) the face points left → drift left (-1).
+      // When not flipped the face points right → drift right (+1).
+      const driftDir = isSeatAvatarFlipped(avatarCanvas) ? -1 : 1;
+      const startX = (anchorRect.left - layerRect.left) + (anchorRect.width * EMOJI_REACTION_ORIGIN_X_RATIO);
+      const startY = (anchorRect.top - layerRect.top) + (anchorRect.height * EMOJI_REACTION_ORIGIN_Y_RATIO);
       const fx = document.createElement('div');
       fx.className = `emojiFx ${reaction.className}`;
       fx.style.left = `${startX}px`;

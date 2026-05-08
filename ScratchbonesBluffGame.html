@@ -549,7 +549,10 @@
       font-size: calc(1rem * var(--layout-sidebar-content-scale));
     }
     .emojiReactionPanel {
-      margin: 2px 2px 8px auto;
+      position: absolute;
+      right: calc(var(--layout-sidebar-width) + var(--layout-app-gap));
+      bottom: calc(var(--layout-app-padding, 8px) + var(--safe, 0px));
+      z-index: 10;
       padding: 8px 6px;
       border-radius: 12px;
       background: rgba(22, 16, 14, 0.88);
@@ -602,8 +605,8 @@
       position: absolute;
       left: 0;
       top: 0;
-      width: 78px;
-      height: 78px;
+      width: 58px;
+      height: 58px;
       pointer-events: none;
       transform-origin: center center;
       --emoji-kiss-drift-mid: 34px;
@@ -648,8 +651,8 @@
       position: absolute;
       left: 50%;
       top: 50%;
-      width: 62px;
-      height: 62px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
       transform: translate(-50%, -50%);
       background: radial-gradient(circle at 50% 50%, rgba(181, 255, 142, 0.38) 0%, rgba(122, 198, 92, 0.22) 42%, rgba(98, 165, 74, 0.01) 72%);
@@ -877,6 +880,25 @@
       88%      { filter: drop-shadow(0 0 20px rgba(140,255,220,0.95)) drop-shadow(0 0 30px rgba(67,206,162,0.60)) drop-shadow(0 0 7px rgba(255,255,255,0.30)); }
     }
     [data-trick-glow] { animation: trickBoneFlameGlow 2.1s ease-in-out infinite; }
+    /* ── Trick bone glyph icons (deck info list near the deck placeholder) ──────
+       Rendered at half their natural size and color-inverted so they read as white
+       silhouettes against the dark panel background. */
+    .trickSymbolContainer {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .trickSymbolImg {
+      height: 0.65em;
+      width: auto;
+      filter: invert(1) brightness(1.05);
+      vertical-align: middle;
+      display: block;
+    }
+    .trickDeckInfo { display: flex; flex-direction: column; gap: 1px; }
+    .trickDeckInfoRows { display: flex; flex-direction: column; gap: 1px; }
+    .trickDeckInfoItem { display: flex; align-items: center; gap: 4px; }
     .eliminated { opacity: 0.55; filter: grayscale(0.4); }
     .seatPortrait {
       display: block;
