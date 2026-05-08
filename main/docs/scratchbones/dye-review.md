@@ -28,8 +28,9 @@
    - all 13 chromatic `Dusty` dyes,
    - `Silver`, `Gray`, `Cream`, and `Brown`.
 4. Legacy dye IDs are migrated through `legacyDyeMigrations`; invalid/removed IDs are dropped.
-   - Legacy `dye:CLOTH:black` maps to `dye:CLOTH:charcoal` only as a safe visual fallback for old saves.
-   - New players do not receive or purchase `Charcoal`; it remains future-achievement metadata.
+   - Legacy starter hue IDs (`red`, `orange`, `yellow`, `green`, `blue`, `purple`) map to their corresponding `Dusty` starter dyes instead of to non-starter prefixed variants.
+   - Legacy starter neutral IDs map into the starter neutral set: `brown` stays `Brown`, `black` falls back to `Gray`, `white` falls back to `Silver`, and `grey` maps to `Gray`.
+   - New and migrated players do not receive or purchase `White` or `Charcoal`; those remain future-achievement metadata.
 5. Collections UI (`docs/js/scratchbones-lobby.js`) reads only owned dyes for normal dye selection, sorts by hue family and variant, and renders swatches from the mint base plus each dye's fitted `color` offsets.
 6. Shop UI reads `ScratchbonesAccount.getMysteryDyeShopCatalog()` and shows seven mobile-visible mystery dye items.
 7. `buyMysteryDye(poolId)` deducts the configured bronze price, grants exactly one unowned eligible chromatic dye from that pool, and returns the granted dye.
