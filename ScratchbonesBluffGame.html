@@ -548,6 +548,185 @@
       min-height: 0;
       font-size: calc(1rem * var(--layout-sidebar-content-scale));
     }
+    .emojiReactionPanel {
+      position: absolute;
+      right: calc(var(--layout-sidebar-width) + var(--layout-app-gap));
+      bottom: calc(var(--layout-app-padding, 8px) + var(--safe, 0px));
+      z-index: 10;
+      padding: 8px 6px;
+      border-radius: 12px;
+      background: rgba(22, 16, 14, 0.88);
+      border: 1px solid rgba(242, 208, 143, 0.32);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: fit-content;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+    }
+    .emojiReactionBtn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid rgba(242,208,143,0.28);
+      background: rgba(37,27,24,0.92);
+      padding: 6px;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+    .emojiReactionBtn:hover,
+    .emojiReactionBtn:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(242,208,143,0.62);
+      background: rgba(52,37,33,0.96);
+    }
+    .emojiReactionGlyph {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: var(--emoji-tint, rgba(255,255,255,0.9));
+      -webkit-mask-image: var(--emoji-mask-src);
+      mask-image: var(--emoji-mask-src);
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+      filter: drop-shadow(0 0 6px rgba(255,255,255,0.42));
+    }
+    .emojiReactionFxLayer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: visible;
+      z-index: 8;
+    }
+    .emojiFx {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 58px;
+      height: 58px;
+      pointer-events: none;
+      transform-origin: center center;
+      --emoji-kiss-drift-mid: 34px;
+      --emoji-kiss-drift-end: 76px;
+      --emoji-kiss-rise-mid: -108%;
+      --emoji-kiss-rise-end: -165%;
+      --emoji-disgust-drift-mid: 16px;
+      --emoji-disgust-drift-end: 58px;
+      --emoji-disgust-rise-mid: -88%;
+      --emoji-disgust-drop-end: 285%;
+    }
+    .emojiFxGlyph {
+      position: absolute;
+      inset: 0;
+      background: var(--emoji-tint, rgba(255,255,255,0.9));
+      -webkit-mask-image: var(--emoji-mask-src);
+      mask-image: var(--emoji-mask-src);
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+    }
+    .emojiFx-love {
+      animation: emojiKissBurst 1.65s ease-out both;
+    }
+    .emojiFx-love .emojiFxGlyph {
+      filter: drop-shadow(0 0 8px rgba(255, 98, 188, 0.92)) drop-shadow(0 0 18px rgba(255, 96, 194, 0.65));
+      opacity: 0.92;
+    }
+    .emojiFx-alarmed {
+      animation: emojiKissBurst 1.65s ease-out both;
+    }
+    .emojiFx-alarmed .emojiFxGlyph {
+      filter: drop-shadow(0 0 8px rgba(255, 60, 60, 0.95)) drop-shadow(0 0 18px rgba(220, 30, 30, 0.65));
+      opacity: 0.95;
+    }
+    .emojiFx-curious {
+      animation: emojiKissBurst 1.65s ease-out both;
+    }
+    .emojiFx-curious .emojiFxGlyph {
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 16px rgba(200, 220, 255, 0.55));
+      opacity: 0.92;
+    }
+    .emojiFx-fast {
+      animation-duration: 0.55s;
+    }
+    .emojiFx-disgust {
+      animation: emojiDisgustArc 1.7s cubic-bezier(0.17, 0.72, 0.34, 1.03) both;
+    }
+    .emojiFx-disgust .emojiFxGlyph {
+      filter: drop-shadow(0 0 7px rgba(125, 219, 113, 0.95)) drop-shadow(0 0 16px rgba(79, 153, 62, 0.72));
+    }
+    .emojiFxStink {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle at 50% 50%, rgba(181, 255, 142, 0.38) 0%, rgba(122, 198, 92, 0.22) 42%, rgba(98, 165, 74, 0.01) 72%);
+      filter: blur(1.6px);
+      animation: emojiStinkTrail 1.2s ease-out both;
+    }
+    @keyframes emojiKissBurst {
+      0% {
+        transform: translate(-50%, -50%) scale(0.32);
+        opacity: 0;
+      }
+      16% {
+        transform: translate(-50%, -50%) scale(1.18);
+        opacity: 1;
+      }
+      60% {
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * var(--emoji-kiss-drift-mid))), var(--emoji-kiss-rise-mid)) scale(1.36);
+        opacity: 0.98;
+      }
+      100% {
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * var(--emoji-kiss-drift-end))), var(--emoji-kiss-rise-end)) scale(1.82);
+        opacity: 0;
+      }
+    }
+    @keyframes emojiDisgustArc {
+      0% {
+        transform: translate(-50%, -50%) scale(0.35);
+        opacity: 0;
+      }
+      18% {
+        transform: translate(-50%, -50%) scale(1.04);
+        opacity: 1;
+      }
+      40% {
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * var(--emoji-disgust-drift-mid))), var(--emoji-disgust-rise-mid)) scale(1.03);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * var(--emoji-disgust-drift-end))), var(--emoji-disgust-drop-end)) scale(0.84);
+        opacity: 0;
+      }
+    }
+    @keyframes emojiStinkTrail {
+      0% {
+        transform: translate(-50%, -50%) scale(0.72);
+        opacity: 0.05;
+      }
+      32% {
+        transform: translate(calc(-50% + 6px), calc(-50% - 18px)) scale(1);
+        opacity: 0.72;
+      }
+      72% {
+        transform: translate(calc(-50% - 8px), calc(-50% - 42px)) scale(1.06);
+        opacity: 0.46;
+      }
+      100% {
+        transform: translate(calc(-50% + 4px), calc(-50% - 58px)) scale(0.85);
+        opacity: 0;
+      }
+    }
     .humanSeatZone {
       grid-area: human;
       min-height: 0;
@@ -715,6 +894,25 @@
       88%      { filter: drop-shadow(0 0 20px rgba(140,255,220,0.95)) drop-shadow(0 0 30px rgba(67,206,162,0.60)) drop-shadow(0 0 7px rgba(255,255,255,0.30)); }
     }
     [data-trick-glow] { animation: trickBoneFlameGlow 2.1s ease-in-out infinite; }
+    /* ── Trick bone glyph icons (deck info list near the deck placeholder) ──────
+       Rendered at half their natural size and color-inverted so they read as white
+       silhouettes against the dark panel background. */
+    .trickSymbolContainer {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .trickSymbolImg {
+      height: 0.65em;
+      width: auto;
+      filter: invert(1) brightness(1.05);
+      vertical-align: middle;
+      display: block;
+    }
+    .trickDeckInfo { display: flex; flex-direction: column; gap: 1px; }
+    .trickDeckInfoRows { display: flex; flex-direction: column; gap: 1px; }
+    .trickDeckInfoItem { display: flex; align-items: center; gap: 4px; }
     .eliminated { opacity: 0.55; filter: grayscale(0.4); }
     .seatPortrait {
       display: block;

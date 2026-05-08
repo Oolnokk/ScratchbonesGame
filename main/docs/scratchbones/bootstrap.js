@@ -48,6 +48,42 @@ import { createTutorial } from './tutorial.js';
     };
     const AUTHORED_PARENT_BOX = {};
     const AUTHORED_BOX_DEFAULTS = SCRATCHBONES_GAME.layout?.authored?.boxes || {};
+    const EMOJI_REACTION_CONFIG = {
+      love: {
+        id: 'love',
+        label: 'Love',
+        src: './docs/assets/symbols/emoji_love.png',
+        tint: 'rgba(255, 136, 202, 0.86)',
+        className: 'emojiFx-love',
+        durationMs: 1650,
+      },
+      disgust: {
+        id: 'disgust',
+        label: 'Disgust',
+        src: './docs/assets/symbols/emoji_disgust.png',
+        tint: 'rgba(122, 198, 92, 0.92)',
+        className: 'emojiFx-disgust',
+        durationMs: 1700,
+      },
+      alarmed: {
+        id: 'alarmed',
+        label: 'Alarmed',
+        src: './docs/assets/symbols/emoji_alarmed.png',
+        tint: 'rgba(255, 84, 84, 0.95)',
+        className: 'emojiFx-alarmed emojiFx-fast',
+        durationMs: 620,
+      },
+      curious: {
+        id: 'curious',
+        label: 'Curious',
+        src: './docs/assets/symbols/emoji_curious.png',
+        tint: 'rgba(255, 255, 255, 0.94)',
+        className: 'emojiFx-curious emojiFx-fast',
+        durationMs: 620,
+      },
+    };
+    const EMOJI_REACTION_ORIGIN_X_RATIO = 0.45;
+    const EMOJI_REACTION_ORIGIN_Y_RATIO = 0.5;
     function applyRootCssCustomProperties(cssRootVars) {
       const rootStyle = document.documentElement.style;
       const entries = cssRootVars && typeof cssRootVars === 'object' ? Object.entries(cssRootVars) : [];
@@ -3944,6 +3980,30 @@ import { createTutorial } from './tutorial.js';
       const CLONE_LAYER_SYNC_FRAME_MS = 50;
       const snapshots = new Map();
       const activeClones = new Map();
+      // Reads layering config lazily so it can be used from any scope within
+      // this IIFE — including from startCloneLayeringTracker callbacks that
+      // close over the outer scope rather than the inner animatePostRender scope.
+      function syncCloneLayeringForSidebarBoundary(cloneEl) {
+        if (!(cloneEl instanceof Element)) return;
+        const cloneLayerCfg = SCRATCHBONES_GAME.layout?.animation?.cardCloneLayering || {};
+        const cloneZBelowLighting = Number.isFinite(Number(cloneLayerCfg.belowLightingZIndex)) ? Number(cloneLayerCfg.belowLightingZIndex) : 1;
+        const cloneZAboveLighting = Number.isFinite(Number(cloneLayerCfg.aboveLightingZIndex)) ? Number(cloneLayerCfg.aboveLightingZIndex) : 9999;
+        const cloneBoundarySelector = String(cloneLayerCfg.sidebarBoundarySelector || '#aiSidebar');
+        const sidebar = document.querySelector(cloneBoundarySelector);
+        if (!sidebar) {
+          cloneEl.style.zIndex = String(cloneZBelowLighting);
+          return;
+        }
+        const cloneRect = cloneEl.getBoundingClientRect();
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const intersectsSidebar = !(
+          cloneRect.right <= sidebarRect.left
+          || cloneRect.left >= sidebarRect.right
+          || cloneRect.bottom <= sidebarRect.top
+          || cloneRect.top >= sidebarRect.bottom
+        );
+        cloneEl.style.zIndex = String(intersectsSidebar ? cloneZAboveLighting : cloneZBelowLighting);
+      }
       function startCloneLayeringTracker(clone) {
         let lastSyncMs = 0;
         requestAnimationFrame(function trackCloneLayering(nowMs) {
@@ -4004,29 +4064,6 @@ import { createTutorial } from './tutorial.js';
         const base = animCfg.baseDurationMs;
         const FLY_MS = base;
         const FADE_MS = Math.round(base / animCfg.fadeInSpeed);
-        const cloneLayerCfg = animCfg.cardCloneLayering || {};
-        const cloneZBelowLighting = Number.isFinite(Number(cloneLayerCfg.belowLightingZIndex)) ? Number(cloneLayerCfg.belowLightingZIndex) : 1;
-        const cloneZAboveLighting = Number.isFinite(Number(cloneLayerCfg.aboveLightingZIndex)) ? Number(cloneLayerCfg.aboveLightingZIndex) : 9999;
-        const cloneBoundarySelector = String(cloneLayerCfg.sidebarBoundarySelector || '#aiSidebar');
-
-
-        function syncCloneLayeringForSidebarBoundary(cloneEl) {
-          if (!(cloneEl instanceof Element)) return;
-          const sidebar = document.querySelector(cloneBoundarySelector);
-          if (!sidebar) {
-            cloneEl.style.zIndex = String(cloneZBelowLighting);
-            return;
-          }
-          const cloneRect = cloneEl.getBoundingClientRect();
-          const sidebarRect = sidebar.getBoundingClientRect();
-          const intersectsSidebar = !(
-            cloneRect.right <= sidebarRect.left
-            || cloneRect.left >= sidebarRect.right
-            || cloneRect.bottom <= sidebarRect.top
-            || cloneRect.top >= sidebarRect.bottom
-          );
-          cloneEl.style.zIndex = String(intersectsSidebar ? cloneZAboveLighting : cloneZBelowLighting);
-        }
 
         // Determine if an opponent just played (for avatar-origin card flights)
         const latestPlay = state.betting?.play || state.challengeWindow?.lastPlay || state.pile.at(-1) || null;
@@ -4583,6 +4620,7 @@ import { createTutorial } from './tutorial.js';
             </div>
           `).join('')}
         </div>
+        ${renderEmojiReactionPanel()}
         <div class="humanSeatZone fit-target fit-0" data-proj-id="human-seat-zone">
           <div class="humanSeatCard ${player.eliminated ? 'eliminated' : ''}" data-proj-id="human-seat">
             <div class="seatInfo" data-proj-id="info-human" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
@@ -4787,6 +4825,11 @@ import { createTutorial } from './tutorial.js';
         });
       });
       document.getElementById('smuggleOffloadBtn')?.addEventListener('click', () => { void resolvePendingSmuggleSelection(); });
+      app.querySelectorAll('[data-emoji-reaction]').forEach((button) => {
+        button.addEventListener('click', () => {
+          spawnEmojiReactionFx(button.getAttribute('data-emoji-reaction'));
+        });
+      });
       app.querySelectorAll('[data-ai-seat-id]').forEach((seat) => {
         seat.addEventListener('click', () => {
           if (!state.smuggleSelection) return;
@@ -5239,6 +5282,92 @@ import { createTutorial } from './tutorial.js';
         if (candidate > bestScale) bestScale = candidate;
       }
       root.style.setProperty('--layout-table-card-auto-scale', clampNumber(bestScale, 0.35, 1).toFixed(3));
+    }
+    // Returns the horizontal scale component from CSS transform matrix/matrix3d values.
+    function parseScaleXFromTransform(transformValue) {
+      const transform = (transformValue || '').trim();
+      if (!transform || transform === 'none') return 1;
+      const matrix3dMatch = transform.match(/^matrix3d\((.+)\)$/);
+      if (matrix3dMatch) {
+        const parts = matrix3dMatch[1].split(',').map((value) => parseFloat(value.trim()));
+        if (parts.length !== 16) return 1;
+        return Number.isFinite(parts[0]) ? parts[0] : 1;
+      }
+      const matrixMatch = transform.match(/^matrix\((.+)\)$/);
+      if (matrixMatch) {
+        const parts = matrixMatch[1].split(',').map((value) => parseFloat(value.trim()));
+        if (parts.length !== 6) return 1;
+        return Number.isFinite(parts[0]) ? parts[0] : 1;
+      }
+      return 1;
+    }
+    function renderEmojiReactionPanel() {
+      const reactionOrder = ['love', 'disgust', 'alarmed', 'curious'];
+      const buttonHtml = reactionOrder.map((id) => {
+        const reaction = EMOJI_REACTION_CONFIG[id];
+        if (!reaction) return '';
+        return `<button type="button" class="emojiReactionBtn" data-emoji-reaction="${reaction.id}" title="${escapeHtml(reaction.label)}" aria-label="${escapeHtml(reaction.label)}"><span class="emojiReactionGlyph" style="--emoji-mask-src:url('${escapeHtml(reaction.src)}');--emoji-tint:${escapeHtml(reaction.tint)};"></span></button>`;
+      }).join('');
+      return `<div class="emojiReactionPanel" data-proj-id="emoji-panel" aria-label="Emoji reactions">${buttonHtml}</div>`;
+    }
+    // Creates or returns the FX layer attached to the given anchor element.
+    function ensureEmojiReactionLayer(anchorEl) {
+      if (!anchorEl) return null;
+      let layer = anchorEl.querySelector(':scope > .emojiReactionFxLayer');
+      if (!layer) {
+        layer = document.createElement('div');
+        layer.className = 'emojiReactionFxLayer';
+        layer.setAttribute('aria-hidden', 'true');
+        anchorEl.appendChild(layer);
+      }
+      return layer;
+    }
+    // Determines if the seat portrait is mirrored by checking transform scaleX.
+    function isSeatAvatarFlipped(avatarCanvas) {
+      if (!avatarCanvas || typeof window.getComputedStyle !== 'function') return false;
+      const style = window.getComputedStyle(avatarCanvas);
+      const scaleX = parseScaleXFromTransform(style.transform);
+      return scaleX < 0;
+    }
+    // Spawns one emoji FX burst, preferring the visible claim-cluster actor float
+    // as the origin; falls back to the human seat card when the cluster is hidden.
+    function spawnEmojiReactionFx(reactionId) {
+      const app = document.getElementById('app');
+      const reaction = EMOJI_REACTION_CONFIG[(reactionId || '').trim().toLowerCase()];
+      if (!app || !reaction) return;
+      // Prefer claim-cluster actor avatar as the visual source when it is rendered.
+      const actorFloat = app.querySelector('.actorAvatarFloat');
+      const actorCanvas = actorFloat?.querySelector('canvas.seatPortrait');
+      const humanSeatCard = app.querySelector('.humanSeatCard');
+      const anchorEl = (actorFloat && actorCanvas && actorFloat.offsetParent !== null)
+        ? actorFloat
+        : humanSeatCard;
+      const avatarCanvas = anchorEl === actorFloat
+        ? actorCanvas
+        : humanSeatCard?.querySelector('.seatAvatarBox canvas.seatPortrait');
+      const layer = ensureEmojiReactionLayer(anchorEl);
+      if (!anchorEl || !layer) return;
+      const layerRect = layer.getBoundingClientRect();
+      const anchorRect = anchorEl.getBoundingClientRect();
+      // When flipped (scaleX < 0) the face points left → drift left (-1).
+      // When not flipped the face points right → drift right (+1).
+      const driftDir = isSeatAvatarFlipped(avatarCanvas) ? -1 : 1;
+      const startX = (anchorRect.left - layerRect.left) + (anchorRect.width * EMOJI_REACTION_ORIGIN_X_RATIO);
+      const startY = (anchorRect.top - layerRect.top) + (anchorRect.height * EMOJI_REACTION_ORIGIN_Y_RATIO);
+      const fx = document.createElement('div');
+      fx.className = `emojiFx ${reaction.className}`;
+      fx.style.left = `${startX}px`;
+      fx.style.top = `${startY}px`;
+      fx.style.setProperty('--emoji-mask-src', `url('${reaction.src}')`);
+      fx.style.setProperty('--emoji-tint', reaction.tint);
+      fx.style.setProperty('--emoji-drift-dir', String(driftDir));
+      fx.innerHTML = `
+        <span class="emojiFxGlyph"></span>
+        ${reaction.id === 'disgust' ? '<span class="emojiFxStink" aria-hidden="true"></span>' : ''}
+      `;
+      layer.appendChild(fx);
+      setTimeout(() => fx.remove(), reaction.durationMs);
+      if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
     const clusterCinematicStageRuntime = {
       phaseKey: null,
