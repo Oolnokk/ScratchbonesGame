@@ -3941,8 +3941,20 @@ import { createTutorial } from './tutorial.js';
 
     const cardAnimator = (() => {
       const OPPONENT_STAGGER_MS = 40;
+      const CLONE_LAYER_SYNC_FRAME_MS = 50;
       const snapshots = new Map();
       const activeClones = new Map();
+      function startCloneLayeringTracker(clone) {
+        let lastSyncMs = 0;
+        requestAnimationFrame(function trackCloneLayering(nowMs) {
+          if (!clone.isConnected) return;
+          if (nowMs - lastSyncMs >= CLONE_LAYER_SYNC_FRAME_MS) {
+            lastSyncMs = nowMs;
+            syncCloneLayeringForSidebarBoundary(clone);
+          }
+          requestAnimationFrame(trackCloneLayering);
+        });
+      }
 
       function getContainerType(el) {
         if (el.closest('.handScroll')) return 'hand';
@@ -4084,11 +4096,7 @@ import { createTutorial } from './tutorial.js';
                 requestAnimationFrame(() => {
                   clone.style.transition = `transform ${FLY_MS}ms cubic-bezier(0.4,0,0.2,1)`;
                   clone.style.transform = 'none';
-                  requestAnimationFrame(function trackCloneLayering(){
-                    if (!clone.isConnected) return;
-                    syncCloneLayeringForSidebarBoundary(clone);
-                    requestAnimationFrame(trackCloneLayering);
-                  });
+                  startCloneLayeringTracker(clone);
                   const done = () => {
                     clone.remove();
                     if (activeClones.get(id) === clone) activeClones.delete(id);
@@ -4135,11 +4143,7 @@ import { createTutorial } from './tutorial.js';
                   requestAnimationFrame(() => {
                     clone.style.transition = `transform ${FLY_MS}ms cubic-bezier(0.4,0,0.2,1)`;
                     clone.style.transform = 'none';
-                    requestAnimationFrame(function trackCloneLayering(){
-                      if (!clone.isConnected) return;
-                      syncCloneLayeringForSidebarBoundary(clone);
-                      requestAnimationFrame(trackCloneLayering);
-                    });
+                    startCloneLayeringTracker(clone);
                     const done = () => {
                       clone.remove();
                       if (activeClones.get(id) === clone) activeClones.delete(id);
@@ -4214,11 +4218,7 @@ import { createTutorial } from './tutorial.js';
             requestAnimationFrame(() => {
               clone.style.transition = `transform ${FLY_MS}ms cubic-bezier(0.4,0,0.2,1)`;
               clone.style.transform = 'none';
-              requestAnimationFrame(function trackCloneLayering(){
-                if (!clone.isConnected) return;
-                syncCloneLayeringForSidebarBoundary(clone);
-                requestAnimationFrame(trackCloneLayering);
-              });
+              startCloneLayeringTracker(clone);
               const done = () => {
                 clone.remove();
                 if (activeClones.get(id) === clone) activeClones.delete(id);
@@ -5135,10 +5135,11 @@ import { createTutorial } from './tutorial.js';
     // Runs at ~20 fps (every 50 ms) to keep CPU cost low while still being fast
     // enough to capture a 140 ms blink window reliably.
     let _portraitLoopActive = false;
+    let _lastPortraitMs = 0;
     function startPortraitLoop() {
       if (_portraitLoopActive) return;
       _portraitLoopActive = true;
-      let _lastPortraitMs = 0;
+      _lastPortraitMs = 0;
       const PORTRAIT_FRAME_MS = 50;
       function tick(nowMs) {
         if (!_portraitLoopActive) return;
@@ -5151,6 +5152,7 @@ import { createTutorial } from './tutorial.js';
     }
     function stopPortraitLoop() {
       _portraitLoopActive = false;
+      _lastPortraitMs = 0;
     }
     // ===== CHALLENGE CINEMATIC MODE =====
     function clearCinematicTimeout() {

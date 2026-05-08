@@ -56,6 +56,11 @@
     }
 
     let w = 0, h = 0, appRef = null;
+    let drawRafId = 0;
+    let startRetryTimerId = 0;
+    let resizeObserver = null;
+    let appMutationObserver = null;
+    let runLoopEnabled = false;
 
     // ── Canvas: occluder shadows (mix-blend-mode: multiply) ──────────────────
     // Black silhouettes of the actual card/coin PNGs cast away from the light.
@@ -107,10 +112,26 @@
     const wbCtx  = workBacklit.getContext('2d', { alpha: true });
 
     // Silhouette cache: pre-render each unique img.src as a black shape once
+    const SILHOUETTE_CACHE_MAX_AGE_MS = 15000;
+    const SILHOUETTE_PRUNE_CADENCE_MS = 1000;
     const silhouetteCache = new Map();
+    let lastSilhouettePruneMs = 0;
+    function maybePruneSilhouetteCache() {
+      const now = performance.now();
+      if (now - lastSilhouettePruneMs < SILHOUETTE_PRUNE_CADENCE_MS) return;
+      lastSilhouettePruneMs = now;
+      for (const [key, value] of silhouetteCache.entries()) {
+        if (now - (value.lastSeenMs || 0) > SILHOUETTE_CACHE_MAX_AGE_MS) silhouetteCache.delete(key);
+      }
+    }
     function getSilhouette(img) {
       const key = img.src;
-      if (silhouetteCache.has(key)) return silhouetteCache.get(key);
+      const now = performance.now();
+      const cached = silhouetteCache.get(key);
+      if (cached) {
+        cached.lastSeenMs = now;
+        return cached.canvas;
+      }
       const nw = img.naturalWidth  || 1;
       const nh = img.naturalHeight || 1;
       const oc = document.createElement('canvas');
@@ -120,7 +141,7 @@
       octx.globalCompositeOperation = 'source-atop';
       octx.fillStyle = '#000';
       octx.fillRect(0, 0, nw, nh);
-      silhouetteCache.set(key, oc);
+      silhouetteCache.set(key, { canvas: oc, lastSeenMs: now });
       return oc;
     }
 
@@ -711,140 +732,192 @@
       // workShadow holds unblurred steps; caller blits with clip + blur
     }
 
-    function draw(time) {
-      requestAnimationFrame(ms => draw(ms / 1000));
-      if (!w || !h || !appRef) return;
-
-      // Scale radius to match the current #app height vs reference
-      const baseRadius = RADIUS_REF * (h / APP_REF_H);
-      const lights = lightSources.map((source) => {
-        const noise = smoothNoise(time * source.flickerSpeed);
-        const qp = Math.sin(time * 31.0) * 0.025;
-        const flick = clamp(1 + noise * 0.16 * source.turbulence + qp, 0.72, 1.28);
-        const driftX = Math.sin(time * 2.2) * 16 * source.turbulence + noise * 10 * source.turbulence;
-        const driftY = Math.cos(time * 2.9) * 10 * source.turbulence;
-        const lx = source.xPct * w + driftX;
-        const ly = source.yPct * h - 12 + driftY;
-        const pulse = clamp(0.86 + (flick - 1) * 0.8, 0.68, 1.18);
-        return {
-          lx,
-          ly,
-          radius: baseRadius * source.radiusMultiplier,
-          alpha: clamp(0.5 * source.intensity * pulse, 0.08, 1.25),
-          shadowIntensity: source.intensity * pulse,
-          pulse,
-          flick,
-          turbulence: source.turbulence,
-        };
-      });
-      const primaryLight = lights[0];
-
-      // Gather backlit panel rects (~10 fps)
-      maybeGatherBacklit(appRef);
-
-      // ── Shadow layer ────────────────────────────────────────────────────────
-      const occluders = maybeGather(appRef);
-      drawOccluderShadows(primaryLight.lx, primaryLight.ly, primaryLight.shadowIntensity, occluders);
-      shadowCtx.clearRect(0, 0, w, h);
-      shadowCtx.filter = 'blur(3px)';
-      shadowCtx.drawImage(workShadow, 0, 0);
-      shadowCtx.filter = 'none';
-      punchOutImmune(shadowCtx);
-
-      // ── Darkness layer ─────────────────────────────────────────────────────
-      wdCtx.clearRect(0, 0, w, h);
-      const dg = wdCtx.createRadialGradient(primaryLight.lx, primaryLight.ly, 0, primaryLight.lx, primaryLight.ly, primaryLight.radius * 1.45);
-      dg.addColorStop(0,    `rgba(255, 200, 100, ${0.04 * primaryLight.flick})`);
-      dg.addColorStop(0.18, 'rgba(200, 140, 60, 0.18)');
-      dg.addColorStop(0.40, 'rgba(60, 36, 14, 0.54)');
-      dg.addColorStop(0.68, 'rgba(16, 10, 4, 0.76)');
-      dg.addColorStop(1,    'rgba(6, 3, 1, 0.88)');
-      wdCtx.fillStyle = dg;
-      wdCtx.fillRect(0, 0, w, h);
-      darkCtx.clearRect(0, 0, w, h);
-      darkCtx.drawImage(workDark, 0, 0);
-      punchOutImmune(darkCtx);
-
-      // ── Glow layer ─────────────────────────────────────────────────────────
-      wgCtx.clearRect(0, 0, w, h);
-      wgCtx.globalCompositeOperation = 'source-over';
-
-      lights.forEach((light) => {
-        wgCtx.save();
-        wgCtx.translate(light.lx, light.ly + light.radius * 0.12);
-        wgCtx.scale(1.12, 0.72);
-        const gg = wgCtx.createRadialGradient(0, 0, 0, 0, 0, light.radius);
-        gg.addColorStop(0,    `rgba(255, 223, 136, ${light.alpha})`);
-        gg.addColorStop(0.14, `rgba(255, 223, 136, ${light.alpha})`);
-        gg.addColorStop(0.55, `rgba(255, 166, 54, ${light.alpha * 0.5})`);
-        gg.addColorStop(1,    'rgba(255, 120, 16, 0)');
-        wgCtx.fillStyle = gg;
-        wgCtx.beginPath();
-        wgCtx.arc(0, 0, light.radius, 0, Math.PI * 2);
-        wgCtx.fill();
-        wgCtx.restore();
-        const cg = wgCtx.createRadialGradient(light.lx, light.ly - 18, 0, light.lx, light.ly - 18, light.radius * 0.07);
-        cg.addColorStop(0, `rgba(255, 248, 200, ${light.alpha * 0.9})`);
-        cg.addColorStop(1, 'rgba(255, 145, 32, 0)');
-        wgCtx.fillStyle = cg;
-        wgCtx.beginPath();
-        wgCtx.arc(light.lx, light.ly - 18, light.radius * 0.07, 0, Math.PI * 2);
-        wgCtx.fill();
-        wgCtx.globalCompositeOperation = 'screen';
-        wgCtx.lineWidth = 1;
-        for (let i = 0; i < 14; i++) {
-          const ang = (i / 14) * Math.PI * 2 + Math.sin(time + i) * 0.08;
-          const len = light.radius * (0.42 + (i % 4) * 0.055);
-          const start = 34 + (i % 3) * 10;
-          const wobble = Math.sin(time * (2.1 + i * 0.13) + i) * 18 * light.turbulence;
-          const x1 = light.lx + Math.cos(ang) * start + wobble;
-          const y1 = light.ly + Math.sin(ang) * start * 0.64;
-          const x2 = light.lx + Math.cos(ang) * len + wobble * 0.45;
-          const y2 = light.ly + Math.sin(ang) * len * 0.64;
-          const sg = wgCtx.createLinearGradient(x1, y1, x2, y2);
-          sg.addColorStop(0, `rgba(255, 221, 140, ${light.alpha * 0.11})`);
-          sg.addColorStop(1, 'rgba(255, 130, 28, 0)');
-          wgCtx.strokeStyle = sg;
-          wgCtx.beginPath();
-          wgCtx.moveTo(x1, y1);
-          wgCtx.lineTo(x2, y2);
-          wgCtx.stroke();
-        }
-      });
-
-      // Backlit panels — element-shaped amber glow, soft blur edges
-      wgCtx.globalCompositeOperation = 'source-over';
-      drawBacklitPanels(wgCtx);
-
-      glowCtx.clearRect(0, 0, w, h);
-      glowCtx.drawImage(workGlow, 0, 0);
-      punchOutImmune(glowCtx);
-      drawImmuneDebugOverlay(glowCtx);
-
-      thevmenuGlowCtx.clearRect(0, 0, w, h);
-      thevmenuGlowCtx.drawImage(glowCanvas, 0, 0);
-      punchOutThevmenuOccluders(thevmenuGlowCtx);
-
-      // ── Lerp clone lighting ─────────────────────────────────────────────────
-      // Clones on document.body get a CSS filter that approximates their position
-      // in the candlelight (dark + warm near source, dim + cool far from it).
-      const ar = appRef.getBoundingClientRect();
-      document.querySelectorAll('[data-candle-lerp-clone]').forEach(el => {
-        const r  = el.getBoundingClientRect();
-        const cx = r.left + r.width  * 0.5 - ar.left;
-        const cy = r.top  + r.height * 0.5 - ar.top;
-        const falloff = Math.max(0, 1 - Math.hypot(cx - primaryLight.lx, cy - primaryLight.ly) / primaryLight.radius);
-        el.style.filter =
-          `brightness(${(0.28 + falloff * 0.72 * primaryLight.pulse).toFixed(3)})` +
-          ` sepia(${(falloff * 0.5).toFixed(3)})`;
+    function requestDrawFrame() {
+      if (!runLoopEnabled || document.hidden || drawRafId) return;
+      drawRafId = requestAnimationFrame((ms) => {
+        drawRafId = 0;
+        draw(ms / 1000);
       });
     }
 
+    function draw(time) {
+      if (!runLoopEnabled) return;
+      try {
+        if (!w || !h || !appRef) return;
+
+        // Scale radius to match the current #app height vs reference
+        const baseRadius = RADIUS_REF * (h / APP_REF_H);
+        const lights = lightSources.map((source) => {
+          const noise = smoothNoise(time * source.flickerSpeed);
+          const qp = Math.sin(time * 31.0) * 0.025;
+          const flick = clamp(1 + noise * 0.16 * source.turbulence + qp, 0.72, 1.28);
+          const driftX = Math.sin(time * 2.2) * 16 * source.turbulence + noise * 10 * source.turbulence;
+          const driftY = Math.cos(time * 2.9) * 10 * source.turbulence;
+          const lx = source.xPct * w + driftX;
+          const ly = source.yPct * h - 12 + driftY;
+          const pulse = clamp(0.86 + (flick - 1) * 0.8, 0.68, 1.18);
+          return {
+            lx,
+            ly,
+            radius: baseRadius * source.radiusMultiplier,
+            alpha: clamp(0.5 * source.intensity * pulse, 0.08, 1.25),
+            shadowIntensity: source.intensity * pulse,
+            pulse,
+            flick,
+            turbulence: source.turbulence,
+          };
+        });
+        const primaryLight = lights[0];
+
+        // Gather backlit panel rects (~10 fps)
+        maybeGatherBacklit(appRef);
+
+        // ── Shadow layer ────────────────────────────────────────────────────────
+        const occluders = maybeGather(appRef);
+        drawOccluderShadows(primaryLight.lx, primaryLight.ly, primaryLight.shadowIntensity, occluders);
+        shadowCtx.clearRect(0, 0, w, h);
+        shadowCtx.filter = 'blur(3px)';
+        shadowCtx.drawImage(workShadow, 0, 0);
+        shadowCtx.filter = 'none';
+        punchOutImmune(shadowCtx);
+
+        // ── Darkness layer ─────────────────────────────────────────────────────
+        wdCtx.clearRect(0, 0, w, h);
+        const dg = wdCtx.createRadialGradient(primaryLight.lx, primaryLight.ly, 0, primaryLight.lx, primaryLight.ly, primaryLight.radius * 1.45);
+        dg.addColorStop(0,    `rgba(255, 200, 100, ${0.04 * primaryLight.flick})`);
+        dg.addColorStop(0.18, 'rgba(200, 140, 60, 0.18)');
+        dg.addColorStop(0.40, 'rgba(60, 36, 14, 0.54)');
+        dg.addColorStop(0.68, 'rgba(16, 10, 4, 0.76)');
+        dg.addColorStop(1,    'rgba(6, 3, 1, 0.88)');
+        wdCtx.fillStyle = dg;
+        wdCtx.fillRect(0, 0, w, h);
+        darkCtx.clearRect(0, 0, w, h);
+        darkCtx.drawImage(workDark, 0, 0);
+        punchOutImmune(darkCtx);
+
+        // ── Glow layer ─────────────────────────────────────────────────────────
+        wgCtx.clearRect(0, 0, w, h);
+        wgCtx.globalCompositeOperation = 'source-over';
+
+        lights.forEach((light) => {
+          wgCtx.save();
+          wgCtx.translate(light.lx, light.ly + light.radius * 0.12);
+          wgCtx.scale(1.12, 0.72);
+          const gg = wgCtx.createRadialGradient(0, 0, 0, 0, 0, light.radius);
+          gg.addColorStop(0,    `rgba(255, 223, 136, ${light.alpha})`);
+          gg.addColorStop(0.14, `rgba(255, 223, 136, ${light.alpha})`);
+          gg.addColorStop(0.55, `rgba(255, 166, 54, ${light.alpha * 0.5})`);
+          gg.addColorStop(1,    'rgba(255, 120, 16, 0)');
+          wgCtx.fillStyle = gg;
+          wgCtx.beginPath();
+          wgCtx.arc(0, 0, light.radius, 0, Math.PI * 2);
+          wgCtx.fill();
+          wgCtx.restore();
+          const cg = wgCtx.createRadialGradient(light.lx, light.ly - 18, 0, light.lx, light.ly - 18, light.radius * 0.07);
+          cg.addColorStop(0, `rgba(255, 248, 200, ${light.alpha * 0.9})`);
+          cg.addColorStop(1, 'rgba(255, 145, 32, 0)');
+          wgCtx.fillStyle = cg;
+          wgCtx.beginPath();
+          wgCtx.arc(light.lx, light.ly - 18, light.radius * 0.07, 0, Math.PI * 2);
+          wgCtx.fill();
+          wgCtx.globalCompositeOperation = 'screen';
+          wgCtx.lineWidth = 1;
+          for (let i = 0; i < 14; i++) {
+            const ang = (i / 14) * Math.PI * 2 + Math.sin(time + i) * 0.08;
+            const len = light.radius * (0.42 + (i % 4) * 0.055);
+            const start = 34 + (i % 3) * 10;
+            const wobble = Math.sin(time * (2.1 + i * 0.13) + i) * 18 * light.turbulence;
+            const x1 = light.lx + Math.cos(ang) * start + wobble;
+            const y1 = light.ly + Math.sin(ang) * start * 0.64;
+            const x2 = light.lx + Math.cos(ang) * len + wobble * 0.45;
+            const y2 = light.ly + Math.sin(ang) * len * 0.64;
+            const sg = wgCtx.createLinearGradient(x1, y1, x2, y2);
+            sg.addColorStop(0, `rgba(255, 221, 140, ${light.alpha * 0.11})`);
+            sg.addColorStop(1, 'rgba(255, 130, 28, 0)');
+            wgCtx.strokeStyle = sg;
+            wgCtx.beginPath();
+            wgCtx.moveTo(x1, y1);
+            wgCtx.lineTo(x2, y2);
+            wgCtx.stroke();
+          }
+        });
+
+        // Backlit panels — element-shaped amber glow, soft blur edges
+        wgCtx.globalCompositeOperation = 'source-over';
+        drawBacklitPanels(wgCtx);
+
+        glowCtx.clearRect(0, 0, w, h);
+        glowCtx.drawImage(workGlow, 0, 0);
+        punchOutImmune(glowCtx);
+        drawImmuneDebugOverlay(glowCtx);
+
+        thevmenuGlowCtx.clearRect(0, 0, w, h);
+        thevmenuGlowCtx.drawImage(glowCanvas, 0, 0);
+        punchOutThevmenuOccluders(thevmenuGlowCtx);
+
+        // ── Lerp clone lighting ─────────────────────────────────────────────────
+        // Clones on document.body get a CSS filter that approximates their position
+        // in the candlelight (dark + warm near source, dim + cool far from it).
+        const ar = appRef.getBoundingClientRect();
+        document.querySelectorAll('[data-candle-lerp-clone]').forEach(el => {
+          const r  = el.getBoundingClientRect();
+          const cx = r.left + r.width  * 0.5 - ar.left;
+          const cy = r.top  + r.height * 0.5 - ar.top;
+          const falloff = Math.max(0, 1 - Math.hypot(cx - primaryLight.lx, cy - primaryLight.ly) / primaryLight.radius);
+          el.style.filter =
+            `brightness(${(0.28 + falloff * 0.72 * primaryLight.pulse).toFixed(3)})` +
+            ` sepia(${(falloff * 0.5).toFixed(3)})`;
+        });
+        maybePruneSilhouetteCache();
+      } finally {
+        requestDrawFrame();
+      }
+    }
+
+    function stop() {
+      runLoopEnabled = false;
+      if (drawRafId) {
+        cancelAnimationFrame(drawRafId);
+        drawRafId = 0;
+      }
+      if (startRetryTimerId) {
+        clearTimeout(startRetryTimerId);
+        startRetryTimerId = 0;
+      }
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+      }
+      if (appMutationObserver) {
+        appMutationObserver.disconnect();
+        appMutationObserver = null;
+      }
+      appRef = null;
+    }
+
+    function handleVisibilityChange() {
+      if (!runLoopEnabled) return;
+      if (document.hidden && drawRafId) {
+        cancelAnimationFrame(drawRafId);
+        drawRafId = 0;
+        return;
+      }
+      if (!document.hidden) requestDrawFrame();
+    }
+
     function start() {
+      runLoopEnabled = true;
+      if (startRetryTimerId) {
+        clearTimeout(startRetryTimerId);
+        startRetryTimerId = 0;
+      }
       const app = document.getElementById('app');
       if (!app) {
         logCandle('debug', 'app-missing-retry');
-        setTimeout(start, 80);
+        startRetryTimerId = setTimeout(() => {
+          startRetryTimerId = 0;
+          start();
+        }, 80);
         return;
       }
       appRef = app;
@@ -856,12 +929,16 @@
       resize(app);
       ensureInApp(app);
 
-      new ResizeObserver(() => resize(app)).observe(app);
+      if (resizeObserver) resizeObserver.disconnect();
+      resizeObserver = new ResizeObserver(() => resize(app));
+      resizeObserver.observe(app);
 
       // Re-inject canvases each time app.innerHTML is replaced
-      new MutationObserver(() => ensureInApp(app)).observe(app, { childList: true });
+      if (appMutationObserver) appMutationObserver.disconnect();
+      appMutationObserver = new MutationObserver(() => ensureInApp(app));
+      appMutationObserver.observe(app, { childList: true });
 
-      requestAnimationFrame(ms => draw(ms / 1000));
+      requestDrawFrame();
     }
 
     // ── Public API (used by the Vars panel controls) ──────────────────────────
@@ -895,6 +972,8 @@
       setBacklit(targetOrProjId, roleOrOn, maybeOn) { setCandleState(targetOrProjId, roleOrOn, maybeOn, 'backlit'); },
       setImmune(targetOrProjId, roleOrOn, maybeOn)  { setCandleState(targetOrProjId, roleOrOn, maybeOn, 'immune'); },
       setProjectionImmune(projId, on, role = 'sub') { setCandleState({ projId, role }, Boolean(on), undefined, 'immune'); },
+      start,
+      stop,
       selectors:           BACKLIT_SELECTORS,
       trackedSelectors:    TRACKED_CANDLE_SELECTORS,
       selectorGroups:      selectorGroups,
@@ -998,5 +1077,10 @@
       start();
       initCandleLightControls();
     }
+    if (window.__scratchbonesCandleVisibilityHandler) {
+      document.removeEventListener('visibilitychange', window.__scratchbonesCandleVisibilityHandler);
+    }
+    window.__scratchbonesCandleVisibilityHandler = handleVisibilityChange;
+    document.addEventListener('visibilitychange', window.__scratchbonesCandleVisibilityHandler);
     logCandle('debug', 'initialized');
   }
