@@ -291,18 +291,19 @@ window.SCRATCHBONES_CONFIG = {
             ],
             "surname": {
               "syllables": { "min": 2, "max": 3 },
-              "onsetConsonants": ["n", "m", "k", "p", "t", "s", "v", "ng", "r", "l", "q", "h"],
-              "onsetWeights": { "n": 12, "m": 10, "k": 12, "p": 8, "t": 10, "s": 8, "v": 6, "ng": 5, "r": 8, "l": 7, "q": 7, "h": 5 },
-              "vowels": ["a", "i", "u"],
-              "vowelWeights": { "a": 14, "i": 10, "u": 10 },
-              "midCodas": ["n", "r", "l", "k", "ng"],
-              "midCodaChance": 0.45,
-              "finalPlosives": ["p", "t", "k", "q", "b", "d", "g", "pp", "tt", "kk", "qq", "mp", "nt", "nk", "lk", "rk"],
+              "onsetConsonants": ["n", "m", "k", "t", "p", "l", "w", "y"],
+              "onsetWeights": { "n": 16, "m": 13, "k": 13, "t": 13, "p": 11, "l": 5, "w": 4, "y": 4 },
+              "vowelOnsetChance": 0.1,
+              "vowels": ["a", "u", "i"],
+              "vowelWeights": { "a": 20, "u": 16, "i": 4 },
+              "midCodas": ["k", "n", "p"],
+              "midCodaChance": 0.5,
+              "finalPlosives": ["k", "p", "t", "b", "d", "g", "kk", "pp", "tt", "nk", "mp", "nt", "lk", "rk"],
               "finalPlosiveWeights": {
-                "p": 9, "t": 11, "k": 12, "q": 10,
-                "b": 3, "d": 3, "g": 4,
-                "pp": 6, "tt": 6, "kk": 7, "qq": 5,
-                "mp": 7, "nt": 7, "nk": 8, "lk": 5, "rk": 6
+                "k": 22, "p": 14, "t": 8,
+                "b": 2, "d": 2, "g": 2,
+                "kk": 10, "pp": 6, "tt": 4,
+                "nk": 10, "mp": 6, "nt": 5, "lk": 4, "rk": 4
               }
             }
           }

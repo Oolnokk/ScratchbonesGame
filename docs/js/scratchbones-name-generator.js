@@ -409,7 +409,8 @@
     const syllableCount = rules.syllables.min + Math.floor(rng() * (rules.syllables.max - rules.syllables.min + 1));
     let result = '';
     for (let i = 0; i < syllableCount - 1; i++) {
-      const onset = weightedPickValue(rng, rules.onsetConsonants, rules.onsetWeights);
+      const useVowelOnset = i === 0 && rng() < (rules.vowelOnsetChance || 0);
+      const onset = useVowelOnset ? '' : weightedPickValue(rng, rules.onsetConsonants, rules.onsetWeights);
       const vowel = weightedPickValue(rng, rules.vowels, rules.vowelWeights);
       const midCoda = rng() < rules.midCodaChance ? pickFromRng(rng, rules.midCodas) : '';
       result += onset + vowel + midCoda;

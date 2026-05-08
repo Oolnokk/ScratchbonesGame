@@ -319,7 +319,7 @@ describe('generateIdentityFromSeed — slagothim culture', () => {
 // ── engh_sho culture ──────────────────────────────────────────────────────────
 
 describe('generateIdentityFromSeed — engh_sho culture', () => {
-  const FINAL_PLOSIVES = ['p', 't', 'k', 'q', 'b', 'd', 'g', 'pp', 'tt', 'kk', 'qq', 'mp', 'nt', 'nk', 'lk', 'rk'];
+  const FINAL_PLOSIVES = ['p', 't', 'k', 'b', 'd', 'g', 'pp', 'tt', 'kk', 'mp', 'nt', 'nk', 'lk', 'rk'];
   const WORD_LIST = [
     'acorn', 'ael', 'aestel', 'amber', 'amethyst', 'awl', 'bar', 'barb', 'bead', 'bean',
     'bell', 'beryl', 'billet', 'bit', 'blade', 'bladelet', 'blank', 'block', 'bodkin', 'bone',
@@ -396,11 +396,11 @@ describe('generateIdentityFromSeed — engh_sho culture', () => {
   });
 
   it('known output for seed "test-seed-001"', () => {
-    assert.equal(ng.generateIdentityFromSeed('test-seed-001', 'male', 'engh_sho'), 'Cone Pansasak');
+    assert.equal(ng.generateIdentityFromSeed('test-seed-001', 'male', 'engh_sho'), 'Cone Nannunant');
   });
 
   it('known output for seed "abc"', () => {
-    assert.equal(ng.generateIdentityFromSeed('abc', 'male', 'engh_sho'), 'Knucklebone Nutungaq');
+    assert.equal(ng.generateIdentityFromSeed('abc', 'male', 'engh_sho'), 'Knucklebone Ukipap');
   });
 });
 
