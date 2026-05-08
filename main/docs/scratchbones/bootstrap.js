@@ -70,7 +70,7 @@ import { createTutorial } from './tutorial.js';
         label: 'Alarmed',
         src: './docs/assets/symbols/emoji_alarmed.png',
         tint: 'rgba(255, 84, 84, 0.95)',
-        className: 'emojiFx-love emojiFx-fast',
+        className: 'emojiFx-alarmed emojiFx-fast',
         durationMs: 620,
       },
       curious: {
@@ -78,7 +78,7 @@ import { createTutorial } from './tutorial.js';
         label: 'Curious',
         src: './docs/assets/symbols/emoji_curious.png',
         tint: 'rgba(255, 255, 255, 0.94)',
-        className: 'emojiFx-love emojiFx-fast',
+        className: 'emojiFx-curious emojiFx-fast',
         durationMs: 620,
       },
     };
