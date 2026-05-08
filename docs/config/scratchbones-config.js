@@ -35,6 +35,96 @@ window.SCRATCHBONES_CONFIG = {
       ]
     },
 
+    "appearanceEditor": {
+      "species": {
+        "engh-sho": {
+          "label": "Engh-sho",
+          "genders": ["male", "female"],
+          "swatchBase": "#c7d2d5",
+          "male": {
+            "slots": [
+              { "slot": "hairFront", "label": "Front Hair", "options": [
+                { "id": null, "label": "Default" },
+                { "id": "appearance::Mao-ao_M::mao-ao_tuft", "label": "Tuft" },
+                { "id": "appearance::Mao-ao_M::mao-ao_forwardtuft_short", "label": "Forward Tuft (Short)" },
+                { "id": "appearance::Mao-ao_M::mao-ao_forwardtuft_long", "label": "Forward Tuft (Long)" }
+              ]},
+              { "slot": "hairBack", "label": "Back Hair", "options": [
+                { "id": null, "label": "None" },
+                { "id": "appearance::Mao-ao_M::mao-ao_splayedknot_medium", "label": "Splayed Knot" },
+                { "id": "appearance::Mao-ao_M::mao-ao_long_ponytail", "label": "Long Ponytail" }
+              ]},
+              { "slot": "hairSide", "label": "Side Hair (R)", "options": [
+                { "id": null, "label": "None" },
+                { "id": "appearance::Mao-ao_M::mao-ao_shoulder_length_drape", "label": "Shoulder Drape" },
+                { "id": "appearance::Mao-ao_M::mao-ao_braid-R", "label": "Braid (Right)" },
+                { "id": "appearance::Mao-ao_M::mao-ao_braidcluster-R", "label": "Braid Cluster (Right)" }
+              ]},
+              { "slot": "hairSideL", "label": "Side Hair (L)", "options": [
+                { "id": null, "label": "None" },
+                { "id": "appearance::Mao-ao_M::mao-ao_braid-L", "label": "Braid (Left)" }
+              ]},
+              { "slot": "eyes", "label": "Eyes", "options": [
+                { "id": "appearance::Engh-sho_M::engh_snowgoggles", "label": "Snow Goggles" }
+              ]},
+              { "slot": "facialHair", "label": "Facial Hair", "options": [
+                { "id": null, "label": "None" },
+                { "id": "appearance::Mao-ao_M::mao-ao_wildbeard", "label": "Wild Beard" }
+              ]}
+            ],
+            "colorOptions": [
+              { "label": "Glacier", "h": -85, "s": -0.90, "v": 0.35 },
+              { "label": "Frost", "h": -60, "s": -0.85, "v": 0.25 },
+              { "label": "Ash", "h": 0, "s": -0.90, "v": 0.15 },
+              { "label": "Cloud", "h": 70, "s": -0.85, "v": 0.30 },
+              { "label": "Slate", "h": -85, "s": -0.65, "v": -0.20 },
+              { "label": "Storm", "h": -60, "s": -0.60, "v": -0.35 },
+              { "label": "Charcoal", "h": 0, "s": -0.75, "v": -0.45 },
+              { "label": "Moraine", "h": 70, "s": -0.70, "v": -0.30 }
+            ]
+          },
+          "female": {
+            "slots": [
+              { "slot": "hairFront", "label": "Front Hair", "options": [
+                { "id": null, "label": "Default" },
+                { "id": "appearance::Mao-ao_F::mao-ao_tuft", "label": "Tuft" },
+                { "id": "appearance::Mao-ao_F::mao-ao_forwardtuft_short", "label": "Forward Tuft (Short)" },
+                { "id": "appearance::Mao-ao_F::mao-ao_forwardtuft_long", "label": "Forward Tuft (Long)" }
+              ]},
+              { "slot": "hairBack", "label": "Back Hair", "options": [
+                { "id": null, "label": "None" },
+                { "id": "appearance::Mao-ao_F::mao-ao_splayedknot_medium", "label": "Splayed Knot" },
+                { "id": "appearance::Mao-ao_F::mao-ao_long_ponytail", "label": "Long Ponytail" }
+              ]},
+              { "slot": "hairSide", "label": "Side Hair (R)", "options": [
+                { "id": null, "label": "None" },
+                { "id": "appearance::Mao-ao_F::mao-ao_shoulder_length_drape", "label": "Shoulder Drape" },
+                { "id": "appearance::Mao-ao_F::mao-ao_braid-R", "label": "Braid (Right)" },
+                { "id": "appearance::Mao-ao_F::mao-ao_braidcluster-R", "label": "Braid Cluster (Right)" }
+              ]},
+              { "slot": "hairSideL", "label": "Side Hair (L)", "options": [
+                { "id": null, "label": "None" },
+                { "id": "appearance::Mao-ao_F::mao-ao_braid-L", "label": "Braid (Left)" }
+              ]},
+              { "slot": "eyes", "label": "Eyes", "options": [
+                { "id": "appearance::Engh-sho_F::engh_snowgoggles", "label": "Snow Goggles" }
+              ]}
+            ],
+            "colorOptions": [
+              { "label": "Glacier", "h": -85, "s": -0.90, "v": 0.35 },
+              { "label": "Frost", "h": -60, "s": -0.85, "v": 0.25 },
+              { "label": "Ash", "h": 0, "s": -0.90, "v": 0.15 },
+              { "label": "Cloud", "h": 70, "s": -0.85, "v": 0.30 },
+              { "label": "Slate", "h": -85, "s": -0.65, "v": -0.20 },
+              { "label": "Storm", "h": -60, "s": -0.60, "v": -0.35 },
+              { "label": "Charcoal", "h": 0, "s": -0.75, "v": -0.45 },
+              { "label": "Moraine", "h": 70, "s": -0.70, "v": -0.30 }
+            ]
+          }
+        }
+      }
+    },
+
     "trickBones": {
       "defaultUnlocked": ["smuggle", "trap", "punish"],
       "defaultLoadout": ["smuggle", "trap", "punish", "smuggle", "trap", "punish"],
