@@ -757,8 +757,9 @@ function portraitOptionFromJson(entry, json) {
                          : json.slot === 'torso' && !json.appearance ? 'TORSO'
                          : tintSlot;
   const hairSlot = json.hairSlot || null; // 'front' | 'back' | 'side' | 'side-L'
+  const portraitSlot = json.portraitSlot || null; // 'eyes' | 'facialHair' | 'hairFront' | 'hairBack' | 'hairSide' | 'hairSideL'
   const hoodLayering = json.hoodLayering || null; // 'under' means hat renders under hood; default is over
-  return { id: shortId, label, tintSlot: resolvedTintSlot, layers, variantLayers, slot: json.slot || null, colorRange, hairSlot, tags, materialTag, hoodLayering };
+  return { id: shortId, label, tintSlot: resolvedTintSlot, layers, variantLayers, slot: json.slot || null, portraitSlot, colorRange, hairSlot, tags, materialTag, hoodLayering };
 }
 
 /**
@@ -831,7 +832,13 @@ async function loadPortraitCosmetics(configBase) {
     if (!optHasLayers) continue;
     if (seenIds.has(opt.id)) continue;
     seenIds.add(opt.id);
-    const cat = opt.slot === 'hat'        ? 'hat'
+    const cat = opt.portraitSlot === 'eyes'       ? 'eyes'
+              : opt.portraitSlot === 'facialHair' ? 'facialhair'
+              : opt.portraitSlot === 'hairFront'  ? 'hairFront'
+              : opt.portraitSlot === 'hairBack'   ? 'hairBack'
+              : opt.portraitSlot === 'hairSide'   ? 'hairSide'
+              : opt.portraitSlot === 'hairSideL'  ? 'hairSideL'
+              : opt.slot === 'hat'        ? 'hat'
               : opt.slot === 'hood'       ? 'hood'
               : opt.hairSlot === 'front'  ? 'hairFront'
               : opt.hairSlot === 'back'   ? 'hairBack'
