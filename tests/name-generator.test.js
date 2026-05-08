@@ -275,6 +275,45 @@ describe('generateIdentityFromSeed — slagothim culture', () => {
     assert.ok(/^[A-Z]/.test(parts[0]), 'first name should be title-cased');
     assert.ok(/^[A-Z]/.test(parts[2]), 'location should be title-cased');
   });
+
+  it('throws a clear error when slagothim phonology cannot produce a valid name', () => {
+    const sandbox = {};
+    sandbox.window = sandbox;
+    sandbox.window.SCRATCHBONES_CONFIG = {
+      game: {
+        nameGeneration: {
+          defaultCultureId: 'slagothim',
+          cultures: {
+            slagothim: {
+              id: 'slagothim',
+              casing: 'title',
+              slagothimRules: {
+                startWithSlChance: 1,
+                slNameUsesSuffixChance: 0,
+                mnClusterChance: 0,
+                firstConsonants: ['b'],
+                vowels: ['a'],
+                secondConsonants: ['k'],
+                rareSecondConsonantCluster: 'mn',
+                optionalBridgeVowelChance: 0,
+                maleSuffix: 'o',
+                femaleSuffix: 'a',
+                maleSlOnlyEndings: [],
+                femaleSlOnlyEndings: [],
+                locations: ['ikinga'],
+              },
+            },
+          },
+        },
+      },
+    };
+    loadBrowserModule('docs/js/scratchbones-name-generator.js', sandbox);
+    const ngBroken = sandbox.SCRATCHBONES_NAME_GENERATOR;
+    assert.throws(
+      () => ngBroken.generateIdentityFromSeed('seed', 'male', 'slagothim'),
+      /Could not generate a Slagothim name within the current phonology rules/
+    );
+  });
 });
 
 // ── Cross-culture variety ─────────────────────────────────────────────────────
