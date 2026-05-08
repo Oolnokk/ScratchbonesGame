@@ -4602,7 +4602,9 @@ import { createTutorial } from './tutorial.js';
             <div class="chip">Pile Plays: ${state.pile.length}</div>
           </div>
         </div>
-        <div id="aiSidebar" class="fit-target fit-0" data-proj-id="sidebar">
+        <div id="sidebarShell" data-proj-id="sidebar">
+          ${renderEmojiReactionPanel()}
+          <div id="aiSidebar" class="fit-target fit-0">
           <div class="sectionTitle" style="padding:6px 10px 2px;color:var(--accent-2);">Table</div>
           ${state.players.filter(p => p.id !== hs).map(p => `
             <div class="aiSeat ${p.eliminated ? 'eliminated' : ''}" data-proj-id="seat-${p.id}" data-ai-seat-id="${p.id}" style="${state.smuggleSelection ? `outline:2px solid ${state.smuggleSelection.selectedTargetId === p.id ? 'var(--warning)' : 'var(--text)'};cursor:pointer;` : (state.trapSelection && state.trapSelection.challengerId === p.id ? 'outline:2px solid var(--danger);' : '')}">
@@ -4620,7 +4622,7 @@ import { createTutorial } from './tutorial.js';
             </div>
           `).join('')}
         </div>
-        ${renderEmojiReactionPanel()}
+        </div>
         <div class="humanSeatZone fit-target fit-0" data-proj-id="human-seat-zone">
           <div class="humanSeatCard ${player.eliminated ? 'eliminated' : ''}" data-proj-id="human-seat">
             <div class="seatInfo" data-proj-id="info-human" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
@@ -5345,8 +5347,13 @@ import { createTutorial } from './tutorial.js';
       const avatarCanvas = anchorEl === actorFloat
         ? actorCanvas
         : humanSeatCard?.querySelector('.seatAvatarBox canvas.seatPortrait');
-      const layer = ensureEmojiReactionLayer(anchorEl);
-      if (!anchorEl || !layer) return;
+      // Host the fx layer on humanSeatZone (not humanSeatCard) so it isn't clipped
+      // by the overflow:hidden that enforceFitContainerBounds sets on humanSeatCard.
+      const fxHost = anchorEl === humanSeatCard
+        ? (humanSeatCard?.closest('.humanSeatZone') || humanSeatCard)
+        : anchorEl;
+      const layer = ensureEmojiReactionLayer(fxHost);
+      if (!anchorEl || !fxHost || !layer) return;
       const layerRect = layer.getBoundingClientRect();
       const anchorRect = anchorEl.getBoundingClientRect();
       // When flipped (scaleX < 0) the face points left → drift left (-1).
