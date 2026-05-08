@@ -82,8 +82,6 @@ import { createTutorial } from './tutorial.js';
         durationMs: 620,
       },
     };
-    const EMOJI_REACTION_ORIGIN_X_RATIO = 0.45;
-    const EMOJI_REACTION_ORIGIN_Y_RATIO = 0.5;
     function applyRootCssCustomProperties(cssRootVars) {
       const rootStyle = document.documentElement.style;
       const entries = cssRootVars && typeof cssRootVars === 'object' ? Object.entries(cssRootVars) : [];
@@ -5339,16 +5337,27 @@ import { createTutorial } from './tutorial.js';
       const app = document.getElementById('app');
       const reaction = EMOJI_REACTION_CONFIG[(reactionId || '').trim().toLowerCase()];
       if (!app || !reaction) return;
-      // Prefer claim-cluster actor avatar as the visual source when it is rendered.
+      const hs = String(state.humanSeat);
       const actorFloat = app.querySelector('.actorAvatarFloat');
       const actorCanvas = actorFloat?.querySelector('canvas.seatPortrait');
+      const reactorFloat = app.querySelector('.reactorAvatarFloat');
+      const reactorCanvas = reactorFloat?.querySelector('canvas.seatPortrait');
       const humanSeatCard = app.querySelector('.humanSeatCard');
-      const anchorEl = (actorFloat && actorCanvas && actorFloat.offsetParent !== null)
-        ? actorFloat
-        : humanSeatCard;
-      const avatarCanvas = anchorEl === actorFloat
-        ? actorCanvas
-        : humanSeatCard?.querySelector('.seatAvatarBox canvas.seatPortrait');
+      const humanAvatarCanvas = humanSeatCard?.querySelector('.seatAvatarBox canvas.seatPortrait');
+      // Use claim-cluster float only when the human player IS that actor/reactor.
+      const humanIsActor = actorCanvas?.dataset.seatId === hs && actorFloat?.offsetParent !== null;
+      const humanIsReactor = reactorCanvas?.dataset.seatId === hs && reactorFloat?.offsetParent !== null;
+      let anchorEl, avatarCanvas;
+      if (humanIsActor) {
+        anchorEl = actorCanvas;
+        avatarCanvas = actorCanvas;
+      } else if (humanIsReactor) {
+        anchorEl = reactorCanvas;
+        avatarCanvas = reactorCanvas;
+      } else {
+        anchorEl = humanAvatarCanvas || humanSeatCard;
+        avatarCanvas = humanAvatarCanvas;
+      }
       // Host the fx layer on #app so it isn't clipped by overflow on any
       // intermediate ancestor (humanSeatCard, humanSeatZone, etc.).
       const fxHost = app;
@@ -5359,8 +5368,10 @@ import { createTutorial } from './tutorial.js';
       // When flipped (scaleX < 0) the face points left → drift left (-1).
       // When not flipped the face points right → drift right (+1).
       const driftDir = isSeatAvatarFlipped(avatarCanvas) ? -1 : 1;
-      const startX = (anchorRect.left - layerRect.left) + (anchorRect.width * EMOJI_REACTION_ORIGIN_X_RATIO);
-      const startY = (anchorRect.top - layerRect.top) + (anchorRect.height * EMOJI_REACTION_ORIGIN_Y_RATIO);
+      // Spawn from the face side of the avatar and upper third (near the head).
+      const originXRatio = driftDir === 1 ? 0.68 : 0.32;
+      const startX = (anchorRect.left - layerRect.left) + (anchorRect.width * originXRatio);
+      const startY = (anchorRect.top - layerRect.top) + (anchorRect.height * 0.28);
       const fx = document.createElement('div');
       fx.className = `emojiFx ${reaction.className}`;
       fx.style.left = `${startX}px`;
