@@ -5395,10 +5395,16 @@ import { createTutorial } from './tutorial.js';
         startX = (anchorRect.left - layerRect.left) + (anchorRect.width * originXRatio);
         startY = (anchorRect.top - layerRect.top) + (anchorRect.height * yRatio);
       }
+      // startX/startY are in screen (viewport) space from getBoundingClientRect(), but
+      // left/top on .emojiFx are in #app's pre-transform coordinate space.  Dividing by
+      // the app's CSS scale converts between the two so zoom never offsets the origin.
+      const appBCR = app.getBoundingClientRect();
+      const appScaleX = app.offsetWidth > 0 ? appBCR.width / app.offsetWidth : 1;
+      const appScaleY = app.offsetHeight > 0 ? appBCR.height / app.offsetHeight : 1;
       const fx = document.createElement('div');
       fx.className = `emojiFx ${reaction.className}`;
-      fx.style.left = `${startX}px`;
-      fx.style.top = `${startY}px`;
+      fx.style.left = `${startX / appScaleX}px`;
+      fx.style.top = `${startY / appScaleY}px`;
       fx.style.setProperty('--emoji-mask-src', `url('${reaction.src}')`);
       fx.style.setProperty('--emoji-tint', reaction.tint);
       fx.style.setProperty('--emoji-drift-dir', String(driftDir));
