@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Engh-sho Name Generator Test</title>
+  <style>
+    body { background: #15110f; color: #f4e8d0; font-family: monospace; padding: 2rem; max-width: 640px; margin: 0 auto; }
+    h1 { color: #c89952; font-size: 1.2rem; margin-bottom: 1.5rem; }
+    button { background: #c89952; color: #15110f; border: none; padding: 0.5rem 1.2rem; font-family: monospace; font-size: 1rem; cursor: pointer; margin-right: 0.5rem; margin-bottom: 1rem; }
+    button:hover { background: #f2d08f; }
+    #seed-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+    #seed { background: #221917; color: #f4e8d0; border: 1px solid #c89952; padding: 0.4rem 0.7rem; font-family: monospace; font-size: 1rem; flex: 1; }
+    #output { background: #221917; padding: 1rem; min-height: 4rem; white-space: pre-wrap; line-height: 1.8; }
+    .name { font-size: 1.1rem; }
+    .label { color: #cdbb9f; font-size: 0.75rem; }
+    hr { border-color: #32231d; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Engh-sho Name Generator</h1>
+
+  <div id="seed-row">
+    <input id="seed" type="text" placeholder="seed string (leave blank for random)" />
+    <button onclick="generateFromSeed()">From seed</button>
+  </div>
+
+  <button onclick="generateBatch(10)">10 names</button>
+  <button onclick="generateBatch(30)">30 names</button>
+  <button onclick="clearOutput()">Clear</button>
+
+  <hr>
+  <div id="output"></div>
+
+  <script src="../../config/scratchbones-config.js"></script>
+  <script src="../../js/scratchbones-name-generator.js"></script>
+  <script>
+    const ng = window.SCRATCHBONES_NAME_GENERATOR;
+
+    function randomSeed() {
+      return Math.random().toString(36).slice(2);
+    }
+
+    function appendOutput(text) {
+      const out = document.getElementById('output');
+      out.textContent += text + '\n';
+      out.scrollTop = out.scrollHeight;
+    }
+
+    function clearOutput() {
+      document.getElementById('output').textContent = '';
+    }
+
+    function generateFromSeed() {
+      const raw = document.getElementById('seed').value.trim();
+      const seed = raw || randomSeed();
+      const male   = ng.generateIdentityFromSeed(seed, 'male',   'engh_sho');
+      const female = ng.generateIdentityFromSeed(seed, 'female', 'engh_sho');
+      appendOutput(`seed: ${seed}\n  → ${male}`);
+    }
+
+    function generateBatch(n) {
+      appendOutput(`--- ${n} names ---`);
+      for (let i = 0; i < n; i++) {
+        const seed = randomSeed();
+        appendOutput('  ' + ng.generateIdentityFromSeed(seed, 'male', 'engh_sho'));
+      }
+    }
+  </script>
+</body>
+</html>
