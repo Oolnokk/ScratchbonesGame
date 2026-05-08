@@ -548,6 +548,160 @@
       min-height: 0;
       font-size: calc(1rem * var(--layout-sidebar-content-scale));
     }
+    .emojiReactionPanel {
+      margin: 2px 2px 8px auto;
+      padding: 8px 6px;
+      border-radius: 12px;
+      background: rgba(22, 16, 14, 0.88);
+      border: 1px solid rgba(242, 208, 143, 0.32);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: fit-content;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+    }
+    .emojiReactionBtn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid rgba(242,208,143,0.28);
+      background: rgba(37,27,24,0.92);
+      padding: 6px;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+    .emojiReactionBtn:hover,
+    .emojiReactionBtn:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(242,208,143,0.62);
+      background: rgba(52,37,33,0.96);
+    }
+    .emojiReactionGlyph {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: var(--emoji-tint, rgba(255,255,255,0.9));
+      -webkit-mask-image: var(--emoji-mask-src);
+      mask-image: var(--emoji-mask-src);
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+      filter: drop-shadow(0 0 6px rgba(255,255,255,0.42));
+    }
+    .emojiReactionFxLayer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: visible;
+      z-index: 8;
+    }
+    .emojiFx {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 78px;
+      height: 78px;
+      pointer-events: none;
+      transform-origin: center center;
+    }
+    .emojiFxGlyph {
+      position: absolute;
+      inset: 0;
+      background: var(--emoji-tint, rgba(255,255,255,0.9));
+      -webkit-mask-image: var(--emoji-mask-src);
+      mask-image: var(--emoji-mask-src);
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+    }
+    .emojiFx-love {
+      animation: emojiKissBurst 1.65s ease-out both;
+    }
+    .emojiFx-love .emojiFxGlyph {
+      filter: drop-shadow(0 0 8px rgba(255, 98, 188, 0.92)) drop-shadow(0 0 18px rgba(255, 96, 194, 0.65));
+      opacity: 0.92;
+    }
+    .emojiFx-fast {
+      animation-duration: 0.55s;
+    }
+    .emojiFx-disgust {
+      animation: emojiDisgustArc 1.7s cubic-bezier(0.17, 0.72, 0.34, 1.03) both;
+    }
+    .emojiFx-disgust .emojiFxGlyph {
+      filter: drop-shadow(0 0 7px rgba(125, 219, 113, 0.95)) drop-shadow(0 0 16px rgba(79, 153, 62, 0.72));
+    }
+    .emojiFxStink {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle at 50% 50%, rgba(181, 255, 142, 0.38) 0%, rgba(122, 198, 92, 0.22) 42%, rgba(98, 165, 74, 0.01) 72%);
+      filter: blur(1.6px);
+      animation: emojiStinkTrail 1.2s ease-out both;
+    }
+    @keyframes emojiKissBurst {
+      0% {
+        transform: translate(-50%, -50%) scale(0.32);
+        opacity: 0;
+      }
+      16% {
+        transform: translate(-50%, -50%) scale(1.18);
+        opacity: 1;
+      }
+      60% {
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * 34px)), -108%) scale(1.36);
+        opacity: 0.98;
+      }
+      100% {
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * 76px)), -165%) scale(1.82);
+        opacity: 0;
+      }
+    }
+    @keyframes emojiDisgustArc {
+      0% {
+        transform: translate(-50%, -50%) scale(0.35);
+        opacity: 0;
+      }
+      18% {
+        transform: translate(-50%, -50%) scale(1.04);
+        opacity: 1;
+      }
+      40% {
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * 16px)), -88%) scale(1.03);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(calc(-50% + (var(--emoji-drift-dir, -1) * 58px)), 285%) scale(0.84);
+        opacity: 0;
+      }
+    }
+    @keyframes emojiStinkTrail {
+      0% {
+        transform: translate(-50%, -50%) scale(0.72);
+        opacity: 0.05;
+      }
+      32% {
+        transform: translate(calc(-50% + 6px), calc(-50% - 18px)) scale(1);
+        opacity: 0.72;
+      }
+      72% {
+        transform: translate(calc(-50% - 8px), calc(-50% - 42px)) scale(1.06);
+        opacity: 0.46;
+      }
+      100% {
+        transform: translate(calc(-50% + 4px), calc(-50% - 58px)) scale(0.85);
+        opacity: 0;
+      }
+    }
     .humanSeatZone {
       grid-area: human;
       min-height: 0;
