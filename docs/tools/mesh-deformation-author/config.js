@@ -22,6 +22,9 @@ window.MESH_DEFORMATION_AUTHOR_CONFIG = {
   },
   avatarPreview: {
     defaultMode: 'avatar',
-    randomSeedDefault: 'mesh-author-seed'
+    randomSeedDefault: 'mesh-author-seed',
+    contentFitEnabled: true,
+    contentFitPaddingPx: 24,
+    contentAlphaThreshold: 8
   }
 };

@@ -2034,9 +2034,9 @@ window.SCRATCHBONES_CONFIG = {
         "claimRankGlyphTemplateSrc": "./docs/assets/symbols/boneglyph{rank}.png",
         "claimMultiplyGlyphSrc": "./docs/assets/symbols/multglyph.png",
         "trickGlyphSrc": {
-          "smuggle": "./docs/assets/symbols/smuggleglyph.png",
-          "trap": "./docs/assets/symbols/trapglyph.png",
-          "punish": "./docs/assets/symbols/punishglyph.png"
+          "smuggle": "./docs/assets/symbols/boneglyph_smuggle.png",
+          "trap": "./docs/assets/symbols/boneglyph_trap.png",
+          "punish": "./docs/assets/symbols/boneglyph_punish.png"
         }
       },
       "hud": {
