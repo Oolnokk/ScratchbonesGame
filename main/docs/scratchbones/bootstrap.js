@@ -5365,11 +5365,29 @@ import { createTutorial } from './tutorial.js';
       if (!anchorEl || !fxHost || !layer) return;
       const layerRect = layer.getBoundingClientRect();
       const anchorRect = anchorEl.getBoundingClientRect();
-      // Spawn from the face-side edge of the avatar, upper-third Y (near the head).
-      // driftDir=1 → face on right → origin at far right (0.82); -1 → face on left → far left (0.18).
+      // Resolve origin from the claim-multiply glyph (×) when visible, else use a
+      // proportional fallback (default yPct 0.52 = config default for claimTimesBoxLeft/Right).
+      const refGlyphSelector = driftDir === 1 ? '.claimTimesBoxLeft .claimMultiplyGlyph' : '.claimTimesBoxRight .claimMultiplyGlyph';
+      const refGlyphEl = app.querySelector(refGlyphSelector);
+      const refGlyphRect = refGlyphEl ? refGlyphEl.getBoundingClientRect() : null;
+      const glyphVisible = !!(refGlyphRect && refGlyphRect.width > 0 && refGlyphRect.height > 0);
       const originXRatio = driftDir === 1 ? 0.82 : 0.18;
-      const startX = (anchorRect.left - layerRect.left) + (anchorRect.width * originXRatio);
-      const startY = (anchorRect.top - layerRect.top) + (anchorRect.height * 0.28);
+      let startX, startY;
+      if ((humanIsActor || humanIsReactor) && glyphVisible) {
+        // Spawn directly from the × glyph centre.
+        startX = (refGlyphRect.left + refGlyphRect.width / 2) - layerRect.left;
+        startY = (refGlyphRect.top + refGlyphRect.height / 2) - layerRect.top;
+      } else {
+        // Compute yRatio: prefer deriving it from the live glyph vs actorCanvas rect so
+        // it auto-adapts to any layout config; fall back to the default config value 0.52.
+        let yRatio = 0.52;
+        if (glyphVisible && actorCanvas) {
+          const acRect = actorCanvas.getBoundingClientRect();
+          if (acRect.height > 0) yRatio = (refGlyphRect.top + refGlyphRect.height / 2 - acRect.top) / acRect.height;
+        }
+        startX = (anchorRect.left - layerRect.left) + (anchorRect.width * originXRatio);
+        startY = (anchorRect.top - layerRect.top) + (anchorRect.height * yRatio);
+      }
       const fx = document.createElement('div');
       fx.className = `emojiFx ${reaction.className}`;
       fx.style.left = `${startX}px`;
