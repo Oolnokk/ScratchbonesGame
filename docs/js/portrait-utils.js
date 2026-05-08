@@ -416,13 +416,16 @@ function getProfileSpriteXforms(profile) {
 
 // ── Rendering ──────────────────────────────────────────────
 
-async function renderProfile(canvas, profile) {
+async function renderProfile(canvas, profile, renderOptions = {}) {
   const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, pauldron, hat, torsoCosmetic, armCosmetic, bodyColors } = profile;
+  const omitHeadSpriteAndCosmetics = renderOptions?.omitHeadSpriteAndCosmetics === true;
+  const renderHeadSprite = !omitHeadSpriteAndCosmetics;
+  const renderHeadCosmetics = !omitHeadSpriteAndCosmetics;
   const resolvedFighter = resolvePortraitFighter(fighter) || fighter;
   const opacityMaskLayer = resolvedFighter?.opacityMaskLayer || fighter?.opacityMaskLayer || null;
-  const headUrl = resolvedFighter?.headUrl || fighter?.headUrl;
+  const headUrl = renderHeadSprite ? (resolvedFighter?.headUrl || fighter?.headUrl) : null;
   const bodyLayerSource = resolvedFighter?.bodyLayers || fighter?.bodyLayers || [];
-  const urLayerSource = resolvedFighter?.urLayers || fighter?.urLayers || [];
+  const urLayerSource = renderHeadSprite ? (resolvedFighter?.urLayers || fighter?.urLayers || []) : [];
   const blinkOverlayUrlsByBase = new Map();
   for (const layer of urLayerSource) {
     const blinkUrl = blinkUrlFor(layer?.url);
@@ -486,7 +489,7 @@ async function renderProfile(canvas, profile) {
     }
   };
 
-  if (hairFront !== undefined) {
+  if (renderHeadCosmetics && hairFront !== undefined) {
     // Pre-arm back layers: back hairstyle then hat back sprite
     for (const group of [hairBack, hat]) {
       if (!group) continue;
@@ -518,7 +521,7 @@ async function renderProfile(canvas, profile) {
     }
     pushToTarget(hood, hoodPauldronLayers);
     pushToTarget(pauldron, hoodPauldronLayers);
-  } else {
+  } else if (renderHeadCosmetics) {
     // Legacy single-slot hair
     const legacyGroups = [hair, eyes, facialHair, hat];
     for (const group of legacyGroups) {
@@ -535,7 +538,7 @@ async function renderProfile(canvas, profile) {
   }
 
   const neededUrls = new Set([
-    headUrl,
+    ...(headUrl ? [headUrl] : []),
     ...urLayerSource.map(m => m.url),
     ...preBackLayers.map(({ layer }) => layer.url),
     ...baseLeftArmLayers.map(({ layer }) => layer.url),
@@ -554,7 +557,7 @@ async function renderProfile(canvas, profile) {
     ...hatOverLayers.map(({ layer }) => layer.url),
     ...(opacityMaskLayer?.url ? [opacityMaskLayer.url] : []),
     ...blinkOverlayUrlsByBase.values(),
-  ]);
+  ].filter(Boolean));
 
   let imgMap;
   try {
@@ -611,7 +614,7 @@ async function renderProfile(canvas, profile) {
   drawLayers(torsoClothingLayers);
   drawLayers(overwearLayers);
   drawLayers(sideLeftLayers);
-  { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), filterA); }
+  if (headUrl) { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), filterA); }
   drawLayers(rightSideHairLayers);
   drawLayers(facialHairLayers);
   drawLayers(frontHairLayers);

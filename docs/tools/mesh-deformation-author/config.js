@@ -25,6 +25,7 @@ window.MESH_DEFORMATION_AUTHOR_CONFIG = {
     randomSeedDefault: 'mesh-author-seed',
     contentFitEnabled: true,
     contentFitPaddingPx: 24,
-    contentAlphaThreshold: 8
+    contentAlphaThreshold: 8,
+    omitHeadSpriteAndCosmeticsDefault: false
   }
 };
