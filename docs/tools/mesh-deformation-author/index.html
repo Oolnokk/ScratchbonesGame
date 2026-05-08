@@ -271,6 +271,9 @@
         <label>Reference body layer</label>
         <select id="sel-layer"><option value="">— select species/gender —</option></select>
       </div>
+      <div class="field">
+        <label><input type="checkbox" id="chk-omit-head" /> Omit head sprite + head cosmetics</label>
+      </div>
       <button id="btn-random-avatar" class="btn-sec">🎲 Generate NPC Avatar</button>
     </div>
 
@@ -394,6 +397,7 @@ let animT     = 0;
 let animSpeed = TOOL_CONFIG.animation?.defaultSpeedSeconds || 0.8;
 let poseDurations = [];
 let previewMode = TOOL_CONFIG.avatarPreview?.defaultMode || 'avatar';
+let omitHeadSpriteAndCosmetics = TOOL_CONFIG.avatarPreview?.omitHeadSpriteAndCosmeticsDefault === true;
 let avatarImg = null;
 let portraitCosmetics = null;
 let lastTime  = 0;
@@ -411,6 +415,7 @@ const selSpecies = document.getElementById('sel-species');
 const selGenderEl = document.getElementById('sel-gender');
 const selPreviewModeEl = document.getElementById('sel-preview-mode');
 const selLayerEl  = document.getElementById('sel-layer');
+const chkOmitHead = document.getElementById('chk-omit-head');
 const inpSpeed    = document.getElementById('inp-speed');
 const inpCols     = document.getElementById('inp-cols');
 const inpRows     = document.getElementById('inp-rows');
@@ -432,6 +437,8 @@ const btnApplyKeyframes = document.getElementById('btn-apply-keyframes');
 // =================================================================
 async function init() {
   inpPoseCount.value = String(poseCount);
+  chkOmitHead.checked = omitHeadSpriteAndCosmetics;
+  updatePreviewControlState();
 
   try {
     const resp = await fetch(SPECIES_INDEX_URL);
@@ -1262,6 +1269,12 @@ function setStatus(msg) {
   statusEl.textContent = msg;
 }
 
+function updatePreviewControlState() {
+  const usesAvatarPreview = previewMode === 'avatar';
+  chkOmitHead.disabled = !usesAvatarPreview;
+  btnRandomAvatar.disabled = !usesAvatarPreview;
+}
+
 
 btnApplyKeyframes.addEventListener('click', () => {
   const min = TOOL_CONFIG.animation?.minPoseCount || 2;
@@ -1273,7 +1286,17 @@ btnApplyKeyframes.addEventListener('click', () => {
   render();
 });
 
-selPreviewModeEl.addEventListener('change', async () => { previewMode = selPreviewModeEl.value; await buildAvatarPreview(); render(); });
+selPreviewModeEl.addEventListener('change', async () => {
+  previewMode = selPreviewModeEl.value;
+  updatePreviewControlState();
+  await buildAvatarPreview();
+  render();
+});
+chkOmitHead.addEventListener('change', async () => {
+  omitHeadSpriteAndCosmetics = chkOmitHead.checked;
+  await buildAvatarPreview();
+  render();
+});
 btnRandomAvatar.addEventListener('click', async () => { await buildAvatarPreview(true); render(); });
 
 
@@ -1365,6 +1388,7 @@ function fitAvatarContentToCanvas(sourceCanvas) {
 }
 
 async function buildAvatarPreview(randomize = false) {
+  if (previewMode !== 'avatar') return;
   if (!speciesData || !selGender) return;
   if (!window.loadPortraitCosmetics || !window.renderPortraitProfile || !window.randomPortraitProfileSeeded) {
     setStatus('⚠ portrait-utils is unavailable; cannot build full NPC avatar preview.');
@@ -1411,7 +1435,9 @@ async function buildAvatarPreview(randomize = false) {
   const cv = document.createElement('canvas');
   cv.width = CS;
   cv.height = CS;
-  await window.renderPortraitProfile(cv, profile);
+  await window.renderPortraitProfile(cv, profile, {
+    omitHeadSpriteAndCosmetics
+  });
   avatarImg = fitAvatarContentToCanvas(cv);
 }
 
