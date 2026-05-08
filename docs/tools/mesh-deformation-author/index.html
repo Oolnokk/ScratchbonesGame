@@ -467,7 +467,8 @@ async function init() {
 // =================================================================
 // SPECIES / GENDER / LAYER LOADING
 // =================================================================
-async function loadSpecies(speciesId) {
+async function loadSpecies(speciesId, options = {}) {
+  const preferredGender = typeof options.preferredGender === 'string' ? options.preferredGender : '';
   const entry = speciesList.find(e => e.speciesId === speciesId);
   if (!entry) return;
 
@@ -490,7 +491,11 @@ async function loadSpecies(speciesId) {
       opt.textContent = g.charAt(0).toUpperCase() + g.slice(1);
       selGenderEl.appendChild(opt);
     });
-    selGender = genders[0] || '';
+    const nextGender = genders.includes(preferredGender)
+      ? preferredGender
+      : (genders.includes(selGender) ? selGender : (genders[0] || ''));
+    selGender = nextGender;
+    if (selGender) selGenderEl.value = selGender;
 
     refreshLayerOptions();
     await loadDefaultBgImage();
@@ -1068,32 +1073,94 @@ function importJSON() {
 }
 
 function loadData(data) {
-  if (!data.speciesId || !data.gender || !Array.isArray(data.poses)) {
+  if (!data || typeof data !== 'object' || !data.speciesId || !data.gender || !Array.isArray(data.poses)) {
     alert('Invalid mesh deformation JSON — missing required fields.');
     return;
   }
 
-  selSpeciesId = data.speciesId;
-  selGender    = data.gender;
-  poseCount = data.poses.length;
-  gridCols = data.gridCols || 4;
-  gridRows = data.gridRows || 4;
+  const minGrid = TOOL_CONFIG.grid?.min || 2;
+  const maxGrid = TOOL_CONFIG.grid?.max || 16;
+  const minPoseDuration = TOOL_CONFIG.animation?.minPoseDurationSeconds || 0.1;
+  const maxPoseDuration = TOOL_CONFIG.animation?.maxPoseDurationSeconds || 10;
 
+  const speciesId = String(data.speciesId || '').trim();
+  const gender = String(data.gender || '').trim();
+  if (!speciesId || !gender) {
+    alert('Invalid mesh deformation JSON — speciesId and gender must be non-empty strings.');
+    return;
+  }
+  if (!speciesList.some(entry => entry.speciesId === speciesId)) {
+    alert('Invalid mesh deformation JSON — unknown speciesId "' + speciesId + '".');
+    return;
+  }
+
+  const parsedCols = parseInt(data.gridCols, 10);
+  const parsedRows = parseInt(data.gridRows, 10);
+  const nextCols = Number.isFinite(parsedCols) ? parsedCols : (TOOL_CONFIG.grid?.defaultCols || 4);
+  const nextRows = Number.isFinite(parsedRows) ? parsedRows : (TOOL_CONFIG.grid?.defaultRows || 4);
+  gridCols = Math.max(minGrid, Math.min(maxGrid, nextCols));
+  gridRows = Math.max(minGrid, Math.min(maxGrid, nextRows));
   const ptCount = gridCols * gridRows;
+
+  const validPoses = [];
+  for (let i = 0; i < data.poses.length; i++) {
+    const pose = data.poses[i];
+    const points = Array.isArray(pose?.points) ? pose.points : null;
+    if (!points || points.length !== ptCount) {
+      alert('Invalid mesh deformation JSON — each pose must contain exactly ' + ptCount + ' points.');
+      return;
+    }
+
+    const normalizedPoints = [];
+    for (let p = 0; p < points.length; p++) {
+      const pt = points[p];
+      if (!Array.isArray(pt) || pt.length < 2 || !Number.isFinite(Number(pt[0])) || !Number.isFinite(Number(pt[1]))) {
+        alert('Invalid mesh deformation JSON — pose points must be numeric [x, y] pairs.');
+        return;
+      }
+      normalizedPoints.push([
+        Math.max(0, Math.min(1, Number(pt[0]))),
+        Math.max(0, Math.min(1, Number(pt[1])))
+      ]);
+    }
+
+    const rawLabel = typeof pose?.label === 'string' ? pose.label.trim() : '';
+    validPoses.push({
+      label: rawLabel || ('pose-' + (i + 1)),
+      points: normalizedPoints
+    });
+  }
+
+  if (validPoses.length === 0) {
+    alert('Invalid mesh deformation JSON — at least one pose is required.');
+    return;
+  }
+
+  selSpeciesId = speciesId;
+  selGender = gender;
+  poses = validPoses;
+  poseCount = poses.length;
+
   locked = Array.isArray(data.locked)
-    ? data.locked.slice(0, ptCount)
+    ? data.locked.slice(0, ptCount).map(Boolean)
     : new Array(ptCount).fill(false);
   // Pad if locked array was shorter
   while (locked.length < ptCount) locked.push(false);
 
-  poses = data.poses.map(p => ({
-    label:  p.label,
-    points: p.points.map(pt => [pt[0], pt[1]])
-  }));
+  poseDurations = Array.isArray(data.poseDurations)
+    ? data.poseDurations.slice(0, poseCount).map((v) => {
+      const parsed = Number(v);
+      if (!Number.isFinite(parsed)) return animSpeed;
+      return Math.max(minPoseDuration, Math.min(maxPoseDuration, parsed));
+    })
+    : Array.from({ length: poseCount }, () => animSpeed);
+  while (poseDurations.length < poseCount) poseDurations.push(animSpeed);
+
   curPoseIdx = 0;
+  if (previewOn) stopPreview();
 
   // Sync UI controls
-  selSpecies.value  = selSpeciesId;
+  selSpecies.value = selSpeciesId;
   inpPoseCount.value = poseCount;
   inpCols.value     = gridCols;
   inpRows.value     = gridRows;
@@ -1101,12 +1168,14 @@ function loadData(data) {
   buildPoseList();
   render();
 
-  // Attempt to load species data and image in background
-  loadSpecies(selSpeciesId).catch(() => {});
-
-  poseDurations = Array.isArray(data.poseDurations) ? data.poseDurations.slice(0, poseCount) : Array.from({ length: poseCount }, () => animSpeed);
-  while (poseDurations.length < poseCount) poseDurations.push(animSpeed);
-  setStatus('Imported: ' + selSpeciesId + '_' + selGender + '_emote.json');
+  // Attempt to load species data and image in background while preserving imported gender
+  loadSpecies(selSpeciesId, { preferredGender: selGender }).then(() => {
+    if (!speciesData || !speciesData[selGender]) {
+      setStatus('⚠ Imported mesh loaded, but gender "' + selGender + '" is not available for species "' + selSpeciesId + '".');
+      return;
+    }
+    setStatus('Imported: ' + selSpeciesId + '_' + selGender + '_emote.json');
+  }).catch(() => {});
 }
 
 // =================================================================
@@ -1211,6 +1280,7 @@ async function buildAvatarPreview(randomize = false) {
   }
 
   if (!portraitCosmetics) {
+    if (window.setPortraitAssetBase) window.setPortraitAssetBase('../../assets/');
     portraitCosmetics = await window.loadPortraitCosmetics('../../config/');
   }
 
