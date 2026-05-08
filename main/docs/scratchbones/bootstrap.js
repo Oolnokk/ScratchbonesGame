@@ -5347,16 +5347,16 @@ import { createTutorial } from './tutorial.js';
       // Use claim-cluster float only when the human player IS that actor/reactor.
       const humanIsActor = actorCanvas?.dataset.seatId === hs && actorFloat?.offsetParent !== null;
       const humanIsReactor = reactorCanvas?.dataset.seatId === hs && reactorFloat?.offsetParent !== null;
-      let anchorEl, avatarCanvas;
+      let anchorEl, driftDir;
       if (humanIsActor) {
         anchorEl = actorCanvas;
-        avatarCanvas = actorCanvas;
+        driftDir = 1;  // actorAvatarFloat uses transform:none — base art faces right
       } else if (humanIsReactor) {
         anchorEl = reactorCanvas;
-        avatarCanvas = reactorCanvas;
+        driftDir = -1; // reactorAvatarFloat uses scaleX(-1) — faces left
       } else {
         anchorEl = humanAvatarCanvas || humanSeatCard;
-        avatarCanvas = humanAvatarCanvas;
+        driftDir = -1; // humanSeatCard portrait uses scaleX(-1) — faces left
       }
       // Host the fx layer on #app so it isn't clipped by overflow on any
       // intermediate ancestor (humanSeatCard, humanSeatZone, etc.).
@@ -5365,11 +5365,9 @@ import { createTutorial } from './tutorial.js';
       if (!anchorEl || !fxHost || !layer) return;
       const layerRect = layer.getBoundingClientRect();
       const anchorRect = anchorEl.getBoundingClientRect();
-      // When flipped (scaleX < 0) the face points left → drift left (-1).
-      // When not flipped the face points right → drift right (+1).
-      const driftDir = isSeatAvatarFlipped(avatarCanvas) ? -1 : 1;
-      // Spawn from the face side of the avatar and upper third (near the head).
-      const originXRatio = driftDir === 1 ? 0.68 : 0.32;
+      // Spawn from the face-side edge of the avatar, upper-third Y (near the head).
+      // driftDir=1 → face on right → origin at far right (0.82); -1 → face on left → far left (0.18).
+      const originXRatio = driftDir === 1 ? 0.82 : 0.18;
       const startX = (anchorRect.left - layerRect.left) + (anchorRect.width * originXRatio);
       const startY = (anchorRect.top - layerRect.top) + (anchorRect.height * 0.28);
       const fx = document.createElement('div');
