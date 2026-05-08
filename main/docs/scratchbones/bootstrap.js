@@ -5343,7 +5343,10 @@ import { createTutorial } from './tutorial.js';
       const reactorFloat = app.querySelector('.reactorAvatarFloat');
       const reactorCanvas = reactorFloat?.querySelector('canvas.seatPortrait');
       const humanSeatCard = app.querySelector('.humanSeatCard');
-      const humanAvatarCanvas = humanSeatCard?.querySelector('.seatAvatarBox canvas.seatPortrait');
+      // .seatAvatarBox owns the CSS scale() transform (transform-origin: top center) used
+      // for layout-fit; querying it directly gives getBoundingClientRect() the correct
+      // post-scale screen rect without going through the canvas's own scaleX(-1) transform.
+      const humanAvatarBox = humanSeatCard?.querySelector('.seatAvatarBox');
       // Use claim-cluster float only when the human player IS that actor/reactor.
       const humanIsActor = actorCanvas?.dataset.seatId === hs && actorFloat?.offsetParent !== null;
       const humanIsReactor = reactorCanvas?.dataset.seatId === hs && reactorFloat?.offsetParent !== null;
@@ -5355,7 +5358,7 @@ import { createTutorial } from './tutorial.js';
         anchorEl = reactorCanvas;
         driftDir = -1; // reactorAvatarFloat uses scaleX(-1) — faces left
       } else {
-        anchorEl = humanAvatarCanvas || humanSeatCard;
+        anchorEl = humanAvatarBox || humanSeatCard;
         driftDir = -1; // humanSeatCard portrait uses scaleX(-1) — faces left
       }
       // Host the fx layer on #app so it isn't clipped by overflow on any
@@ -5378,12 +5381,16 @@ import { createTutorial } from './tutorial.js';
         startX = (refGlyphRect.left + refGlyphRect.width / 2) - layerRect.left;
         startY = (refGlyphRect.top + refGlyphRect.height / 2) - layerRect.top;
       } else {
-        // Compute yRatio: prefer deriving it from the live glyph vs actorCanvas rect so
-        // it auto-adapts to any layout config; fall back to the default config value 0.52.
+        // Compute yRatio from the live glyph vs actorAvatarFloat's seatAvatarBox rect
+        // (same scale transform applied), adapting to any layout config.  Fall back to
+        // 0.52, the config default yPct for claimTimesBoxLeft/Right.
         let yRatio = 0.52;
-        if (glyphVisible && actorCanvas) {
-          const acRect = actorCanvas.getBoundingClientRect();
-          if (acRect.height > 0) yRatio = (refGlyphRect.top + refGlyphRect.height / 2 - acRect.top) / acRect.height;
+        if (glyphVisible && actorFloat) {
+          const acBox = actorFloat.querySelector('.seatAvatarBox') || actorCanvas;
+          if (acBox) {
+            const acRect = acBox.getBoundingClientRect();
+            if (acRect.height > 0) yRatio = (refGlyphRect.top + refGlyphRect.height / 2 - acRect.top) / acRect.height;
+          }
         }
         startX = (anchorRect.left - layerRect.left) + (anchorRect.width * originXRatio);
         startY = (anchorRect.top - layerRect.top) + (anchorRect.height * yRatio);
