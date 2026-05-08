@@ -63,27 +63,25 @@ import { createTutorial } from './tutorial.js';
         src: './docs/assets/symbols/emoji_disgust.png',
         tint: 'rgba(122, 198, 92, 0.92)',
         className: 'emojiFx-disgust',
-        durationMs: 1700,
+        durationMs: 1650,
       },
       alarmed: {
         id: 'alarmed',
         label: 'Alarmed',
         src: './docs/assets/symbols/emoji_alarmed.png',
         tint: 'rgba(255, 84, 84, 0.95)',
-        className: 'emojiFx-alarmed emojiFx-fast',
-        durationMs: 620,
+        className: 'emojiFx-alarmed',
+        durationMs: 680,
       },
       curious: {
         id: 'curious',
         label: 'Curious',
         src: './docs/assets/symbols/emoji_curious.png',
         tint: 'rgba(255, 255, 255, 0.94)',
-        className: 'emojiFx-curious emojiFx-fast',
-        durationMs: 620,
+        className: 'emojiFx-curious',
+        durationMs: 680,
       },
     };
-    const EMOJI_REACTION_ORIGIN_X_RATIO = 0.45;
-    const EMOJI_REACTION_ORIGIN_Y_RATIO = 0.5;
     function applyRootCssCustomProperties(cssRootVars) {
       const rootStyle = document.documentElement.style;
       const entries = cssRootVars && typeof cssRootVars === 'object' ? Object.entries(cssRootVars) : [];
@@ -4637,24 +4635,26 @@ import { createTutorial } from './tutorial.js';
             </div>
           </div>
         </div>
-        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:0;">
-          <div data-deck-stack style="position:relative;">
-            ${(() => {
-              const deckCfg = SCRATCHBONES_GAME.layout?.cards?.deckPlaceholderPx || {};
-              const cards = Array.isArray(deckCfg.cards) ? deckCfg.cards : [];
-              const backArt = resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true });
-              return cards.map((deckCard) => {
-                const left = Number(deckCard.left) || 0;
-                const top = Number(deckCard.top) || 0;
-                const width = Number(deckCard.width) || 0;
-                const height = Number(deckCard.height) || 0;
-                const opacity = Number.isFinite(Number(deckCard.opacity)) ? Number(deckCard.opacity) : 1;
-                const brightness = Number.isFinite(Number(deckCard.brightness)) ? Number(deckCard.brightness) : 1;
-                return `<img class="tableDeckCard" src="${escapeHtml(backArt.src)}" data-fallback-src="${escapeHtml(backArt.fallbackSrc)}" alt="Deck placeholder" data-base-left="${left}" data-base-top="${top}" data-base-width="${width}" data-base-height="${height}" style="position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;opacity:${opacity};object-fit:contain;filter:brightness(${brightness});">`;
-              }).join('');
-            })()}
+        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;pointer-events:none;z-index:0;">
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div data-deck-stack style="position:relative;">
+              ${(() => {
+                const deckCfg = SCRATCHBONES_GAME.layout?.cards?.deckPlaceholderPx || {};
+                const cards = Array.isArray(deckCfg.cards) ? deckCfg.cards : [];
+                const backArt = resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true });
+                return cards.map((deckCard) => {
+                  const left = Number(deckCard.left) || 0;
+                  const top = Number(deckCard.top) || 0;
+                  const width = Number(deckCard.width) || 0;
+                  const height = Number(deckCard.height) || 0;
+                  const opacity = Number.isFinite(Number(deckCard.opacity)) ? Number(deckCard.opacity) : 1;
+                  const brightness = Number.isFinite(Number(deckCard.brightness)) ? Number(deckCard.brightness) : 1;
+                  return `<img class="tableDeckCard" src="${escapeHtml(backArt.src)}" data-fallback-src="${escapeHtml(backArt.fallbackSrc)}" alt="Deck placeholder" data-base-left="${left}" data-base-top="${top}" data-base-width="${width}" data-base-height="${height}" style="position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;opacity:${opacity};object-fit:contain;filter:brightness(${brightness});">`;
+                }).join('');
+              })()}
+            </div>
+            <div class="tiny tableDeckLabel" style="font-weight:700;letter-spacing:.08em;">DECK</div>
           </div>
-          <div class="tiny tableDeckLabel" style="font-weight:700;letter-spacing:.08em;">DECK</div>
           ${renderTrickDeckInfo(deckCompositionSnapshot())}
         </div>
         </div>
@@ -5337,30 +5337,64 @@ import { createTutorial } from './tutorial.js';
       const app = document.getElementById('app');
       const reaction = EMOJI_REACTION_CONFIG[(reactionId || '').trim().toLowerCase()];
       if (!app || !reaction) return;
-      // Prefer claim-cluster actor avatar as the visual source when it is rendered.
+      const hs = String(state.humanSeat);
       const actorFloat = app.querySelector('.actorAvatarFloat');
       const actorCanvas = actorFloat?.querySelector('canvas.seatPortrait');
+      const reactorFloat = app.querySelector('.reactorAvatarFloat');
+      const reactorCanvas = reactorFloat?.querySelector('canvas.seatPortrait');
       const humanSeatCard = app.querySelector('.humanSeatCard');
-      const anchorEl = (actorFloat && actorCanvas && actorFloat.offsetParent !== null)
-        ? actorFloat
-        : humanSeatCard;
-      const avatarCanvas = anchorEl === actorFloat
-        ? actorCanvas
-        : humanSeatCard?.querySelector('.seatAvatarBox canvas.seatPortrait');
-      // Host the fx layer on humanSeatZone (not humanSeatCard) so it isn't clipped
-      // by the overflow:hidden that enforceFitContainerBounds sets on humanSeatCard.
-      const fxHost = anchorEl === humanSeatCard
-        ? (humanSeatCard?.closest('.humanSeatZone') || humanSeatCard)
-        : anchorEl;
+      // .seatAvatarBox owns the CSS scale() transform (transform-origin: top center) used
+      // for layout-fit; querying it directly gives getBoundingClientRect() the correct
+      // post-scale screen rect without going through the canvas's own scaleX(-1) transform.
+      const humanAvatarBox = humanSeatCard?.querySelector('.seatAvatarBox');
+      // Use claim-cluster float only when the human player IS that actor/reactor.
+      const humanIsActor = actorCanvas?.dataset.seatId === hs && actorFloat?.offsetParent !== null;
+      const humanIsReactor = reactorCanvas?.dataset.seatId === hs && reactorFloat?.offsetParent !== null;
+      let anchorEl, driftDir;
+      if (humanIsActor) {
+        anchorEl = actorCanvas;
+        driftDir = 1;  // actorAvatarFloat uses transform:none — base art faces right
+      } else if (humanIsReactor) {
+        anchorEl = reactorCanvas;
+        driftDir = -1; // reactorAvatarFloat uses scaleX(-1) — faces left
+      } else {
+        anchorEl = humanAvatarBox || humanSeatCard;
+        driftDir = -1; // humanSeatCard portrait uses scaleX(-1) — faces left
+      }
+      // Host the fx layer on #app so it isn't clipped by overflow on any
+      // intermediate ancestor (humanSeatCard, humanSeatZone, etc.).
+      const fxHost = app;
       const layer = ensureEmojiReactionLayer(fxHost);
       if (!anchorEl || !fxHost || !layer) return;
       const layerRect = layer.getBoundingClientRect();
       const anchorRect = anchorEl.getBoundingClientRect();
-      // When flipped (scaleX < 0) the face points left → drift left (-1).
-      // When not flipped the face points right → drift right (+1).
-      const driftDir = isSeatAvatarFlipped(avatarCanvas) ? -1 : 1;
-      const startX = (anchorRect.left - layerRect.left) + (anchorRect.width * EMOJI_REACTION_ORIGIN_X_RATIO);
-      const startY = (anchorRect.top - layerRect.top) + (anchorRect.height * EMOJI_REACTION_ORIGIN_Y_RATIO);
+      // Resolve origin from the claim-multiply glyph (×) when visible, else use a
+      // proportional fallback (default yPct 0.52 = config default for claimTimesBoxLeft/Right).
+      const refGlyphSelector = driftDir === 1 ? '.claimTimesBoxLeft .claimMultiplyGlyph' : '.claimTimesBoxRight .claimMultiplyGlyph';
+      const refGlyphEl = app.querySelector(refGlyphSelector);
+      const refGlyphRect = refGlyphEl ? refGlyphEl.getBoundingClientRect() : null;
+      const glyphVisible = !!(refGlyphRect && refGlyphRect.width > 0 && refGlyphRect.height > 0);
+      const originXRatio = driftDir === 1 ? 0.82 : 0.18;
+      let startX, startY;
+      if ((humanIsActor || humanIsReactor) && glyphVisible) {
+        // Spawn directly from the × glyph centre.
+        startX = (refGlyphRect.left + refGlyphRect.width / 2) - layerRect.left;
+        startY = (refGlyphRect.top + refGlyphRect.height / 2) - layerRect.top;
+      } else {
+        // Compute yRatio from the live glyph vs actorAvatarFloat's seatAvatarBox rect
+        // (same scale transform applied), adapting to any layout config.  Fall back to
+        // 0.52, the config default yPct for claimTimesBoxLeft/Right.
+        let yRatio = 0.52;
+        if (glyphVisible && actorFloat) {
+          const acBox = actorFloat.querySelector('.seatAvatarBox') || actorCanvas;
+          if (acBox) {
+            const acRect = acBox.getBoundingClientRect();
+            if (acRect.height > 0) yRatio = (refGlyphRect.top + refGlyphRect.height / 2 - acRect.top) / acRect.height;
+          }
+        }
+        startX = (anchorRect.left - layerRect.left) + (anchorRect.width * originXRatio);
+        startY = (anchorRect.top - layerRect.top) + (anchorRect.height * yRatio);
+      }
       const fx = document.createElement('div');
       fx.className = `emojiFx ${reaction.className}`;
       fx.style.left = `${startX}px`;
@@ -5368,10 +5402,7 @@ import { createTutorial } from './tutorial.js';
       fx.style.setProperty('--emoji-mask-src', `url('${reaction.src}')`);
       fx.style.setProperty('--emoji-tint', reaction.tint);
       fx.style.setProperty('--emoji-drift-dir', String(driftDir));
-      fx.innerHTML = `
-        <span class="emojiFxGlyph"></span>
-        ${reaction.id === 'disgust' ? '<span class="emojiFxStink" aria-hidden="true"></span>' : ''}
-      `;
+      fx.innerHTML = '<span class="emojiFxGlyph"></span>';
       layer.appendChild(fx);
       setTimeout(() => fx.remove(), reaction.durationMs);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
