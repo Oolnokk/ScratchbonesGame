@@ -1834,7 +1834,6 @@ import { createTutorial } from './tutorial.js';
       showScreenBurst('OUT!', {
         anchorEl: walletCoinRowAnchorForPlayer(playerIndex),
         colorClass: 'burst-out',
-        fontSizeRem: 3.2,
       });
       return checkGameOverBySurvivors();
     }
@@ -2352,7 +2351,6 @@ import { createTutorial } from './tutorial.js';
       showScreenBurst('Clear!', {
         anchorEl: walletCoinRowAnchorForPlayer(playerIndex),
         colorClass: 'burst-win',
-        fontSizeRem: 3.0,
       });
       state.ante += Math.max(1, Number(CONFIG.anteIncrement) || 1);
       addLog(`The ante rises to ${state.ante} chip${state.ante === 1 ? '' : 's'}.`);
