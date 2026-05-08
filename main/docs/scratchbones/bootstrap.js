@@ -63,23 +63,23 @@ import { createTutorial } from './tutorial.js';
         src: './docs/assets/symbols/emoji_disgust.png',
         tint: 'rgba(122, 198, 92, 0.92)',
         className: 'emojiFx-disgust',
-        durationMs: 1700,
+        durationMs: 1650,
       },
       alarmed: {
         id: 'alarmed',
         label: 'Alarmed',
         src: './docs/assets/symbols/emoji_alarmed.png',
         tint: 'rgba(255, 84, 84, 0.95)',
-        className: 'emojiFx-alarmed emojiFx-fast',
-        durationMs: 620,
+        className: 'emojiFx-alarmed',
+        durationMs: 680,
       },
       curious: {
         id: 'curious',
         label: 'Curious',
         src: './docs/assets/symbols/emoji_curious.png',
         tint: 'rgba(255, 255, 255, 0.94)',
-        className: 'emojiFx-curious emojiFx-fast',
-        durationMs: 620,
+        className: 'emojiFx-curious',
+        durationMs: 680,
       },
     };
     function applyRootCssCustomProperties(cssRootVars) {
@@ -5377,10 +5377,7 @@ import { createTutorial } from './tutorial.js';
       fx.style.setProperty('--emoji-mask-src', `url('${reaction.src}')`);
       fx.style.setProperty('--emoji-tint', reaction.tint);
       fx.style.setProperty('--emoji-drift-dir', String(driftDir));
-      fx.innerHTML = `
-        <span class="emojiFxGlyph"></span>
-        ${reaction.id === 'disgust' ? '<span class="emojiFxStink" aria-hidden="true"></span>' : ''}
-      `;
+      fx.innerHTML = '<span class="emojiFxGlyph"></span>';
       layer.appendChild(fx);
       setTimeout(() => fx.remove(), reaction.durationMs);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
