@@ -1,15 +1,24 @@
+'use strict';
+
 const WebSocket = require('ws');
 const crypto = require('crypto');
 const { normalizePlayerLoadout, normalizeKhymeryyanPayload, occupantPayload, filterStateForSeat } = require('./utils');
 
 const PORT = process.env.PORT || 8080;
-const wss = new WebSocket.Server({ port: PORT });
+const MAX_MESSAGE_BYTES = 64 * 1024;
+const JOIN_FAIL_WINDOW_MS = 15_000;
+const MAX_JOIN_FAILS_PER_WINDOW = 8;
+const wss = new WebSocket.Server({ port: PORT, maxPayload: MAX_MESSAGE_BYTES });
 
 // rooms: Map<code, { host, hostSeatId, hostName, hostKhymeryyan, hostAppearance, hostLoadout, clients: Map<seatId, {ws, name, khymeryyan, appearance, playerLoadout}>, lastState }>
 const rooms = new Map();
 
 function makeCode() {
-  return crypto.randomBytes(2).toString('hex').toUpperCase();
+  let code;
+  do {
+    code = crypto.randomBytes(2).toString('hex').toUpperCase();
+  } while (rooms.has(code));
+  return code;
 }
 
 function send(ws, obj) {
@@ -22,8 +31,29 @@ wss.on('connection', ws => {
   let roomCode = null;
   let role = null;    // 'host' | 'client'
   let seatId = null;
+  let joinFailWindowStartMs = 0;
+  let joinFailCount = 0;
+
+  function registerJoinFailure(reason) {
+    const now = Date.now();
+    if ((now - joinFailWindowStartMs) > JOIN_FAIL_WINDOW_MS) {
+      joinFailWindowStartMs = now;
+      joinFailCount = 0;
+    }
+    joinFailCount += 1;
+    send(ws, { type: 'error', reason });
+    if (joinFailCount >= MAX_JOIN_FAILS_PER_WINDOW) {
+      ws.close(1008, 'Too many failed join attempts');
+    }
+  }
 
   ws.on('message', raw => {
+    const messageSize = Buffer.isBuffer(raw) ? raw.length : Buffer.byteLength(String(raw || ''), 'utf8');
+    if (messageSize > MAX_MESSAGE_BYTES) {
+      ws.close(1009, 'Message too large');
+      return;
+    }
+
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
 
@@ -55,9 +85,9 @@ wss.on('connection', ws => {
       if (roomCode) return;
       const code = String(msg.code || '').toUpperCase().trim();
       const room = rooms.get(code);
-      if (!room) { send(ws, { type: 'error', reason: 'Room not found' }); return; }
+      if (!room) { registerJoinFailure('Room not found'); return; }
       if (room.clients.size >= room.totalSeats - 1) {
-        send(ws, { type: 'error', reason: 'Room is full' }); return;
+        registerJoinFailure('Room is full'); return;
       }
       // Auto-assign lowest available seat
       const taken = new Set([room.hostSeatId, ...room.clients.keys()]);
@@ -65,7 +95,7 @@ wss.on('connection', ws => {
       for (let i = 0; i < room.totalSeats; i++) {
         if (!taken.has(i)) { seat = i; break; }
       }
-      if (seat === null) { send(ws, { type: 'error', reason: 'No seats available' }); return; }
+      if (seat === null) { registerJoinFailure('No seats available'); return; }
 
       const playerKhymeryyan = normalizeKhymeryyanPayload(msg.selectedKhymeryyan);
       const playerName = String(msg.playerName || playerKhymeryyan?.name || `Player ${seat + 1}`).slice(0, 32);
@@ -107,7 +137,7 @@ wss.on('connection', ws => {
     if (msg.type === 'action' && role === 'client') {
       const room = rooms.get(roomCode);
       if (!room) return;
-      const { type: actionType, ...actionData } = msg.payload || {};
+      const { type: actionType, seatId: _ignoredSeatId, ...actionData } = msg.payload || {};
       send(room.host, { type: 'action', seatId, actionType, ...actionData });
       return;
     }
