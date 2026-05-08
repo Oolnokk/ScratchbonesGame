@@ -365,36 +365,39 @@
 
   function buildSlagothimGivenName(rng, culture, gender) {
     const rules = culture.slagothimRules || {};
-    const useSl = chance(rng, Number(rules.startWithSlChance ?? 0.58));
-    const willUseSuffix = useSl ? chance(rng, Number(rules.slNameUsesSuffixChance ?? 0.2)) : true;
-    const c1 = useSl ? 'sl' : pickFromRng(rng, rules.firstConsonants || []);
-    const v1 = pickFromRng(rng, rules.vowels || []);
-    const useMnCluster = chance(rng, Number(rules.mnClusterChance ?? 0.08));
-    const c2 = useMnCluster ? rules.rareSecondConsonantCluster : pickFromRng(rng, rules.secondConsonants || []);
-    const c2AllowsVowel = c2 === 'ng' || c2 === 'r' || c2 === rules.rareSecondConsonantCluster;
-    const c2ForcesVowel = c2 === rules.rareSecondConsonantCluster;
-    let v2 = '';
-    let ending = '';
+    for (let attempt = 1; attempt <= 40; attempt++) {
+      const useSl = chance(rng, Number(rules.startWithSlChance ?? 0.58));
+      const willUseSuffix = useSl ? chance(rng, Number(rules.slNameUsesSuffixChance ?? 0.2)) : true;
+      const c1 = useSl ? 'sl' : pickFromRng(rng, rules.firstConsonants || []);
+      const v1 = pickFromRng(rng, rules.vowels || []);
+      const useMnCluster = chance(rng, Number(rules.mnClusterChance ?? 0.08));
+      const c2 = useMnCluster ? rules.rareSecondConsonantCluster : pickFromRng(rng, rules.secondConsonants || []);
+      const c2AllowsVowel = c2 === 'ng' || c2 === 'r' || c2 === rules.rareSecondConsonantCluster;
+      const c2ForcesVowel = c2 === rules.rareSecondConsonantCluster;
+      let v2 = '';
+      let ending = '';
 
-    if (willUseSuffix) {
-      if (c2ForcesVowel || (c2AllowsVowel && chance(rng, Number(rules.optionalBridgeVowelChance ?? 0.55)))) {
-        v2 = pickFromRng(rng, rules.vowels || []);
+      if (willUseSuffix) {
+        if (c2ForcesVowel || (c2AllowsVowel && chance(rng, Number(rules.optionalBridgeVowelChance ?? 0.55)))) {
+          v2 = pickFromRng(rng, rules.vowels || []);
+        }
+        ending = gender === 'male' ? rules.maleSuffix : rules.femaleSuffix;
+      } else {
+        if (!useSl || !c2AllowsVowel) continue;
+        v2 = pickFromRng(rng, gender === 'male' ? (rules.maleSlOnlyEndings || []) : (rules.femaleSlOnlyEndings || []));
       }
-      ending = gender === 'male' ? rules.maleSuffix : rules.femaleSuffix;
-    } else {
-      if (!useSl || !c2AllowsVowel) return buildSlagothimGivenName(rng, culture, gender);
-      v2 = pickFromRng(rng, gender === 'male' ? (rules.maleSlOnlyEndings || []) : (rules.femaleSlOnlyEndings || []));
-    }
 
-    const given = (c1 + v1 + c2 + v2 + ending).toLowerCase();
-    if (gender === 'male') {
-      if (!(startsWithSl(given) || endsWithToken(given, rules.maleSuffix))) return buildSlagothimGivenName(rng, culture, gender);
-      if (startsWithSl(given) && !endsWithToken(given, rules.maleSuffix) && !/[ou]$/i.test(given)) return buildSlagothimGivenName(rng, culture, gender);
-    } else {
-      if (!(startsWithSl(given) || endsWithToken(given, rules.femaleSuffix))) return buildSlagothimGivenName(rng, culture, gender);
-      if (startsWithSl(given) && !endsWithToken(given, rules.femaleSuffix) && !/[ai]$/i.test(given)) return buildSlagothimGivenName(rng, culture, gender);
+      const given = (c1 + v1 + c2 + v2 + ending).toLowerCase();
+      if (gender === 'male') {
+        if (!(startsWithSl(given) || endsWithToken(given, rules.maleSuffix))) continue;
+        if (startsWithSl(given) && !endsWithToken(given, rules.maleSuffix) && !/[ou]$/i.test(given)) continue;
+      } else {
+        if (!(startsWithSl(given) || endsWithToken(given, rules.femaleSuffix))) continue;
+        if (startsWithSl(given) && !endsWithToken(given, rules.femaleSuffix) && !/[ai]$/i.test(given)) continue;
+      }
+      return applyCasing(given, culture.casing);
     }
-    return applyCasing(given, culture.casing);
+    throw new Error('Could not generate a Slagothim name within the current phonology rules.');
   }
 
   function buildSlagothimSurname(rng, culture) {

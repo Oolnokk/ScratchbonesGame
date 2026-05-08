@@ -340,7 +340,7 @@
   function getActiveKhymeryyanRef() {
     const acc = getAccount();
     let active = acc.khymeryyans.find(kh => kh.id === acc.activeKhymeryyanId) || acc.khymeryyans[0] || null;
-    if (!active && acc.khymeryyans.length === 0) return null;
+    if (!active) return null;
     if (active && acc.activeKhymeryyanId !== active.id) {
       acc.activeKhymeryyanId = active.id;
       save();

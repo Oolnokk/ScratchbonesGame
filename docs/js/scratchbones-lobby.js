@@ -1516,7 +1516,7 @@
     render();
   }
 
-  function startOfflineGame() {
+  function buildSingleHumanPveSession(startMode = 'pve') {
     const khymeryyan = getFullKhymeryyan();
     const username = khymeryyan?.name || 'Player';
     const ap = getFullAppearance();
@@ -1533,12 +1533,16 @@
       }
     }
     window.SCRATCHBONES_SESSION = {
-      mode: 'pve',
+      mode: startMode,
       humanSeats: [humanSeat],
       playerNames,
       playerAppearances,
       playerLoadouts,
     };
+  }
+
+  function startOfflineGame() {
+    buildSingleHumanPveSession('pve');
     _postGameMessage = '';
     hide();
     if (_scratchbonesReady && window.scratchbonesStartGame) {
@@ -1548,28 +1552,7 @@
 
   function startTutorialGame() {
     if (!window.ScratchbonesAccount?.isCreated()) return;
-    const khymeryyan = getFullKhymeryyan();
-    const username = khymeryyan?.name || 'Player';
-    const ap = getFullAppearance();
-    const totalPlayers = 4;
-    const humanSeat = 0;
-    const playerNames = { [humanSeat]: username };
-    const playerAppearances = { [humanSeat]: ap };
-    const playerLoadouts = { [humanSeat]: getLocalPlayerLoadout() };
-    let npcIndex = 0;
-    for (let seat = 0; seat < totalPlayers; seat++) {
-      if (seat !== humanSeat) {
-        playerNames[seat] = NPC_NAMES[npcIndex % NPC_NAMES.length];
-        npcIndex++;
-      }
-    }
-    window.SCRATCHBONES_SESSION = {
-      mode: 'pve',
-      humanSeats: [humanSeat],
-      playerNames,
-      playerAppearances,
-      playerLoadouts,
-    };
+    buildSingleHumanPveSession('pve');
     _postGameMessage = '';
     hide();
     if (_scratchbonesReady && window.scratchbonesStartTutorial) {
@@ -1681,9 +1664,8 @@
 
   function _syncCosmeticVarsInputs() {
     const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.xformPresets || {};
-    const defaults = window.SCRATCHBONES_CONFIG?.game?.portrait?.xformPresets || {};
     for (const name of ['A', 'B', 'C', 'D']) {
-      const p = cfg[name] || defaults[name] || {};
+      const p = cfg[name] || {};
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? 0; };
       set(`cvp-${name}-ax`,     p.ax     ?? 0);
       set(`cvp-${name}-ay`,     p.ay     ?? 0);

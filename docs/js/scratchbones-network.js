@@ -35,12 +35,15 @@
     return new Promise((resolve, reject) => {
       const prevOk = _handlers[type];
       const prevErr = _handlers['error'];
+      const prevDisconnect = _handlers['disconnect'];
       function restore() {
         _handlers[type] = prevOk;
         _handlers['error'] = prevErr;
+        _handlers['disconnect'] = prevDisconnect;
       }
       _handlers[type] = (msg) => { restore(); resolve(msg); };
       _handlers['error'] = (msg) => { restore(); reject(new Error(msg.reason || 'Server error')); };
+      _handlers['disconnect'] = () => { restore(); reject(new Error('Disconnected before server reply')); };
     });
   }
 
