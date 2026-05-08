@@ -4637,24 +4637,26 @@ import { createTutorial } from './tutorial.js';
             </div>
           </div>
         </div>
-        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:0;">
-          <div data-deck-stack style="position:relative;">
-            ${(() => {
-              const deckCfg = SCRATCHBONES_GAME.layout?.cards?.deckPlaceholderPx || {};
-              const cards = Array.isArray(deckCfg.cards) ? deckCfg.cards : [];
-              const backArt = resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true });
-              return cards.map((deckCard) => {
-                const left = Number(deckCard.left) || 0;
-                const top = Number(deckCard.top) || 0;
-                const width = Number(deckCard.width) || 0;
-                const height = Number(deckCard.height) || 0;
-                const opacity = Number.isFinite(Number(deckCard.opacity)) ? Number(deckCard.opacity) : 1;
-                const brightness = Number.isFinite(Number(deckCard.brightness)) ? Number(deckCard.brightness) : 1;
-                return `<img class="tableDeckCard" src="${escapeHtml(backArt.src)}" data-fallback-src="${escapeHtml(backArt.fallbackSrc)}" alt="Deck placeholder" data-base-left="${left}" data-base-top="${top}" data-base-width="${width}" data-base-height="${height}" style="position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;opacity:${opacity};object-fit:contain;filter:brightness(${brightness});">`;
-              }).join('');
-            })()}
+        <div class="tableDeckPlaceholder fit-target fit-0" data-proj-id="turn-spotlight" data-deck-anchor="1" style="display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;pointer-events:none;z-index:0;">
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div data-deck-stack style="position:relative;">
+              ${(() => {
+                const deckCfg = SCRATCHBONES_GAME.layout?.cards?.deckPlaceholderPx || {};
+                const cards = Array.isArray(deckCfg.cards) ? deckCfg.cards : [];
+                const backArt = resolveScratchbone2DAsset({ wild: false, rank: null }, { flipped: true });
+                return cards.map((deckCard) => {
+                  const left = Number(deckCard.left) || 0;
+                  const top = Number(deckCard.top) || 0;
+                  const width = Number(deckCard.width) || 0;
+                  const height = Number(deckCard.height) || 0;
+                  const opacity = Number.isFinite(Number(deckCard.opacity)) ? Number(deckCard.opacity) : 1;
+                  const brightness = Number.isFinite(Number(deckCard.brightness)) ? Number(deckCard.brightness) : 1;
+                  return `<img class="tableDeckCard" src="${escapeHtml(backArt.src)}" data-fallback-src="${escapeHtml(backArt.fallbackSrc)}" alt="Deck placeholder" data-base-left="${left}" data-base-top="${top}" data-base-width="${width}" data-base-height="${height}" style="position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;opacity:${opacity};object-fit:contain;filter:brightness(${brightness});">`;
+                }).join('');
+              })()}
+            </div>
+            <div class="tiny tableDeckLabel" style="font-weight:700;letter-spacing:.08em;">DECK</div>
           </div>
-          <div class="tiny tableDeckLabel" style="font-weight:700;letter-spacing:.08em;">DECK</div>
           ${renderTrickDeckInfo(deckCompositionSnapshot())}
         </div>
         </div>
