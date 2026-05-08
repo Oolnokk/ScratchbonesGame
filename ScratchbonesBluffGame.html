@@ -540,7 +540,7 @@
     #sidebarShell {
       grid-area: sidebar;
       display: flex;
-      flex-direction: row;
+      flex-direction: column;
       min-height: 0;
       max-height: 100%;
     }
@@ -557,8 +557,9 @@
       font-size: calc(1rem * var(--layout-sidebar-content-scale));
     }
     .emojiReactionPanel {
-      flex-shrink: 0;
-      align-self: stretch;
+      position: absolute;
+      right: 100%;
+      top: 0;
       z-index: 10;
       padding: 8px 6px;
       border-radius: 12px 0 0 12px;
