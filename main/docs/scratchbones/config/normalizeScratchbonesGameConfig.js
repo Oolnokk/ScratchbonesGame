@@ -340,9 +340,9 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
 
 
 const DEFAULT_TRICK_GLYPH_SRC = {
-  smuggle: './docs/assets/symbols/smuggleglyph.png',
-  trap: './docs/assets/symbols/trapglyph.png',
-  punish: './docs/assets/symbols/punishglyph.png',
+  smuggle: './docs/assets/symbols/boneglyph_smuggle.png',
+  trap: './docs/assets/symbols/boneglyph_trap.png',
+  punish: './docs/assets/symbols/boneglyph_punish.png',
 };
 
 const DEFAULT_TRICK_BONE_DEFINITIONS = {
