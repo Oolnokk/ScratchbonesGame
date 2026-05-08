@@ -5280,6 +5280,7 @@ import { createTutorial } from './tutorial.js';
       }
       root.style.setProperty('--layout-table-card-auto-scale', clampNumber(bestScale, 0.35, 1).toFixed(3));
     }
+    // Returns the horizontal scale component from CSS transform matrix/matrix3d values.
     function parseScaleXFromTransform(transformValue) {
       const transform = String(transformValue || '').trim();
       if (!transform || transform === 'none') return 1;
@@ -5298,14 +5299,15 @@ import { createTutorial } from './tutorial.js';
       return 1;
     }
     function renderEmojiReactionPanel() {
-      const ordered = ['love', 'disgust', 'alarmed', 'curious'];
-      const buttonHtml = ordered.map((id) => {
+      const reactionOrder = ['love', 'disgust', 'alarmed', 'curious'];
+      const buttonHtml = reactionOrder.map((id) => {
         const reaction = EMOJI_REACTION_CONFIG[id];
         if (!reaction) return '';
         return `<button type="button" class="emojiReactionBtn" data-emoji-reaction="${reaction.id}" title="${escapeHtml(reaction.label)}" aria-label="${escapeHtml(reaction.label)}"><span class="emojiReactionGlyph" style="--emoji-mask-src:url('${escapeHtml(reaction.src)}');--emoji-tint:${escapeHtml(reaction.tint)};"></span></button>`;
       }).join('');
       return `<div class="emojiReactionPanel" data-proj-id="emoji-panel" aria-label="Emoji reactions">${buttonHtml}</div>`;
     }
+    // Creates or returns the layer used for local emoji FX on the human seat card.
     function ensureEmojiReactionLayer(humanSeatCard) {
       if (!humanSeatCard) return null;
       let layer = humanSeatCard.querySelector('.emojiReactionFxLayer');
@@ -5317,12 +5319,14 @@ import { createTutorial } from './tutorial.js';
       }
       return layer;
     }
+    // Determines if the seat portrait is mirrored by checking transform scaleX.
     function isSeatAvatarFlipped(avatarCanvas) {
       if (!avatarCanvas || typeof window.getComputedStyle !== 'function') return false;
       const style = window.getComputedStyle(avatarCanvas);
       const scaleX = parseScaleXFromTransform(style.transform);
       return scaleX < 0;
     }
+    // Spawns one local emoji FX burst from the human avatar anchor.
     function spawnEmojiReactionFx(reactionId) {
       const app = document.getElementById('app');
       const reaction = EMOJI_REACTION_CONFIG[String(reactionId || '').trim().toLowerCase()];
