@@ -194,6 +194,7 @@ function shouldRenderBlink(headUrl, nowMs) {
 
 let _puAssetBase = './assets/';
 const IMG_CACHE  = new Map();
+const BREATHING_ANIMATIONS = new WeakMap();
 
 /** Set the asset base URL used by loadImg(). Call before rendering. */
 function setPortraitAssetBase(base) {
@@ -388,6 +389,76 @@ function getProfileSpriteXforms(profile) {
 
 // ── Rendering ──────────────────────────────────────────────
 
+
+function interpolateMeshPose(animation, nowMs) {
+  const poses = Array.isArray(animation?.poses) ? animation.poses : null;
+  const durations = Array.isArray(animation?.poseDurations) ? animation.poseDurations : null;
+  if (!poses || poses.length < 2 || !durations || durations.length !== poses.length) return null;
+  const totalMs = durations.reduce((sum, sec) => sum + Math.max(0.05, Number(sec) || 0.05) * 1000, 0);
+  if (!totalMs) return null;
+  let t = nowMs % totalMs;
+  let fromI = 0;
+  for (let i = 0; i < durations.length; i++) {
+    const seg = Math.max(0.05, Number(durations[i]) || 0.05) * 1000;
+    if (t < seg) { fromI = i; break; }
+    t -= seg;
+  }
+  const toI = (fromI + 1) % poses.length;
+  const segMs = Math.max(0.05, Number(durations[fromI]) || 0.05) * 1000;
+  const alpha = Math.min(1, Math.max(0, t / segMs));
+  const fromPts = poses[fromI]?.points;
+  const toPts = poses[toI]?.points;
+  if (!Array.isArray(fromPts) || !Array.isArray(toPts) || fromPts.length !== toPts.length) return null;
+  return fromPts.map((p, i) => [
+    p[0] + (toPts[i][0] - p[0]) * alpha,
+    p[1] + (toPts[i][1] - p[1]) * alpha,
+  ]);
+}
+
+function drawPortraitLayerWithMesh(ctx, img, xform, cssFilter, meshPoints, gridCols, gridRows) {
+  if (!Array.isArray(meshPoints) || meshPoints.length !== gridCols * gridRows || gridCols < 2 || gridRows < 2) {
+    drawPortraitLayer(ctx, img, xform, cssFilter);
+    return;
+  }
+  const { ax, ay, sx, sy } = xform;
+  const h  = PORTRAIT_L * sy;
+  const w  = (img.naturalWidth / img.naturalHeight) * PORTRAIT_L * sx;
+  const cx = PORTRAIT_CW / 2 + ay * PORTRAIT_L;
+  const cy = PORTRAIT_CH / 2 - ax * PORTRAIT_L;
+  const left = cx - w / 2;
+  const top = cy - h / 2;
+  const drawTriangle = (s0, s1, s2, d0, d1, d2) => {
+    const [sx0, sy0] = s0, [sx1, sy1] = s1, [sx2, sy2] = s2;
+    const [dx0, dy0] = d0, [dx1, dy1] = d1, [dx2, dy2] = d2;
+    const det = sx0 * (sy1 - sy2) + sx1 * (sy2 - sy0) + sx2 * (sy0 - sy1);
+    if (Math.abs(det) < 1e-10) return;
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(dx0, dy0); ctx.lineTo(dx1, dy1); ctx.lineTo(dx2, dy2); ctx.closePath(); ctx.clip();
+    const a = (dx0*(sy1-sy2) + dx1*(sy2-sy0) + dx2*(sy0-sy1)) / det;
+    const b = (dy0*(sy1-sy2) + dy1*(sy2-sy0) + dy2*(sy0-sy1)) / det;
+    const c = (sx0*(dx1-dx2) + sx1*(dx2-dx0) + sx2*(dx0-dx1)) / det;
+    const d = (sx0*(dy1-dy2) + sx1*(dy2-dy0) + sx2*(dy0-dy1)) / det;
+    const e = (dx0*(sx1*sy2-sx2*sy1) + dx1*(sx2*sy0-sx0*sy2) + dx2*(sx0*sy1-sx1*sy0)) / det;
+    const f = (dy0*(sx1*sy2-sx2*sy1) + dy1*(sx2*sy0-sx0*sy2) + dy2*(sx0*sy1-sx1*sy0)) / det;
+    ctx.setTransform(a, b, c, d, e, f);
+    ctx.filter = cssFilter || 'none';
+    ctx.drawImage(img, left, top, w, h);
+    ctx.restore();
+  };
+  for (let r = 0; r < gridRows - 1; r++) for (let c = 0; c < gridCols - 1; c++) {
+    const i00 = r * gridCols + c, i10 = i00 + 1, i01 = (r + 1) * gridCols + c, i11 = i01 + 1;
+    const src00 = [left + (c / (gridCols - 1)) * w, top + (r / (gridRows - 1)) * h];
+    const src10 = [left + ((c + 1) / (gridCols - 1)) * w, top + (r / (gridRows - 1)) * h];
+    const src01 = [left + (c / (gridCols - 1)) * w, top + ((r + 1) / (gridRows - 1)) * h];
+    const src11 = [left + ((c + 1) / (gridCols - 1)) * w, top + ((r + 1) / (gridRows - 1)) * h];
+    const dst00 = [left + meshPoints[i00][0] * w, top + meshPoints[i00][1] * h];
+    const dst10 = [left + meshPoints[i10][0] * w, top + meshPoints[i10][1] * h];
+    const dst01 = [left + meshPoints[i01][0] * w, top + meshPoints[i01][1] * h];
+    const dst11 = [left + meshPoints[i11][0] * w, top + meshPoints[i11][1] * h];
+    drawTriangle(src00, src10, src01, dst00, dst10, dst01);
+    drawTriangle(src10, src11, src01, dst10, dst11, dst01);
+  }
+}
 async function renderProfile(canvas, profile) {
   const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, pauldron, hat, torsoCosmetic, armCosmetic, bodyColors } = profile;
   const resolvedFighter = resolvePortraitFighter(fighter) || fighter;
@@ -417,7 +488,7 @@ async function renderProfile(canvas, profile) {
       : normalizedId.includes('armr') ? baseRightArmLayers
       : normalizedId.includes('torso') ? baseTorsoLayers
       : baseTorsoLayers;
-    target.push({ layer, filter: filterFor(layer.tintSlot || 'A') });
+    target.push({ layer, filter: filterFor(layer.tintSlot || 'A'), layerPart: 'body' });
   }
   for (const group of [torsoCosmetic, armCosmetic]) {
     if (!group) continue;
@@ -425,7 +496,7 @@ async function renderProfile(canvas, profile) {
     if (!groupLayers.length) continue;
     for (const layer of groupLayers) {
       const target = group?.slot === 'torso' ? torsoClothingLayers : overwearLayers;
-      target.push({ layer, filter: filterFor(group.tintSlot || 'A') });
+      target.push({ layer, filter: filterFor(group.tintSlot || 'A'), layerPart: group?.slot === 'torso' ? 'torsoCosmetic' : 'armCosmetic' });
     }
   }
 
@@ -444,7 +515,7 @@ async function renderProfile(canvas, profile) {
   const hoodPauldronLayers = []; // hood then pauldron
   const hatOverLayers    = [];  // hat front when hoodLayering=over (default)
 
-  const pushToTarget = (group, target) => {
+  const pushToTarget = (group, target, layerPart = 'cosmetic') => {
     if (!group || hiddenCosmeticGroups?.has(group)) return;
     const groupLayers = resolveOptionLayers(group, resolvedFighter);
     if (!groupLayers.length) return;
@@ -452,7 +523,7 @@ async function renderProfile(canvas, profile) {
       const key = layer.paletteColorKey;
       const layerTintSlot = (!key || key === 'A') ? group.tintSlot
         : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
-      target.push({ layer, filter: filterFor(layerTintSlot), group });
+      target.push({ layer, filter: filterFor(layerTintSlot), group, layerPart });
     }
   };
 
@@ -466,15 +537,15 @@ async function renderProfile(canvas, profile) {
           const key = layer.paletteColorKey;
           const layerTintSlot = (!key || key === 'A') ? group.tintSlot
             : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
-          preBackLayers.push({ layer, filter: filterFor(layerTintSlot), group });
+          preBackLayers.push({ layer, filter: filterFor(layerTintSlot), group, layerPart: 'hairBack' });
         }
       }
     }
-    pushToTarget(hairSideL, sideLeftLayers);
-    pushToTarget(facialHair, facialHairLayers);
-    pushToTarget(eyes, eyesLayers);
-    pushToTarget(hairFront, frontHairLayers);
-    pushToTarget(hairSide, rightSideHairLayers);
+    pushToTarget(hairSideL, sideLeftLayers, 'hairSideL');
+    pushToTarget(facialHair, facialHairLayers, 'facialHair');
+    pushToTarget(eyes, eyesLayers, 'eyes');
+    pushToTarget(hairFront, frontHairLayers, 'hairFront');
+    pushToTarget(hairSide, rightSideHairLayers, 'hairSide');
     if (hat) {
       const groupLayers = resolveOptionLayers(hat, resolvedFighter);
       for (const layer of groupLayers) {
@@ -482,12 +553,12 @@ async function renderProfile(canvas, profile) {
           const key = layer.paletteColorKey;
           const layerTintSlot = (!key || key === 'A') ? hat.tintSlot
             : (hat.tintSlot ? `${hat.tintSlot}_${key}` : null);
-          (hatIsUnderHood ? hatUnderLayers : hatOverLayers).push({ layer, filter: filterFor(layerTintSlot), group: hat });
+          (hatIsUnderHood ? hatUnderLayers : hatOverLayers).push({ layer, filter: filterFor(layerTintSlot), group: hat, layerPart: 'hat' });
         }
       }
     }
-    pushToTarget(hood, hoodPauldronLayers);
-    pushToTarget(pauldron, hoodPauldronLayers);
+    pushToTarget(hood, hoodPauldronLayers, 'hood');
+    pushToTarget(pauldron, hoodPauldronLayers, 'pauldron');
   } else {
     // Legacy single-slot hair
     const legacyGroups = [hair, eyes, facialHair, hat];
@@ -499,7 +570,12 @@ async function renderProfile(canvas, profile) {
         const key = layer.paletteColorKey;
         const layerTintSlot = (!key || key === 'A') ? group.tintSlot
           : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
-        (layer.pos === 'back' ? preBackLayers : frontHairLayers).push({ layer, filter: filterFor(layerTintSlot), group });
+        (layer.pos === 'back' ? preBackLayers : frontHairLayers).push({
+          layer,
+          filter: filterFor(layerTintSlot),
+          group,
+          layerPart: layer.pos === 'back' ? 'hairBack' : (group?.id?.includes('eye') ? 'eyes' : group?.id?.includes('facial') ? 'facialHair' : 'hairFront'),
+        });
       }
     }
   }
@@ -566,10 +642,22 @@ async function renderProfile(canvas, profile) {
       sy: layer?.sy ?? 1,
     };
 
+  const breathingMesh = resolvedFighter?.breathingMesh || fighter?.breathingMesh || null;
+  const breathingPoints = interpolateMeshPose(breathingMesh, nowMs);
+  const breathingGridCols = Number(breathingMesh?.gridCols) || 0;
+  const breathingGridRows = Number(breathingMesh?.gridRows) || 0;
+  const meshEnabled = Array.isArray(breathingPoints) && breathingGridCols > 1 && breathingGridRows > 1;
+  const breathingAnimCfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.breathing || {};
+  const breathingFps = Math.max(1, Number(breathingAnimCfg.fps) || 12);
+  const breathingFrameMs = 1000 / breathingFps;
+
   const drawLayers = (layerList) => {
-    for (const { layer, filter } of layerList) {
+    for (const { layer, filter, layerPart } of layerList) {
       const img = imgMap.get(layer.url);
-      if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
+      if (!img) continue;
+      const applyMesh = meshEnabled && !['head','headOverlay','eyes','facialHair','hairFront','hairBack','hairSide','hairSideL','hood','hat'].includes(layerPart);
+      if (applyMesh) drawPortraitLayerWithMesh(ctx, img, resolveXform(layer), filter, breathingPoints, breathingGridCols, breathingGridRows);
+      else drawPortraitLayer(ctx, img, resolveXform(layer), filter);
     }
   };
 
@@ -596,6 +684,31 @@ async function renderProfile(canvas, profile) {
   if (opacityMaskLayer?.url) {
     const maskImg = imgMap.get(opacityMaskLayer.url);
     if (maskImg) applyPortraitOpacityMask(ctx, maskImg, resolveXform(opacityMaskLayer));
+  }
+
+  const existingAnimation = BREATHING_ANIMATIONS.get(canvas);
+  if (meshEnabled) {
+    if (!existingAnimation) {
+      const state = { rafId: 0, lastFrameMs: 0, profile, rendering: false };
+      const animate = (frameMs) => {
+        if (!BREATHING_ANIMATIONS.has(canvas)) return;
+        if (!state.rendering && frameMs - state.lastFrameMs >= breathingFrameMs) {
+          state.lastFrameMs = frameMs;
+          state.rendering = true;
+          Promise.resolve(renderProfile(canvas, state.profile)).finally(() => {
+            state.rendering = false;
+          });
+        }
+        state.rafId = requestAnimationFrame(animate);
+      };
+      state.rafId = requestAnimationFrame(animate);
+      BREATHING_ANIMATIONS.set(canvas, state);
+    } else {
+      existingAnimation.profile = profile;
+    }
+  } else if (existingAnimation) {
+    cancelAnimationFrame(existingAnimation.rafId);
+    BREATHING_ANIMATIONS.delete(canvas);
   }
 }
 
