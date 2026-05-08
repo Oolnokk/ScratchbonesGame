@@ -82,6 +82,8 @@ import { createTutorial } from './tutorial.js';
         durationMs: 620,
       },
     };
+    const EMOJI_REACTION_ORIGIN_X_RATIO = 0.45;
+    const EMOJI_REACTION_ORIGIN_Y_RATIO = 0.5;
     function applyRootCssCustomProperties(cssRootVars) {
       const rootStyle = document.documentElement.style;
       const entries = cssRootVars && typeof cssRootVars === 'object' ? Object.entries(cssRootVars) : [];
@@ -5286,13 +5288,13 @@ import { createTutorial } from './tutorial.js';
       if (!transform || transform === 'none') return 1;
       const matrix3dMatch = transform.match(/^matrix3d\((.+)\)$/);
       if (matrix3dMatch) {
-        const parts = matrix3dMatch[1].split(',').map((value) => Number.parseFloat(value.trim()));
+        const parts = matrix3dMatch[1].split(',').map((value) => parseFloat(value.trim()));
         if (parts.length !== 16) return 1;
         return Number.isFinite(parts[0]) ? parts[0] : 1;
       }
       const matrixMatch = transform.match(/^matrix\((.+)\)$/);
       if (matrixMatch) {
-        const parts = matrixMatch[1].split(',').map((value) => Number.parseFloat(value.trim()));
+        const parts = matrixMatch[1].split(',').map((value) => parseFloat(value.trim()));
         if (parts.length !== 6) return 1;
         return Number.isFinite(parts[0]) ? parts[0] : 1;
       }
@@ -5339,8 +5341,8 @@ import { createTutorial } from './tutorial.js';
       const layerRect = layer.getBoundingClientRect();
       const avatarRect = avatarBox.getBoundingClientRect();
       const driftDir = isSeatAvatarFlipped(avatarCanvas) ? 1 : -1;
-      const startX = (avatarRect.left - layerRect.left) + (avatarRect.width * 0.45);
-      const startY = (avatarRect.top - layerRect.top) + (avatarRect.height * 0.5);
+      const startX = (avatarRect.left - layerRect.left) + (avatarRect.width * EMOJI_REACTION_ORIGIN_X_RATIO);
+      const startY = (avatarRect.top - layerRect.top) + (avatarRect.height * EMOJI_REACTION_ORIGIN_Y_RATIO);
       const fx = document.createElement('div');
       fx.className = `emojiFx ${reaction.className}`;
       fx.style.left = `${startX}px`;
