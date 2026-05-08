@@ -494,7 +494,7 @@
       transform-origin: center center;
     }
     #app.cinematic-mode-active .topbar,
-    #app.cinematic-mode-active #aiSidebar,
+    #app.cinematic-mode-active #sidebarShell,
     #app.cinematic-mode-active .humanSeatZone,
     #app.cinematic-mode-active .turnSpotlight,
     #app.cinematic-mode-active .tableViewHeader,
@@ -537,8 +537,16 @@
       font-size: 0.95rem;
       color: var(--accent-2);
     }
-    #aiSidebar {
+    #sidebarShell {
       grid-area: sidebar;
+      display: flex;
+      flex-direction: row;
+      min-height: 0;
+      max-height: 100%;
+    }
+    #aiSidebar {
+      flex: 1 1 auto;
+      min-width: 0;
       display: flex;
       flex-direction: column;
       gap: calc(8px * var(--layout-sidebar-content-scale));
@@ -549,19 +557,20 @@
       font-size: calc(1rem * var(--layout-sidebar-content-scale));
     }
     .emojiReactionPanel {
-      position: absolute;
-      right: calc(var(--layout-sidebar-width) + var(--layout-app-gap));
-      bottom: calc(var(--layout-app-padding, 8px) + var(--safe, 0px));
+      flex-shrink: 0;
+      align-self: stretch;
       z-index: 10;
       padding: 8px 6px;
-      border-radius: 12px;
+      border-radius: 12px 0 0 12px;
       background: rgba(22, 16, 14, 0.88);
       border: 1px solid rgba(242, 208, 143, 0.32);
+      border-right: none;
       display: flex;
       flex-direction: column;
+      justify-content: center;
       gap: 8px;
       width: fit-content;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+      box-shadow: -4px 0 12px rgba(0,0,0,0.25);
     }
     .emojiReactionBtn {
       width: 38px;
@@ -836,7 +845,7 @@
       box-shadow: 0 8px 16px rgba(0,0,0,0.35);
       pointer-events: none;
     }
-    #aiSidebar {
+    #sidebarShell {
       margin-bottom: calc(var(--layout-app-gap) * -1);
       padding-bottom: var(--layout-app-gap);
     }
