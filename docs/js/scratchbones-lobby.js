@@ -10,14 +10,7 @@
   // ── Species UI data ────────────────────────────────────────
   // colorOptions: shared preset list for both A and B selectors.
   // C is auto-derived from A (slightly lighter).
-  const HAT_OPTS = [
-    { id: null,                                       label: 'None' },
-    { id: 'appearance::hat::basic_headband',          label: 'Headband' },
-    { id: 'appearance::hat::riverlandskasa_low',      label: 'Kasa (Low)' },
-    { id: 'appearance::hat::riverlandskasa_wide',     label: 'Kasa (Wide)' },
-  ];
-
-  const SPECIES_DATA = {
+  const BASE_SPECIES_DATA = {
     'mao-ao': {
       label: 'Mao-ao', genders: ['male', 'female'], swatchBase: '#7dc89a',
       male: {
@@ -243,6 +236,9 @@
     },
   };
 
+  const CONFIG_SPECIES_DATA = window.SCRATCHBONES_CONFIG?.game?.appearanceEditor?.species || {};
+  const SPECIES_DATA = { ...BASE_SPECIES_DATA, ...CONFIG_SPECIES_DATA };
+
   // ── Lobby state ────────────────────────────────────────────
   const NPC_NAMES = ['Rook', 'Sable', 'Grim', 'Vex'];
 
@@ -363,6 +359,18 @@
     if (!_editAppearance) return null;
     const specData = SPECIES_DATA[_editAppearance.speciesId];
     return specData ? specData[_editAppearance.gender] : null;
+  }
+
+  function defaultCosmeticsFor(speciesId, gender) {
+    const genderData = SPECIES_DATA[speciesId]?.[gender];
+    if (!genderData) return {};
+    const cosmetics = { ...(genderData.defaultCosmetics || {}) };
+    for (const slotDef of genderData.slots || []) {
+      if (cosmetics[slotDef.slot] !== undefined) continue;
+      const hasNoneOption = (slotDef.options || []).some(option => option.id == null || option.id === '');
+      if (!hasNoneOption && slotDef.options?.[0]?.id) cosmetics[slotDef.slot] = slotDef.options[0].id;
+    }
+    return cosmetics;
   }
 
   // ── Portrait preview ───────────────────────────────────────
@@ -1049,7 +1057,7 @@
     _editAppearance = {
       speciesId,
       gender,
-      cosmetics: { ...(saved?.cosmetics || {}) },
+      cosmetics: { ...defaultCosmeticsFor(speciesId, gender), ...(saved?.cosmetics || {}) },
       bodyColors: {
         A: { ...(saved?.bodyColors?.A || { h:0, s:-0.70, v:-0.30 }) },
         B: { ...(saved?.bodyColors?.B || { h:0, s:-0.70, v:-0.50 }) },
@@ -1171,7 +1179,7 @@
         if (specData && !specData.genders.includes(_editAppearance.gender)) {
           _editAppearance.gender = specData.genders[0];
         }
-        _editAppearance.cosmetics = {};
+        _editAppearance.cosmetics = defaultCosmeticsFor(sid, _editAppearance.gender);
         const gData = specData && specData[_editAppearance.gender];
         const opts = gData ? gData.colorOptions : [];
         _editAIdx = 0; _editBIdx = 0;
@@ -1188,7 +1196,7 @@
       btn.addEventListener('click', () => {
         if (!_editAppearance) return;
         _editAppearance.gender = btn.dataset.gender;
-        _editAppearance.cosmetics = {};
+        _editAppearance.cosmetics = defaultCosmeticsFor(_editAppearance.speciesId, _editAppearance.gender);
         const gData = currentSpeciesGenderData();
         const opts = gData ? gData.colorOptions : [];
         _editAIdx = 0; _editBIdx = 0;

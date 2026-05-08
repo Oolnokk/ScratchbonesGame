@@ -298,9 +298,6 @@
           ]
         }
       }
-    },
-    "forcedCosmetics": {
-      "eyes": "engh_snowgoggles"
     }
   },
   "female": {
@@ -596,9 +593,6 @@
           ]
         }
       }
-    },
-    "forcedCosmetics": {
-      "eyes": "engh_snowgoggles"
     }
   }
 }
