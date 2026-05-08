@@ -296,6 +296,31 @@ function applyPortraitOpacityMask(ctx, img, xform) {
   ctx.restore();
 }
 
+
+function getPortraitLayeringConfig() {
+  const layering = window.SCRATCHBONES_CONFIG?.game?.portrait?.layering || {};
+  return {
+    hatUnderHoodTag: layering.hatUnderHoodTag || null,
+    eyeAccessoryAboveUnderHoodHatTag: layering.eyeAccessoryAboveUnderHoodHatTag || null,
+  };
+}
+
+function hasPortraitTag(option, tag) {
+  if (!option || !tag) return false;
+  return Array.isArray(option.tags) && option.tags.includes(tag);
+}
+
+function hatLayersUnderHood(hat) {
+  const { hatUnderHoodTag } = getPortraitLayeringConfig();
+  return hat?.hoodLayering === 'under' || hasPortraitTag(hat, hatUnderHoodTag);
+}
+
+function eyeAccessoryLayersAboveUnderHoodHat(eyes, hat) {
+  if (!hatLayersUnderHood(hat)) return false;
+  const { eyeAccessoryAboveUnderHoodHatTag } = getPortraitLayeringConfig();
+  return hasPortraitTag(eyes, eyeAccessoryAboveUnderHoodHatTag);
+}
+
 function getProfileSpriteXforms(profile) {
   if (!profile) return [];
   const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, pauldron, hat, torsoCosmetic, armCosmetic } = profile;
@@ -319,7 +344,8 @@ function getProfileSpriteXforms(profile) {
     ...extra,
   });
   const records = [];
-  const hatIsUnderHood = hat?.hoodLayering === 'under';
+  const hatIsUnderHood = hatLayersUnderHood(hat);
+  const eyesLayerAboveUnderHoodHat = eyeAccessoryLayersAboveUnderHoodHat(eyes, hat);
   const pushGroupRecords = (group) => {
     if (!group) return;
     const groupLayers = resolveOptionLayers(group, resolvedFighter);
@@ -352,9 +378,10 @@ function getProfileSpriteXforms(profile) {
     pushGroupRecords(hairSideL);
     // Head
     if (headUrl) records.push({ part: 'head', url: headUrl, xform: getPortraitXformPreset('B') });
-    // Facial hair and eyes after head, before ur-head
+    // Facial hair and standard eyes after head, before ur-head. Tagged eye accessories
+    // can be promoted later so under-hood hats do not cover goggles.
     pushGroupRecords(facialHair);
-    pushGroupRecords(eyes);
+    if (!eyesLayerAboveUnderHoodHat) pushGroupRecords(eyes);
     // Ur-head overlays
     for (const layer of urLayerSource) {
       records.push({ part: 'headOverlay', url: layer.url || null, renderOrder: layer.renderOrder || 'normal', xform: getPortraitXformPreset('B') });
@@ -364,6 +391,7 @@ function getProfileSpriteXforms(profile) {
     pushGroupRecords(hairSide);
     // Hat (under hood), hood, pauldron, hat (over hood)
     if (hatIsUnderHood) pushGroupRecords(hat);
+    if (eyesLayerAboveUnderHoodHat) pushGroupRecords(eyes);
     pushGroupRecords(hood);
     pushGroupRecords(pauldron);
     if (!hatIsUnderHood) pushGroupRecords(hat);
@@ -430,7 +458,8 @@ async function renderProfile(canvas, profile) {
   }
 
   // Support both three-slot (hairBack/hairSide/hairFront) and legacy single-slot (hair).
-  const hatIsUnderHood = hat?.hoodLayering === 'under';
+  const hatIsUnderHood = hatLayersUnderHood(hat);
+  const eyesLayerAboveUnderHoodHat = eyeAccessoryLayersAboveUnderHoodHat(eyes, hat);
   const hoodHideFrontAndSideHair = Boolean(resolveOptionLayers(hood, resolvedFighter).length);
   const hiddenCosmeticGroups = hoodHideFrontAndSideHair ? new Set([hairFront, hairSide, hairSideL]) : null;
 
@@ -440,7 +469,8 @@ async function renderProfile(canvas, profile) {
   const eyesLayers       = [];  // eyes, drawn after facial hair
   const frontHairLayers   = [];  // front fringe hair, drawn after facial hair and ur-head overlays
   const rightSideHairLayers = [];  // right-side hairstyle, drawn between head and facial hair
-  const hatUnderLayers   = [];  // hat front when hoodLayering=under
+  const hatUnderLayers   = [];  // hat front when configured to render under hoods
+  const elevatedEyeAccessoryLayers = []; // tagged eye accessories that render above under-hood hats
   const hoodPauldronLayers = []; // hood then pauldron
   const hatOverLayers    = [];  // hat front when hoodLayering=over (default)
 
@@ -472,7 +502,7 @@ async function renderProfile(canvas, profile) {
     }
     pushToTarget(hairSideL, sideLeftLayers);
     pushToTarget(facialHair, facialHairLayers);
-    pushToTarget(eyes, eyesLayers);
+    pushToTarget(eyes, eyesLayerAboveUnderHoodHat ? elevatedEyeAccessoryLayers : eyesLayers);
     pushToTarget(hairFront, frontHairLayers);
     pushToTarget(hairSide, rightSideHairLayers);
     if (hat) {
@@ -519,6 +549,7 @@ async function renderProfile(canvas, profile) {
     ...eyesLayers.map(({ layer }) => layer.url),
     ...frontHairLayers.map(({ layer }) => layer.url),
     ...hatUnderLayers.map(({ layer }) => layer.url),
+    ...elevatedEyeAccessoryLayers.map(({ layer }) => layer.url),
     ...hoodPauldronLayers.map(({ layer }) => layer.url),
     ...hatOverLayers.map(({ layer }) => layer.url),
     ...(opacityMaskLayer?.url ? [opacityMaskLayer.url] : []),
@@ -591,6 +622,7 @@ async function renderProfile(canvas, profile) {
     if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), 'none');
   }
   drawLayers(hatUnderLayers);
+  drawLayers(elevatedEyeAccessoryLayers);
   drawLayers(hoodPauldronLayers);
   drawLayers(hatOverLayers);
   if (opacityMaskLayer?.url) {

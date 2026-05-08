@@ -770,6 +770,10 @@ window.SCRATCHBONES_CONFIG = {
         "shirtbeardIds": ["kenk_shirtbeard", "kenk_shirtbeard_f"],
         "collarLockedFacialHairIds": ["kenk_shirtbeard", "kenk_shirtbeard_f"]
       },
+      "layering": {
+        "hatUnderHoodTag": "hood-layer:under",
+        "eyeAccessoryAboveUnderHoodHatTag": "layer:eye-accessory-above-under-hood-hat"
+      },
       "randomization": {
         "minimumNpcClothingArticles": 1,
         "clothingSlots": ["hat", "hood", "torsoCosmetic", "armCosmetic"],

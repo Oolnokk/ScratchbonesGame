@@ -2,7 +2,8 @@
   "slot": "hat",
   "hoodLayering": "under",
   "tags": [
-    "material:cloth"
+    "material:cloth",
+    "hood-layer:under"
   ],
   "colorRange": {
     "minH": -180,
