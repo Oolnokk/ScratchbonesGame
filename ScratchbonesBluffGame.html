@@ -1081,16 +1081,56 @@
         var(--layout-hand-card-max-width)
       );
       --hand-card-gap: calc(clamp(var(--layout-hand-card-gap-min), 1.6vw, var(--layout-hand-card-gap-max)) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(var(--hand-card-min), 1fr));
+      --hand-overlap-px: 0px;
+      display: flex;
+      align-items: stretch;
       gap: var(--hand-card-gap);
-      align-content: start;
-      overflow: auto;
-      padding-bottom: 4px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-behavior: smooth;
+      touch-action: pan-x;
+      padding: 2px 0 6px;
+      min-height: 0;
+      scrollbar-width: thin;
+      cursor: grab;
+    }
+    .handScroll.dragging {
+      cursor: grabbing;
+      user-select: none;
+    }
+    .handScroll .card + .card {
+      margin-left: calc(-1 * var(--hand-overlap-px));
+    }
+    .handRail {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
       min-height: 0;
     }
+    .handArrow {
+      width: 34px;
+      min-width: 34px;
+      min-height: 34px;
+      padding: 0;
+      border-radius: 10px;
+      background: rgba(242, 208, 143, 0.2);
+      color: var(--accent-2);
+      border: 1px solid rgba(242, 208, 143, 0.35);
+      box-shadow: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+    .handRail:not(.handRail-scrollable) .handArrow {
+      visibility: hidden;
+      pointer-events: none;
+    }
     .card {
-      width: 100%;
+      width: max(var(--hand-card-min), var(--layout-card-hit-min-width));
+      flex: 0 0 auto;
       min-width: var(--layout-card-hit-min-width);
       min-height: max(
         var(--layout-card-hit-min-height),
@@ -1174,15 +1214,11 @@
       white-space: nowrap;
     }
     .layout-hand-force-all-visible .handScroll {
-      overflow: visible;
       scroll-snap-type: none;
-      grid-auto-flow: row dense;
     }
     .layout-hand-compact .handScroll {
       --hand-card-min: var(--hand-compact-card-min, 64px);
       --hand-card-gap: calc(var(--hand-compact-card-gap, 6px) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
-      grid-template-columns: repeat(auto-fit, minmax(var(--hand-card-min), 1fr));
-      align-content: start;
     }
     .layout-hand-compact .card {
       min-height: max(var(--layout-card-hit-min-height), calc(var(--hand-compact-card-min-height, 128px) * var(--layout-card-scale)));
@@ -1206,8 +1242,7 @@
     @media (max-width: 430px) {
       .layout-hand-force-all-visible .handScroll,
       .layout-hand-compact .handScroll {
-        overflow: visible;
-        grid-template-columns: repeat(auto-fit, minmax(var(--hand-card-min), 1fr));
+        overflow-x: auto;
       }
     }
     .eventLog {
@@ -1215,13 +1250,21 @@
       padding: calc(var(--layout-event-log-padding-y) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale))
                calc(var(--layout-event-log-padding-x) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
       display: grid;
-      gap: calc(var(--layout-event-log-gap) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
+      gap: 8px;
+      grid-template-rows: auto minmax(0, 1fr) auto;
       max-height: var(--layout-event-log-max-height);
       min-height: 0;
-      overflow-y: auto;
       opacity: 0.84;
       max-height: var(--layout-log-max-row-height);
       contain: layout paint style;
+    }
+    .chatLogBody {
+      min-height: 0;
+      overflow-y: auto;
+      display: grid;
+      gap: calc(var(--layout-event-log-gap) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
+      align-content: start;
+      padding-right: 2px;
     }
     .logItem {
       background: rgba(255,255,255,0.05);
@@ -1230,6 +1273,39 @@
                calc(var(--layout-log-item-padding-x) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
       font-size: calc(0.84rem * var(--layout-challenge-font-scale) * var(--layout-fit-font-scale));
       color: var(--text);
+    }
+    .logItem.chat-user {
+      background: rgba(87, 149, 219, 0.24);
+      border: 1px solid rgba(98, 176, 255, 0.35);
+    }
+    .chatMeta {
+      font-size: 0.66rem;
+      color: var(--muted);
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .chatComposer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .chatComposerInput {
+      width: 100%;
+      min-width: 0;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(30, 22, 19, 0.92);
+      color: var(--text);
+      padding: 9px 10px;
+      font-size: 0.82rem;
+    }
+    .chatSendBtn {
+      min-height: 35px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.78rem;
     }
     .challengeBar {
       display: flex;
