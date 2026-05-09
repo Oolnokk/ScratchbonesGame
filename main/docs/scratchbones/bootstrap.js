@@ -5292,11 +5292,24 @@ import { createTutorial } from './tutorial.js';
     function renderSeatPortraits() {
       const root = document.getElementById('app');
       if (!root) return;
+      const now = Date.now();
+      const flipActive = _disgustFlipSeatId != null && _disgustFlipUntilMs > now;
+      if (!flipActive && _disgustFlipSeatId != null) _disgustFlipSeatId = null;
       for (const p of state.players) {
         if (!p.profile) continue;
+        const seatIdStr = String(p.id);
         const canvases = root.querySelectorAll(`canvas[data-seat-id="${p.id}"]`);
         for (const canvas of canvases) {
-          if (window.renderProfile) renderProfile(canvas, p.profile, { seatId: String(p.id) });
+          if (window.renderProfile) renderProfile(canvas, p.profile, { seatId: seatIdStr });
+          // Disgust-emote flip: temporarily mirror the portrait opposite to its CSS-intended
+          // state, then revert. actorAvatarFloat = intended un-flipped (transform:none);
+          // all other contexts = intended flipped (transform:scaleX(-1)).
+          if (flipActive && _disgustFlipSeatId === seatIdStr) {
+            const intendedFlipped = !canvas.closest('.actorAvatarFloat');
+            canvas.style.transform = intendedFlipped ? 'none' : 'scaleX(-1)';
+          } else if (canvas.style.transform !== '') {
+            canvas.style.transform = '';
+          }
         }
       }
     }
@@ -5309,6 +5322,14 @@ import { createTutorial } from './tutorial.js';
     // Text of the most recently client-sent chat message; cleared when
     // applyNetworkState sees the echo from the host, preventing a double-animation.
     let _pendingOwnChatText = null;
+    // Disgust-emote flip state: the affected seat's portrait is horizontally mirrored
+    // from its intended CSS state for 1 second, then reverted.
+    let _disgustFlipSeatId = null;
+    let _disgustFlipUntilMs = 0;
+    function triggerDisgustFlip(seatId) {
+      _disgustFlipSeatId = seatId != null ? String(seatId) : null;
+      _disgustFlipUntilMs = Date.now() + 1000;
+    }
     function startPortraitLoop() {
       if (_portraitLoopActive) return;
       _portraitLoopActive = true;
@@ -5652,6 +5673,7 @@ import { createTutorial } from './tutorial.js';
         setTimeout(() => fx.remove(), reaction.durationMs);
       }
       window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));
+      if (reactionId === 'disgust') triggerDisgustFlip(state.humanSeat);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
     // Returns (creating if needed) a position:fixed overlay on document.body for
