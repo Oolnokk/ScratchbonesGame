@@ -184,8 +184,9 @@ class BreathingComposer {
    */
   triggerEmote(emoteName, seatId) {
     const animKey = emoteName === 'shock' ? 'alarmed' : emoteName;
-    const anim = EMOTE_ANIMATIONS[animKey];
-    if (!anim || !this.enabled) return;
+    const baseAnim = EMOTE_ANIMATIONS[animKey];
+    if (!baseAnim || !this.enabled) return;
+    const anim = _getConfiguredEmoteAnimation(animKey, baseAnim);
     const durations = Array.isArray(anim.poseDurations) ? anim.poseDurations : [];
     const totalMs = durations.reduce((s, d) => s + (Number(d) || 0.8), 0) * 1000;
     this.setBodyOverlay(null, null, anim, {
@@ -332,6 +333,26 @@ function _getNeutralPoints(gridCols, gridRows) {
   }
   return pts;
 }
+function _getConfiguredEmoteAnimation(animKey, anim) {
+  if (animKey !== 'disgust') return anim;
+  const scale = Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.emotes?.disgust?.horizontalDeformationScale);
+  if (!Number.isFinite(scale) || scale === 1) return anim;
+
+  const neutral = Array.isArray(anim.poses?.[0]?.points)
+    ? anim.poses[0].points
+    : _getNeutralPoints(anim.gridCols, anim.gridRows);
+  return {
+    ...anim,
+    poses: anim.poses.map((pose) => ({
+      ...pose,
+      points: pose.points.map(([x, y], i) => {
+        const [nx] = neutral[i] || [x];
+        return [nx + (x - nx) * scale, y];
+      }),
+    })),
+  };
+}
+
 
 /**
  * Looping interpolation used for the breathing cycle.
