@@ -6712,6 +6712,14 @@ import { createTutorial } from './tutorial.js';
     }
     window.addEventListener('resize', scheduleResponsiveFitPass, { passive: true });
     window.addEventListener('orientationchange', scheduleResponsiveFitPass, { passive: true });
+    // Recompute layout and re-sync the visual viewport anchor whenever fullscreen is
+    // entered or exited — the viewport dimensions change and must be re-measured.
+    const handleFullscreenChange = () => {
+      syncToVisualViewport();
+      scheduleResponsiveFitPass();
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange, { passive: true });
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange, { passive: true });
     // Counteract visual-viewport drift from pinch-zoom + pan on mobile (iOS Safari) and
     // browser-zoom + scroll on desktop. #authoredRoot is position:fixed so it doesn't
     // rubber-band, but the visual viewport can still pan relative to the layout viewport.

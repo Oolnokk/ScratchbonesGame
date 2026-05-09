@@ -1,11 +1,12 @@
 export function applyAuthoredLayoutMode({ app, authoredConfig, authoredBoxKeyByProjId, authoredParentBox, applyAuthoredBoxStyles }) {
   if (!app || !authoredConfig) return;
   const authoredRoot = document.getElementById('authoredRoot');
-  // Prefer visualViewport dimensions when available: they reflect the actual visible
-  // area after pinch-zoom on mobile, allowing authored layout scale to compensate.
-  const vv = window.visualViewport;
-  const liveWidth = (vv?.width) || authoredRoot?.clientWidth || window.innerWidth || authoredConfig.designWidthPx;
-  const liveHeight = (vv?.height) || authoredRoot?.clientHeight || window.innerHeight || authoredConfig.designHeightPx;
+  // Use the layout-viewport dimensions (clientWidth/Height of the fixed root, which equals
+  // window.innerWidth/innerHeight) for scale. visualViewport.width shrinks with pinch-zoom and
+  // must NOT be used here — doing so would make the scale change with zoom, misaligning elements.
+  // Pan compensation (vv.offsetLeft/Top) is applied separately via syncToVisualViewport().
+  const liveWidth = authoredRoot?.clientWidth || window.innerWidth || authoredConfig.designWidthPx;
+  const liveHeight = authoredRoot?.clientHeight || window.innerHeight || authoredConfig.designHeightPx;
   const scale = Math.min(liveWidth / authoredConfig.designWidthPx, liveHeight / authoredConfig.designHeightPx);
   const translatedX = Math.round((liveWidth - (authoredConfig.designWidthPx * scale)) / 2);
   const translatedY = Math.round((liveHeight - (authoredConfig.designHeightPx * scale)) / 2);
