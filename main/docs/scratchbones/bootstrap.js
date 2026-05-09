@@ -456,6 +456,7 @@ import { createTutorial } from './tutorial.js';
     // Hand panel slot-based layout constants
     const HAND_MAX_VISIBLE_SLOTS = 10;     // max cards visible at once (defines max overlap at full count)
     const HAND_MIN_SLOT_WIDTH_PX = 36;     // minimum slot box width (px in design space)
+    const HAND_STACK_SLOT_PX = 3;          // flex-basis per stacked (out-of-view) card slot
     // View offset persisted across renders so paging state is maintained.
     let handViewOffset = 0;
     window.__scratchbonesDebugEvents = window.__scratchbonesDebugEvents || [];
@@ -5401,21 +5402,57 @@ import { createTutorial } from './tutorial.js';
       }
       // Clamp view offset to a valid range given current hand size.
       handViewOffset = clampNumber(handViewOffset, 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
-      const visibleCount = Math.min(totalCards, HAND_MAX_VISIBLE_SLOTS);
+      const leftStackCount = handViewOffset;                                          // cards off left edge
+      const rightStackCount = Math.max(0, totalCards - handViewOffset - HAND_MAX_VISIBLE_SLOTS); // cards off right edge
+      const visibleCount = totalCards - leftStackCount - rightStackCount;
       // Determine card width from the configured CSS variable (set per layout policy).
       const cardWidthPx = Math.max(
         40,
         Number.parseFloat(getComputedStyle(track).getPropertyValue('--layout-hand-card-max-width')) || 86
       );
       track.style.setProperty('--hand-card-width-px', `${cardWidthPx}px`);
-      // Slot width is evenly divided across visible slots, minimum enforced.
+      track.style.setProperty('--hand-stack-slot-width', `${HAND_STACK_SLOT_PX}px`);
+      // Slot width: subtract the pixel budget consumed by stacked slots, then divide evenly.
       const availableWidth = Math.max(1, track.clientWidth || track.offsetWidth);
-      const slotWidth = Math.max(HAND_MIN_SLOT_WIDTH_PX, Math.floor(availableWidth / visibleCount));
+      const stackBudget = (leftStackCount + rightStackCount) * HAND_STACK_SLOT_PX;
+      const slotWidth = Math.max(HAND_MIN_SLOT_WIDTH_PX, Math.floor((availableWidth - stackBudget) / Math.max(1, visibleCount)));
       track.style.setProperty('--hand-slot-width', `${slotWidth}px`);
-      // Show only the slots inside the current view window; hide the rest.
+      // Configure each slot according to its role: left-stack, visible, or right-stack.
       slots.forEach((slot, idx) => {
-        const inView = idx >= handViewOffset && idx < handViewOffset + HAND_MAX_VISIBLE_SLOTS;
-        slot.style.display = inView ? '' : 'none';
+        const isLeft = idx < handViewOffset;
+        const isRight = idx >= handViewOffset + HAND_MAX_VISIBLE_SLOTS;
+        const card = slot.querySelector('.card');
+        if (!isLeft && !isRight) {
+          // Visible card — normal slot.
+          slot.classList.remove('stack-left', 'stack-right');
+          slot.style.zIndex = String(1000 + idx);
+          if (card) {
+            card.disabled = false;
+            card.style.opacity = '';
+            card.style.pointerEvents = '';
+          }
+        } else if (isLeft) {
+          // Left-edge stack. Higher idx = closer to the visible window = on top.
+          slot.classList.add('stack-left');
+          slot.classList.remove('stack-right');
+          slot.style.zIndex = String(idx + 1);
+          if (card) {
+            card.disabled = true;
+            // Fade with depth: card closest to window (idx = handViewOffset-1) is more opaque.
+            const depth = handViewOffset - 1 - idx; // 0 = closest, increases toward back
+            card.style.opacity = String(Math.max(0.25, 0.65 - depth * 0.06));
+          }
+        } else {
+          // Right-edge stack. Closer to window (lower distFromWindow) = on top.
+          slot.classList.add('stack-right');
+          slot.classList.remove('stack-left');
+          const distFromWindow = idx - (handViewOffset + HAND_MAX_VISIBLE_SLOTS); // 0 = closest
+          slot.style.zIndex = String(999 - distFromWindow);
+          if (card) {
+            card.disabled = true;
+            card.style.opacity = String(Math.max(0.25, 0.65 - distFromWindow * 0.06));
+          }
+        }
       });
       const canPage = totalCards > HAND_MAX_VISIBLE_SLOTS;
       rail.classList.toggle('handRail-scrollable', canPage);
@@ -6671,6 +6708,28 @@ import { createTutorial } from './tutorial.js';
     }
     window.addEventListener('resize', scheduleResponsiveFitPass, { passive: true });
     window.addEventListener('orientationchange', scheduleResponsiveFitPass, { passive: true });
+    // Counteract visual-viewport drift from pinch-zoom + pan on mobile (iOS Safari) and
+    // browser-zoom + scroll on desktop. #authoredRoot is position:fixed so it doesn't
+    // rubber-band, but the visual viewport can still pan relative to the layout viewport.
+    // Translating authoredRoot by vv.offsetLeft/Top keeps it locked to what the user sees,
+    // and re-running the authored layout uses vv.width/height so #app scale adapts to zoom.
+    function syncToVisualViewport() {
+      const vv = window.visualViewport;
+      const root = document.getElementById('authoredRoot');
+      if (!vv || !root) return;
+      const ox = vv.offsetLeft || 0;
+      const oy = vv.offsetTop || 0;
+      root.style.transform = (ox || oy) ? `translate(${ox}px, ${oy}px)` : '';
+    }
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('scroll', () => {
+        syncToVisualViewport();
+      }, { passive: true });
+      window.visualViewport.addEventListener('resize', () => {
+        syncToVisualViewport();
+        scheduleResponsiveFitPass();
+      }, { passive: true });
+    }
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     window.addEventListener('keydown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     // Client-mode entry point: no game logic runs; just wait for state from the host.

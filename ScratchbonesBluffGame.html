@@ -49,9 +49,11 @@
     }
     button, select, input { font: inherit; }
     #authoredRoot {
-      width: 100vw;
-      height: 100dvh;
-      position: relative;
+      /* Fixed positioning prevents rubber-band scroll on iOS and keeps the root
+         anchored to the same stacking context as position:fixed animation overlays.
+         inset:0 matches 100vw × 100dvh without scroll-coupled drift. */
+      position: fixed;
+      inset: 0;
       overflow: hidden;
     }
     #app {
@@ -1092,6 +1094,19 @@
       flex: 0 0 var(--hand-slot-width, 80px);
       position: relative;
       align-self: stretch;
+    }
+    /* Out-of-view slots (left/right edge stacks). They get a tiny flex-basis set by JS
+       so their card PNGs cluster at the panel edge like the curled ends of a scroll. */
+    .handCardSlot.stack-left,
+    .handCardSlot.stack-right {
+      flex-basis: var(--hand-stack-slot-width, 3px);
+      pointer-events: none;
+    }
+    .handCardSlot.stack-left > .card,
+    .handCardSlot.stack-right > .card {
+      cursor: default;
+      pointer-events: none;
+      /* opacity is set inline by JS to graduate with depth */
     }
     .handCardSlot > .card {
       position: absolute;
