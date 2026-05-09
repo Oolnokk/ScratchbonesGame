@@ -1098,6 +1098,11 @@
       cursor: grabbing;
       user-select: none;
     }
+    .handScroll:focus-visible {
+      outline: 2px solid rgba(242, 208, 143, 0.75);
+      outline-offset: 2px;
+      border-radius: 8px;
+    }
     .handScroll .card + .card {
       margin-left: calc(-1 * var(--hand-overlap-px));
     }
@@ -1252,7 +1257,6 @@
       display: grid;
       gap: 8px;
       grid-template-rows: auto minmax(0, 1fr) auto;
-      max-height: var(--layout-event-log-max-height);
       min-height: 0;
       opacity: 0.84;
       max-height: var(--layout-log-max-row-height);

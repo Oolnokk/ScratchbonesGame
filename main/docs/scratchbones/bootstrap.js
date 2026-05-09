@@ -452,6 +452,15 @@ import { createTutorial } from './tutorial.js';
     const DEBUG_OPTIONS = SCRATCHBONES_GAME.debug || {};
     const DEBUG_TRACE = DEBUG_OPTIONS.trace || {};
     const DEBUG_EVENT_LOG_LIMIT = Math.max(50, Number(DEBUG_OPTIONS.eventLogLimit) || 300);
+    const MAX_RENDERED_CHAT_LOG_ENTRIES = 80;
+    const MAX_HAND_CARD_OVERLAP_RATIO = 0.30;
+    const HAND_OVERLAP_LERP_FACTOR = 0.38;
+    const HAND_SCROLL_MIN_DELTA_PX = 80;
+    const HAND_SCROLL_VIEWPORT_RATIO = 0.72;
+    const HAND_SCROLL_THRESHOLD_PX = 2;
+    const HAND_SCROLL_EDGE_THRESHOLD_PX = 1;
+    const HAND_DRAG_THRESHOLD_PX = 6;
+    const HAND_DRAG_CLICK_SUPPRESS_MS = 200;
     window.__scratchbonesDebugEvents = window.__scratchbonesDebugEvents || [];
     function traceEvent(level, channel, payload = {}) {
       if (DEBUG_OPTIONS.enabled === false) return;
@@ -1154,14 +1163,17 @@ import { createTutorial } from './tutorial.js';
     function selectedCards() {
       return state.players[state.humanSeat].hand.filter(c => state.selectedCardIds.has(c.id));
     }
+    function normalizeLogKind(kind) {
+      return String(kind || 'event').toLowerCase() === 'chat' ? 'chat' : 'event';
+    }
     function addLog(text, meta = {}) {
-      const kind = String(meta.kind || 'event').toLowerCase() === 'chat' ? 'chat' : 'event';
+      const kind = normalizeLogKind(meta.kind);
       const entry = {
         text: String(text || '').trim(),
         ts: Number(meta.ts) || Date.now(),
         kind,
         author: kind === 'chat' ? String(meta.author || '').trim() || 'You' : '',
-        seatId: Number.isInteger(meta.seatId) ? meta.seatId : null,
+        seatId: Number.isFinite(Number(meta.seatId)) ? Number(meta.seatId) : null,
       };
       if (!entry.text) return;
       state.logs.unshift(entry);
@@ -1169,7 +1181,7 @@ import { createTutorial } from './tutorial.js';
     }
     function addChatLog(text, seatId = state.humanSeat) {
       const player = state.players[seatId];
-      const author = player?.id === state.humanSeat ? 'You' : seatFirstName(player || seatId);
+      const author = Number(seatId) === state.humanSeat ? 'You' : seatFirstName(player || seatId);
       addLog(text, { kind: 'chat', author, seatId });
     }
     function seatLabel(playerOrIndex) {
@@ -4512,18 +4524,18 @@ import { createTutorial } from './tutorial.js';
         : '<div class="tiny">No cards on the table yet.</div>';
       const chatLogEntries = eventLogEnabled
         ? state.logs
-          .slice(0, 80)
+          .slice(0, MAX_RENDERED_CHAT_LOG_ENTRIES)
           .map((entry, index) => {
             if (entry && typeof entry === 'object') {
               const text = String(entry.text || '').trim();
               if (!text) return null;
-              const kind = String(entry.kind || 'event').toLowerCase() === 'chat' ? 'chat' : 'event';
+              const kind = normalizeLogKind(entry.kind);
               return {
                 id: `${Number(entry.ts) || 0}-${index}`,
                 text,
                 kind,
                 author: kind === 'chat' ? String(entry.author || '').trim() || 'You' : 'System',
-                seatId: Number.isInteger(entry.seatId) ? entry.seatId : null,
+                seatId: Number.isFinite(Number(entry.seatId)) ? Number(entry.seatId) : null,
                 ts: Number(entry.ts) || Date.now(),
               };
             }
@@ -4785,7 +4797,7 @@ import { createTutorial } from './tutorial.js';
           </div>
           <div class="handRail" data-hand-rail>
             <button class="handArrow handArrowLeft" type="button" aria-label="Scroll hand left" data-hand-scroll-dir="-1">◀</button>
-            <div class="handScroll" data-hand-scroll>
+            <div class="handScroll" data-hand-scroll tabindex="0" aria-label="Your hand card rail">
               ${player.hand.map(card => {
                 const art = resolveScratchbone2DAsset(card);
                 const handCardLabel = card.wild ? 'Wild' : `Rank ${card.rank}`;
@@ -4805,7 +4817,7 @@ import { createTutorial } from './tutorial.js';
         `}
         ${eventLogEnabled ? `
           <div class="eventLog fit-target fit-0" data-proj-id="log">
-            <div class="sectionTitle">Activity chat</div>
+            <div class="sectionTitle">Activity Chat</div>
             <div class="chatLogBody" id="chatLogBody">
               ${chatLogEntries.map((item) => `
                 <div class="logItem ${item.kind === 'chat' ? 'chat-user' : ''}" data-log-kind="${item.kind}">
@@ -5386,29 +5398,32 @@ import { createTutorial } from './tutorial.js';
         return;
       }
       const firstCard = cards[0];
-      const cardWidth = Math.max(1, firstCard.getBoundingClientRect().width || firstCard.offsetWidth || 1);
+      const cardWidth = Math.max(1, firstCard.getBoundingClientRect().width || firstCard.offsetWidth);
       const computed = window.getComputedStyle(scroller);
       const baseGap = Number.parseFloat(computed.gap || computed.columnGap || '0') || 0;
       const cardCount = cards.length;
       const availableWidth = Math.max(1, scroller.clientWidth);
       const naturalWidth = (cardCount * cardWidth) + (Math.max(0, cardCount - 1) * baseGap);
-      const maxOverlapPx = cardWidth * 0.30;
+      const maxOverlapPx = cardWidth * MAX_HAND_CARD_OVERLAP_RATIO;
+      // Divide by inter-card gap instances (count - 1) to compute per-gap overlap needed to fit.
       const requiredOverlapPx = cardCount > 1 ? Math.max(0, (naturalWidth - availableWidth) / (cardCount - 1)) : 0;
       const targetOverlapPx = clampNumber(requiredOverlapPx, 0, maxOverlapPx);
       const currentOverlapPx = Number.parseFloat(scroller.style.getPropertyValue('--hand-overlap-px')) || 0;
-      const lerpedOverlapPx = currentOverlapPx + ((targetOverlapPx - currentOverlapPx) * 0.38);
+      const lerpedOverlapPx = currentOverlapPx + ((targetOverlapPx - currentOverlapPx) * HAND_OVERLAP_LERP_FACTOR);
       scroller.style.setProperty('--hand-overlap-px', `${lerpedOverlapPx.toFixed(2)}px`);
-      const canScroll = (scroller.scrollWidth - scroller.clientWidth) > 2;
+      const canScroll = (scroller.scrollWidth - scroller.clientWidth) > HAND_SCROLL_THRESHOLD_PX;
       rail.classList.toggle('handRail-scrollable', canScroll);
-      const updateArrows = () => {
+      if (scroller.__handArrowSync) scroller.removeEventListener('scroll', scroller.__handArrowSync);
+      scroller.__handArrowSync = () => {
         const leftButton = rail.querySelector('[data-hand-scroll-dir="-1"]');
         const rightButton = rail.querySelector('[data-hand-scroll-dir="1"]');
         if (!leftButton || !rightButton) return;
-        leftButton.disabled = !canScroll || scroller.scrollLeft <= 1;
-        rightButton.disabled = !canScroll || (scroller.scrollLeft + scroller.clientWidth) >= (scroller.scrollWidth - 1);
+        const scrollable = (scroller.scrollWidth - scroller.clientWidth) > HAND_SCROLL_THRESHOLD_PX;
+        leftButton.disabled = !scrollable || scroller.scrollLeft <= HAND_SCROLL_EDGE_THRESHOLD_PX;
+        rightButton.disabled = !scrollable || (scroller.scrollLeft + scroller.clientWidth) >= (scroller.scrollWidth - HAND_SCROLL_EDGE_THRESHOLD_PX);
       };
-      scroller.addEventListener('scroll', updateArrows, { passive: true });
-      updateArrows();
+      scroller.addEventListener('scroll', scroller.__handArrowSync, { passive: true });
+      scroller.__handArrowSync();
     }
     function bindHandRailInteractions(app) {
       const rail = app?.querySelector?.('[data-hand-rail]');
@@ -5420,7 +5435,7 @@ import { createTutorial } from './tutorial.js';
         button.addEventListener('click', () => {
           const dir = Number(button.getAttribute('data-hand-scroll-dir')) || 0;
           if (!dir) return;
-          const delta = Math.max(80, scroller.clientWidth * 0.72);
+          const delta = Math.max(HAND_SCROLL_MIN_DELTA_PX, scroller.clientWidth * HAND_SCROLL_VIEWPORT_RATIO);
           scroller.scrollBy({ left: dir * delta, behavior: 'smooth' });
         });
       });
@@ -5433,14 +5448,14 @@ import { createTutorial } from './tutorial.js';
         if (!dragState || event.pointerId !== dragState.pointerId) return;
         const dx = event.clientX - dragState.startX;
         const dy = event.clientY - dragState.startY;
-        if (!dragState.moved && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) dragState.moved = true;
+        if (!dragState.moved && (Math.abs(dx) > HAND_DRAG_THRESHOLD_PX || Math.abs(dy) > HAND_DRAG_THRESHOLD_PX)) dragState.moved = true;
         if (!dragState.moved || Math.abs(dx) < Math.abs(dy)) return;
         scroller.classList.add('dragging');
         scroller.scrollLeft = dragState.startScrollLeft - dx;
       });
       const endDrag = (event) => {
         if (!dragState || event.pointerId !== dragState.pointerId) return;
-        if (dragState.moved) suppressClickUntil = Date.now() + 200;
+        if (dragState.moved) suppressClickUntil = Date.now() + HAND_DRAG_CLICK_SUPPRESS_MS;
         scroller.classList.remove('dragging');
         dragState = null;
       };
@@ -5450,7 +5465,9 @@ import { createTutorial } from './tutorial.js';
         if (Date.now() <= suppressClickUntil) {
           event.preventDefault();
           event.stopPropagation();
+          return;
         }
+        suppressClickUntil = 0;
       }, true);
     }
     // Returns the horizontal scale component from CSS transform matrix/matrix3d values.
