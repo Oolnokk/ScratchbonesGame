@@ -493,7 +493,9 @@
       height: 100%;
       object-fit: contain;
       display: block;
-      transform: scale(var(--layout-table-card-content-scale));
+      /* translateY(4px) before scale so the shift is in screen-space; same 4px
+         correction as .cardArt to compensate for asymmetric PNG bottom padding. */
+      transform: translateY(4px) scale(var(--layout-table-card-content-scale));
       transform-origin: center center;
     }
     #app.cinematic-mode-active .topbar,
@@ -1237,6 +1239,9 @@
       display: block;
       border-radius: 0;
       pointer-events: none;
+      /* The card PNGs have ~5px top padding and ~23px bottom padding; shift down by
+         half the difference so the bone art appears visually centred in the card slot. */
+      transform: translateY(4px);
     }
     .cardLabel {
       position: absolute;
@@ -1363,7 +1368,8 @@
       background: rgba(30, 22, 19, 0.92);
       color: var(--text);
       padding: 5px 8px;
-      font-size: 0.76rem;
+      /* 1rem (≥16px) prevents iOS Safari from auto-zooming on input focus */
+      font-size: 1rem;
     }
     .chatSendBtn {
       min-height: 28px;

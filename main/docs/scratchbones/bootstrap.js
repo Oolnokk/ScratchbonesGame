@@ -6803,8 +6803,6 @@ import { createTutorial } from './tutorial.js';
       const ox = vv.offsetLeft || 0;
       const oy = vv.offsetTop || 0;
       root.style.transform = (ox || oy) ? `translate(${ox}px, ${oy}px)` : '';
-      // Re-sync promoted layer positions whenever the visual viewport shifts.
-      scheduleResponsiveFitPass();
     }
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
@@ -6813,12 +6811,23 @@ import { createTutorial } from './tutorial.js';
       }
     }, { passive: true });
     if (window.visualViewport) {
+      // Track window dimensions to distinguish a real resize from a mobile keyboard appearance.
+      // Keyboard open/close changes visualViewport.height but NOT window.innerWidth/innerHeight.
+      let _lastInnerW = window.innerWidth;
+      let _lastInnerH = window.innerHeight;
+      window.addEventListener('resize', () => {
+        _lastInnerW = window.innerWidth;
+        _lastInnerH = window.innerHeight;
+      }, { passive: true });
       window.visualViewport.addEventListener('scroll', () => {
         syncToVisualViewport();
       }, { passive: true });
       window.visualViewport.addEventListener('resize', () => {
         syncToVisualViewport();
-        scheduleResponsiveFitPass();
+        // Only reflow layout when the actual window changed — not when a mobile keyboard
+        // appears/disappears (which shrinks visualViewport but leaves window dimensions intact).
+        const windowChanged = window.innerWidth !== _lastInnerW || window.innerHeight !== _lastInnerH;
+        if (windowChanged) scheduleResponsiveFitPass();
       }, { passive: true });
     }
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
