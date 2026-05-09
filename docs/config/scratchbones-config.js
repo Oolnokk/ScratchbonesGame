@@ -859,6 +859,11 @@ window.SCRATCHBONES_CONFIG = {
         "flurryCountMin": 1,
         "flurryCountMax": 2,
         "flurryIntervalMs": 280
+      },
+      "emotes": {
+        "disgust": {
+          "horizontalDeformationScale": 0.2
+        }
       }
     },
     "ai": {
