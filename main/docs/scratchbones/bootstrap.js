@@ -4679,6 +4679,9 @@ import { createTutorial } from './tutorial.js';
         const punishArmed = state.betting.punishArmed === true;
         return `<div class="fit-target fit-0" data-proj-id="challenge-prompt" style="z-index:78;display:flex;align-items:center;justify-content:center;pointer-events:none;"><button class="secondary" id="betPunishToggleBtn" data-punish-armed="${punishArmed ? 'true' : 'false'}" ${state.betting.actionInFlight ? 'disabled' : ''} style="pointer-events:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:190px;min-height:210px;border-width:3px;border-color:${punishArmed ? 'var(--warning)' : 'var(--line)'};background:${punishArmed ? 'var(--warning)' : 'var(--bg-2)'};color:${punishArmed ? 'var(--bg)' : 'var(--text)'};"><span class="punishBoneSpinShell"><img class="punishBoneSpinArt" src="${escapeHtml(punishArt.src)}" data-fallback-src="${escapeHtml(punishArt.fallbackSrc)}" alt="Punish Bone card" style="width:96px;height:136px;object-fit:contain;border-radius:6px;"></span><span style="font-weight:700;">${punishArmed ? 'Punish Armed' : 'Arm Punish Bone'}</span></button></div>`;
       };
+      // Preserve any in-flight emoji FX elements so app.innerHTML doesn't wipe them.
+      const _existingFxLayer = app.querySelector(':scope > .emojiReactionFxLayer');
+      const _preservedFxChildren = _existingFxLayer ? Array.from(_existingFxLayer.children) : [];
       app.innerHTML = `
         <div class="topbar" data-proj-id="topbar">
           <div class="titleRow">
@@ -4846,6 +4849,11 @@ import { createTutorial } from './tutorial.js';
       if (state.declaredRank !== null) {
         const select = document.getElementById('declareRank');
         if (select) select.value = String(state.declaredRank);
+      }
+      // Re-attach any emoji FX that were in-flight before innerHTML wiped the layer.
+      if (_preservedFxChildren.length) {
+        const _restoredLayer = ensureEmojiReactionLayer(app);
+        _preservedFxChildren.forEach(el => _restoredLayer?.appendChild(el));
       }
       document.getElementById('lobbyBtn')?.addEventListener('click', goToLobby);
       // Card selection is always local (included in 'play' action when submitted)
@@ -5615,11 +5623,12 @@ import { createTutorial } from './tutorial.js';
       if (!emoteConfig) return;
       const emoter = state.players[emoterSeatId];
       // Show comeback notice to human when an AI emotes.
+      // Don't call render() here — let the next natural render display it so we
+      // don't wipe any FX elements that were just spawned this same call stack.
       if (emoter && !emoter.isHuman) {
         const human = state.players[state.humanSeat];
         if (human && !human.eliminated) {
           state.aiEmoteComebackNotice = { emoterName: emoter.name, reactionId, expiresAt: Date.now() + 4000 };
-          render();
         }
       }
       // AI observer reactions — only at depth 0 so we don't cascade.
