@@ -204,3 +204,32 @@ function _interpolatePoses(anim, timeMs) {
 }
 
 window.BreathingComposer = BreathingComposer;
+
+// ── Auto-initialise a shared global composer ─────────────────
+// Loaded automatically so callers (bootstrap.js, lobby.js) don't need
+// to be modified. renderProfile() in portrait-utils.js falls back to
+// window.portraitBreathingComposer when no composer is in renderOptions.
+(function _autoInitBreathingComposer() {
+  const composer = new BreathingComposer();
+  window.portraitBreathingComposer = composer;
+
+  // Derive config base from the portrait-utils or breathing script src,
+  // falling back to common paths used in the project.
+  function _resolveConfigBase() {
+    const candidates = ['./docs/config/', './config/'];
+    // Try to mirror whatever loadPortraitCosmetics was last called with.
+    const cfgBase = window.SCRATCHBONES_CONFIG?.game?.assets?.portrait?.configBase;
+    if (cfgBase) candidates.unshift(cfgBase);
+    return candidates[0];
+  }
+
+  function _load() {
+    composer.load(_resolveConfigBase()).catch(() => {});
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _load, { once: true });
+  } else {
+    _load();
+  }
+}());
