@@ -89,7 +89,7 @@ import { createTutorial } from './tutorial.js';
         className: 'emojiFx-shock',
         durationMs: 1500,
         fanAngles: [-60, -30, 0, 30, 60],
-        fanRadius: 80,
+        fanRadius: 140,
         fanSrcs: [
           './docs/assets/symbols/emoji_curious.png',
           './docs/assets/symbols/emoji_alarmed.png',
@@ -932,6 +932,8 @@ import { createTutorial } from './tutorial.js';
       if (!received) return;
       traceAction('net.state-received', { currentTurn: received.currentTurn, humanSeat: received.humanSeat, hasChallenge: !!received.challengeWindow, hasBet: !!received.betting, gameOver: received.gameOver, myHandSize: (received.players?.find(p => p.id === received.humanSeat)?.hand || []).length });
       const localSelected = state.selectedCardIds;
+      // Capture existing log timestamps so we can detect genuinely new chat entries.
+      const prevLogTs = new Set(state.logs.map(l => l.ts));
       state.players = received.players || [];
       state.currentTurn = received.currentTurn ?? 0;
       state.leaderIndex = received.leaderIndex ?? 0;
@@ -941,6 +943,16 @@ import { createTutorial } from './tutorial.js';
       state.winnerIndex = received.winnerIndex ?? null;
       state.banner = received.banner || '';
       state.logs = received.logs || [];
+      // Trigger chat animations for new messages from other players.
+      // Own messages were already animated optimistically on send; skip the echo.
+      for (const entry of state.logs) {
+        if (entry.kind !== 'chat' || prevLogTs.has(entry.ts)) continue;
+        if (entry.seatId === state.humanSeat && _pendingOwnChatText === entry.text) {
+          _pendingOwnChatText = null;
+          continue;
+        }
+        spawnChatTextFx(entry.text, entry.seatId);
+      }
       state.tablePot = received.tablePot ?? 0;
       state.ante = received.ante ?? state.ante;
       state.round = received.round ?? state.round;
@@ -1182,10 +1194,11 @@ import { createTutorial } from './tutorial.js';
       state.logs.unshift(entry);
       state.logs = state.logs.slice(0, 30);
     }
-    function addChatLog(text, seatId = state.humanSeat) {
+    function addChatLog(text, seatId = state.humanSeat, { silent = false } = {}) {
       const player = state.players[seatId];
       const author = Number(seatId) === state.humanSeat ? 'You' : seatFirstName(player || seatId);
       addLog(text, { kind: 'chat', author, seatId });
+      if (!silent) spawnChatTextFx(text, seatId);
     }
     function seatLabel(playerOrIndex) {
       const player = typeof playerOrIndex === 'number' ? state.players[playerOrIndex] : playerOrIndex;
@@ -4749,14 +4762,14 @@ import { createTutorial } from './tutorial.js';
             <div class="claimCountBoxRight ${claimClusterShellClass}" data-proj-id="claim-count-right" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimCountBoxRight)};font-family:${escapeHtml(claimClusterFontFamily)};">${claimCount}</div>
             <div class="actorAvatarFloat ${claimClusterShellClass}" data-proj-id="claim-avatar-actor" style="${claimClusterElementStyle(claimClusterPolicy.elements.actorAvatarFloat)}" title="${seatLabel(focusActor || claimFocus.actorId)}">
               <div class="claimAvatarShell ${(challengeIntro && focusActor) ? 'alert-pulse' : ''}">
-                <canvas class="seatPortrait" data-seat-id="${claimFocus.actorId}" width="220" height="220"></canvas>
+                <canvas class="seatPortrait" data-seat-id="${claimFocus.actorId}" width="200" height="200"></canvas>
               </div>
               ${focusActor ? `<div class="claimAvatarNameTag">${escapeHtml(seatFirstName(focusActor))}</div>` : ''}
               <div class="claimAvatarLocalOverlay" aria-hidden="true"></div>
             </div>
             <div class="reactorAvatarFloat ${claimClusterShellClass}" data-proj-id="claim-avatar-reactor" style="${claimClusterElementStyle(claimClusterPolicy.elements.reactorAvatarFloat)}" title="${focusReactor ? seatLabel(focusReactor) : 'No reactor'}">
               <div class="claimAvatarShell">
-                ${focusReactor ? `<canvas class="seatPortrait" data-seat-id="${focusReactor.id}" width="220" height="220"></canvas>` : ''}
+                ${focusReactor ? `<canvas class="seatPortrait" data-seat-id="${focusReactor.id}" width="200" height="200"></canvas>` : ''}
               </div>
               ${focusReactor ? `<div class="claimAvatarNameTag">${escapeHtml(seatFirstName(focusReactor))}</div>` : ''}
               ${(challengeIntro && focusReactor) ? `<div class="fx-burst-shell"><div class="cin-action-burst burst-liar">${escapeHtml(challengeIntro.burstText || 'LIAR!!!')}</div></div>` : ''}
@@ -4916,6 +4929,10 @@ import { createTutorial } from './tutorial.js';
           const text = String(input?.value || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH);
           if (!text) return;
           if (_isClient) {
+            // Immediate visual feedback: play animation now; mark the text so
+            // applyNetworkState skips re-animating when the echo arrives from host.
+            _pendingOwnChatText = text;
+            spawnChatTextFx(text, state.humanSeat);
             _net.sendAction({ type: 'chat', text });
           } else {
             addChatLog(text, hs);
@@ -5275,11 +5292,24 @@ import { createTutorial } from './tutorial.js';
     function renderSeatPortraits() {
       const root = document.getElementById('app');
       if (!root) return;
+      const now = Date.now();
+      const flipActive = _disgustFlipSeatId != null && _disgustFlipUntilMs > now;
+      if (!flipActive && _disgustFlipSeatId != null) _disgustFlipSeatId = null;
       for (const p of state.players) {
         if (!p.profile) continue;
+        const seatIdStr = String(p.id);
         const canvases = root.querySelectorAll(`canvas[data-seat-id="${p.id}"]`);
         for (const canvas of canvases) {
-          if (window.renderProfile) renderProfile(canvas, p.profile, { seatId: String(p.id) });
+          if (window.renderProfile) renderProfile(canvas, p.profile, { seatId: seatIdStr });
+          // Disgust-emote flip: temporarily mirror the portrait opposite to its CSS-intended
+          // state, then revert. actorAvatarFloat = intended un-flipped (transform:none);
+          // all other contexts = intended flipped (transform:scaleX(-1)).
+          if (flipActive && _disgustFlipSeatId === seatIdStr) {
+            const intendedFlipped = !canvas.closest('.actorAvatarFloat');
+            canvas.style.transform = intendedFlipped ? 'none' : 'scaleX(-1)';
+          } else if (canvas.style.transform !== '') {
+            canvas.style.transform = '';
+          }
         }
       }
     }
@@ -5289,6 +5319,17 @@ import { createTutorial } from './tutorial.js';
     // while still being fast enough to capture a 140 ms blink window reliably.
     let _portraitLoopActive = false;
     let _lastPortraitMs = 0;
+    // Text of the most recently client-sent chat message; cleared when
+    // applyNetworkState sees the echo from the host, preventing a double-animation.
+    let _pendingOwnChatText = null;
+    // Disgust-emote flip state: the affected seat's portrait is horizontally mirrored
+    // from its intended CSS state for 1 second, then reverted.
+    let _disgustFlipSeatId = null;
+    let _disgustFlipUntilMs = 0;
+    function triggerDisgustFlip(seatId) {
+      _disgustFlipSeatId = seatId != null ? String(seatId) : null;
+      _disgustFlipUntilMs = Date.now() + 1000;
+    }
     function startPortraitLoop() {
       if (_portraitLoopActive) return;
       _portraitLoopActive = true;
@@ -5499,7 +5540,7 @@ import { createTutorial } from './tutorial.js';
       return 1;
     }
     function renderEmojiReactionPanel() {
-      const reactionOrder = ['love', 'disgust', 'alarmed', 'curious'];
+      const reactionOrder = ['love', 'disgust', 'alarmed', 'curious', 'shock'];
       const buttonHtml = reactionOrder.map((id) => {
         const reaction = EMOJI_REACTION_CONFIG[id];
         if (!reaction) return '';
@@ -5632,7 +5673,58 @@ import { createTutorial } from './tutorial.js';
         setTimeout(() => fx.remove(), reaction.durationMs);
       }
       window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));
+      if (reactionId === 'disgust') triggerDisgustFlip(state.humanSeat);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
+    }
+    // Returns (creating if needed) a position:fixed overlay on document.body for
+    // chat FX. Appending here survives render() which only replaces #app.innerHTML.
+    function getGlobalFxOverlay() {
+      let overlay = document.getElementById('scratchbones-chat-fx-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'scratchbones-chat-fx-overlay';
+        overlay.setAttribute('aria-hidden', 'true');
+        overlay.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:9995;';
+        document.body.appendChild(overlay);
+      }
+      return overlay;
+    }
+    // Spawns a chat-text speech bubble at the given seat's avatar, triggering the
+    // alarmed body deformation so the avatar visually "speaks" the message.
+    function spawnChatTextFx(text, seatId) {
+      const app = document.getElementById('app');
+      if (!app || !text) return;
+      const seatIdStr = String(seatId);
+      window.portraitBreathingComposer?.triggerEmote('alarmed', seatIdStr);
+      let anchorEl = null;
+      const clusterAnchor = claimClusterAvatarAnchorForPlayer(seatId, app);
+      if (clusterAnchor && clusterAnchor.offsetParent !== null) {
+        anchorEl = clusterAnchor.querySelector('canvas.seatPortrait') || clusterAnchor;
+      } else {
+        const humanSeatCard = app.querySelector('.humanSeatCard');
+        const humanCanvas = humanSeatCard?.querySelector(`canvas.seatPortrait[data-seat-id="${seatIdStr}"]`);
+        if (humanCanvas) {
+          anchorEl = humanSeatCard.querySelector('.seatAvatarBox') || humanCanvas;
+        } else {
+          const aiCanvas = app.querySelector(`.seatAvatarBox canvas.seatPortrait[data-seat-id="${seatIdStr}"]`);
+          if (aiCanvas) {
+            anchorEl = aiCanvas.closest('.seatAvatarBox') || aiCanvas;
+          }
+        }
+      }
+      if (!anchorEl) return;
+      // Use a body-level fixed overlay so render()'s app.innerHTML replacement can't wipe it.
+      const overlay = getGlobalFxOverlay();
+      const anchorRect = anchorEl.getBoundingClientRect();
+      const fx = document.createElement('div');
+      fx.className = 'chatTextFx';
+      // Position in viewport space directly — no scale correction needed for position:fixed.
+      fx.style.left = `${anchorRect.left + anchorRect.width / 2}px`;
+      fx.style.top = `${anchorRect.top + anchorRect.height * 0.25}px`;
+      const label = String(text).trim();
+      fx.textContent = label.length > 36 ? label.slice(0, 36) + '…' : label;
+      overlay.appendChild(fx);
+      setTimeout(() => fx.remove(), 2000);
     }
     const clusterCinematicStageRuntime = {
       phaseKey: null,
@@ -6708,6 +6800,7 @@ import { createTutorial } from './tutorial.js';
         updateTableCardAutoScale(app);
         syncStationaryCardScreenSpace(app);
         syncClaimClusterCardSizeFromHand(app);
+        if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
       }, fitDebounceMs);
     }
     window.addEventListener('resize', scheduleResponsiveFitPass, { passive: true });
@@ -6733,13 +6826,30 @@ import { createTutorial } from './tutorial.js';
       const oy = vv.offsetTop || 0;
       root.style.transform = (ox || oy) ? `translate(${ox}px, ${oy}px)` : '';
     }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        syncToVisualViewport();
+        scheduleResponsiveFitPass();
+      }
+    }, { passive: true });
     if (window.visualViewport) {
+      // Track window dimensions to distinguish a real resize from a mobile keyboard appearance.
+      // Keyboard open/close changes visualViewport.height but NOT window.innerWidth/innerHeight.
+      let _lastInnerW = window.innerWidth;
+      let _lastInnerH = window.innerHeight;
+      window.addEventListener('resize', () => {
+        _lastInnerW = window.innerWidth;
+        _lastInnerH = window.innerHeight;
+      }, { passive: true });
       window.visualViewport.addEventListener('scroll', () => {
         syncToVisualViewport();
       }, { passive: true });
       window.visualViewport.addEventListener('resize', () => {
         syncToVisualViewport();
-        scheduleResponsiveFitPass();
+        // Only reflow layout when the actual window changed — not when a mobile keyboard
+        // appears/disappears (which shrinks visualViewport but leaves window dimensions intact).
+        const windowChanged = window.innerWidth !== _lastInnerW || window.innerHeight !== _lastInnerH;
+        if (windowChanged) scheduleResponsiveFitPass();
       }, { passive: true });
     }
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
