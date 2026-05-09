@@ -206,6 +206,14 @@ describe('cosmetic shop', () => {
     assert.ok(catalog.length > 0);
   });
 
+  it('prices all shop cosmetics above the passive bronze cap', () => {
+    const { ScratchbonesAccount: acc } = makeSandbox();
+    acc.createAccount('X');
+    const catalog = acc.getShopCatalog();
+    assert.ok(catalog.every(item => item.price > acc.BRONZE_PASSIVE_MAX));
+    assert.ok(acc.getMysteryDyeShopCatalog().every(item => item.price > acc.BRONZE_PASSIVE_MAX));
+  });
+
   it('getShopCatalogForAppearance filters by species and gender', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
@@ -235,9 +243,10 @@ describe('cosmetic shop', () => {
   it('buyCosmetic deducts price and marks item as unlocked', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
-    const before = acc.getBronze();
     const item = acc.getShopCatalog().find(c => c.id === 'appearance::hat::basic_headband');
     assert.ok(item, 'test item should exist in catalog');
+    acc.addBronze(item.price);
+    const before = acc.getBronze();
     const result = acc.buyCosmetic(item.id);
     assert.equal(result.ok, true);
     assert.equal(acc.getBronze(), before - item.price);
@@ -247,8 +256,10 @@ describe('cosmetic shop', () => {
   it('buyCosmetic returns ok:false when already owned', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
-    acc.buyCosmetic('appearance::hat::basic_headband');
-    const result = acc.buyCosmetic('appearance::hat::basic_headband');
+    const item = acc.getShopCatalog().find(c => c.id === 'appearance::hat::basic_headband');
+    acc.addBronze(item.price);
+    acc.buyCosmetic(item.id);
+    const result = acc.buyCosmetic(item.id);
     assert.equal(result.ok, false);
     assert.equal(result.error, 'Already owned');
   });
@@ -263,7 +274,9 @@ describe('cosmetic shop', () => {
   it('equipCosmetic equips a purchased item', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
-    acc.buyCosmetic('appearance::hat::basic_headband');
+    const item = acc.getShopCatalog().find(c => c.id === 'appearance::hat::basic_headband');
+    acc.addBronze(item.price);
+    acc.buyCosmetic(item.id);
     const ok = acc.equipCosmetic('appearance::hat::basic_headband');
     assert.equal(ok, true);
     assert.equal(acc.isEquipped('appearance::hat::basic_headband'), true);
@@ -272,9 +285,11 @@ describe('cosmetic shop', () => {
   it('equipping a new item in the same category replaces the old one', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
-    acc.addBronze(50);
-    acc.buyCosmetic('appearance::hat::basic_headband');    // hat, price 5
-    acc.buyCosmetic('appearance::hat::riverlandskasa_low'); // hat, price 10
+    const firstHat = acc.getShopCatalog().find(c => c.id === 'appearance::hat::basic_headband');
+    const secondHat = acc.getShopCatalog().find(c => c.id === 'appearance::hat::riverlandskasa_low');
+    acc.addBronze(firstHat.price + secondHat.price);
+    acc.buyCosmetic(firstHat.id);
+    acc.buyCosmetic(secondHat.id);
     acc.equipCosmetic('appearance::hat::basic_headband');
     acc.equipCosmetic('appearance::hat::riverlandskasa_low');
     assert.equal(acc.isEquipped('appearance::hat::basic_headband'), false);
@@ -285,7 +300,9 @@ describe('cosmetic shop', () => {
   it('unequipCosmetic removes the item from the equipped list', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
-    acc.buyCosmetic('appearance::hat::basic_headband');
+    const item = acc.getShopCatalog().find(c => c.id === 'appearance::hat::basic_headband');
+    acc.addBronze(item.price);
+    acc.buyCosmetic(item.id);
     acc.equipCosmetic('appearance::hat::basic_headband');
     acc.unequipCosmetic('appearance::hat::basic_headband');
     assert.equal(acc.isEquipped('appearance::hat::basic_headband'), false);
@@ -600,6 +617,7 @@ describe('dye API', () => {
   it('buyMysteryDye deducts bronze and grants exactly one unowned dye from the pool', () => {
     const { ScratchbonesAccount: acc } = makeSandbox();
     acc.createAccount('X');
+    acc.addBronze(acc.MYSTERY_DYE_PRICE);
     const beforeBronze = acc.getBronze();
     const beforeOwned = new Set(acc.getOwnedDyes());
     const beforeRemaining = toPlain(acc.getMysteryDyePoolRemaining('red')).map(d => d.id);

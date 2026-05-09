@@ -310,10 +310,29 @@ window.SCRATCHBONES_CONFIG = {
         }
       }
     },
+    "account": {
+      "bronzePassiveMax": 30,
+      "bronzePassiveRateMs": 300000,
+      "shopCatalog": [
+        { "id": "appearance::hat::basic_headband",       "label": "Basic Headband",        "price": 35, "category": "hat",      "description": "A simple cloth headband." },
+        { "id": "appearance::hat::leather_headband",     "label": "Leather Headband",      "price": 40, "category": "hat",      "description": "A sturdy leather headband.", "material": "leather" },
+        { "id": "appearance::hat::riverlandskasa_low",   "label": "Riverland Kasa (Low)",  "price": 45, "category": "hat",      "description": "Traditional riverland hat, worn low.", "material": "rigid_fiber" },
+        { "id": "appearance::hat::riverlandskasa_tight", "label": "Riverland Kasa (Tight)", "price": 45, "category": "hat",      "description": "Traditional riverland hat, tight fit.", "material": "rigid_fiber" },
+        { "id": "appearance::hat::riverlandskasa_wide",  "label": "Riverland Kasa (Wide)", "price": 45, "category": "hat",      "description": "Traditional riverland hat, wide brim.", "material": "rigid_fiber" },
+        { "id": "appearance::Kenkari_M::kenk_riverlandskasa_low",  "label": "Kenkari Kasa (Low)",  "price": 45, "category": "hat", "species": "kenkari", "gender": "male",   "description": "Kenkari riverland hat, worn low.", "material": "rigid_fiber" },
+        { "id": "appearance::Kenkari_F::kenk_riverlandskasa_low",  "label": "Kenkari Kasa (Low)",  "price": 45, "category": "hat", "species": "kenkari", "gender": "female", "description": "Kenkari riverland hat, worn low.", "material": "rigid_fiber" },
+        { "id": "appearance::Kenkari_M::kenk_riverlandskasa_wide", "label": "Kenkari Kasa (Wide)", "price": 45, "category": "hat", "species": "kenkari", "gender": "male",   "description": "Kenkari riverland hat, wide brim.", "material": "rigid_fiber" },
+        { "id": "appearance::Kenkari_F::kenk_riverlandskasa_wide", "label": "Kenkari Kasa (Wide)", "price": 45, "category": "hat", "species": "kenkari", "gender": "female", "description": "Kenkari riverland hat, wide brim.", "material": "rigid_fiber" },
+        { "id": "tankan_tunic",     "label": "Tankan Tunic",      "price": 50, "category": "torso",    "description": "A fitted tankan-style tunic." },
+        { "id": "bandolier1",       "label": "Bandolier",         "price": 40, "category": "torso",    "description": "A rugged leather bandolier.", "material": "leather" },
+        { "id": "tankan_bodywrap",  "label": "Tankan Body Wrap",  "price": 60, "category": "overwear", "description": "A wrapped ceremonial bodywrap." },
+        { "id": "fine_hood",        "label": "Fine Hood",         "price": 60, "category": "hood",     "description": "A finely crafted hood with trim." }
+      ]
+    },
     "dyes": {
       "swatchBase": "#7dc89a",
       // Mystery dye purchases use this single config value through ScratchbonesAccount.
-      "mysteryDyePrice": 10,
+      "mysteryDyePrice": 35,
       "hueFamilies": [
         { "id": "red", "label": "Red", "abbreviation": "R", "hueAngle": 0 },
         { "id": "red_orange", "label": "Red-Orange", "abbreviation": "R/O", "hueAngle": 15 },

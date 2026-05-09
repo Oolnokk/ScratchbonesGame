@@ -1326,7 +1326,7 @@
       const net = window.ScratchbonesNetwork;
       if (!net) { alert('Network module not loaded'); return; }
       const acc = window.ScratchbonesAccount;
-      const MIN_BRONZE = acc?.BRONZE_PASSIVE_MAX ?? 30;
+      const MIN_BRONZE = acc?.BRONZE_PASSIVE_MAX ?? window.SCRATCHBONES_CONFIG?.game?.account?.bronzePassiveMax;
       if (!acc || acc.getBronze() < MIN_BRONZE) {
         alert(`You need at least ${MIN_BRONZE} Bronze to host a game.`);
         return;
@@ -1382,7 +1382,7 @@
         const net = window.ScratchbonesNetwork;
         if (!net) { showJoinError('Network module not loaded'); return; }
         const acc = window.ScratchbonesAccount;
-        const MIN_BRONZE = acc?.BRONZE_PASSIVE_MAX ?? 30;
+        const MIN_BRONZE = acc?.BRONZE_PASSIVE_MAX ?? window.SCRATCHBONES_CONFIG?.game?.account?.bronzePassiveMax;
         if (!acc || acc.getBronze() < MIN_BRONZE) {
           showJoinError(`You need at least ${MIN_BRONZE} Bronze to join a game.`);
           return;

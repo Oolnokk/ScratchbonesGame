@@ -2,31 +2,18 @@
   'use strict';
 
   const SAVE_KEY = 'sb_account_v1';
-  const BRONZE_PASSIVE_MAX = 30;
-  const BRONZE_PASSIVE_RATE_MS = 5 * 60 * 1000; // 1 bronze per 5 minutes
+  const CONFIG_ACCOUNT = window.SCRATCHBONES_CONFIG?.game?.account || {};
+  function configNumber(value, min = 0) {
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.max(min, Math.floor(number)) : min;
+  }
+  const BRONZE_PASSIVE_MAX = configNumber(CONFIG_ACCOUNT.bronzePassiveMax);
+  const BRONZE_PASSIVE_RATE_MS = configNumber(CONFIG_ACCOUNT.bronzePassiveRateMs, 1);
 
   // NPC-usable cosmetics available for purchase.
   // Items tagged species/gender are only shown when the player matches.
-  const SHOP_CATALOG = [
-    // Hats — universal
-    { id: 'appearance::hat::basic_headband',       label: 'Basic Headband',        price: 5,  category: 'hat', description: 'A simple cloth headband.' },
-    { id: 'appearance::hat::leather_headband',     label: 'Leather Headband',      price: 8,  category: 'hat', description: 'A sturdy leather headband.', material: 'leather' },
-    { id: 'appearance::hat::riverlandskasa_low',   label: 'Riverland Kasa (Low)',  price: 10, category: 'hat', description: 'Traditional riverland hat, worn low.', material: 'rigid_fiber' },
-    { id: 'appearance::hat::riverlandskasa_tight', label: 'Riverland Kasa (Tight)', price: 10, category: 'hat', description: 'Traditional riverland hat, tight fit.', material: 'rigid_fiber' },
-    { id: 'appearance::hat::riverlandskasa_wide',  label: 'Riverland Kasa (Wide)', price: 10, category: 'hat', description: 'Traditional riverland hat, wide brim.', material: 'rigid_fiber' },
-    // Hats — Kenkari specific
-    { id: 'appearance::Kenkari_M::kenk_riverlandskasa_low',  label: 'Kenkari Kasa (Low)',  price: 10, category: 'hat', species: 'kenkari', gender: 'male',   description: 'Kenkari riverland hat, worn low.', material: 'rigid_fiber' },
-    { id: 'appearance::Kenkari_F::kenk_riverlandskasa_low',  label: 'Kenkari Kasa (Low)',  price: 10, category: 'hat', species: 'kenkari', gender: 'female', description: 'Kenkari riverland hat, worn low.', material: 'rigid_fiber' },
-    { id: 'appearance::Kenkari_M::kenk_riverlandskasa_wide', label: 'Kenkari Kasa (Wide)', price: 10, category: 'hat', species: 'kenkari', gender: 'male',   description: 'Kenkari riverland hat, wide brim.', material: 'rigid_fiber' },
-    { id: 'appearance::Kenkari_F::kenk_riverlandskasa_wide', label: 'Kenkari Kasa (Wide)', price: 10, category: 'hat', species: 'kenkari', gender: 'female', description: 'Kenkari riverland hat, wide brim.', material: 'rigid_fiber' },
-    // Torso
-    { id: 'tankan_tunic',   label: 'Tankan Tunic',    price: 12, category: 'torso',   description: 'A fitted tankan-style tunic.' },
-    { id: 'bandolier1',     label: 'Bandolier',       price: 8,  category: 'torso',   description: 'A rugged leather bandolier.', material: 'leather' },
-    // Overwear
-    { id: 'tankan_bodywrap', label: 'Tankan Body Wrap', price: 15, category: 'overwear', description: 'A wrapped ceremonial bodywrap.' },
-    // Hoods
-    { id: 'fine_hood',      label: 'Fine Hood',       price: 15, category: 'hood',    description: 'A finely crafted hood with trim.' },
-  ];
+  const SHOP_CATALOG = Array.isArray(CONFIG_ACCOUNT.shopCatalog) ? CONFIG_ACCOUNT.shopCatalog : [];
+
 
   // Migration map: old per-variant cosmetic IDs → new consolidated IDs.
   const _COSMETIC_ID_MIGRATIONS = {
@@ -90,7 +77,7 @@
   const DYE_MIGRATIONS = CONFIG_DYES.legacyDyeMigrations || {};
   const MYSTERY_DYE_POOLS = Array.isArray(CONFIG_DYES.mysteryPools) ? CONFIG_DYES.mysteryPools : [];
   // Mystery dye purchases read the price from config so UI and account logic stay in sync.
-  const MYSTERY_DYE_PRICE = Math.max(0, Math.floor(Number(CONFIG_DYES.mysteryDyePrice) || 10));
+  const MYSTERY_DYE_PRICE = configNumber(CONFIG_DYES.mysteryDyePrice);
 
   // Starter dyes given to every new and migrated account.
   const STARTER_DYE_IDS = (Array.isArray(CONFIG_DYES.starterDyeIds) ? CONFIG_DYES.starterDyeIds : [])
