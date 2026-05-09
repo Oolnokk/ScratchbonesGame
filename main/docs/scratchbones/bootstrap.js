@@ -452,6 +452,17 @@ import { createTutorial } from './tutorial.js';
     const DEBUG_OPTIONS = SCRATCHBONES_GAME.debug || {};
     const DEBUG_TRACE = DEBUG_OPTIONS.trace || {};
     const DEBUG_EVENT_LOG_LIMIT = Math.max(50, Number(DEBUG_OPTIONS.eventLogLimit) || 300);
+    const MAX_RENDERED_CHAT_LOG_ENTRIES = 80;
+    const CHAT_MESSAGE_MAX_LENGTH = 180;   // defines chat input maxlength and server-side trim length
+    // Hand panel slot-based layout constants
+    const HAND_MAX_VISIBLE_SLOTS = 10;     // max cards visible at once (defines max overlap at full count)
+    const HAND_MIN_SLOT_WIDTH_PX = 36;     // minimum slot box width (px in design space)
+    const HAND_STACK_SLOT_PX = 3;          // flex-basis per stacked (out-of-view) card slot
+    const HAND_STACK_BASE_OPACITY = 0.65;  // opacity for the card closest to the visible window
+    const HAND_STACK_MIN_OPACITY = 0.25;   // minimum opacity for the deepest stacked card
+    const HAND_STACK_FADE_STEP = 0.06;     // opacity decrease per additional card depth
+    // View offset persisted across renders so paging state is maintained.
+    let handViewOffset = 0;
     window.__scratchbonesDebugEvents = window.__scratchbonesDebugEvents || [];
     function traceEvent(level, channel, payload = {}) {
       if (DEBUG_OPTIONS.enabled === false) return;
@@ -1029,6 +1040,14 @@ import { createTutorial } from './tutorial.js';
           traceAction('net.bet-raise-tier', { seat, tierId: msg.tierId });
           void resolveBetAction(seat, { type: 'raise-tier', tierId: msg.tierId }).catch(e => console.error('[net-action] bet-raise-tier', e));
           break;
+        case 'chat': {
+          // Enforce a server-side length cap matching the client input maxlength.
+          const text = String(msg.text || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH);
+          if (!text) break;
+          addChatLog(text, seat);
+          render();
+          break;
+        }
         case 'punish-toggle':
           if (state.betting && state.betting.currentActorId === seat) {
             traceAction('net.punish-toggle', { seat });
@@ -1147,9 +1166,26 @@ import { createTutorial } from './tutorial.js';
     function selectedCards() {
       return state.players[state.humanSeat].hand.filter(c => state.selectedCardIds.has(c.id));
     }
-    function addLog(text) {
-      state.logs.unshift({ text, ts: Date.now() });
+    function normalizeLogKind(kind) {
+      return String(kind || 'event').toLowerCase() === 'chat' ? 'chat' : 'event';
+    }
+    function addLog(text, meta = {}) {
+      const kind = normalizeLogKind(meta.kind);
+      const entry = {
+        text: String(text).trim(),
+        ts: Number(meta.ts) || Date.now(),
+        kind,
+        author: kind === 'chat' ? String(meta.author || '').trim() || 'You' : '',
+        seatId: Number.isFinite(Number(meta.seatId)) ? Number(meta.seatId) : null,
+      };
+      if (!entry.text) return;
+      state.logs.unshift(entry);
       state.logs = state.logs.slice(0, 30);
+    }
+    function addChatLog(text, seatId = state.humanSeat) {
+      const player = state.players[seatId];
+      const author = Number(seatId) === state.humanSeat ? 'You' : seatFirstName(player || seatId);
+      addLog(text, { kind: 'chat', author, seatId });
     }
     function seatLabel(playerOrIndex) {
       const player = typeof playerOrIndex === 'number' ? state.players[playerOrIndex] : playerOrIndex;
@@ -1343,6 +1379,7 @@ import { createTutorial } from './tutorial.js';
     async function startGame() {
       await preloadScratchboneCardArt();
       clearChallengeTimer();
+      handViewOffset = 0;
       state.humanSeat = 0;
       state.seed = Math.floor(Math.random() * 1e9);
       state.poolVisualSeed = Math.floor(Math.random() * 1e9);
@@ -4489,7 +4526,30 @@ import { createTutorial } from './tutorial.js';
               return `<div class="tableViewCard" data-card-id="${card.id}"${!tableCardFaceDown && card.trickType ? ` data-trick-glow="${card.trickType}"` : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${tableCardFaceDown ? 'Face-down scratchbone card' : (card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`)}"></div>`;
             }).join(''))
         : '<div class="tiny">No cards on the table yet.</div>';
-      const recentLogs = eventLogEnabled ? state.logs.slice(0, 4) : [];
+      const chatLogEntries = eventLogEnabled
+        ? state.logs
+          .slice(0, MAX_RENDERED_CHAT_LOG_ENTRIES)
+          .map((entry, index) => {
+            if (entry && typeof entry === 'object') {
+              const text = String(entry.text || '').trim();
+              if (!text) return null;
+              const kind = normalizeLogKind(entry.kind);
+              return {
+                id: `${Number(entry.ts) || 0}-${index}`,
+                text,
+                kind,
+                author: kind === 'chat' ? String(entry.author || '').trim() || 'You' : 'System',
+                seatId: Number.isFinite(Number(entry.seatId)) ? Number(entry.seatId) : null,
+                ts: Number(entry.ts) || Date.now(),
+              };
+            }
+            const text = String(entry || '').trim();
+            if (!text) return null;
+            return { id: `legacy-${index}`, text, kind: 'event', author: 'System', seatId: null, ts: Date.now() };
+          })
+          .filter(Boolean)
+          .reverse()
+        : [];
       const turnPlayer = state.players[state.currentTurn];
       const renderDeclareControls = () => `
         <div class="controls fit-target fit-0" data-proj-id="challenge-prompt" style="max-height:none;">
@@ -4739,27 +4799,43 @@ import { createTutorial } from './tutorial.js';
             <div class="sectionTitle">Your hand</div>
             <div class="tiny">Selected: ${selected.length}</div>
           </div>
-          <div class="handScroll">
-              ${player.hand.map(card => {
+          <div class="handRail" data-hand-rail>
+            <button class="handArrow handArrowLeft" type="button" aria-label="Scroll hand left" data-hand-scroll-dir="-1">◀</button>
+            <div class="handScroll" data-hand-scroll aria-label="Your hand card rail">
+              ${player.hand.map((card, cardIdx) => {
                 const art = resolveScratchbone2DAsset(card);
                 const handCardLabel = card.wild ? 'Wild' : `Rank ${card.rank}`;
                 const cardGlyph = card.wild ? 'W' : String(card.rank);
                 const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id);
                 return `
-                <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}"${card.trickType ? ` data-trick-glow="${card.trickType}"` : ''} title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}"${hiddenDealCard ? ' style=\"visibility:hidden;\"' : ' style=\"background:transparent;border:0;box-shadow:none;outline:none;padding:0;width:fit-content;min-width:0;\"'}>
-                  <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`}">
-                  <span class="cardLabel" aria-hidden="true" style="left:var(--layout-hand-card-label-inset-left,2px);bottom:var(--layout-hand-card-label-inset-bottom,2px);right:auto;top:auto;"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${handCardLabel}</span></span>
-                </button>
+                <div class="handCardSlot" data-slot-idx="${cardIdx}" style="z-index:${cardIdx + 1};">
+                  <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}"${card.trickType ? ` data-trick-glow="${card.trickType}"` : ''} title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}"${hiddenDealCard ? ' style=\"visibility:hidden;\"' : ''}>
+                    <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`}">
+                    <span class="cardLabel" aria-hidden="true" style="left:var(--layout-hand-card-label-inset-left,2px);bottom:var(--layout-hand-card-label-inset-bottom,2px);right:auto;top:auto;"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${handCardLabel}</span></span>
+                  </button>
+                </div>
               `;
               }).join('')}
             </div>
+            <button class="handArrow handArrowRight" type="button" aria-label="Scroll hand right" data-hand-scroll-dir="1">▶</button>
           </div>
         </div>
         `}
         ${eventLogEnabled ? `
           <div class="eventLog fit-target fit-0" data-proj-id="log">
-            <div class="sectionTitle">Recent events</div>
-            ${recentLogs.map(item => `<div class="logItem">${escapeHtml(item.text)}</div>`).join('')}
+            <div class="sectionTitle">Activity Chat</div>
+            <div class="chatLogBody" id="chatLogBody">
+              ${chatLogEntries.map((item) => `
+                <div class="logItem ${item.kind === 'chat' ? 'chat-user' : ''}" data-log-kind="${item.kind}">
+                  <div class="chatMeta">${escapeHtml(item.kind === 'chat' ? item.author : 'System')}</div>
+                  <div>${escapeHtml(item.text)}</div>
+                </div>
+              `).join('')}
+            </div>
+            <form class="chatComposer" id="chatComposer">
+              <input id="chatInput" class="chatComposerInput" type="text" maxlength="${CHAT_MESSAGE_MAX_LENGTH}" placeholder="Type a message..." autocomplete="off">
+              <button class="chatSendBtn" type="submit">Send</button>
+            </form>
           </div>
         ` : ''}
       `;
@@ -4773,6 +4849,8 @@ import { createTutorial } from './tutorial.js';
         el.addEventListener('click', () => toggleSelect(Number(el.getAttribute('data-card-id'))));
       });
       wireScratchboneImageFallbacks(app);
+      bindHandRailInteractions(app);
+      updateHandRailLayout(app);
       resolveChallengeLayoutPressure(app, layoutPolicy?.allowChallengeOverflow !== false);
       renderSeatPortraits();
       mountClaimClusterCinematicStage(app, { cinematicMode, cinematicPhase, cinematicRevealPlay, bettingActorHuman, humanCallAmount });
@@ -4832,6 +4910,19 @@ import { createTutorial } from './tutorial.js';
           if (_isClient) { state.cinematicMode = null; render(); }
           else closeCinematic(true);
         });
+        document.getElementById('chatComposer')?.addEventListener('submit', (event) => {
+          event.preventDefault();
+          const input = document.getElementById('chatInput');
+          const text = String(input?.value || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH);
+          if (!text) return;
+          if (_isClient) {
+            _net.sendAction({ type: 'chat', text });
+          } else {
+            addChatLog(text, hs);
+            render();
+          }
+          if (input) input.value = '';
+        });
       }
       app.querySelectorAll('[data-smuggle-seat]').forEach((button) => {
         button.addEventListener('click', () => {
@@ -4856,6 +4947,8 @@ import { createTutorial } from './tutorial.js';
         });
       });
       document.getElementById('trapOffloadBtn')?.addEventListener('click', () => { void resolvePendingTrapSelection(); });
+      const chatBody = document.getElementById('chatLogBody');
+      if (chatBody) chatBody.scrollTop = chatBody.scrollHeight;
       const layoutMode = getScratchbonesLayoutMode();
       document.body.classList.toggle('layout-mode-authored', layoutMode === 'authored');
       if (layoutMode === 'authored') {
@@ -4872,6 +4965,7 @@ import { createTutorial } from './tutorial.js';
       renderAuthoredOverlays();
       renderAuthoredInspector();
       updateTableCardAutoScale(app);
+      updateHandRailLayout(app);
       syncStationaryCardScreenSpace(app);
       syncClaimClusterCardSizeFromHand(app);
       enforceFitContainerBounds(app);
@@ -5298,6 +5392,93 @@ import { createTutorial } from './tutorial.js';
         if (candidate > bestScale) bestScale = candidate;
       }
       root.style.setProperty('--layout-table-card-auto-scale', clampNumber(bestScale, 0.35, 1).toFixed(3));
+    }
+    function updateHandRailLayout(app) {
+      const rail = app?.querySelector?.('[data-hand-rail]');
+      const track = rail?.querySelector?.('[data-hand-scroll]');
+      if (!rail || !track) return;
+      const slots = Array.from(track.querySelectorAll('.handCardSlot'));
+      const totalCards = slots.length;
+      if (!totalCards) {
+        rail.classList.remove('handRail-scrollable');
+        track.style.removeProperty('--hand-slot-width');
+        return;
+      }
+      // Clamp view offset to a valid range given current hand size.
+      handViewOffset = clampNumber(handViewOffset, 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
+      const leftStackCount = handViewOffset;                                          // cards off left edge
+      const rightStackCount = Math.max(0, totalCards - handViewOffset - HAND_MAX_VISIBLE_SLOTS); // cards off right edge
+      const visibleCount = totalCards - leftStackCount - rightStackCount;
+      // Determine card width from the configured CSS variable (set per layout policy).
+      const cardWidthPx = Math.max(
+        40,
+        Number.parseFloat(getComputedStyle(track).getPropertyValue('--layout-hand-card-max-width')) || 86
+      );
+      track.style.setProperty('--hand-card-width-px', `${cardWidthPx}px`);
+      track.style.setProperty('--hand-stack-slot-width', `${HAND_STACK_SLOT_PX}px`);
+      // Slot width: subtract the pixel budget consumed by stacked slots, then divide evenly.
+      const availableWidth = Math.max(1, track.clientWidth || track.offsetWidth);
+      const stackBudget = (leftStackCount + rightStackCount) * HAND_STACK_SLOT_PX;
+      const slotWidth = Math.max(HAND_MIN_SLOT_WIDTH_PX, Math.floor((availableWidth - stackBudget) / Math.max(1, visibleCount)));
+      track.style.setProperty('--hand-slot-width', `${slotWidth}px`);
+      // Configure each slot according to its role: left-stack, visible, or right-stack.
+      slots.forEach((slot, idx) => {
+        const isLeft = idx < handViewOffset;
+        const isRight = idx >= handViewOffset + HAND_MAX_VISIBLE_SLOTS;
+        const card = slot.querySelector('.card');
+        if (!isLeft && !isRight) {
+          // Visible card — normal slot.
+          slot.classList.remove('stack-left', 'stack-right');
+          slot.style.zIndex = String(1000 + idx);
+          if (card) {
+            card.disabled = false;
+            card.style.opacity = '';
+            card.style.pointerEvents = '';
+          }
+        } else if (isLeft) {
+          // Left-edge stack. Higher idx = closer to the visible window = on top.
+          slot.classList.add('stack-left');
+          slot.classList.remove('stack-right');
+          slot.style.zIndex = String(idx + 1);
+          if (card) {
+            card.disabled = true;
+            // Fade with depth: card closest to window (idx = handViewOffset-1) is more opaque.
+            const depth = handViewOffset - 1 - idx; // 0 = closest, increases toward back
+            card.style.opacity = String(Math.max(HAND_STACK_MIN_OPACITY, HAND_STACK_BASE_OPACITY - depth * HAND_STACK_FADE_STEP));
+          }
+        } else {
+          // Right-edge stack. Closer to window (lower distFromWindow) = on top.
+          slot.classList.add('stack-right');
+          slot.classList.remove('stack-left');
+          const distFromWindow = idx - (handViewOffset + HAND_MAX_VISIBLE_SLOTS); // 0 = closest
+          slot.style.zIndex = String(999 - distFromWindow);
+          if (card) {
+            card.disabled = true;
+            card.style.opacity = String(Math.max(HAND_STACK_MIN_OPACITY, HAND_STACK_BASE_OPACITY - distFromWindow * HAND_STACK_FADE_STEP));
+          }
+        }
+      });
+      const canPage = totalCards > HAND_MAX_VISIBLE_SLOTS;
+      rail.classList.toggle('handRail-scrollable', canPage);
+      // Sync arrow enabled states.
+      const leftBtn = rail.querySelector('[data-hand-scroll-dir="-1"]');
+      const rightBtn = rail.querySelector('[data-hand-scroll-dir="1"]');
+      if (leftBtn) leftBtn.disabled = handViewOffset <= 0;
+      if (rightBtn) rightBtn.disabled = handViewOffset + HAND_MAX_VISIBLE_SLOTS >= totalCards;
+    }
+    function bindHandRailInteractions(app) {
+      const rail = app?.querySelector?.('[data-hand-rail]');
+      if (!rail) return;
+      rail.querySelectorAll('[data-hand-scroll-dir]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const dir = Number(button.getAttribute('data-hand-scroll-dir')) || 0;
+          if (!dir) return;
+          const track = rail.querySelector('[data-hand-scroll]');
+          const totalCards = track ? track.querySelectorAll('.handCardSlot').length : 0;
+          handViewOffset = clampNumber(handViewOffset + dir, 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
+          updateHandRailLayout(app);
+        });
+      });
     }
     // Returns the horizontal scale component from CSS transform matrix/matrix3d values.
     function parseScaleXFromTransform(transformValue) {
@@ -6531,6 +6712,36 @@ import { createTutorial } from './tutorial.js';
     }
     window.addEventListener('resize', scheduleResponsiveFitPass, { passive: true });
     window.addEventListener('orientationchange', scheduleResponsiveFitPass, { passive: true });
+    // Recompute layout and re-sync the visual viewport anchor whenever fullscreen is
+    // entered or exited — the viewport dimensions change and must be re-measured.
+    const handleFullscreenChange = () => {
+      syncToVisualViewport();
+      scheduleResponsiveFitPass();
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange, { passive: true });
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange, { passive: true });
+    // Counteract visual-viewport drift from pinch-zoom + pan on mobile (iOS Safari) and
+    // browser-zoom + scroll on desktop. #authoredRoot is position:fixed so it doesn't
+    // rubber-band, but the visual viewport can still pan relative to the layout viewport.
+    // Translating authoredRoot by vv.offsetLeft/Top keeps it locked to what the user sees,
+    // and re-running the authored layout uses vv.width/height so #app scale adapts to zoom.
+    function syncToVisualViewport() {
+      const vv = window.visualViewport;
+      const root = document.getElementById('authoredRoot');
+      if (!vv || !root) return;
+      const ox = vv.offsetLeft || 0;
+      const oy = vv.offsetTop || 0;
+      root.style.transform = (ox || oy) ? `translate(${ox}px, ${oy}px)` : '';
+    }
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('scroll', () => {
+        syncToVisualViewport();
+      }, { passive: true });
+      window.visualViewport.addEventListener('resize', () => {
+        syncToVisualViewport();
+        scheduleResponsiveFitPass();
+      }, { passive: true });
+    }
     window.addEventListener('pointerdown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     window.addEventListener('keydown', () => SCRATCHBONES_AUDIO.startPlaylist(), { once: true, passive: true });
     // Client-mode entry point: no game logic runs; just wait for state from the host.

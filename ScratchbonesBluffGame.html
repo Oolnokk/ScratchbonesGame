@@ -27,7 +27,7 @@
       --safe: env(safe-area-inset-bottom, 0px);
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { margin: 0; background: transparent; color: var(--text); font-family: 'Khymeryyanroman4', Inter, system-ui, sans-serif; letter-spacing: 0.10em; height: 100%; }
+    html, body { margin: 0; background: transparent; color: var(--text); font-family: 'Khymeryyanroman4', Inter, system-ui, sans-serif; letter-spacing: 0.10em; line-height: 1.45; height: 100%; }
     body {
       overscroll-behavior: none;
       overflow: hidden;
@@ -49,9 +49,11 @@
     }
     button, select, input { font: inherit; }
     #authoredRoot {
-      width: 100vw;
-      height: 100dvh;
-      position: relative;
+      /* Fixed positioning prevents rubber-band scroll on iOS and keeps the root
+         anchored to the same stacking context as position:fixed animation overlays.
+         inset:0 matches 100vw × 100dvh without scroll-coupled drift. */
+      position: fixed;
+      inset: 0;
       overflow: hidden;
     }
     #app {
@@ -1065,8 +1067,9 @@
       width: 100%;
       max-width: 100%;
       min-width: 0;
-      overflow: hidden;
-      contain: layout paint style;
+      /* overflow visible so promoted card PNGs can exceed the slot track boundary */
+      overflow: visible;
+      contain: style;
     }
     .handHeader {
       display: flex;
@@ -1074,23 +1077,81 @@
       justify-content: space-between;
       gap: 12px;
     }
+    /* Slot track: flex row of fixed-width slot boxes. overflow:visible so card images
+       that extend beyond their slot are not clipped. */
     .handScroll {
-      --hand-card-min: clamp(
-        var(--layout-hand-card-min-width),
-        14vw,
-        var(--layout-hand-card-max-width)
-      );
-      --hand-card-gap: calc(clamp(var(--layout-hand-card-gap-min), 1.6vw, var(--layout-hand-card-gap-max)) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(var(--hand-card-min), 1fr));
-      gap: var(--hand-card-gap);
-      align-content: start;
-      overflow: auto;
-      padding-bottom: 4px;
+      display: flex;
+      align-items: stretch;
+      overflow: visible;
+      position: relative;
       min-height: 0;
+      height: 100%;
+    }
+    /* Each card slot is a thin placeholder box. The card image is promoted above it
+       (position: absolute, centered on the slot center) so it overlaps adjacent slots
+       without being clipped. */
+    .handCardSlot {
+      flex: 0 0 var(--hand-slot-width, 80px);
+      position: relative;
+      align-self: stretch;
+    }
+    /* Out-of-view slots (left/right edge stacks). They get a tiny flex-basis set by JS
+       so their card PNGs cluster at the panel edge like the curled ends of a scroll. */
+    .handCardSlot.stack-left,
+    .handCardSlot.stack-right {
+      flex-basis: var(--hand-stack-slot-width, 3px);
+      pointer-events: none;
+    }
+    .handCardSlot.stack-left > .card,
+    .handCardSlot.stack-right > .card {
+      cursor: default;
+      pointer-events: none;
+      /* opacity is set inline by JS to graduate with depth */
+    }
+    .handCardSlot > .card {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: var(--hand-card-width-px, 86px);
+      height: auto;
+      flex: none;
+      min-width: 0;
+    }
+    .handRail {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 8px;
+      /* stretch so the track fills the full rail height */
+      align-items: stretch;
+      min-height: 0;
+      /* allow promoted cards to escape the rail boundary */
+      overflow: visible;
+    }
+    .handArrow {
+      width: 34px;
+      min-width: 34px;
+      min-height: 34px;
+      padding: 0;
+      border-radius: 10px;
+      background: rgba(242, 208, 143, 0.2);
+      color: var(--accent-2);
+      border: 1px solid rgba(242, 208, 143, 0.35);
+      box-shadow: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+    .handRail:not(.handRail-scrollable) .handArrow {
+      visibility: hidden;
+      pointer-events: none;
     }
     .card {
-      width: 100%;
+      width: max(var(--layout-hand-card-min-width, 74px), var(--layout-card-hit-min-width, 44px));
+      flex: 0 0 auto;
       min-width: var(--layout-card-hit-min-width);
       min-height: max(
         var(--layout-card-hit-min-height),
@@ -1112,6 +1173,7 @@
       isolation: isolate;
     }
     .card.selected { transform: translateY(-4px); border-color: transparent; }
+    .handCardSlot > .card.selected { transform: translateX(-50%) translateY(-4px); }
     .card.selected::after {
       content: '';
       position: absolute;
@@ -1174,15 +1236,10 @@
       white-space: nowrap;
     }
     .layout-hand-force-all-visible .handScroll {
-      overflow: visible;
       scroll-snap-type: none;
-      grid-auto-flow: row dense;
     }
     .layout-hand-compact .handScroll {
-      --hand-card-min: var(--hand-compact-card-min, 64px);
-      --hand-card-gap: calc(var(--hand-compact-card-gap, 6px) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
-      grid-template-columns: repeat(auto-fit, minmax(var(--hand-card-min), 1fr));
-      align-content: start;
+      /* compact mode still uses slot-based layout; slot width recalculated by JS */
     }
     .layout-hand-compact .card {
       min-height: max(var(--layout-card-hit-min-height), calc(var(--hand-compact-card-min-height, 128px) * var(--layout-card-scale)));
@@ -1207,7 +1264,6 @@
       .layout-hand-force-all-visible .handScroll,
       .layout-hand-compact .handScroll {
         overflow: visible;
-        grid-template-columns: repeat(auto-fit, minmax(var(--hand-card-min), 1fr));
       }
     }
     .eventLog {
@@ -1215,21 +1271,63 @@
       padding: calc(var(--layout-event-log-padding-y) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale))
                calc(var(--layout-event-log-padding-x) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
       display: grid;
-      gap: calc(var(--layout-event-log-gap) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
-      max-height: var(--layout-event-log-max-height);
+      gap: 5px;
+      grid-template-rows: auto minmax(0, 1fr) auto;
       min-height: 0;
-      overflow-y: auto;
       opacity: 0.84;
       max-height: var(--layout-log-max-row-height);
+      /* contain clips messages to the log interior */
       contain: layout paint style;
+    }
+    .chatLogBody {
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-content: start;
+      padding-right: 2px;
     }
     .logItem {
       background: rgba(255,255,255,0.05);
-      border-radius: 12px;
-      padding: calc(var(--layout-log-item-padding-y) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale))
-               calc(var(--layout-log-item-padding-x) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
-      font-size: calc(0.84rem * var(--layout-challenge-font-scale) * var(--layout-fit-font-scale));
+      border-radius: 6px;
+      padding: 3px 6px;
+      font-size: calc(0.76rem * var(--layout-challenge-font-scale) * var(--layout-fit-font-scale));
+      line-height: 1.25;
       color: var(--text);
+    }
+    .logItem.chat-user {
+      background: rgba(87, 149, 219, 0.24);
+      border: 1px solid rgba(98, 176, 255, 0.35);
+    }
+    .chatMeta {
+      font-size: 0.60rem;
+      color: var(--muted);
+      margin-bottom: 1px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .chatComposer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: center;
+    }
+    .chatComposerInput {
+      width: 100%;
+      min-width: 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(30, 22, 19, 0.92);
+      color: var(--text);
+      padding: 5px 8px;
+      font-size: 0.76rem;
+    }
+    .chatSendBtn {
+      min-height: 28px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.74rem;
     }
     .challengeBar {
       display: flex;

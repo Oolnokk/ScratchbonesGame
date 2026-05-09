@@ -1,6 +1,10 @@
 export function applyAuthoredLayoutMode({ app, authoredConfig, authoredBoxKeyByProjId, authoredParentBox, applyAuthoredBoxStyles }) {
   if (!app || !authoredConfig) return;
   const authoredRoot = document.getElementById('authoredRoot');
+  // Use the layout-viewport dimensions (clientWidth/Height of the fixed root, which equals
+  // window.innerWidth/innerHeight) for scale. visualViewport.width shrinks with pinch-zoom and
+  // must NOT be used here — doing so would make the scale change with zoom, misaligning elements.
+  // Pan compensation (vv.offsetLeft/Top) is applied separately via syncToVisualViewport().
   const liveWidth = authoredRoot?.clientWidth || window.innerWidth || authoredConfig.designWidthPx;
   const liveHeight = authoredRoot?.clientHeight || window.innerHeight || authoredConfig.designHeightPx;
   const scale = Math.min(liveWidth / authoredConfig.designWidthPx, liveHeight / authoredConfig.designHeightPx);
