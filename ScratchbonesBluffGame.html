@@ -1065,8 +1065,9 @@
       width: 100%;
       max-width: 100%;
       min-width: 0;
-      overflow: hidden;
-      contain: layout paint style;
+      /* overflow visible so promoted card PNGs can exceed the slot track boundary */
+      overflow: visible;
+      contain: style;
     }
     .handHeader {
       display: flex;
@@ -1074,44 +1075,44 @@
       justify-content: space-between;
       gap: 12px;
     }
+    /* Slot track: flex row of fixed-width slot boxes. overflow:visible so card images
+       that extend beyond their slot are not clipped. */
     .handScroll {
-      --hand-card-min: clamp(
-        var(--layout-hand-card-min-width),
-        14vw,
-        var(--layout-hand-card-max-width)
-      );
-      --hand-card-gap: calc(clamp(var(--layout-hand-card-gap-min), 1.6vw, var(--layout-hand-card-gap-max)) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
-      --hand-overlap-px: 0px;
       display: flex;
       align-items: stretch;
-      gap: var(--hand-card-gap);
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-behavior: smooth;
-      touch-action: pan-x;
-      padding: 2px 0 6px;
+      overflow: visible;
+      position: relative;
       min-height: 0;
-      scrollbar-width: thin;
-      cursor: grab;
+      height: 100%;
     }
-    .handScroll.dragging {
-      cursor: grabbing;
-      user-select: none;
+    /* Each card slot is a thin placeholder box. The card image is promoted above it
+       (position: absolute, centered on the slot center) so it overlaps adjacent slots
+       without being clipped. */
+    .handCardSlot {
+      flex: 0 0 var(--hand-slot-width, 80px);
+      position: relative;
+      align-self: stretch;
     }
-    .handScroll:focus-visible {
-      outline: 2px solid rgba(242, 208, 143, 0.75);
-      outline-offset: 2px;
-      border-radius: 8px;
-    }
-    .handScroll .card + .card {
-      margin-left: calc(-1 * var(--hand-overlap-px));
+    .handCardSlot > .card {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: var(--hand-card-width-px, 86px);
+      height: auto;
+      flex: none;
+      min-width: 0;
     }
     .handRail {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
       gap: 8px;
-      align-items: center;
+      /* stretch so the track fills the full rail height */
+      align-items: stretch;
       min-height: 0;
+      /* allow promoted cards to escape the rail boundary */
+      overflow: visible;
     }
     .handArrow {
       width: 34px;
@@ -1134,7 +1135,7 @@
       pointer-events: none;
     }
     .card {
-      width: max(var(--hand-card-min), var(--layout-card-hit-min-width));
+      width: max(var(--layout-hand-card-min-width, 74px), var(--layout-card-hit-min-width, 44px));
       flex: 0 0 auto;
       min-width: var(--layout-card-hit-min-width);
       min-height: max(
@@ -1157,6 +1158,7 @@
       isolation: isolate;
     }
     .card.selected { transform: translateY(-4px); border-color: transparent; }
+    .handCardSlot > .card.selected { transform: translateX(-50%) translateY(-4px); }
     .card.selected::after {
       content: '';
       position: absolute;
@@ -1222,8 +1224,7 @@
       scroll-snap-type: none;
     }
     .layout-hand-compact .handScroll {
-      --hand-card-min: var(--hand-compact-card-min, 64px);
-      --hand-card-gap: calc(var(--hand-compact-card-gap, 6px) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
+      /* compact mode still uses slot-based layout; slot width recalculated by JS */
     }
     .layout-hand-compact .card {
       min-height: max(var(--layout-card-hit-min-height), calc(var(--hand-compact-card-min-height, 128px) * var(--layout-card-scale)));
@@ -1247,7 +1248,7 @@
     @media (max-width: 430px) {
       .layout-hand-force-all-visible .handScroll,
       .layout-hand-compact .handScroll {
-        overflow-x: auto;
+        overflow: visible;
       }
     }
     .eventLog {
@@ -1255,27 +1256,29 @@
       padding: calc(var(--layout-event-log-padding-y) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale))
                calc(var(--layout-event-log-padding-x) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
       display: grid;
-      gap: 8px;
+      gap: 5px;
       grid-template-rows: auto minmax(0, 1fr) auto;
       min-height: 0;
       opacity: 0.84;
       max-height: var(--layout-log-max-row-height);
+      /* contain clips messages to the log interior */
       contain: layout paint style;
     }
     .chatLogBody {
       min-height: 0;
       overflow-y: auto;
-      display: grid;
-      gap: calc(var(--layout-event-log-gap) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
       align-content: start;
       padding-right: 2px;
     }
     .logItem {
       background: rgba(255,255,255,0.05);
-      border-radius: 12px;
-      padding: calc(var(--layout-log-item-padding-y) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale))
-               calc(var(--layout-log-item-padding-x) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
-      font-size: calc(0.84rem * var(--layout-challenge-font-scale) * var(--layout-fit-font-scale));
+      border-radius: 6px;
+      padding: 3px 6px;
+      font-size: calc(0.76rem * var(--layout-challenge-font-scale) * var(--layout-fit-font-scale));
+      line-height: 1.25;
       color: var(--text);
     }
     .logItem.chat-user {
@@ -1283,33 +1286,33 @@
       border: 1px solid rgba(98, 176, 255, 0.35);
     }
     .chatMeta {
-      font-size: 0.66rem;
+      font-size: 0.60rem;
       color: var(--muted);
-      margin-bottom: 3px;
+      margin-bottom: 1px;
       text-transform: uppercase;
       letter-spacing: 0.06em;
     }
     .chatComposer {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
     }
     .chatComposerInput {
       width: 100%;
       min-width: 0;
-      border-radius: 10px;
+      border-radius: 8px;
       border: 1px solid rgba(255,255,255,0.14);
       background: rgba(30, 22, 19, 0.92);
       color: var(--text);
-      padding: 9px 10px;
-      font-size: 0.82rem;
+      padding: 5px 8px;
+      font-size: 0.76rem;
     }
     .chatSendBtn {
-      min-height: 35px;
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-size: 0.78rem;
+      min-height: 28px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.74rem;
     }
     .challengeBar {
       display: flex;

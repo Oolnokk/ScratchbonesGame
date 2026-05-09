@@ -453,14 +453,11 @@ import { createTutorial } from './tutorial.js';
     const DEBUG_TRACE = DEBUG_OPTIONS.trace || {};
     const DEBUG_EVENT_LOG_LIMIT = Math.max(50, Number(DEBUG_OPTIONS.eventLogLimit) || 300);
     const MAX_RENDERED_CHAT_LOG_ENTRIES = 80;
-    const MAX_HAND_CARD_OVERLAP_RATIO = 0.30;
-    const HAND_OVERLAP_LERP_FACTOR = 0.38;
-    const HAND_SCROLL_MIN_DELTA_PX = 80;
-    const HAND_SCROLL_VIEWPORT_RATIO = 0.72;
-    const HAND_SCROLL_THRESHOLD_PX = 2;
-    const HAND_SCROLL_EDGE_THRESHOLD_PX = 1;
-    const HAND_DRAG_THRESHOLD_PX = 6;
-    const HAND_DRAG_CLICK_SUPPRESS_MS = 200;
+    // Hand panel slot-based layout constants
+    const HAND_MAX_VISIBLE_SLOTS = 10;     // max cards visible at once (defines max overlap at full count)
+    const HAND_MIN_SLOT_WIDTH_PX = 36;     // minimum slot box width (px in design space)
+    // View offset persisted across renders so paging state is maintained.
+    let handViewOffset = 0;
     window.__scratchbonesDebugEvents = window.__scratchbonesDebugEvents || [];
     function traceEvent(level, channel, payload = {}) {
       if (DEBUG_OPTIONS.enabled === false) return;
@@ -1376,6 +1373,7 @@ import { createTutorial } from './tutorial.js';
     async function startGame() {
       await preloadScratchboneCardArt();
       clearChallengeTimer();
+      handViewOffset = 0;
       state.humanSeat = 0;
       state.seed = Math.floor(Math.random() * 1e9);
       state.poolVisualSeed = Math.floor(Math.random() * 1e9);
@@ -4797,17 +4795,19 @@ import { createTutorial } from './tutorial.js';
           </div>
           <div class="handRail" data-hand-rail>
             <button class="handArrow handArrowLeft" type="button" aria-label="Scroll hand left" data-hand-scroll-dir="-1">◀</button>
-            <div class="handScroll" data-hand-scroll tabindex="0" aria-label="Your hand card rail">
-              ${player.hand.map(card => {
+            <div class="handScroll" data-hand-scroll aria-label="Your hand card rail">
+              ${player.hand.map((card, cardIdx) => {
                 const art = resolveScratchbone2DAsset(card);
                 const handCardLabel = card.wild ? 'Wild' : `Rank ${card.rank}`;
                 const cardGlyph = card.wild ? 'W' : String(card.rank);
                 const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id);
                 return `
-                <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}"${card.trickType ? ` data-trick-glow="${card.trickType}"` : ''} title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}"${hiddenDealCard ? ' style=\"visibility:hidden;\"' : ' style=\"background:transparent;border:0;box-shadow:none;outline:none;padding:0;width:fit-content;min-width:0;\"'}>
-                  <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`}">
-                  <span class="cardLabel" aria-hidden="true" style="left:var(--layout-hand-card-label-inset-left,2px);bottom:var(--layout-hand-card-label-inset-bottom,2px);right:auto;top:auto;"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${handCardLabel}</span></span>
-                </button>
+                <div class="handCardSlot" data-slot-idx="${cardIdx}" style="z-index:${cardIdx + 1};">
+                  <button class="card ${card.wild ? 'wild' : ''} ${state.selectedCardIds.has(card.id) ? 'selected' : ''}" data-card-id="${card.id}"${card.trickType ? ` data-trick-glow="${card.trickType}"` : ''} title="${card.wild ? 'Wild card' : `Scratchbone ${card.rank}`}"${hiddenDealCard ? ' style=\"visibility:hidden;\"' : ''}>
+                    <img class="cardArt" src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`}">
+                    <span class="cardLabel" aria-hidden="true" style="left:var(--layout-hand-card-label-inset-left,2px);bottom:var(--layout-hand-card-label-inset-bottom,2px);right:auto;top:auto;"><span class="cardGlyph">${cardGlyph}</span><span class="cardText">${handCardLabel}</span></span>
+                  </button>
+                </div>
               `;
               }).join('')}
             </div>
@@ -5389,86 +5389,54 @@ import { createTutorial } from './tutorial.js';
     }
     function updateHandRailLayout(app) {
       const rail = app?.querySelector?.('[data-hand-rail]');
-      const scroller = rail?.querySelector?.('[data-hand-scroll]');
-      if (!rail || !scroller) return;
-      const cards = Array.from(scroller.querySelectorAll('.card'));
-      if (!cards.length) {
+      const track = rail?.querySelector?.('[data-hand-scroll]');
+      if (!rail || !track) return;
+      const slots = Array.from(track.querySelectorAll('.handCardSlot'));
+      const totalCards = slots.length;
+      if (!totalCards) {
         rail.classList.remove('handRail-scrollable');
-        scroller.style.setProperty('--hand-overlap-px', '0px');
+        track.style.removeProperty('--hand-slot-width');
         return;
       }
-      const firstCard = cards[0];
-      const cardWidth = Math.max(1, firstCard.getBoundingClientRect().width || firstCard.offsetWidth);
-      const computed = window.getComputedStyle(scroller);
-      const baseGap = Number.parseFloat(computed.gap || computed.columnGap || '0') || 0;
-      const cardCount = cards.length;
-      const availableWidth = Math.max(1, scroller.clientWidth);
-      const naturalWidth = (cardCount * cardWidth) + (Math.max(0, cardCount - 1) * baseGap);
-      const maxOverlapPx = cardWidth * MAX_HAND_CARD_OVERLAP_RATIO;
-      // Divide by inter-card gap instances (count - 1) to compute per-gap overlap needed to fit.
-      const requiredOverlapPx = cardCount > 1 ? Math.max(0, (naturalWidth - availableWidth) / (cardCount - 1)) : 0;
-      const targetOverlapPx = clampNumber(requiredOverlapPx, 0, maxOverlapPx);
-      const currentOverlapPx = Number.parseFloat(scroller.style.getPropertyValue('--hand-overlap-px')) || 0;
-      const lerpedOverlapPx = currentOverlapPx + ((targetOverlapPx - currentOverlapPx) * HAND_OVERLAP_LERP_FACTOR);
-      scroller.style.setProperty('--hand-overlap-px', `${lerpedOverlapPx.toFixed(2)}px`);
-      const canScroll = (scroller.scrollWidth - scroller.clientWidth) > HAND_SCROLL_THRESHOLD_PX;
-      rail.classList.toggle('handRail-scrollable', canScroll);
-      if (scroller.__handArrowSync) scroller.removeEventListener('scroll', scroller.__handArrowSync);
-      scroller.__handArrowSync = () => {
-        const leftButton = rail.querySelector('[data-hand-scroll-dir="-1"]');
-        const rightButton = rail.querySelector('[data-hand-scroll-dir="1"]');
-        if (!leftButton || !rightButton) return;
-        const scrollable = (scroller.scrollWidth - scroller.clientWidth) > HAND_SCROLL_THRESHOLD_PX;
-        leftButton.disabled = !scrollable || scroller.scrollLeft <= HAND_SCROLL_EDGE_THRESHOLD_PX;
-        rightButton.disabled = !scrollable || (scroller.scrollLeft + scroller.clientWidth) >= (scroller.scrollWidth - HAND_SCROLL_EDGE_THRESHOLD_PX);
-      };
-      scroller.addEventListener('scroll', scroller.__handArrowSync, { passive: true });
-      scroller.__handArrowSync();
+      // Clamp view offset to a valid range given current hand size.
+      handViewOffset = clampNumber(handViewOffset, 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
+      const visibleCount = Math.min(totalCards, HAND_MAX_VISIBLE_SLOTS);
+      // Determine card width from the configured CSS variable (set per layout policy).
+      const cardWidthPx = Math.max(
+        40,
+        Number.parseFloat(getComputedStyle(track).getPropertyValue('--layout-hand-card-max-width')) || 86
+      );
+      track.style.setProperty('--hand-card-width-px', `${cardWidthPx}px`);
+      // Slot width is evenly divided across visible slots, minimum enforced.
+      const availableWidth = Math.max(1, track.clientWidth || track.offsetWidth);
+      const slotWidth = Math.max(HAND_MIN_SLOT_WIDTH_PX, Math.floor(availableWidth / visibleCount));
+      track.style.setProperty('--hand-slot-width', `${slotWidth}px`);
+      // Show only the slots inside the current view window; hide the rest.
+      slots.forEach((slot, idx) => {
+        const inView = idx >= handViewOffset && idx < handViewOffset + HAND_MAX_VISIBLE_SLOTS;
+        slot.style.display = inView ? '' : 'none';
+      });
+      const canPage = totalCards > HAND_MAX_VISIBLE_SLOTS;
+      rail.classList.toggle('handRail-scrollable', canPage);
+      // Sync arrow enabled states.
+      const leftBtn = rail.querySelector('[data-hand-scroll-dir="-1"]');
+      const rightBtn = rail.querySelector('[data-hand-scroll-dir="1"]');
+      if (leftBtn) leftBtn.disabled = handViewOffset <= 0;
+      if (rightBtn) rightBtn.disabled = handViewOffset + HAND_MAX_VISIBLE_SLOTS >= totalCards;
     }
     function bindHandRailInteractions(app) {
       const rail = app?.querySelector?.('[data-hand-rail]');
-      const scroller = rail?.querySelector?.('[data-hand-scroll]');
-      if (!rail || !scroller) return;
-      let dragState = null;
-      let suppressClickUntil = 0;
+      if (!rail) return;
       rail.querySelectorAll('[data-hand-scroll-dir]').forEach((button) => {
         button.addEventListener('click', () => {
           const dir = Number(button.getAttribute('data-hand-scroll-dir')) || 0;
           if (!dir) return;
-          const delta = Math.max(HAND_SCROLL_MIN_DELTA_PX, scroller.clientWidth * HAND_SCROLL_VIEWPORT_RATIO);
-          scroller.scrollBy({ left: dir * delta, behavior: 'smooth' });
+          const track = rail.querySelector('[data-hand-scroll]');
+          const totalCards = track ? track.querySelectorAll('.handCardSlot').length : 0;
+          handViewOffset = clampNumber(handViewOffset + dir, 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
+          updateHandRailLayout(app);
         });
       });
-      scroller.addEventListener('pointerdown', (event) => {
-        dragState = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, startScrollLeft: scroller.scrollLeft, moved: false };
-        scroller.classList.remove('dragging');
-        scroller.setPointerCapture(event.pointerId);
-      });
-      scroller.addEventListener('pointermove', (event) => {
-        if (!dragState || event.pointerId !== dragState.pointerId) return;
-        const dx = event.clientX - dragState.startX;
-        const dy = event.clientY - dragState.startY;
-        if (!dragState.moved && (Math.abs(dx) > HAND_DRAG_THRESHOLD_PX || Math.abs(dy) > HAND_DRAG_THRESHOLD_PX)) dragState.moved = true;
-        if (!dragState.moved || Math.abs(dx) < Math.abs(dy)) return;
-        scroller.classList.add('dragging');
-        scroller.scrollLeft = dragState.startScrollLeft - dx;
-      });
-      const endDrag = (event) => {
-        if (!dragState || event.pointerId !== dragState.pointerId) return;
-        if (dragState.moved) suppressClickUntil = Date.now() + HAND_DRAG_CLICK_SUPPRESS_MS;
-        scroller.classList.remove('dragging');
-        dragState = null;
-      };
-      scroller.addEventListener('pointerup', endDrag);
-      scroller.addEventListener('pointercancel', endDrag);
-      scroller.addEventListener('click', (event) => {
-        if (Date.now() <= suppressClickUntil) {
-          event.preventDefault();
-          event.stopPropagation();
-          return;
-        }
-        suppressClickUntil = 0;
-      }, true);
     }
     // Returns the horizontal scale component from CSS transform matrix/matrix3d values.
     function parseScaleXFromTransform(transformValue) {

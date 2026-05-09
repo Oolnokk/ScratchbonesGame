@@ -899,11 +899,11 @@ window.SCRATCHBONES_CONFIG = {
           "topbar":         { "x": -2,   "y": 11,  "width": 1123, "height": 106 },
         "sidebar":        { "x": 1354, "y": 14,  "width": 251,  "height": 681 },
           "humanSeat":      { "x": 1260, "y": 701, "width": 373,  "height": 187 },
-          "hand":           { "x": 469,  "y": 711, "width": 508,  "height": 199 },
-          "log":            { "x": 7,   "y": 718, "width": 477, "height": 182  },
+          "hand":           { "x": 469,  "y": 701, "width": 508,  "height": 199 },
+          "log":            { "x": 7,   "y": 680, "width": 477, "height": 220  },
           "turnSpotlight":  { "x": 1122, "y": 12,  "width": 230,  "height": 200 },
           "claimCluster":   { "x": 187,  "y": 290, "width": 1037, "height": 275 },
-          "challengePrompt":{ "x": 960,  "y": 699, "width": 280,  "height": 140 }
+          "challengePrompt":{ "x": 960,  "y": 760, "width": 280,  "height": 140 }
         },
         "subOffsets": {
           "betting-left-contribution-anchor": { "dx": 260, "dy": 150 },
