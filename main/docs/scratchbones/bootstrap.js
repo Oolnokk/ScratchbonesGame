@@ -89,7 +89,7 @@ import { createTutorial } from './tutorial.js';
         className: 'emojiFx-shock',
         durationMs: 1500,
         fanAngles: [-60, -30, 0, 30, 60],
-        fanRadius: 80,
+        fanRadius: 140,
         fanSrcs: [
           './docs/assets/symbols/emoji_curious.png',
           './docs/assets/symbols/emoji_alarmed.png',
@@ -5654,53 +5654,54 @@ import { createTutorial } from './tutorial.js';
       window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
+    // Returns (creating if needed) a position:fixed overlay on document.body for
+    // chat FX. Appending here survives render() which only replaces #app.innerHTML.
+    function getGlobalFxOverlay() {
+      let overlay = document.getElementById('scratchbones-chat-fx-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'scratchbones-chat-fx-overlay';
+        overlay.setAttribute('aria-hidden', 'true');
+        overlay.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:9995;';
+        document.body.appendChild(overlay);
+      }
+      return overlay;
+    }
     // Spawns a chat-text speech bubble at the given seat's avatar, triggering the
     // alarmed body deformation so the avatar visually "speaks" the message.
     function spawnChatTextFx(text, seatId) {
       const app = document.getElementById('app');
       if (!app || !text) return;
       const seatIdStr = String(seatId);
-      // Trigger alarmed body deformation on this seat's portrait
       window.portraitBreathingComposer?.triggerEmote('alarmed', seatIdStr);
-      // Locate the visible avatar element for this seat
       let anchorEl = null;
-      let driftDir = 1;
       const clusterAnchor = claimClusterAvatarAnchorForPlayer(seatId, app);
       if (clusterAnchor && clusterAnchor.offsetParent !== null) {
         anchorEl = clusterAnchor.querySelector('canvas.seatPortrait') || clusterAnchor;
-        driftDir = clusterAnchor.classList.contains('actorAvatarFloat') ? 1 : -1;
       } else {
         const humanSeatCard = app.querySelector('.humanSeatCard');
         const humanCanvas = humanSeatCard?.querySelector(`canvas.seatPortrait[data-seat-id="${seatIdStr}"]`);
         if (humanCanvas) {
           anchorEl = humanSeatCard.querySelector('.seatAvatarBox') || humanCanvas;
-          driftDir = -1;
         } else {
           const aiCanvas = app.querySelector(`.seatAvatarBox canvas.seatPortrait[data-seat-id="${seatIdStr}"]`);
           if (aiCanvas) {
             anchorEl = aiCanvas.closest('.seatAvatarBox') || aiCanvas;
-            driftDir = 1;
           }
         }
       }
       if (!anchorEl) return;
-      const layer = ensureEmojiReactionLayer(app);
-      if (!layer) return;
-      const layerRect = layer.getBoundingClientRect();
+      // Use a body-level fixed overlay so render()'s app.innerHTML replacement can't wipe it.
+      const overlay = getGlobalFxOverlay();
       const anchorRect = anchorEl.getBoundingClientRect();
-      const appBCR = app.getBoundingClientRect();
-      const appScaleX = app.offsetWidth > 0 ? appBCR.width / app.offsetWidth : 1;
-      const appScaleY = app.offsetHeight > 0 ? appBCR.height / app.offsetHeight : 1;
-      // Spawn bubble above the avatar centre
-      const originX = (anchorRect.left + anchorRect.width / 2) - layerRect.left;
-      const originY = (anchorRect.top + anchorRect.height * 0.25) - layerRect.top;
       const fx = document.createElement('div');
       fx.className = 'chatTextFx';
-      fx.style.left = `${originX / appScaleX}px`;
-      fx.style.top = `${originY / appScaleY}px`;
+      // Position in viewport space directly — no scale correction needed for position:fixed.
+      fx.style.left = `${anchorRect.left + anchorRect.width / 2}px`;
+      fx.style.top = `${anchorRect.top + anchorRect.height * 0.25}px`;
       const label = String(text).trim();
       fx.textContent = label.length > 36 ? label.slice(0, 36) + '…' : label;
-      layer.appendChild(fx);
+      overlay.appendChild(fx);
       setTimeout(() => fx.remove(), 2000);
     }
     const clusterCinematicStageRuntime = {
@@ -6777,6 +6778,7 @@ import { createTutorial } from './tutorial.js';
         updateTableCardAutoScale(app);
         syncStationaryCardScreenSpace(app);
         syncClaimClusterCardSizeFromHand(app);
+        if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
       }, fitDebounceMs);
     }
     window.addEventListener('resize', scheduleResponsiveFitPass, { passive: true });
@@ -6801,7 +6803,15 @@ import { createTutorial } from './tutorial.js';
       const ox = vv.offsetLeft || 0;
       const oy = vv.offsetTop || 0;
       root.style.transform = (ox || oy) ? `translate(${ox}px, ${oy}px)` : '';
+      // Re-sync promoted layer positions whenever the visual viewport shifts.
+      scheduleResponsiveFitPass();
     }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        syncToVisualViewport();
+        scheduleResponsiveFitPass();
+      }
+    }, { passive: true });
     if (window.visualViewport) {
       window.visualViewport.addEventListener('scroll', () => {
         syncToVisualViewport();
