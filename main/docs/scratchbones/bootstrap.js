@@ -1036,7 +1036,8 @@ import { createTutorial } from './tutorial.js';
           void resolveBetAction(seat, { type: 'raise-tier', tierId: msg.tierId }).catch(e => console.error('[net-action] bet-raise-tier', e));
           break;
         case 'chat': {
-          const text = String(msg.text || '').trim();
+          // Enforce a server-side length cap matching the client input maxlength.
+          const text = String(msg.text || '').trim().slice(0, 180);
           if (!text) break;
           addChatLog(text, seat);
           render();
@@ -1166,7 +1167,7 @@ import { createTutorial } from './tutorial.js';
     function addLog(text, meta = {}) {
       const kind = normalizeLogKind(meta.kind);
       const entry = {
-        text: String(text || '').trim(),
+        text: String(text).trim(),
         ts: Number(meta.ts) || Date.now(),
         kind,
         author: kind === 'chat' ? String(meta.author || '').trim() || 'You' : '',
@@ -4907,7 +4908,7 @@ import { createTutorial } from './tutorial.js';
         document.getElementById('chatComposer')?.addEventListener('submit', (event) => {
           event.preventDefault();
           const input = document.getElementById('chatInput');
-          const text = String(input?.value || '').trim();
+          const text = String(input?.value || '').trim().slice(0, 180);
           if (!text) return;
           if (_isClient) {
             _net.sendAction({ type: 'chat', text });
