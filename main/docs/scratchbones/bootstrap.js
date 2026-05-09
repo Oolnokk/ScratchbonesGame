@@ -5171,7 +5171,7 @@ import { createTutorial } from './tutorial.js';
         if (!p.profile) continue;
         const canvases = root.querySelectorAll(`canvas[data-seat-id="${p.id}"]`);
         for (const canvas of canvases) {
-          if (window.renderProfile) renderProfile(canvas, p.profile);
+          if (window.renderProfile) renderProfile(canvas, p.profile, { seatId: String(p.id) });
         }
       }
     }
@@ -5411,7 +5411,7 @@ import { createTutorial } from './tutorial.js';
       fx.innerHTML = '<span class="emojiFxGlyph"></span>';
       layer.appendChild(fx);
       setTimeout(() => fx.remove(), reaction.durationMs);
-      window.portraitBreathingComposer?.triggerEmote(reactionId);
+      window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
     const clusterCinematicStageRuntime = {

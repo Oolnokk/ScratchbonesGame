@@ -42,7 +42,7 @@ const EMOTE_ANIMATIONS = {
   // Humorous vertical squash-stretch-settle
   disgust: {
     gridCols: 4, gridRows: 6,
-    poseDurations: [0.05, 0.15, 0.10, 0.12, 0.30],
+    poseDurations: [0.20, 0.60, 0.40, 0.48, 1.20],
     poses: [
       { label: 'neutral', points: _N4x6 },
       { label: 'squash', points: [
@@ -76,7 +76,7 @@ const EMOTE_ANIMATIONS = {
   // Cartoony blow-kiss sway: lean right → hold → sway back → small left → neutral
   love: {
     gridCols: 4, gridRows: 6,
-    poseDurations: [0.06, 0.22, 0.15, 0.12, 0.30],
+    poseDurations: [0.24, 0.88, 0.60, 0.48, 1.20],
     poses: [
       { label: 'neutral', points: _N4x6 },
       { label: 'lean-right', points: [
@@ -110,7 +110,7 @@ const EMOTE_ANIMATIONS = {
   // Text-burst-style outward expansion → contract overshoot → small burst → neutral
   alarmed: {
     gridCols: 4, gridRows: 6,
-    poseDurations: [0.03, 0.12, 0.08, 0.10, 0.25],
+    poseDurations: [0.12, 0.48, 0.32, 0.40, 1.00],
     poses: [
       { label: 'neutral', points: _N4x6 },
       { label: 'burst', points: [
@@ -144,7 +144,7 @@ const EMOTE_ANIMATIONS = {
   // Inverted alarm: inward contraction → small burst → secondary contract → neutral
   curious: {
     gridCols: 4, gridRows: 6,
-    poseDurations: [0.03, 0.12, 0.08, 0.10, 0.25],
+    poseDurations: [0.12, 0.48, 0.32, 0.40, 1.00],
     poses: [
       { label: 'neutral', points: _N4x6 },
       { label: 'contract', points: [
@@ -231,39 +231,43 @@ class BreathingComposer {
   // ── Emoji body overlay ───────────────────────────────────
 
   /**
-   * Trigger a one-shot global body deformation for an emoji reaction.
+   * Trigger a one-shot body deformation for an emoji reaction on a specific seat.
    * emoteName: 'disgust' | 'love' | 'alarmed' | 'curious'
+   * seatId: the seat whose portrait should deform (null = all seats)
    */
-  triggerEmote(emoteName) {
+  triggerEmote(emoteName, seatId) {
     const anim = EMOTE_ANIMATIONS[emoteName];
     if (!anim || !this.enabled) return;
     const durations = Array.isArray(anim.poseDurations) ? anim.poseDurations : [];
     const totalMs = durations.reduce((s, d) => s + (Number(d) || 0.8), 0) * 1000;
-    this.setBodyOverlay(null, null, anim, { oneshot: true, global: true, durationMs: totalMs });
+    this.setBodyOverlay(null, null, anim, {
+      oneshot:      true,
+      targetSeatId: seatId != null ? String(seatId) : null,
+      durationMs:   totalMs,
+    });
   }
 
   /**
    * Low-level overlay API. animData must pass validation.
-   * opts: number (legacy durationMs) or { oneshot, global, durationMs }
+   * opts: number (legacy durationMs) or { oneshot, targetSeatId, durationMs }
+   * targetSeatId null/omitted = apply to all seats.
    */
   setBodyOverlay(speciesId, gender, animData, opts) {
     if (!_validateBreathingAnim(animData)) return;
-    let oneshot = false, global = false, durationMs = 2000;
+    let oneshot = false, targetSeatId = null, durationMs = 2000;
     if (typeof opts === 'number') {
       durationMs = Number(opts) || 2000;
     } else if (opts && typeof opts === 'object') {
-      oneshot    = !!opts.oneshot;
-      global     = !!opts.global;
-      durationMs = Number(opts.durationMs) || 2000;
+      oneshot      = !!opts.oneshot;
+      targetSeatId = opts.targetSeatId != null ? String(opts.targetSeatId) : null;
+      durationMs   = Number(opts.durationMs) || 2000;
     }
     this._overlay = {
-      speciesId:  global ? null : String(speciesId || ''),
-      gender:     global ? null : String(gender    || ''),
-      anim:       animData,
-      startMs:    Date.now(),
+      anim: animData,
+      startMs: Date.now(),
       durationMs,
       oneshot,
-      global,
+      targetSeatId, // null = all seats; string seatId = specific seat only
     };
   }
 
@@ -274,11 +278,11 @@ class BreathingComposer {
   // ── Point interpolation ──────────────────────────────────
 
   /**
-   * Returns the interpolated deformed mesh points for the given species/gender
-   * at the given time (with optional phase offset for portrait-to-portrait variation).
-   * Returns null if no animation data is available and no overlay is active.
+   * Returns interpolated deformed mesh points combining breathing + active emote overlay.
+   * seatId scopes the overlay check so only the triggering seat is affected.
+   * Returns null if no animation data is available.
    */
-  getInterpolatedPoints(speciesId, gender, nowMs, phaseOffsetMs) {
+  getInterpolatedPoints(speciesId, gender, nowMs, phaseOffsetMs, seatId) {
     if (!this.enabled) return null;
     const anim = this.getAnimData(speciesId, gender);
     const offset = Number(phaseOffsetMs) || 0;
@@ -291,8 +295,8 @@ class BreathingComposer {
       if (elapsed >= ol.durationMs) {
         this._overlay = null;
       } else {
-        const applies = ol.global ||
-          (ol.speciesId === String(speciesId || '') && ol.gender === String(gender || ''));
+        const applies = (ol.targetSeatId === null) ||
+          (ol.targetSeatId === String(seatId ?? ''));
 
         if (applies) {
           const olPts = ol.oneshot
@@ -301,18 +305,15 @@ class BreathingComposer {
 
           if (olPts) {
             const olNeutral = _getNeutralPoints(ol.anim.gridCols, ol.anim.gridRows);
-            // Base to composite onto: breathing if available, else the overlay's neutral grid
             const base = breathePts || olNeutral;
 
             if (ol.oneshot) {
-              // One-shot: add displacement directly — animation starts/ends at neutral so no fade needed
               return base.map(([bx, by], i) => {
                 const [onx, ony] = olNeutral[i];
                 const [ox, oy] = olPts[i];
                 return [bx + (ox - onx), by + (oy - ony)];
               });
             } else {
-              // Fading overlay: triangle fade envelope (in over first 20%, out over last 20%)
               const t = elapsed / ol.durationMs;
               const env = t < 0.2 ? t / 0.2 : t > 0.8 ? (1 - t) / 0.2 : 1;
               return base.map(([bx, by], i) => {
@@ -327,6 +328,34 @@ class BreathingComposer {
     }
 
     return breathePts;
+  }
+
+  /**
+   * Returns the emote overlay's deformed points for head/static layers (no breathing added).
+   * Used by portrait-utils to apply emote deformation to head, hair, eyes, and hat layers.
+   * Returns null when no overlay is active or it doesn't target this seatId.
+   */
+  getOverlayOnlyPoints(nowMs, seatId) {
+    if (!this.enabled || !this._overlay) return null;
+    const ol = this._overlay;
+    const elapsed = nowMs - ol.startMs;
+    if (elapsed >= ol.durationMs) { this._overlay = null; return null; }
+    if (ol.targetSeatId !== null && ol.targetSeatId !== String(seatId ?? '')) return null;
+
+    const olPts = ol.oneshot
+      ? _interpolatePosesOneShot(ol.anim, elapsed)
+      : _interpolatePoses(ol.anim, elapsed);
+    if (!olPts) return null;
+
+    if (ol.oneshot) return olPts;
+
+    const t = elapsed / ol.durationMs;
+    const env = t < 0.2 ? t / 0.2 : t > 0.8 ? (1 - t) / 0.2 : 1;
+    const neutral = _getNeutralPoints(ol.anim.gridCols, ol.anim.gridRows);
+    return neutral.map(([nx, ny], i) => {
+      const [ox, oy] = olPts[i];
+      return [nx + (ox - nx) * env, ny + (oy - ny) * env];
+    });
   }
 }
 
