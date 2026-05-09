@@ -5411,6 +5411,7 @@ import { createTutorial } from './tutorial.js';
       fx.innerHTML = '<span class="emojiFxGlyph"></span>';
       layer.appendChild(fx);
       setTimeout(() => fx.remove(), reaction.durationMs);
+      window.portraitBreathingComposer?.triggerEmote(reactionId);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
     const clusterCinematicStageRuntime = {
