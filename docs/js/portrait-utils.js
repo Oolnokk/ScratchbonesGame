@@ -284,6 +284,97 @@ function drawPortraitLayer(ctx, img, xform, cssFilter) {
   ctx.restore();
 }
 
+// ── Mesh-deformation warp helpers ─────────────────────────
+// Adapted from docs/tools/mesh-deformation-author/index.html.
+// Renders one triangle of a mesh-deformed image using an affine
+// transform that maps the source (neutral) triangle → destination
+// (deformed) triangle. cssFilter must be applied by the caller
+// before this function via ctx.save / ctx.filter.
+
+function _drawPortraitLayerTriangle(ctx, img, imgX, imgY, imgW, imgH, s0, s1, s2, d0, d1, d2) {
+  const [sx0, sy0] = s0, [sx1, sy1] = s1, [sx2, sy2] = s2;
+  const [dx0, dy0] = d0, [dx1, dy1] = d1, [dx2, dy2] = d2;
+  const det = sx0 * (sy1 - sy2) + sx1 * (sy2 - sy0) + sx2 * (sy0 - sy1);
+  if (Math.abs(det) < 1e-10) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(dx0, dy0); ctx.lineTo(dx1, dy1); ctx.lineTo(dx2, dy2);
+  ctx.closePath();
+  ctx.clip();
+  const m_a = (dx0 * (sy1 - sy2) + dx1 * (sy2 - sy0) + dx2 * (sy0 - sy1)) / det;
+  const m_b = (dy0 * (sy1 - sy2) + dy1 * (sy2 - sy0) + dy2 * (sy0 - sy1)) / det;
+  const m_c = (sx0 * (dx1 - dx2) + sx1 * (dx2 - dx0) + sx2 * (dx0 - dx1)) / det;
+  const m_d = (sx0 * (dy1 - dy2) + sx1 * (dy2 - dy0) + sx2 * (dy0 - dy1)) / det;
+  const m_e = (dx0 * (sx1 * sy2 - sx2 * sy1) + dx1 * (sx2 * sy0 - sx0 * sy2) + dx2 * (sx0 * sy1 - sx1 * sy0)) / det;
+  const m_f = (dy0 * (sx1 * sy2 - sx2 * sy1) + dy1 * (sx2 * sy0 - sx0 * sy2) + dy2 * (sx0 * sy1 - sx1 * sy0)) / det;
+  ctx.setTransform(m_a, m_b, m_c, m_d, m_e, m_f);
+  ctx.drawImage(img, imgX, imgY, imgW, imgH);
+  ctx.restore();
+}
+
+/**
+ * Draw a portrait layer warped by a mesh.
+ * neutralPts / deformedPts: normalized [0..1] control point arrays (same format
+ * as BreathingComposer / mesh-deformation-author JSON).
+ * The outer ctx.save() / ctx.filter setup is the caller's responsibility so that
+ * CSS filters compose correctly with existing canvas state.
+ */
+function _drawPortraitLayerWarped(ctx, img, layerX, layerY, layerW, layerH, neutralPts, deformedPts, gridCols, gridRows) {
+  const toCanvas = (pt) => [layerX + pt[0] * layerW, layerY + pt[1] * layerH];
+  for (let r = 0; r < gridRows - 1; r++) {
+    for (let c = 0; c < gridCols - 1; c++) {
+      const i00 = r * gridCols + c,      i10 = r * gridCols + c + 1;
+      const i01 = (r + 1) * gridCols + c, i11 = (r + 1) * gridCols + c + 1;
+      const s00 = toCanvas(neutralPts[i00]), s10 = toCanvas(neutralPts[i10]);
+      const s01 = toCanvas(neutralPts[i01]), s11 = toCanvas(neutralPts[i11]);
+      const d00 = toCanvas(deformedPts[i00]), d10 = toCanvas(deformedPts[i10]);
+      const d01 = toCanvas(deformedPts[i01]), d11 = toCanvas(deformedPts[i11]);
+      _drawPortraitLayerTriangle(ctx, img, layerX, layerY, layerW, layerH, s00, s10, s01, d00, d10, d01);
+      _drawPortraitLayerTriangle(ctx, img, layerX, layerY, layerW, layerH, s10, s11, s01, d10, d11, d01);
+    }
+  }
+}
+
+function _buildNeutralGrid(cols, rows) {
+  const pts = [];
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      pts.push([cols > 1 ? c / (cols - 1) : 0.5, rows > 1 ? r / (rows - 1) : 0.5]);
+  return pts;
+}
+
+/**
+ * Draw a portrait layer with optional mesh-deformation breathing warp.
+ * seatId: identifies which seat this portrait belongs to, used to scope emote overlays.
+ * Falls back to a plain drawImage when the composer has no data for this portrait.
+ */
+function drawPortraitLayerWarped(ctx, img, xform, cssFilter, breathingComposer, speciesId, gender, nowMs, phaseOffsetMs, seatId) {
+  const { ax, ay, sx, sy } = xform;
+  const h  = PORTRAIT_L * sy;
+  const w  = (img.naturalWidth / img.naturalHeight) * PORTRAIT_L * sx;
+  const cx = PORTRAIT_CW / 2 + ay * PORTRAIT_L;
+  const cy = PORTRAIT_CH / 2 - ax * PORTRAIT_L;
+  const layerX = cx - w / 2;
+  const layerY = cy - h / 2;
+
+  const deformedPts = breathingComposer?.getInterpolatedPoints(speciesId, gender, nowMs, phaseOffsetMs, seatId);
+  if (!deformedPts) {
+    ctx.save();
+    ctx.filter = cssFilter || 'none';
+    ctx.drawImage(img, layerX, layerY, w, h);
+    ctx.restore();
+    return;
+  }
+
+  const anim = breathingComposer.getAnimData(speciesId, gender);
+  const gridCols = anim.gridCols, gridRows = anim.gridRows;
+
+  ctx.save();
+  ctx.filter = cssFilter || 'none';
+  _drawPortraitLayerWarped(ctx, img, layerX, layerY, w, h, _buildNeutralGrid(gridCols, gridRows), deformedPts, gridCols, gridRows);
+  ctx.restore();
+}
+
 function applyPortraitOpacityMask(ctx, img, xform) {
   const { ax, ay, sx, sy } = xform;
   const h  = PORTRAIT_L * sy;
@@ -419,6 +510,9 @@ function getProfileSpriteXforms(profile) {
 async function renderProfile(canvas, profile, renderOptions = {}) {
   const { fighter, hair, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, pauldron, hat, torsoCosmetic, armCosmetic, bodyColors } = profile;
   const omitHeadSpriteAndCosmetics = renderOptions?.omitHeadSpriteAndCosmetics === true;
+  const breathingComposer   = renderOptions?.breathingComposer ?? window.portraitBreathingComposer ?? null;
+  const breathingPhaseOffset = Number(renderOptions?.breathingPhaseOffsetMs) || 0;
+  const seatId = renderOptions?.seatId ?? null;
   const renderHeadSprite = !omitHeadSpriteAndCosmetics;
   const renderHeadCosmetics = !omitHeadSpriteAndCosmetics;
   const resolvedFighter = resolvePortraitFighter(fighter) || fighter;
@@ -474,7 +568,8 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
   const rightSideHairLayers = [];  // right-side hairstyle, drawn between head and facial hair
   const hatUnderLayers   = [];  // hat front when configured to render under hoods
   const elevatedEyeAccessoryLayers = []; // tagged eye accessories that render above under-hood hats
-  const hoodPauldronLayers = []; // hood then pauldron
+  const hoodLayers    = [];  // hood — receives breathing warp
+  const pauldronLayers = []; // pauldron — static
   const hatOverLayers    = [];  // hat front when hoodLayering=over (default)
 
   const pushToTarget = (group, target) => {
@@ -519,8 +614,8 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
         }
       }
     }
-    pushToTarget(hood, hoodPauldronLayers);
-    pushToTarget(pauldron, hoodPauldronLayers);
+    pushToTarget(hood, hoodLayers);
+    pushToTarget(pauldron, pauldronLayers);
   } else if (renderHeadCosmetics) {
     // Legacy single-slot hair
     const legacyGroups = [hair, eyes, facialHair, hat];
@@ -553,7 +648,8 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
     ...frontHairLayers.map(({ layer }) => layer.url),
     ...hatUnderLayers.map(({ layer }) => layer.url),
     ...elevatedEyeAccessoryLayers.map(({ layer }) => layer.url),
-    ...hoodPauldronLayers.map(({ layer }) => layer.url),
+    ...hoodLayers.map(({ layer }) => layer.url),
+    ...pauldronLayers.map(({ layer }) => layer.url),
     ...hatOverLayers.map(({ layer }) => layer.url),
     ...(opacityMaskLayer?.url ? [opacityMaskLayer.url] : []),
     ...blinkOverlayUrlsByBase.values(),
@@ -600,34 +696,73 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
       sy: layer?.sy ?? 1,
     };
 
-  const drawLayers = (layerList) => {
-    for (const { layer, filter } of layerList) {
-      const img = imgMap.get(layer.url);
-      if (img) drawPortraitLayer(ctx, img, resolveXform(layer), filter);
+  const speciesId = resolvedFighter?.speciesId || fighter?.speciesId || '';
+  const gender    = resolvedFighter?.gender    || fighter?.gender    || '';
+
+  // Pre-compute emote overlay deformation for this portrait (null when no emote is active).
+  const emoteDeformedPts = breathingComposer?.getOverlayOnlyPoints(nowMs, seatId) ?? null;
+  const emoteNeutralPts  = emoteDeformedPts ? _buildNeutralGrid(4, 6) : null;
+
+  // Draws a single image with emote deformation if active, else plain.
+  const drawLayerWithEmote = (img, xform, filter) => {
+    if (emoteDeformedPts) {
+      const { ax, ay, sx, sy } = xform;
+      const h = PORTRAIT_L * sy;
+      const w = (img.naturalWidth / img.naturalHeight) * PORTRAIT_L * sx;
+      const cx = PORTRAIT_CW / 2 + ay * PORTRAIT_L;
+      const cy = PORTRAIT_CH / 2 - ax * PORTRAIT_L;
+      ctx.save();
+      ctx.filter = filter || 'none';
+      _drawPortraitLayerWarped(ctx, img, cx - w / 2, cy - h / 2, w, h, emoteNeutralPts, emoteDeformedPts, 4, 6);
+      ctx.restore();
+    } else {
+      drawPortraitLayer(ctx, img, xform, filter);
     }
   };
 
-  drawLayers(preBackLayers);
-  drawLayers(baseLeftArmLayers);
-  drawLayers(baseTorsoLayers);
-  drawLayers(baseRightArmLayers);
-  drawLayers(torsoClothingLayers);
-  drawLayers(overwearLayers);
-  drawLayers(sideLeftLayers);
-  if (headUrl) { const img = imgMap.get(headUrl); if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), filterA); }
-  drawLayers(rightSideHairLayers);
-  drawLayers(facialHairLayers);
-  drawLayers(frontHairLayers);
-  drawLayers(eyesLayers);
+  // Draws a list of layers with emote deformation applied to each (head, hair, eyes, hat, etc.).
+  const drawEmoteLayers = (layerList) => {
+    for (const { layer, filter } of layerList) {
+      const img = imgMap.get(layer.url);
+      if (img) drawLayerWithEmote(img, resolveXform(layer), filter);
+    }
+  };
+
+  // Draws body/cosmetic/hood layers with full breathing + emote deformation.
+  const drawBreathingLayers = (layerList) => {
+    for (const { layer, filter } of layerList) {
+      const img = imgMap.get(layer.url);
+      if (!img) continue;
+      if (breathingComposer) {
+        drawPortraitLayerWarped(ctx, img, resolveXform(layer), filter, breathingComposer, speciesId, gender, nowMs, breathingPhaseOffset, seatId);
+      } else {
+        drawPortraitLayer(ctx, img, resolveXform(layer), filter);
+      }
+    }
+  };
+
+  drawEmoteLayers(preBackLayers);
+  drawBreathingLayers(baseLeftArmLayers);
+  drawBreathingLayers(baseTorsoLayers);
+  drawBreathingLayers(baseRightArmLayers);
+  drawBreathingLayers(torsoClothingLayers);
+  drawBreathingLayers(overwearLayers);
+  drawEmoteLayers(sideLeftLayers);
+  if (headUrl) { const img = imgMap.get(headUrl); if (img) drawLayerWithEmote(img, getPortraitXformPreset('B'), filterA); }
+  drawEmoteLayers(rightSideHairLayers);
+  drawEmoteLayers(facialHairLayers);
+  drawEmoteLayers(frontHairLayers);
+  drawEmoteLayers(eyesLayers);
   for (const mid of urLayerSource) {
     const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
     const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
-    if (img) drawPortraitLayer(ctx, img, getPortraitXformPreset('B'), 'none');
+    if (img) drawLayerWithEmote(img, getPortraitXformPreset('B'), 'none');
   }
-  drawLayers(hatUnderLayers);
-  drawLayers(elevatedEyeAccessoryLayers);
-  drawLayers(hoodPauldronLayers);
-  drawLayers(hatOverLayers);
+  drawEmoteLayers(hatUnderLayers);
+  drawEmoteLayers(elevatedEyeAccessoryLayers);
+  drawBreathingLayers(hoodLayers);
+  drawEmoteLayers(pauldronLayers);
+  drawEmoteLayers(hatOverLayers);
   if (opacityMaskLayer?.url) {
     const maskImg = imgMap.get(opacityMaskLayer.url);
     if (maskImg) applyPortraitOpacityMask(ctx, maskImg, resolveXform(opacityMaskLayer));
@@ -1367,3 +1502,4 @@ window.getPortraitXformPreset = getPortraitXformPreset;
 window.loadPortraitCosmetics = loadPortraitCosmetics;
 window.renderPortraitProfile = renderProfile;
 window.randomPortraitProfileSeeded = randomProfileSeeded;
+window.drawPortraitLayerWarped = drawPortraitLayerWarped;

@@ -81,6 +81,20 @@ import { createTutorial } from './tutorial.js';
         className: 'emojiFx-curious',
         durationMs: 680,
       },
+      shock: {
+        id: 'shock',
+        label: 'Shock',
+        src: './docs/assets/symbols/emoji_curious.png',
+        tint: 'rgba(255, 45, 45, 0.95)',
+        className: 'emojiFx-shock',
+        durationMs: 1500,
+        fanAngles: [-60, -30, 0, 30, 60],
+        fanRadius: 80,
+        fanSrcs: [
+          './docs/assets/symbols/emoji_curious.png',
+          './docs/assets/symbols/emoji_alarmed.png',
+        ],
+      },
     };
     function applyRootCssCustomProperties(cssRootVars) {
       const rootStyle = document.documentElement.style;
@@ -5171,7 +5185,7 @@ import { createTutorial } from './tutorial.js';
         if (!p.profile) continue;
         const canvases = root.querySelectorAll(`canvas[data-seat-id="${p.id}"]`);
         for (const canvas of canvases) {
-          if (window.renderProfile) renderProfile(canvas, p.profile);
+          if (window.renderProfile) renderProfile(canvas, p.profile, { seatId: String(p.id) });
         }
       }
     }
@@ -5401,16 +5415,42 @@ import { createTutorial } from './tutorial.js';
       const appBCR = app.getBoundingClientRect();
       const appScaleX = app.offsetWidth > 0 ? appBCR.width / app.offsetWidth : 1;
       const appScaleY = app.offsetHeight > 0 ? appBCR.height / app.offsetHeight : 1;
-      const fx = document.createElement('div');
-      fx.className = `emojiFx ${reaction.className}`;
-      fx.style.left = `${startX / appScaleX}px`;
-      fx.style.top = `${startY / appScaleY}px`;
-      fx.style.setProperty('--emoji-mask-src', `url('${reaction.src}')`);
-      fx.style.setProperty('--emoji-tint', reaction.tint);
-      fx.style.setProperty('--emoji-drift-dir', String(driftDir));
-      fx.innerHTML = '<span class="emojiFxGlyph"></span>';
-      layer.appendChild(fx);
-      setTimeout(() => fx.remove(), reaction.durationMs);
+      if (reaction.fanAngles) {
+        const fanCX = (anchorRect.left + anchorRect.width / 2) - layerRect.left;
+        const fanCY = (anchorRect.top + anchorRect.height / 2) - layerRect.top;
+        const container = document.createElement('div');
+        container.className = `emojiFx ${reaction.className}`;
+        container.style.left = `${fanCX / appScaleX}px`;
+        container.style.top = `${fanCY / appScaleY}px`;
+        reaction.fanAngles.forEach((deg, i) => {
+          const src = reaction.fanSrcs[i % reaction.fanSrcs.length];
+          const particle = document.createElement('span');
+          particle.className = 'shockParticle';
+          particle.style.setProperty('--sp-angle', `${deg}deg`);
+          particle.style.setProperty('--sp-src', `url('${src}')`);
+          particle.style.setProperty('--sp-tint', reaction.tint);
+          particle.style.setProperty('--sp-r', `-${reaction.fanRadius || 80}px`);
+          particle.style.animationDelay = `${i * 0.025}s`;
+          const glyph = document.createElement('span');
+          glyph.className = 'shockGlyph';
+          particle.appendChild(glyph);
+          container.appendChild(particle);
+        });
+        layer.appendChild(container);
+        setTimeout(() => container.remove(), reaction.durationMs);
+      } else {
+        const fx = document.createElement('div');
+        fx.className = `emojiFx ${reaction.className}`;
+        fx.style.left = `${startX / appScaleX}px`;
+        fx.style.top = `${startY / appScaleY}px`;
+        fx.style.setProperty('--emoji-mask-src', `url('${reaction.src}')`);
+        fx.style.setProperty('--emoji-tint', reaction.tint);
+        fx.style.setProperty('--emoji-drift-dir', String(driftDir));
+        fx.innerHTML = '<span class="emojiFxGlyph"></span>';
+        layer.appendChild(fx);
+        setTimeout(() => fx.remove(), reaction.durationMs);
+      }
+      window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
     const clusterCinematicStageRuntime = {
