@@ -37,42 +37,40 @@ const _N4x6 = [
 // ── Emote one-shot deformation animations ────────────────────────────────
 // Each animation starts AND ends at neutral so blending in/out is seamless.
 // Poses are additive on top of the breathing cycle via triggerEmote().
+// Peak pose objects referenced twice per animation so the from→to lerp is identity,
+// producing a true hold at the peak without needing extra poses.
+const _dPeak = { label: 'squash', points: [
+  [0,0.14],[0.290,0.14],[0.710,0.14],[1,0.14],
+  [0,0.29],[0.288,0.29],[0.712,0.29],[1,0.29],
+  [0,0.44],[0.287,0.44],[0.713,0.44],[1,0.44],
+  [0,0.61],[0.288,0.61],[0.712,0.61],[1,0.61],
+  [0,0.79],[0.290,0.79],[0.710,0.79],[1,0.79],
+  [0,1],   [0.333333,1],[0.666667,1],[1,1],
+]};
+const _aPeak = { label: 'burst', points: [
+  [0,0],    [0.317,0],    [0.683,0],    [1,0],
+  [0,0.194],[0.322,0.194],[0.678,0.194],[1,0.194],
+  [0,0.392],[0.318,0.392],[0.682,0.392],[1,0.392],
+  [0,0.594],[0.318,0.594],[0.682,0.594],[1,0.594],
+  [0,0.797],[0.322,0.797],[0.678,0.797],[1,0.797],
+  [0,1],    [0.333333,1], [0.666667,1], [1,1],
+]};
+const _cPeak = { label: 'contract', points: [
+  [0,0],    [0.346,0],    [0.654,0],    [1,0],
+  [0,0.204],[0.340,0.204],[0.660,0.204],[1,0.204],
+  [0,0.406],[0.343,0.406],[0.657,0.406],[1,0.406],
+  [0,0.594],[0.343,0.594],[0.657,0.594],[1,0.594],
+  [0,0.796],[0.340,0.796],[0.660,0.796],[1,0.796],
+  [0,1],    [0.333333,1], [0.666667,1], [1,1],
+]};
+
 const EMOTE_ANIMATIONS = {
 
-  // Humorous vertical squash-stretch-settle, anchored at the feet (bottom locked).
-  // Squash: top descends, body compresses toward bottom and widens.
-  // Stretch: rows spread upward from fixed bottom, body narrows.
+  // Single bounce: quick snap to squash (bottom locked), long drawn-out hold, snap back.
   disgust: {
     gridCols: 4, gridRows: 6,
-    poseDurations: [0.20, 0.60, 0.40, 0.48, 1.20],
-    poses: [
-      { label: 'neutral', points: _N4x6 },
-      { label: 'squash', points: [
-        [0,0.14],[0.290,0.14],[0.710,0.14],[1,0.14],
-        [0,0.29],[0.288,0.29],[0.712,0.29],[1,0.29],
-        [0,0.44],[0.287,0.44],[0.713,0.44],[1,0.44],
-        [0,0.61],[0.288,0.61],[0.712,0.61],[1,0.61],
-        [0,0.79],[0.290,0.79],[0.710,0.79],[1,0.79],
-        [0,1],   [0.333333,1],[0.666667,1],[1,1],
-      ]},
-      { label: 'stretch', points: [
-        [0,0],   [0.357,0],   [0.643,0],   [1,0],
-        [0,0.12],[0.361,0.12],[0.639,0.12],[1,0.12],
-        [0,0.34],[0.363,0.34],[0.637,0.34],[1,0.34],
-        [0,0.56],[0.363,0.56],[0.637,0.56],[1,0.56],
-        [0,0.78],[0.360,0.78],[0.640,0.78],[1,0.78],
-        [0,1],   [0.333333,1],[0.666667,1],[1,1],
-      ]},
-      { label: 'squash2', points: [
-        [0,0.06],[0.310,0.06],[0.690,0.06],[1,0.06],
-        [0,0.22],[0.309,0.22],[0.691,0.22],[1,0.22],
-        [0,0.42],[0.308,0.42],[0.692,0.42],[1,0.42],
-        [0,0.61],[0.309,0.61],[0.691,0.61],[1,0.61],
-        [0,0.80],[0.310,0.80],[0.690,0.80],[1,0.80],
-        [0,1],   [0.333333,1],[0.666667,1],[1,1],
-      ]},
-      { label: 'neutral', points: _N4x6 },
-    ],
+    poseDurations: [0.10, 0.80, 0.10, 1.20],
+    poses: [{ label: 'neutral', points: _N4x6 }, _dPeak, _dPeak, { label: 'neutral', points: _N4x6 }],
   },
 
   // Cartoony blow-kiss: full-body shear lean rooted at feet, max lean at head.
@@ -110,74 +108,18 @@ const EMOTE_ANIMATIONS = {
     ],
   },
 
-  // Outward burst from the feet up: quick snap → long hold at max expand → fast contract → echo → settle.
-  // All displacements are 20% of the original radial values; bottom row locked.
+  // Single bounce: quick snap outward (bottom locked, 20% scale), long hold at max expand, snap back.
   alarmed: {
     gridCols: 4, gridRows: 6,
-    poseDurations: [0.06, 0.40, 0.12, 0.08, 0.60],
-    poses: [
-      { label: 'neutral', points: _N4x6 },
-      { label: 'burst', points: [
-        [0,0],    [0.317,0],    [0.683,0],    [1,0],
-        [0,0.194],[0.322,0.194],[0.678,0.194],[1,0.194],
-        [0,0.392],[0.318,0.392],[0.682,0.392],[1,0.392],
-        [0,0.594],[0.318,0.594],[0.682,0.594],[1,0.594],
-        [0,0.797],[0.322,0.797],[0.678,0.797],[1,0.797],
-        [0,1],    [0.333333,1], [0.666667,1], [1,1],
-      ]},
-      { label: 'contract', points: [
-        [0,0],    [0.346,0],    [0.654,0],    [1,0],
-        [0,0.204],[0.340,0.204],[0.660,0.204],[1,0.204],
-        [0,0.406],[0.343,0.406],[0.657,0.406],[1,0.406],
-        [0,0.594],[0.343,0.594],[0.657,0.594],[1,0.594],
-        [0,0.796],[0.340,0.796],[0.660,0.796],[1,0.796],
-        [0,1],    [0.333333,1], [0.666667,1], [1,1],
-      ]},
-      { label: 'burst2', points: [
-        [0,0],    [0.323,0],    [0.677,0],    [1,0],
-        [0,0.197],[0.326,0.197],[0.674,0.197],[1,0.197],
-        [0,0.395],[0.323,0.395],[0.677,0.395],[1,0.395],
-        [0,0.597],[0.323,0.597],[0.677,0.597],[1,0.597],
-        [0,0.798],[0.326,0.798],[0.674,0.798],[1,0.798],
-        [0,1],    [0.333333,1], [0.666667,1], [1,1],
-      ]},
-      { label: 'neutral', points: _N4x6 },
-    ],
+    poseDurations: [0.03, 0.70, 0.06, 0.60],
+    poses: [{ label: 'neutral', points: _N4x6 }, _aPeak, _aPeak, { label: 'neutral', points: _N4x6 }],
   },
 
-  // Inverted alarm: quick snap inward → long hold at max compress → fast bounce out → echo → settle.
-  // All displacements are 20% of the original values; bottom row locked.
+  // Single bounce: quick snap inward (bottom locked, 20% scale), long hold at max compress, snap back.
   curious: {
     gridCols: 4, gridRows: 6,
-    poseDurations: [0.06, 0.40, 0.12, 0.08, 0.60],
-    poses: [
-      { label: 'neutral', points: _N4x6 },
-      { label: 'contract', points: [
-        [0,0],    [0.346,0],    [0.654,0],    [1,0],
-        [0,0.204],[0.340,0.204],[0.660,0.204],[1,0.204],
-        [0,0.406],[0.343,0.406],[0.657,0.406],[1,0.406],
-        [0,0.594],[0.343,0.594],[0.657,0.594],[1,0.594],
-        [0,0.796],[0.340,0.796],[0.660,0.796],[1,0.796],
-        [0,1],    [0.333333,1], [0.666667,1], [1,1],
-      ]},
-      { label: 'bounce-out', points: [
-        [0,0],    [0.323,0],    [0.677,0],    [1,0],
-        [0,0.197],[0.326,0.197],[0.674,0.197],[1,0.197],
-        [0,0.395],[0.323,0.395],[0.677,0.395],[1,0.395],
-        [0,0.597],[0.323,0.597],[0.677,0.597],[1,0.597],
-        [0,0.798],[0.326,0.798],[0.674,0.798],[1,0.798],
-        [0,1],    [0.333333,1], [0.666667,1], [1,1],
-      ]},
-      { label: 'contract2', points: [
-        [0,0],    [0.340,0],    [0.660,0],    [1,0],
-        [0,0.202],[0.338,0.202],[0.662,0.202],[1,0.202],
-        [0,0.403],[0.340,0.403],[0.660,0.403],[1,0.403],
-        [0,0.597],[0.340,0.597],[0.660,0.597],[1,0.597],
-        [0,0.798],[0.338,0.798],[0.662,0.798],[1,0.798],
-        [0,1],    [0.333333,1], [0.666667,1], [1,1],
-      ]},
-      { label: 'neutral', points: _N4x6 },
-    ],
+    poseDurations: [0.03, 0.70, 0.06, 0.60],
+    poses: [{ label: 'neutral', points: _N4x6 }, _cPeak, _cPeak, { label: 'neutral', points: _N4x6 }],
   },
 };
 
@@ -241,7 +183,8 @@ class BreathingComposer {
    * seatId: the seat whose portrait should deform (null = all seats)
    */
   triggerEmote(emoteName, seatId) {
-    const anim = EMOTE_ANIMATIONS[emoteName];
+    const animKey = emoteName === 'shock' ? 'alarmed' : emoteName;
+    const anim = EMOTE_ANIMATIONS[animKey];
     if (!anim || !this.enabled) return;
     const durations = Array.isArray(anim.poseDurations) ? anim.poseDurations : [];
     const totalMs = durations.reduce((s, d) => s + (Number(d) || 0.8), 0) * 1000;
