@@ -5521,40 +5521,63 @@ import { createTutorial } from './tutorial.js';
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
     // Spawns an emoji FX burst from any seat's portrait (AI or human).
+    // Mirrors spawnEmojiReactionFx logic exactly, generalized for any seat ID.
     function spawnEmojiReactionFxForSeat(reactionId, seatId) {
       const app = document.getElementById('app');
       const reaction = EMOJI_REACTION_CONFIG[(reactionId || '').trim().toLowerCase()];
       if (!app || !reaction) return;
-      // Prefer the cinematic float if this seat is currently featured there.
-      const actorCanvas = app.querySelector('.actorAvatarFloat canvas.seatPortrait');
-      const reactorCanvas = app.querySelector('.reactorAvatarFloat canvas.seatPortrait');
-      let anchorEl = null;
-      let driftDir = 1;
-      if (actorCanvas && Number(actorCanvas.getAttribute('data-seat-id')) === Number(seatId)) {
+      const sid = String(seatId);
+      const actorFloat = app.querySelector('.actorAvatarFloat');
+      const actorCanvas = actorFloat?.querySelector('canvas.seatPortrait');
+      const reactorFloat = app.querySelector('.reactorAvatarFloat');
+      const reactorCanvas = reactorFloat?.querySelector('canvas.seatPortrait');
+      // Check if this seat is currently featured in a cinematic float.
+      const isActor   = actorCanvas?.dataset.seatId === sid && actorFloat?.offsetParent !== null;
+      const isReactor = reactorCanvas?.dataset.seatId === sid && reactorFloat?.offsetParent !== null;
+      let anchorEl, driftDir;
+      if (isActor) {
         anchorEl = actorCanvas;
-        driftDir = 1;
-      } else if (reactorCanvas && Number(reactorCanvas.getAttribute('data-seat-id')) === Number(seatId)) {
+        driftDir = 1;   // actorAvatarFloat: no flip, portrait faces right
+      } else if (isReactor) {
         anchorEl = reactorCanvas;
-        driftDir = -1;
+        driftDir = -1;  // reactorAvatarFloat: scaleX(-1), portrait faces left
       } else {
-        const seatCanvas = app.querySelector(`canvas.seatPortrait[data-seat-id="${seatId}"]`);
+        // Regular seat position — use seatAvatarBox for correct post-scale rect,
+        // same as spawnEmojiReactionFx uses humanAvatarBox instead of the raw canvas.
+        const seatCanvas = app.querySelector(`canvas.seatPortrait[data-seat-id="${sid}"]`);
         anchorEl = seatCanvas?.closest('.seatAvatarBox') || seatCanvas;
-        // AI seats sit in the sidebar on the left; emote drifts rightward toward center.
-        driftDir = isHumanSeat(Number(seatId)) ? -1 : 1;
+        // Detect flip from computed style so any CSS orientation is respected.
+        driftDir = isSeatAvatarFlipped(seatCanvas) ? -1 : 1;
       }
       const layer = ensureEmojiReactionLayer(app);
       if (!anchorEl || !layer) return;
-      const layerRect = layer.getBoundingClientRect();
+      const layerRect  = layer.getBoundingClientRect();
       const anchorRect = anchorEl.getBoundingClientRect();
-      const appBCR = app.getBoundingClientRect();
-      const appScaleX = app.offsetWidth > 0 ? appBCR.width / app.offsetWidth : 1;
+      // Use the × glyph as spawn origin when this seat is in a cinematic float,
+      // exactly matching the original behaviour for the human player.
+      const refGlyphSelector = driftDir === 1 ? '.claimTimesBoxLeft .claimMultiplyGlyph' : '.claimTimesBoxRight .claimMultiplyGlyph';
+      const refGlyphEl   = app.querySelector(refGlyphSelector);
+      const refGlyphRect = refGlyphEl ? refGlyphEl.getBoundingClientRect() : null;
+      const glyphVisible = !!(refGlyphRect && refGlyphRect.width > 0 && refGlyphRect.height > 0);
+      const originXRatio = driftDir === 1 ? 0.82 : 0.18;
+      let startX, startY;
+      if ((isActor || isReactor) && glyphVisible) {
+        // Spawn from the centre of the × glyph, same as the human cinematic case.
+        startX = (refGlyphRect.left + refGlyphRect.width / 2) - layerRect.left;
+        startY = (refGlyphRect.top  + refGlyphRect.height / 2) - layerRect.top;
+      } else {
+        // Proportional fallback: 0.52 matches the config default yPct for the claim-times boxes.
+        startX = (anchorRect.left - layerRect.left) + anchorRect.width  * originXRatio;
+        startY = (anchorRect.top  - layerRect.top)  + anchorRect.height * 0.52;
+      }
+      // Divide by app CSS scale so zoom never offsets the origin (same fix as original).
+      const appBCR   = app.getBoundingClientRect();
+      const appScaleX = app.offsetWidth  > 0 ? appBCR.width  / app.offsetWidth  : 1;
       const appScaleY = app.offsetHeight > 0 ? appBCR.height / app.offsetHeight : 1;
-      const startX = (anchorRect.left - layerRect.left) + anchorRect.width * (driftDir === 1 ? 0.82 : 0.18);
-      const startY = (anchorRect.top - layerRect.top) + anchorRect.height * 0.32;
       const fx = document.createElement('div');
       fx.className = `emojiFx ${reaction.className}`;
       fx.style.left = `${startX / appScaleX}px`;
-      fx.style.top = `${startY / appScaleY}px`;
+      fx.style.top  = `${startY / appScaleY}px`;
       fx.style.setProperty('--emoji-mask-src', `url('${reaction.src}')`);
       fx.style.setProperty('--emoji-tint', reaction.tint);
       fx.style.setProperty('--emoji-drift-dir', String(driftDir));
