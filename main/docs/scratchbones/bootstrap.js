@@ -5285,15 +5285,15 @@ import { createTutorial } from './tutorial.js';
     }
     // Continuous portrait animation loop — needed so blinks appear at the correct
     // duration (≈140 ms) even when game state is idle between renders.
-    // Runs at ~20 fps (every 50 ms) to keep CPU cost low while still being fast
-    // enough to capture a 140 ms blink window reliably.
+    // Runs at ~30 fps (every 33 ms) for smooth mesh-deformation breathing animation
+    // while still being fast enough to capture a 140 ms blink window reliably.
     let _portraitLoopActive = false;
     let _lastPortraitMs = 0;
     function startPortraitLoop() {
       if (_portraitLoopActive) return;
       _portraitLoopActive = true;
       _lastPortraitMs = 0;
-      const PORTRAIT_FRAME_MS = 50;
+      const PORTRAIT_FRAME_MS = 33;
       function tick(nowMs) {
         if (!_portraitLoopActive) return;
         requestAnimationFrame(tick);

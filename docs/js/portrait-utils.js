@@ -11,8 +11,7 @@
 // ── Constants / Config ─────────────────────────────────────
 
 // ── Xform Presets ──────────────────────────────────────────
-// A: heads and ur-head overlays
-// B: body layers and all other cosmetics
+// B: used for all portrait layers (head, ur-head overlays, body, and cosmetics)
 // C/D: placeholder presets (identity)
 const _XFORM_PRESET_DEFAULTS = {
   A: { ax: -0.2,    ay: 0,       sx: 2.55, sy: 2.55 },
@@ -526,6 +525,14 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
     if (blinkUrl) blinkOverlayUrlsByBase.set(layer.url, blinkUrl);
   }
   const ctx = canvas.getContext('2d');
+  // Scale the context when the canvas pixel dimensions differ from the logical render
+  // size (e.g. 220×220 cinematic canvases vs the 200×200 logical coordinate space).
+  // This keeps all drawing helpers working in the same PORTRAIT_CW×PORTRAIT_CH space
+  // while the portrait fills and is centered within any canvas size.
+  const _scaleX = canvas.width / PORTRAIT_CW;
+  const _scaleY = canvas.height / PORTRAIT_CH;
+  const _needsScale = (_scaleX !== 1 || _scaleY !== 1);
+  if (_needsScale) { ctx.save(); ctx.scale(_scaleX, _scaleY); }
   ctx.clearRect(0, 0, PORTRAIT_CW, PORTRAIT_CH);
 
   const filterFor = (slot) => slot ? makeCSSFilter(bodyColors[slot]) : 'none';
@@ -672,6 +679,7 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
     ctx.fillStyle = '#ff4444'; ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Load error', PORTRAIT_CW / 2, PORTRAIT_CH / 2);
+    if (_needsScale) ctx.restore();
     return;
   }
   // Capture current time after image loading so blink-state timing is accurate.
@@ -767,6 +775,7 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
     const maskImg = imgMap.get(opacityMaskLayer.url);
     if (maskImg) applyPortraitOpacityMask(ctx, maskImg, resolveXform(opacityMaskLayer));
   }
+  if (_needsScale) ctx.restore();
 }
 
 // ── Cosmetic config parsing ────────────────────────────────
