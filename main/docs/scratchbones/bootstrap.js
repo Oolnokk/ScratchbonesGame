@@ -453,7 +453,7 @@ import { createTutorial } from './tutorial.js';
     const DEBUG_TRACE = DEBUG_OPTIONS.trace || {};
     const DEBUG_EVENT_LOG_LIMIT = Math.max(50, Number(DEBUG_OPTIONS.eventLogLimit) || 300);
     const MAX_RENDERED_CHAT_LOG_ENTRIES = 80;
-    const CHAT_MESSAGE_MAX_LENGTH = 180;   // must match <input maxlength> in the chat composer
+    const CHAT_MESSAGE_MAX_LENGTH = 180;   // defines chat input maxlength and server-side trim length
     // Hand panel slot-based layout constants
     const HAND_MAX_VISIBLE_SLOTS = 10;     // max cards visible at once (defines max overlap at full count)
     const HAND_MIN_SLOT_WIDTH_PX = 36;     // minimum slot box width (px in design space)
