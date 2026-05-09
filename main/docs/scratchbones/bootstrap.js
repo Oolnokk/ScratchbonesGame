@@ -932,6 +932,8 @@ import { createTutorial } from './tutorial.js';
       if (!received) return;
       traceAction('net.state-received', { currentTurn: received.currentTurn, humanSeat: received.humanSeat, hasChallenge: !!received.challengeWindow, hasBet: !!received.betting, gameOver: received.gameOver, myHandSize: (received.players?.find(p => p.id === received.humanSeat)?.hand || []).length });
       const localSelected = state.selectedCardIds;
+      // Capture existing log timestamps so we can detect genuinely new chat entries.
+      const prevLogTs = new Set(state.logs.map(l => l.ts));
       state.players = received.players || [];
       state.currentTurn = received.currentTurn ?? 0;
       state.leaderIndex = received.leaderIndex ?? 0;
@@ -941,6 +943,16 @@ import { createTutorial } from './tutorial.js';
       state.winnerIndex = received.winnerIndex ?? null;
       state.banner = received.banner || '';
       state.logs = received.logs || [];
+      // Trigger chat animations for new messages from other players.
+      // Own messages were already animated optimistically on send; skip the echo.
+      for (const entry of state.logs) {
+        if (entry.kind !== 'chat' || prevLogTs.has(entry.ts)) continue;
+        if (entry.seatId === state.humanSeat && _pendingOwnChatText === entry.text) {
+          _pendingOwnChatText = null;
+          continue;
+        }
+        spawnChatTextFx(entry.text, entry.seatId);
+      }
       state.tablePot = received.tablePot ?? 0;
       state.ante = received.ante ?? state.ante;
       state.round = received.round ?? state.round;
@@ -1182,10 +1194,11 @@ import { createTutorial } from './tutorial.js';
       state.logs.unshift(entry);
       state.logs = state.logs.slice(0, 30);
     }
-    function addChatLog(text, seatId = state.humanSeat) {
+    function addChatLog(text, seatId = state.humanSeat, { silent = false } = {}) {
       const player = state.players[seatId];
       const author = Number(seatId) === state.humanSeat ? 'You' : seatFirstName(player || seatId);
       addLog(text, { kind: 'chat', author, seatId });
+      if (!silent) spawnChatTextFx(text, seatId);
     }
     function seatLabel(playerOrIndex) {
       const player = typeof playerOrIndex === 'number' ? state.players[playerOrIndex] : playerOrIndex;
@@ -4749,14 +4762,14 @@ import { createTutorial } from './tutorial.js';
             <div class="claimCountBoxRight ${claimClusterShellClass}" data-proj-id="claim-count-right" style="${claimClusterElementStyle(claimClusterPolicy.elements.claimCountBoxRight)};font-family:${escapeHtml(claimClusterFontFamily)};">${claimCount}</div>
             <div class="actorAvatarFloat ${claimClusterShellClass}" data-proj-id="claim-avatar-actor" style="${claimClusterElementStyle(claimClusterPolicy.elements.actorAvatarFloat)}" title="${seatLabel(focusActor || claimFocus.actorId)}">
               <div class="claimAvatarShell ${(challengeIntro && focusActor) ? 'alert-pulse' : ''}">
-                <canvas class="seatPortrait" data-seat-id="${claimFocus.actorId}" width="220" height="220"></canvas>
+                <canvas class="seatPortrait" data-seat-id="${claimFocus.actorId}" width="200" height="200"></canvas>
               </div>
               ${focusActor ? `<div class="claimAvatarNameTag">${escapeHtml(seatFirstName(focusActor))}</div>` : ''}
               <div class="claimAvatarLocalOverlay" aria-hidden="true"></div>
             </div>
             <div class="reactorAvatarFloat ${claimClusterShellClass}" data-proj-id="claim-avatar-reactor" style="${claimClusterElementStyle(claimClusterPolicy.elements.reactorAvatarFloat)}" title="${focusReactor ? seatLabel(focusReactor) : 'No reactor'}">
               <div class="claimAvatarShell">
-                ${focusReactor ? `<canvas class="seatPortrait" data-seat-id="${focusReactor.id}" width="220" height="220"></canvas>` : ''}
+                ${focusReactor ? `<canvas class="seatPortrait" data-seat-id="${focusReactor.id}" width="200" height="200"></canvas>` : ''}
               </div>
               ${focusReactor ? `<div class="claimAvatarNameTag">${escapeHtml(seatFirstName(focusReactor))}</div>` : ''}
               ${(challengeIntro && focusReactor) ? `<div class="fx-burst-shell"><div class="cin-action-burst burst-liar">${escapeHtml(challengeIntro.burstText || 'LIAR!!!')}</div></div>` : ''}
@@ -4916,6 +4929,10 @@ import { createTutorial } from './tutorial.js';
           const text = String(input?.value || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH);
           if (!text) return;
           if (_isClient) {
+            // Immediate visual feedback: play animation now; mark the text so
+            // applyNetworkState skips re-animating when the echo arrives from host.
+            _pendingOwnChatText = text;
+            spawnChatTextFx(text, state.humanSeat);
             _net.sendAction({ type: 'chat', text });
           } else {
             addChatLog(text, hs);
@@ -5289,6 +5306,9 @@ import { createTutorial } from './tutorial.js';
     // while still being fast enough to capture a 140 ms blink window reliably.
     let _portraitLoopActive = false;
     let _lastPortraitMs = 0;
+    // Text of the most recently client-sent chat message; cleared when
+    // applyNetworkState sees the echo from the host, preventing a double-animation.
+    let _pendingOwnChatText = null;
     function startPortraitLoop() {
       if (_portraitLoopActive) return;
       _portraitLoopActive = true;
@@ -5499,7 +5519,7 @@ import { createTutorial } from './tutorial.js';
       return 1;
     }
     function renderEmojiReactionPanel() {
-      const reactionOrder = ['love', 'disgust', 'alarmed', 'curious'];
+      const reactionOrder = ['love', 'disgust', 'alarmed', 'curious', 'shock'];
       const buttonHtml = reactionOrder.map((id) => {
         const reaction = EMOJI_REACTION_CONFIG[id];
         if (!reaction) return '';
@@ -5633,6 +5653,55 @@ import { createTutorial } from './tutorial.js';
       }
       window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
+    }
+    // Spawns a chat-text speech bubble at the given seat's avatar, triggering the
+    // alarmed body deformation so the avatar visually "speaks" the message.
+    function spawnChatTextFx(text, seatId) {
+      const app = document.getElementById('app');
+      if (!app || !text) return;
+      const seatIdStr = String(seatId);
+      // Trigger alarmed body deformation on this seat's portrait
+      window.portraitBreathingComposer?.triggerEmote('alarmed', seatIdStr);
+      // Locate the visible avatar element for this seat
+      let anchorEl = null;
+      let driftDir = 1;
+      const clusterAnchor = claimClusterAvatarAnchorForPlayer(seatId, app);
+      if (clusterAnchor && clusterAnchor.offsetParent !== null) {
+        anchorEl = clusterAnchor.querySelector('canvas.seatPortrait') || clusterAnchor;
+        driftDir = clusterAnchor.classList.contains('actorAvatarFloat') ? 1 : -1;
+      } else {
+        const humanSeatCard = app.querySelector('.humanSeatCard');
+        const humanCanvas = humanSeatCard?.querySelector(`canvas.seatPortrait[data-seat-id="${seatIdStr}"]`);
+        if (humanCanvas) {
+          anchorEl = humanSeatCard.querySelector('.seatAvatarBox') || humanCanvas;
+          driftDir = -1;
+        } else {
+          const aiCanvas = app.querySelector(`.seatAvatarBox canvas.seatPortrait[data-seat-id="${seatIdStr}"]`);
+          if (aiCanvas) {
+            anchorEl = aiCanvas.closest('.seatAvatarBox') || aiCanvas;
+            driftDir = 1;
+          }
+        }
+      }
+      if (!anchorEl) return;
+      const layer = ensureEmojiReactionLayer(app);
+      if (!layer) return;
+      const layerRect = layer.getBoundingClientRect();
+      const anchorRect = anchorEl.getBoundingClientRect();
+      const appBCR = app.getBoundingClientRect();
+      const appScaleX = app.offsetWidth > 0 ? appBCR.width / app.offsetWidth : 1;
+      const appScaleY = app.offsetHeight > 0 ? appBCR.height / app.offsetHeight : 1;
+      // Spawn bubble above the avatar centre
+      const originX = (anchorRect.left + anchorRect.width / 2) - layerRect.left;
+      const originY = (anchorRect.top + anchorRect.height * 0.25) - layerRect.top;
+      const fx = document.createElement('div');
+      fx.className = 'chatTextFx';
+      fx.style.left = `${originX / appScaleX}px`;
+      fx.style.top = `${originY / appScaleY}px`;
+      const label = String(text).trim();
+      fx.textContent = label.length > 36 ? label.slice(0, 36) + '…' : label;
+      layer.appendChild(fx);
+      setTimeout(() => fx.remove(), 2000);
     }
     const clusterCinematicStageRuntime = {
       phaseKey: null,

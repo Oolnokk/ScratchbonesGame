@@ -713,6 +713,46 @@
         opacity: 0;
       }
     }
+    .chatTextFx {
+      position: absolute;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      background: rgba(28, 20, 16, 0.93);
+      border: 1px solid rgba(242, 208, 143, 0.52);
+      border-radius: 10px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #f4e8d0;
+      white-space: nowrap;
+      max-width: 210px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.85);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.55), 0 0 0 1px rgba(242,208,143,0.10);
+      animation: chatTextBurstUp 2s both;
+    }
+    @keyframes chatTextBurstUp {
+      0% {
+        transform: translate(-50%, -50%) scale(0.08);
+        opacity: 0;
+        animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      14% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 1;
+        animation-timing-function: linear;
+      }
+      56% {
+        transform: translate(-50%, -60%) scale(1.05);
+        opacity: 1;
+        animation-timing-function: ease-in;
+      }
+      100% {
+        transform: translate(-50%, -200%) scale(1.05);
+        opacity: 0;
+      }
+    }
     .emojiFxStink {
       position: absolute;
       left: 50%;
@@ -1280,7 +1320,7 @@
       contain: layout paint style;
     }
     .chatLogBody {
-      min-height: 0;
+      min-height: 2.4rem;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
@@ -1312,6 +1352,8 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 6px;
       align-items: center;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 4px;
     }
     .chatComposerInput {
       width: 100%;
