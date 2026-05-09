@@ -82,6 +82,20 @@ import { createTutorial } from './tutorial.js';
         durationMs: 680,
       },
     };
+    // Maps internal emotion keys to the closest available emote.
+    // MISSING emotes (use these names if adding sprite assets):
+    //   emoji_proud.png    — smug/triumphant face   (pride, smugness after a bluff)
+    //   emoji_frustrated.png — fuming/angry face    (frustration, losing chips)
+    //   emoji_relief.png   — phew/sweat-wipe face   (surviving a challenge truthfully)
+    //   emoji_shame.png    — embarrassed/caught face (getting caught bluffing)
+    const EMOTION_EMOTE_MAP = {
+      pride:       'love',      // placeholder → emoji_proud.png
+      frustration: 'disgust',   // placeholder → emoji_frustrated.png
+      relief:      'love',      // placeholder → emoji_relief.png
+      shame:       'disgust',   // placeholder → emoji_shame.png
+      suspicion:   'curious',   // good fit
+      alarm:       'alarmed',   // good fit
+    };
     function applyRootCssCustomProperties(cssRootVars) {
       const rootStyle = document.documentElement.style;
       const entries = cssRootVars && typeof cssRootVars === 'object' ? Object.entries(cssRootVars) : [];
@@ -133,6 +147,43 @@ import { createTutorial } from './tutorial.js';
       document.head.appendChild(styleEl);
     }
     injectPunishBoneSpinStyles();
+    function injectEmotionSystemStyles() {
+      if (typeof document === 'undefined' || document.getElementById('scratchbones-emotion-system-styles')) return;
+      const styleEl = document.createElement('style');
+      styleEl.id = 'scratchbones-emotion-system-styles';
+      styleEl.textContent = `
+        .aiEmoteComebackNotice {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 10px;
+          margin: 4px 0;
+          background: rgba(255,255,255,0.07);
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.13);
+          font-size: 0.78em;
+          color: var(--text, #e8e0d0);
+          animation: emoteComebackFadeIn 0.3s ease;
+        }
+        .aiEmoteComebackNotice .emojiReactionGlyph {
+          width: 22px;
+          height: 22px;
+          flex-shrink: 0;
+        }
+        .aiEmoteComebackText {
+          opacity: 0.85;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        @keyframes emoteComebackFadeIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
+    injectEmotionSystemStyles();
     const authoredEditorState = {
       selectedId: null,
       selectedSubId: null,
@@ -854,6 +905,7 @@ import { createTutorial } from './tutorial.js';
           reads: {},
           appearance,
           playerLoadout,
+          emotion: { mood: 'neutral', intensity: 0, expiresAt: 0 },
         };
       });
     }
@@ -1460,6 +1512,19 @@ import { createTutorial } from './tutorial.js';
         startChallengeTimer();
       }
       scheduleAiChallengeWindowDecisions(playerIndex);
+      // Trigger suspicion emotes for AI observers watching a big or repeat claim.
+      const latestPlay = state.pile[state.pile.length - 1];
+      const isRepeatRank = state.pile.length >= 2 && state.pile[state.pile.length - 2]?.declaredRank === latestPlay?.declaredRank;
+      state.players.forEach(observer => {
+        if (observer.eliminated || observer.isHuman || observer.id === playerIndex) return;
+        if (!observer.personality) return;
+        const pers = observer.personality;
+        const suspicionBoost = (latestPlay?.cards.length >= 3 ? 0.12 : 0) + (isRepeatRank ? 0.1 : 0);
+        const reactLevel = (pers.suspicion - 0.48) + suspicionBoost;
+        if (reactLevel > 0.15 && rand() < 0.28 + reactLevel * 0.35) {
+          triggerPlayerEmotion(observer.id, 'suspicion', { delayMs: 180 + Math.floor(rand() * 350), depth: 1 });
+        }
+      });
     }
     function countKnownRank(rank) {
       let count = 0;
@@ -1665,6 +1730,7 @@ import { createTutorial } from './tutorial.js';
           if (state.challengeIntro) return;
           if (state.challengeWindow.lastPlay?.playerIndex !== playerIndex) return;
           if (aiShouldChallenge(idx, lastPlay)) {
+            triggerPlayerEmotion(idx, 'suspicion', { delayMs: 0, depth: 1 });
             startChallenge(idx, playerIndex);
           }
         }, delayMs);
@@ -1760,6 +1826,8 @@ import { createTutorial } from './tutorial.js';
         burstText: String(CONFIG.uiText?.challengeBurstText || 'LIAR!!!'),
       };
       setBanner(`${seatFirstName(challengerIndex)} calls liar! Challenge begins...`);
+      // The challenged player reacts with alarm; human challenger shows no auto-emote.
+      triggerPlayerEmotion(challengedIndex, 'alarm', { delayMs: 120, depth: 1 });
       render();
       const introMs = Math.max(0, Number(CONFIG.timers?.challengeIntroMs) || 2200);
       state.challengeIntroTimeout = setTimeout(() => {
@@ -2243,6 +2311,8 @@ import { createTutorial } from './tutorial.js';
         state.stats.failedChallenges += 1;
         noteChallengeReadResult(state.betting.challengerId, state.betting.challengedId, false);
       }
+      triggerPlayerEmotion(winnerId, 'pride', { delayMs: 300, depth: 0 });
+      triggerPlayerEmotion(loserId, 'frustration', { delayMs: 550, depth: 0 });
       showFoldCinematic(winnerId, loserId, () => {
         state.betting = null;
         void concludeChallengeFlow(winnerId);
@@ -2287,6 +2357,16 @@ import { createTutorial } from './tutorial.js';
           }
         }
         addLog(`${seatLabel(winner)} wins ${netGain} net chip${netGain === 1 ? '' : 's'} from the challenge.`);
+        // success = bluff caught: winner=challenger(pride), loser=challenged(shame)
+        // !success = truth defended: winner=challenged(relief), loser=challenger(frustration)
+        triggerPlayerEmotion(winnerId, success ? 'pride' : 'relief', { delayMs: 500, depth: 0 });
+        triggerPlayerEmotion(loserId, success ? 'shame' : 'frustration', { delayMs: 750, depth: 0 });
+        state.players.forEach(obs => {
+          if (obs.eliminated || obs.id === winnerId || obs.id === loserId || obs.isHuman) return;
+          if (rand() < 0.28) {
+            triggerPlayerEmotion(obs.id, success ? 'alarm' : 'suspicion', { delayMs: 900 + Math.floor(rand() * 700), depth: 1 });
+          }
+        });
         state.betting = null;
         showRevealCinematic(challengerId, challengedId, play, success, () => {
           void concludeChallengeFlow(winnerId);
@@ -2332,6 +2412,19 @@ import { createTutorial } from './tutorial.js';
         if (state.smuggleSelection) {
           state.smuggleSelection.resumePlayerIndex = lastPlayerIndex;
           return;
+        }
+        // Bluff sailed through unchallenged — claimer feels smug pride.
+        if (lastPlay && !lastPlay.truthful) {
+          triggerPlayerEmotion(lastPlayerIndex, 'pride', { delayMs: 0, depth: 0 });
+          // Some observers may feel frustration or alarm at the missed opportunity.
+          state.players.forEach(obs => {
+            if (obs.eliminated || obs.id === lastPlayerIndex || obs.isHuman) return;
+            if (!obs.personality) return;
+            if (rand() < 0.18 + obs.personality.suspicion * 0.12) {
+              const obsEmotion = rand() < 0.55 ? 'frustration' : 'alarm';
+              triggerPlayerEmotion(obs.id, obsEmotion, { delayMs: 400 + Math.floor(rand() * 500), depth: 1 });
+            }
+          });
         }
         void continueAfterNoChallenge(lastPlayerIndex);
       });
@@ -4602,6 +4695,7 @@ import { createTutorial } from './tutorial.js';
         </div>
         <div id="sidebarShell" data-proj-id="sidebar">
           ${renderEmojiReactionPanel()}
+          ${renderAiEmoteComebackNotice()}
           <div id="aiSidebar" class="fit-target fit-0">
           <div class="sectionTitle" style="padding:6px 10px 2px;color:var(--accent-2);">Table</div>
           ${state.players.filter(p => p.id !== hs).map(p => `
@@ -4829,7 +4923,11 @@ import { createTutorial } from './tutorial.js';
       document.getElementById('smuggleOffloadBtn')?.addEventListener('click', () => { void resolvePendingSmuggleSelection(); });
       app.querySelectorAll('[data-emoji-reaction]').forEach((button) => {
         button.addEventListener('click', () => {
-          spawnEmojiReactionFx(button.getAttribute('data-emoji-reaction'));
+          const rid = button.getAttribute('data-emoji-reaction');
+          spawnEmojiReactionFx(rid);
+          // Human emote clears any pending comeback notice and notifies AI observers.
+          state.aiEmoteComebackNotice = null;
+          onAnyPlayerEmoted(state.humanSeat, rid, 0);
         });
       });
       app.querySelectorAll('[data-ai-seat-id]').forEach((seat) => {
@@ -5303,6 +5401,15 @@ import { createTutorial } from './tutorial.js';
       }
       return 1;
     }
+    // Renders a brief "comeback" prompt when an AI recently emoted.
+    function renderAiEmoteComebackNotice() {
+      const notice = state.aiEmoteComebackNotice;
+      if (!notice || Date.now() > notice.expiresAt) return '';
+      const reaction = EMOJI_REACTION_CONFIG[notice.reactionId];
+      if (!reaction) return '';
+      const glyphStyle = `--emoji-mask-src:url('${escapeHtml(reaction.src)}');--emoji-tint:${escapeHtml(reaction.tint)};`;
+      return `<div class="aiEmoteComebackNotice" aria-live="polite"><span class="emojiReactionGlyph" style="${glyphStyle}"></span><span class="aiEmoteComebackText">${escapeHtml(notice.emoterName)} sent one — comeback?</span></div>`;
+    }
     function renderEmojiReactionPanel() {
       const reactionOrder = ['love', 'disgust', 'alarmed', 'curious'];
       const buttonHtml = reactionOrder.map((id) => {
@@ -5412,6 +5519,114 @@ import { createTutorial } from './tutorial.js';
       layer.appendChild(fx);
       setTimeout(() => fx.remove(), reaction.durationMs);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
+    }
+    // Spawns an emoji FX burst from any seat's portrait (AI or human).
+    function spawnEmojiReactionFxForSeat(reactionId, seatId) {
+      const app = document.getElementById('app');
+      const reaction = EMOJI_REACTION_CONFIG[(reactionId || '').trim().toLowerCase()];
+      if (!app || !reaction) return;
+      // Prefer the cinematic float if this seat is currently featured there.
+      const actorCanvas = app.querySelector('.actorAvatarFloat canvas.seatPortrait');
+      const reactorCanvas = app.querySelector('.reactorAvatarFloat canvas.seatPortrait');
+      let anchorEl = null;
+      let driftDir = 1;
+      if (actorCanvas && Number(actorCanvas.getAttribute('data-seat-id')) === Number(seatId)) {
+        anchorEl = actorCanvas;
+        driftDir = 1;
+      } else if (reactorCanvas && Number(reactorCanvas.getAttribute('data-seat-id')) === Number(seatId)) {
+        anchorEl = reactorCanvas;
+        driftDir = -1;
+      } else {
+        const seatCanvas = app.querySelector(`canvas.seatPortrait[data-seat-id="${seatId}"]`);
+        anchorEl = seatCanvas?.closest('.seatAvatarBox') || seatCanvas;
+        // AI seats sit in the sidebar on the left; emote drifts rightward toward center.
+        driftDir = isHumanSeat(Number(seatId)) ? -1 : 1;
+      }
+      const layer = ensureEmojiReactionLayer(app);
+      if (!anchorEl || !layer) return;
+      const layerRect = layer.getBoundingClientRect();
+      const anchorRect = anchorEl.getBoundingClientRect();
+      const appBCR = app.getBoundingClientRect();
+      const appScaleX = app.offsetWidth > 0 ? appBCR.width / app.offsetWidth : 1;
+      const appScaleY = app.offsetHeight > 0 ? appBCR.height / app.offsetHeight : 1;
+      const startX = (anchorRect.left - layerRect.left) + anchorRect.width * (driftDir === 1 ? 0.82 : 0.18);
+      const startY = (anchorRect.top - layerRect.top) + anchorRect.height * 0.32;
+      const fx = document.createElement('div');
+      fx.className = `emojiFx ${reaction.className}`;
+      fx.style.left = `${startX / appScaleX}px`;
+      fx.style.top = `${startY / appScaleY}px`;
+      fx.style.setProperty('--emoji-mask-src', `url('${reaction.src}')`);
+      fx.style.setProperty('--emoji-tint', reaction.tint);
+      fx.style.setProperty('--emoji-drift-dir', String(driftDir));
+      fx.innerHTML = '<span class="emojiFxGlyph"></span>';
+      layer.appendChild(fx);
+      setTimeout(() => fx.remove(), reaction.durationMs);
+      if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
+    }
+    // Sets a player's emotion state and spawns the corresponding emote visual.
+    // depth guards against cascading: game events use depth 0, observer reactions use depth 1.
+    function triggerPlayerEmotion(playerIndex, emotionKey, { delayMs = 0, intensity = 0.75, depth = 0 } = {}) {
+      const player = state.players[playerIndex];
+      if (!player || player.eliminated) return;
+      const reactionId = EMOTION_EMOTE_MAP[emotionKey];
+      if (!reactionId) return;
+      const durationMs = (EMOJI_REACTION_CONFIG[reactionId]?.durationMs ?? 1650) + 800;
+      const doTrigger = () => {
+        if (!state.players[playerIndex] || state.players[playerIndex].eliminated) return;
+        state.players[playerIndex].emotion = { mood: emotionKey, intensity, expiresAt: Date.now() + durationMs };
+        if (Number(playerIndex) === Number(state.humanSeat)) {
+          spawnEmojiReactionFx(reactionId);
+        } else {
+          spawnEmojiReactionFxForSeat(reactionId, playerIndex);
+        }
+        onAnyPlayerEmoted(playerIndex, reactionId, depth);
+      };
+      if (delayMs > 0) setTimeout(doTrigger, delayMs);
+      else doTrigger();
+    }
+    // Notifies all other players that someone emoted so they can react.
+    // depth 0 = primary trigger (game event or human click), depth 1 = secondary reaction (AI observer).
+    // Secondary reactions don't propagate further to prevent infinite cascades.
+    function onAnyPlayerEmoted(emoterSeatId, reactionId, depth = 0) {
+      const emoteConfig = EMOJI_REACTION_CONFIG[reactionId];
+      if (!emoteConfig) return;
+      const emoter = state.players[emoterSeatId];
+      // Show comeback notice to human when an AI emotes.
+      if (emoter && !emoter.isHuman) {
+        const human = state.players[state.humanSeat];
+        if (human && !human.eliminated) {
+          state.aiEmoteComebackNotice = { emoterName: emoter.name, reactionId, expiresAt: Date.now() + 4000 };
+          render();
+        }
+      }
+      // AI observer reactions — only at depth 0 so we don't cascade.
+      if (depth > 0) return;
+      state.players.forEach(observer => {
+        if (observer.eliminated || observer.isHuman || observer.id === emoterSeatId) return;
+        if (!observer.personality) return;
+        const pers = observer.personality;
+        let responseEmotion = null;
+        let reactChance = 0;
+        if (reactionId === 'love') {
+          // Love / pride — solidarity mirrors it; high suspicion reacts skeptically.
+          if (pers.solidarity > 0.55) { responseEmotion = 'pride';      reactChance = 0.18 + (pers.solidarity - 0.55) * 0.45; }
+          else if (pers.suspicion > 0.65) { responseEmotion = 'suspicion'; reactChance = 0.12 + (pers.suspicion - 0.65) * 0.25; }
+        } else if (reactionId === 'disgust') {
+          // Disgust — aggressive AIs echo it; cautious ones get alarmed.
+          if (pers.aggression > 0.6) { responseEmotion = 'frustration'; reactChance = 0.15 + (pers.aggression - 0.6) * 0.4; }
+          else                         { responseEmotion = 'alarm';       reactChance = 0.10; }
+        } else if (reactionId === 'alarmed') {
+          // Alarm is contagious.
+          responseEmotion = 'alarm'; reactChance = 0.14 + pers.suspicion * 0.1;
+        } else if (reactionId === 'curious') {
+          // Curiosity echoes among suspicious personalities.
+          responseEmotion = 'suspicion'; reactChance = 0.12 + pers.suspicion * 0.08;
+        }
+        if (responseEmotion && rand() < reactChance) {
+          const staggerMs = 350 + Math.floor(rand() * 900);
+          triggerPlayerEmotion(observer.id, responseEmotion, { delayMs: staggerMs, intensity: 0.55, depth: 1 });
+        }
+      });
     }
     const clusterCinematicStageRuntime = {
       phaseKey: null,
