@@ -453,10 +453,14 @@ import { createTutorial } from './tutorial.js';
     const DEBUG_TRACE = DEBUG_OPTIONS.trace || {};
     const DEBUG_EVENT_LOG_LIMIT = Math.max(50, Number(DEBUG_OPTIONS.eventLogLimit) || 300);
     const MAX_RENDERED_CHAT_LOG_ENTRIES = 80;
+    const CHAT_MESSAGE_MAX_LENGTH = 180;   // must match <input maxlength> in the chat composer
     // Hand panel slot-based layout constants
     const HAND_MAX_VISIBLE_SLOTS = 10;     // max cards visible at once (defines max overlap at full count)
     const HAND_MIN_SLOT_WIDTH_PX = 36;     // minimum slot box width (px in design space)
     const HAND_STACK_SLOT_PX = 3;          // flex-basis per stacked (out-of-view) card slot
+    const HAND_STACK_BASE_OPACITY = 0.65;  // opacity for the card closest to the visible window
+    const HAND_STACK_MIN_OPACITY = 0.25;   // minimum opacity for the deepest stacked card
+    const HAND_STACK_FADE_STEP = 0.06;     // opacity decrease per additional card depth
     // View offset persisted across renders so paging state is maintained.
     let handViewOffset = 0;
     window.__scratchbonesDebugEvents = window.__scratchbonesDebugEvents || [];
@@ -1038,7 +1042,7 @@ import { createTutorial } from './tutorial.js';
           break;
         case 'chat': {
           // Enforce a server-side length cap matching the client input maxlength.
-          const text = String(msg.text || '').trim().slice(0, 180);
+          const text = String(msg.text || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH);
           if (!text) break;
           addChatLog(text, seat);
           render();
@@ -4829,7 +4833,7 @@ import { createTutorial } from './tutorial.js';
               `).join('')}
             </div>
             <form class="chatComposer" id="chatComposer">
-              <input id="chatInput" class="chatComposerInput" type="text" maxlength="180" placeholder="Type a message..." autocomplete="off">
+              <input id="chatInput" class="chatComposerInput" type="text" maxlength="${CHAT_MESSAGE_MAX_LENGTH}" placeholder="Type a message..." autocomplete="off">
               <button class="chatSendBtn" type="submit">Send</button>
             </form>
           </div>
@@ -4909,7 +4913,7 @@ import { createTutorial } from './tutorial.js';
         document.getElementById('chatComposer')?.addEventListener('submit', (event) => {
           event.preventDefault();
           const input = document.getElementById('chatInput');
-          const text = String(input?.value || '').trim().slice(0, 180);
+          const text = String(input?.value || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH);
           if (!text) return;
           if (_isClient) {
             _net.sendAction({ type: 'chat', text });
@@ -5440,7 +5444,7 @@ import { createTutorial } from './tutorial.js';
             card.disabled = true;
             // Fade with depth: card closest to window (idx = handViewOffset-1) is more opaque.
             const depth = handViewOffset - 1 - idx; // 0 = closest, increases toward back
-            card.style.opacity = String(Math.max(0.25, 0.65 - depth * 0.06));
+            card.style.opacity = String(Math.max(HAND_STACK_MIN_OPACITY, HAND_STACK_BASE_OPACITY - depth * HAND_STACK_FADE_STEP));
           }
         } else {
           // Right-edge stack. Closer to window (lower distFromWindow) = on top.
@@ -5450,7 +5454,7 @@ import { createTutorial } from './tutorial.js';
           slot.style.zIndex = String(999 - distFromWindow);
           if (card) {
             card.disabled = true;
-            card.style.opacity = String(Math.max(0.25, 0.65 - distFromWindow * 0.06));
+            card.style.opacity = String(Math.max(HAND_STACK_MIN_OPACITY, HAND_STACK_BASE_OPACITY - distFromWindow * HAND_STACK_FADE_STEP));
           }
         }
       });
