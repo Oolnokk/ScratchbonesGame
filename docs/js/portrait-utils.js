@@ -511,7 +511,7 @@ const _MOUTH_SPECIES_MAP = {
   'mao_ao':   { sprite: 'mao-ao',   gendered: true,  masked: false },
   'engh-sho': { sprite: 'engh',     gendered: true,  masked: false },
   'engh_sho': { sprite: 'engh',     gendered: true,  masked: false },
-  'tletingan':{ sprite: 'tletingan',gendered: false,  masked: false },
+  'tletingan':{ sprite: 'tletingan',gendered: true,   masked: false },
   'kenkari':  { sprite: 'kenkari',  gendered: false,  masked: true  },
 };
 
