@@ -5684,9 +5684,12 @@ import { createTutorial } from './tutorial.js';
         layer.appendChild(container);
         setTimeout(() => container.remove(), reaction.durationMs);
       } else if (reaction.coinSrcs) {
-        // Gloat: cloud hovers above avatar, coins rain down from cloud position.
-        const cloudX = startX / appScaleX;
-        const cloudY = (startY - anchorRect.height * 0.28) / appScaleY;
+        // Gloat: cloud at the apex of where the shock fan's tallest particle would be
+        // (anchor centre X, fanRadius=140 above anchor centre Y). Coins rain from there.
+        const _fanCX = (anchorRect.left + anchorRect.width / 2) - layerRect.left;
+        const _fanCY = (anchorRect.top  + anchorRect.height / 2) - layerRect.top;
+        const cloudX = _fanCX / appScaleX;
+        const cloudY = (_fanCY - 140) / appScaleY;
         const cloudEl = document.createElement('div');
         cloudEl.className = 'emojiFx emojiFx-gloat-cloud';
         cloudEl.style.left = `${cloudX}px`;
