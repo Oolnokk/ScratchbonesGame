@@ -739,6 +739,8 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
       ctx.fillStyle = '#220000'; ctx.fillRect(0, 0, PORTRAIT_CW, PORTRAIT_CH);
       ctx.fillStyle = '#ff4444'; ctx.font = '11px sans-serif';
       ctx.textAlign = 'center';
+      ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+      ctx.strokeText('Load error', PORTRAIT_CW / 2, PORTRAIT_CH / 2);
       ctx.fillText('Load error', PORTRAIT_CW / 2, PORTRAIT_CH / 2);
       if (_needsScale) ctx.restore();
       return;

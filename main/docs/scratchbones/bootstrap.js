@@ -4764,7 +4764,7 @@ import { createTutorial } from './tutorial.js';
                 }).join('');
               })()}
             </div>
-            <div class="tiny tableDeckLabel" style="font-weight:700;letter-spacing:.08em;">DECK</div>
+            <div class="tiny tableDeckLabel" style="font-weight:700;letter-spacing:.12em;">DECK</div>
           </div>
           ${renderTrickDeckInfo(deckCompositionSnapshot())}
         </div>
@@ -4788,14 +4788,12 @@ import { createTutorial } from './tutorial.js';
               <div class="claimAvatarShell ${(challengeIntro && focusActor) ? 'alert-pulse' : ''}">
                 <canvas class="seatPortrait" data-seat-id="${claimFocus.actorId}" width="200" height="200"></canvas>
               </div>
-              ${focusActor ? `<div class="claimAvatarNameTag">${escapeHtml(seatFirstName(focusActor))}</div>` : ''}
               <div class="claimAvatarLocalOverlay" aria-hidden="true"></div>
             </div>
             <div class="reactorAvatarFloat ${claimClusterShellClass}" data-proj-id="claim-avatar-reactor" style="${claimClusterElementStyle(claimClusterPolicy.elements.reactorAvatarFloat)}" title="${focusReactor ? seatLabel(focusReactor) : 'No reactor'}">
               <div class="claimAvatarShell">
                 ${focusReactor ? `<canvas class="seatPortrait" data-seat-id="${focusReactor.id}" width="200" height="200"></canvas>` : ''}
               </div>
-              ${focusReactor ? `<div class="claimAvatarNameTag">${escapeHtml(seatFirstName(focusReactor))}</div>` : ''}
               ${(challengeIntro && focusReactor) ? `<div class="fx-burst-shell"><div class="cin-action-burst burst-liar">${escapeHtml(challengeIntro.burstText || 'LIAR!!!')}</div></div>` : ''}
               <div class="claimAvatarLocalOverlay" aria-hidden="true"></div>
             </div>
