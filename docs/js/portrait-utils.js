@@ -827,9 +827,7 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
   drawBreathingLayers(overwearLayers);
   drawEmoteLayers(sideLeftLayers);
   if (headUrl) { const img = imgMap.get(headUrl); if (img) drawLayerWithEmote(img, getPortraitXformPreset('B'), filterA); }
-  // Non-mask species: draw mouth sprite as a colour overlay directly onto the portrait.
   const _isMaskSpecies = mouthImg && _isMouthMask(speciesId);
-  if (mouthImg && !_isMaskSpecies) drawLayerWithEmote(mouthImg, getPortraitXformPreset('B'), 'none');
   drawEmoteLayers(rightSideHairLayers);
   drawEmoteLayers(facialHairLayers);
   drawEmoteLayers(frontHairLayers);
@@ -880,6 +878,8 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
       if (img) drawLayerWithEmote(img, getPortraitXformPreset('B'), 'none');
     }
   }
+  // Non-mask species: mouth sprite overlays ur-head (drawn here so it sits above ur-head).
+  if (mouthImg && !_isMaskSpecies) drawLayerWithEmote(mouthImg, getPortraitXformPreset('B'), 'none');
   drawEmoteLayers(hatUnderLayers);
   drawEmoteLayers(elevatedEyeAccessoryLayers);
   drawBreathingLayers(hoodLayers);
