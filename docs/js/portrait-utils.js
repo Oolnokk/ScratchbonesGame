@@ -507,30 +507,34 @@ function getProfileSpriteXforms(profile) {
 // ── Mouth expression helpers ───────────────────────────────
 
 const _MOUTH_SPECIES_MAP = {
-  'mao-ao':   { sprite: 'mao-ao',   gendered: true  },
-  'mao_ao':   { sprite: 'mao-ao',   gendered: true  },
-  'engh-sho': { sprite: 'engh',     gendered: true  },
-  'engh_sho': { sprite: 'engh',     gendered: true  },
-  'tletingan':{ sprite: 'tletingan',gendered: false  }, // only _m exists, shared
-  'kenkari':  { sprite: 'kenkari',  gendered: false  }, // m+f share one sprite
+  'mao-ao':   { sprite: 'mao-ao',   gendered: true,  masked: false },
+  'mao_ao':   { sprite: 'mao-ao',   gendered: true,  masked: false },
+  'engh-sho': { sprite: 'engh',     gendered: true,  masked: false },
+  'engh_sho': { sprite: 'engh',     gendered: true,  masked: false },
+  'tletingan':{ sprite: 'tletingan',gendered: false,  masked: false },
+  'kenkari':  { sprite: 'kenkari',  gendered: false,  masked: true  },
 };
 
 /**
- * Returns the relative path to the mouth expression sprite for the given
- * expression, species, and gender, or null when no sprite exists.
- * Expressions: 'neutral' | 'smile' | 'frown' | 'laugh'
- * 'neutral' always returns null (no overlay needed — portrait default is neutral).
+ * Returns the relative path to the mouth expression sprite, or null.
+ * For masked species (kenkari) neutral also has a sprite and is returned.
+ * For all others, 'neutral' returns null (no overlay needed).
  */
 function _getMouthSpriteUrl(expression, speciesId, gender) {
-  if (!expression || expression === 'neutral') return null;
   const sid = String(speciesId || '').toLowerCase().replace(/_/g, '-');
   const mapping = _MOUTH_SPECIES_MAP[sid] || _MOUTH_SPECIES_MAP[String(speciesId || '').toLowerCase()];
   if (!mapping) return null;
-  let suffix = '';
-  if (mapping.gendered) {
-    suffix = '_' + (String(gender || '').toLowerCase() === 'female' ? 'f' : 'm');
-  }
-  return `portraitsprites/expressions/mouth/${expression}_${mapping.sprite}${suffix}.png`;
+  const expr = String(expression || 'neutral');
+  if (expr === 'neutral' && !mapping.masked) return null;
+  const suffix = mapping.gendered
+    ? '_' + (String(gender || '').toLowerCase() === 'female' ? 'f' : 'm')
+    : '';
+  return `portraitsprites/expressions/mouth/${expr}_${mapping.sprite}${suffix}.png`;
+}
+
+function _isMouthMask(speciesId) {
+  const sid = String(speciesId || '').toLowerCase().replace(/_/g, '-');
+  return !!(_MOUTH_SPECIES_MAP[sid] || _MOUTH_SPECIES_MAP[String(speciesId || '').toLowerCase()])?.masked;
 }
 
 // ── Rendering ──────────────────────────────────────────────
@@ -797,15 +801,58 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
   drawBreathingLayers(overwearLayers);
   drawEmoteLayers(sideLeftLayers);
   if (headUrl) { const img = imgMap.get(headUrl); if (img) drawLayerWithEmote(img, getPortraitXformPreset('B'), filterA); }
-  if (mouthImg) drawLayerWithEmote(mouthImg, getPortraitXformPreset('B'), 'none');
+  // Non-mask species: draw mouth sprite as a colour overlay directly onto the portrait.
+  const _isMaskSpecies = mouthImg && _isMouthMask(speciesId);
+  if (mouthImg && !_isMaskSpecies) drawLayerWithEmote(mouthImg, getPortraitXformPreset('B'), 'none');
   drawEmoteLayers(rightSideHairLayers);
   drawEmoteLayers(facialHairLayers);
   drawEmoteLayers(frontHairLayers);
   drawEmoteLayers(eyesLayers);
-  for (const mid of urLayerSource) {
-    const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
-    const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
-    if (img) drawLayerWithEmote(img, getPortraitXformPreset('B'), 'none');
+  // Kenkari mask species: draw ur-head layers onto an offscreen canvas then punch out the
+  // mouth shape (destination-out) before compositing the result onto the main canvas.
+  // All other species draw ur-head directly.
+  if (_isMaskSpecies && urLayerSource.length) {
+    const urOff = Object.assign(document.createElement('canvas'), { width: PORTRAIT_CW, height: PORTRAIT_CH });
+    const urCtx = urOff.getContext('2d');
+    const urXform = getPortraitXformPreset('B');
+    for (const mid of urLayerSource) {
+      const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
+      const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
+      if (!img) continue;
+      if (emoteDeformedPts) {
+        const { ax, ay, sx, sy } = urXform;
+        const h = PORTRAIT_L * sy;
+        const w = (img.naturalWidth / img.naturalHeight) * PORTRAIT_L * sx;
+        const cx = PORTRAIT_CW / 2 + ay * PORTRAIT_L;
+        const cy = PORTRAIT_CH / 2 - ax * PORTRAIT_L;
+        _drawPortraitLayerWarped(urCtx, img, cx - w / 2, cy - h / 2, w, h, emoteNeutralPts, emoteDeformedPts, 4, 6);
+      } else {
+        drawPortraitLayer(urCtx, img, urXform, 'none');
+      }
+    }
+    // Punch mouth shape out of the ur-head layer using destination-out.
+    const { ax: _mx, ay: _my, sx: _msx, sy: _msy } = urXform;
+    const _mh = PORTRAIT_L * _msy;
+    const _mw = (mouthImg.naturalWidth / mouthImg.naturalHeight) * PORTRAIT_L * _msx;
+    const _mcx = PORTRAIT_CW / 2 + _my * PORTRAIT_L;
+    const _mcy = PORTRAIT_CH / 2 - _mx * PORTRAIT_L;
+    urCtx.save();
+    urCtx.globalCompositeOperation = 'destination-out';
+    if (emoteDeformedPts) {
+      _drawPortraitLayerWarped(urCtx, mouthImg, _mcx - _mw / 2, _mcy - _mh / 2, _mw, _mh, emoteNeutralPts, emoteDeformedPts, 4, 6);
+    } else {
+      urCtx.drawImage(mouthImg, _mcx - _mw / 2, _mcy - _mh / 2, _mw, _mh);
+    }
+    urCtx.restore();
+    ctx.save();
+    ctx.drawImage(urOff, 0, 0, PORTRAIT_CW, PORTRAIT_CH);
+    ctx.restore();
+  } else {
+    for (const mid of urLayerSource) {
+      const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
+      const img = imgMap.get(activeUrl) || imgMap.get(mid.url);
+      if (img) drawLayerWithEmote(img, getPortraitXformPreset('B'), 'none');
+    }
   }
   drawEmoteLayers(hatUnderLayers);
   drawEmoteLayers(elevatedEyeAccessoryLayers);
