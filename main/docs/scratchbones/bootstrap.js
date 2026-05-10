@@ -113,7 +113,7 @@ import { createTutorial } from './tutorial.js';
           'rgba(218,212,175,0.82)',  // white bronze
           'rgba(162,160,160,0.76)',  // tin
         ],
-        coinCount: 18,
+        coinCount: 40,
       },
     };
     function applyRootCssCustomProperties(cssRootVars) {
