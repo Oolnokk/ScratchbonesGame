@@ -24,6 +24,13 @@ window.SCRATCHBONES_CONFIG = {
         "actions": true
       }
     },
+    "gameplayShortcuts": {
+      "focusChat": {
+        "enabled": true,
+        "key": "Enter",
+        "selectExistingText": true
+      }
+    },
     "deck": {
       "rankCount": 10,
       "copiesPerRank": 4,

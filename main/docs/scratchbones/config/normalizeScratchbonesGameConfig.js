@@ -175,6 +175,30 @@ function normalizeStringMap(value, fallback) {
     .filter(([key, mapValue]) => key && mapValue));
 }
 
+
+const DEFAULT_GAMEPLAY_SHORTCUTS_CONFIG = {
+  focusChat: {
+    enabled: true,
+    key: 'Enter',
+    selectExistingText: true,
+  },
+};
+
+function normalizeGameplayShortcutsConfig(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const rawFocusChat = source.focusChat && typeof source.focusChat === 'object' && !Array.isArray(source.focusChat)
+    ? source.focusChat
+    : {};
+  const key = String(rawFocusChat.key || DEFAULT_GAMEPLAY_SHORTCUTS_CONFIG.focusChat.key).trim() || DEFAULT_GAMEPLAY_SHORTCUTS_CONFIG.focusChat.key;
+  return {
+    focusChat: {
+      enabled: rawFocusChat.enabled !== false,
+      key,
+      selectExistingText: rawFocusChat.selectExistingText !== false,
+    },
+  };
+}
+
 const DEFAULT_TUTORIAL_CONFIG = {
   ringPadPx: 9,
   minVisibleAreaRatio: 0.55,
@@ -464,6 +488,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       playerCount: rawGameConfig.deck?.playerCount ?? 4,
       humanNames: rawGameConfig.deck?.humanNames ?? ['You'],
     },
+    gameplayShortcuts: normalizeGameplayShortcutsConfig(rawGameConfig.gameplayShortcuts),
     tutorial: {
       ringPadPx: Math.max(0, finiteNumberOrDefault(rawGameConfig.tutorial?.ringPadPx, DEFAULT_TUTORIAL_CONFIG.ringPadPx)),
       minVisibleAreaRatio: Math.min(1, Math.max(0, finiteNumberOrDefault(rawGameConfig.tutorial?.minVisibleAreaRatio, DEFAULT_TUTORIAL_CONFIG.minVisibleAreaRatio))),
