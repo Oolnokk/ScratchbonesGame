@@ -4557,12 +4557,12 @@ import { createTutorial } from './tutorial.js';
       const tablePoolAnchorYPct = clampNumber((claimClusterPolicy.geometry.centerYPct - (claimClusterPolicy.geometry.heightPctOfTableView / 2)) + ((claimHandBarLayout.yPct + (claimHandBarLayout.hPct / 2)) * claimClusterPolicy.geometry.heightPctOfTableView), 0, 1);
       const tableCardsHtml = latestPlay?.cards?.length
         ? (claimClusterEnabled
-          ? `<div class="tiny">Claim cluster visualization active.</div>`
+          ? ''
           : latestPlay.cards.map(card => {
               const art = resolveScratchbone2DAsset(card, { flipped: tableCardFaceDown });
               return `<div class="tableViewCard" data-card-id="${card.id}"${!tableCardFaceDown && card.trickType ? ` data-trick-glow="${card.trickType}"` : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="${tableCardFaceDown ? 'Face-down scratchbone card' : (card.wild ? 'Wild scratchbone card' : `Scratchbone ${card.rank} card`)}"></div>`;
             }).join(''))
-        : '<div class="tiny">No cards on the table yet.</div>';
+        : '';
       const chatLogEntries = eventLogEnabled
         ? state.logs
           .slice(0, MAX_RENDERED_CHAT_LOG_ENTRIES)
@@ -4742,7 +4742,7 @@ import { createTutorial } from './tutorial.js';
               <div class="seatStatus">${player.lastAction}</div>
             </div>
             <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
-              <canvas class="seatPortrait" data-seat-id="${hs}" width="220" height="220"></canvas>
+              <canvas class="seatPortrait" data-seat-id="${hs}" width="200" height="200"></canvas>
             </div>
           </div>
         </div>
@@ -4768,10 +4768,6 @@ import { createTutorial } from './tutorial.js';
           </div>
           ${renderTrickDeckInfo(deckCompositionSnapshot())}
         </div>
-        </div>
-        <div class="tableViewHeader">
-          <div class="sectionTitle">Table View</div>
-          <div class="tiny">${claimClusterEnabled ? 'Visual claim cluster active' : (latestPlay ? `Latest: ${seatLabel(latestPlay.playerIndex)} · ${latestPlay.cards?.length || 0} card(s)` : 'Waiting for opening play')}</div>
         </div>
         <div class="tableViewCards">${tableCardsHtml}</div>
         ${renderSmuggleTableOverlay()}

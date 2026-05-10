@@ -484,6 +484,7 @@
       transform: translateY(4px) scale(var(--layout-table-card-content-scale));
       transform-origin: center center;
     }
+    details.debug { display: none !important; }
     #app.cinematic-mode-active .topbar,
     #app.cinematic-mode-active #sidebarShell,
     #app.cinematic-mode-active .humanSeatZone,
@@ -491,8 +492,7 @@
     #app.cinematic-mode-active .tableViewHeader,
     #app.cinematic-mode-active .tableViewCards,
     #app.cinematic-mode-active .handWrap,
-    #app.cinematic-mode-active .eventLog,
-    #app.cinematic-mode-active details.debug {
+    #app.cinematic-mode-active .eventLog {
       display: none !important;
     }
     #app.cinematic-mode-active .controls {
@@ -2518,7 +2518,7 @@
       display: flex; align-items: center; justify-content: center;
       background: radial-gradient(circle at top, #30211d 0%, #1a1210 42%, #0f0c0b 100%);
       font-family: 'Khymeryyanroman4', Inter, system-ui, sans-serif;
-      letter-spacing: 0.10em; color: #f2d08f;
+      letter-spacing: 0.14em; color: rgba(255,255,255,0.9);
     }
     .sb-card {
       background: rgba(20,12,10,0.97);
@@ -2626,7 +2626,7 @@
 
     /* ── Portrait canvas ────────────────────────────────────── */
     .sb-portrait-canvas {
-      width: 160px; height: 160px; border-radius: 8px;
+      width: 200px; height: 200px; border-radius: 8px;
       background: rgba(242,208,143,0.05); border: 1px solid rgba(242,208,143,0.14);
       image-rendering: pixelated;
     }
