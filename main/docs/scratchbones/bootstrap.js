@@ -1443,6 +1443,10 @@ import { createTutorial } from './tutorial.js';
       applyEquippedCosmeticsToHumanPlayers();
       applyAiNamesByPortraitCulture();
       for (const p of state.players) logPlayerPortraitXforms(p);
+      if (window.setPortraitAssetBase) {
+        const _earlyPortraitCfg = window.SCRATCHBONES_CONFIG?.game?.assets?.portrait;
+        setPortraitAssetBase(_earlyPortraitCfg?.assetBase || './docs/assets/');
+      }
       startPortraitLoop();
       state.leaderIndex = rngInt(0, state.players.length - 1);
       state.currentTurn = state.leaderIndex;
@@ -5696,27 +5700,34 @@ import { createTutorial } from './tutorial.js';
         cloudEl.style.top  = `${cloudY}px`;
         cloudEl.style.setProperty('--gloat-cloud-src', `url('${reaction.cloudSrc}')`);
         layer.appendChild(cloudEl);
-        const coinCount = reaction.coinCount || 18;
         const coinColors = reaction.coinColors;
         const coinSrcs   = reaction.coinSrcs;
         const spawnedCoins = [];
-        for (let i = 0; i < coinCount; i++) {
-          const coin = document.createElement('div');
-          coin.className = 'emojiFx emojiFx-gloat-coin';
-          const src   = coinSrcs[Math.floor(Math.random() * coinSrcs.length)];
-          const color = coinColors[Math.floor(Math.random() * coinColors.length)];
-          const delay = 0.15 + Math.random() * 2.0;
-          const drift = (Math.random() - 0.5) * 72;
-          const spin  = (Math.random() - 0.5) * 520;
-          coin.style.left = `${cloudX}px`;
-          coin.style.top  = `${cloudY}px`;
-          coin.style.setProperty('--gloat-coin-src',   `url('${src}')`);
-          coin.style.setProperty('--gloat-coin-tint',  color);
-          coin.style.setProperty('--gloat-coin-delay', `${delay}s`);
-          coin.style.setProperty('--gloat-coin-drift', `${drift}px`);
-          coin.style.setProperty('--gloat-coin-spin',  `${spin}deg`);
-          layer.appendChild(coin);
-          spawnedCoins.push(coin);
+        // Three streams: centre (coinCount coins), left and right flanks (20 each).
+        const _streamDefs = [
+          { x: cloudX,        count: reaction.coinCount || 40, driftRange: 72 },
+          { x: cloudX - 82,   count: 20,                       driftRange: 38 },
+          { x: cloudX + 82,   count: 20,                       driftRange: 38 },
+        ];
+        for (const stream of _streamDefs) {
+          for (let i = 0; i < stream.count; i++) {
+            const coin = document.createElement('div');
+            coin.className = 'emojiFx emojiFx-gloat-coin';
+            const src   = coinSrcs[Math.floor(Math.random() * coinSrcs.length)];
+            const color = coinColors[Math.floor(Math.random() * coinColors.length)];
+            const delay = 0.15 + Math.random() * 2.0;
+            const drift = (Math.random() - 0.5) * stream.driftRange;
+            const spin  = (Math.random() - 0.5) * 520;
+            coin.style.left = `${stream.x}px`;
+            coin.style.top  = `${cloudY}px`;
+            coin.style.setProperty('--gloat-coin-src',   `url('${src}')`);
+            coin.style.setProperty('--gloat-coin-tint',  color);
+            coin.style.setProperty('--gloat-coin-delay', `${delay}s`);
+            coin.style.setProperty('--gloat-coin-drift', `${drift}px`);
+            coin.style.setProperty('--gloat-coin-spin',  `${spin}deg`);
+            layer.appendChild(coin);
+            spawnedCoins.push(coin);
+          }
         }
         setTimeout(() => { cloudEl.remove(); spawnedCoins.forEach(c => c.remove()); }, reaction.durationMs + 500);
       } else {
