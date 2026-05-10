@@ -853,7 +853,7 @@
     /* ── Gloat emoji: silver cloud + raining coins ────────────── */
     .emojiFx-gloat-cloud {
       position: absolute;
-      width: 194px;
+      width: 233px; /* widened 20% from 194px */
       height: 123px;
       pointer-events: none;
       animation: gloatCloudAppear 3.8s ease-out both;
@@ -865,8 +865,8 @@
       background: rgba(192, 210, 228, 0.58);
       -webkit-mask-image: var(--gloat-cloud-src);
       mask-image: var(--gloat-cloud-src);
-      -webkit-mask-size: contain;
-      mask-size: contain;
+      -webkit-mask-size: 100% 100%; /* stretch to fill the wider element */
+      mask-size: 100% 100%;
       -webkit-mask-repeat: no-repeat;
       mask-repeat: no-repeat;
       -webkit-mask-position: center;

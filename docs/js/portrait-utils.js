@@ -201,7 +201,11 @@ function setPortraitAssetBase(base) {
 }
 
 function loadImg(relPath) {
-  if (IMG_CACHE.has(relPath)) return IMG_CACHE.get(relPath);
+  const cached = IMG_CACHE.get(relPath);
+  // Fast path: image already resolved — return a pre-resolved promise so callers
+  // can still await it uniformly, but the microtask queue is not involved.
+  if (cached instanceof Image) return Promise.resolve(cached);
+  if (cached !== undefined) return cached;  // pending or failed promise
 
   const ensureTrailingSlash = (base) => String(base || './assets/').replace(/\/?$/, '/');
   const localBase = ensureTrailingSlash(_puAssetBase);
@@ -246,6 +250,10 @@ function loadImg(relPath) {
     error.attemptedUrls = attemptedUrls;
     throw error;
   })();
+
+  // Once the image resolves, upgrade the cache entry from Promise → Image so
+  // subsequent calls get a synchronous hit and renderProfile can skip await.
+  promise.then(img => IMG_CACHE.set(relPath, img), () => { /* leave failed promise as-is */ });
 
   IMG_CACHE.set(relPath, promise);
   return promise;
@@ -334,11 +342,17 @@ function _drawPortraitLayerWarped(ctx, img, layerX, layerY, layerW, layerH, neut
   }
 }
 
+// Memoised neutral grid cache — avoids rebuilding the same array on every frame.
+const _neutralGridCache = new Map();
 function _buildNeutralGrid(cols, rows) {
-  const pts = [];
+  const key = `${cols}x${rows}`;
+  let pts = _neutralGridCache.get(key);
+  if (pts) return pts;
+  pts = [];
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++)
       pts.push([cols > 1 ? c / (cols - 1) : 0.5, rows > 1 ? r / (rows - 1) : 0.5]);
+  _neutralGridCache.set(key, pts);
   return pts;
 }
 
@@ -517,15 +531,15 @@ const _MOUTH_SPECIES_MAP = {
 
 /**
  * Returns the relative path to the mouth expression sprite, or null.
- * For masked species (kenkari) neutral also has a sprite and is returned.
- * For all others, 'neutral' returns null (no overlay needed).
+ * All known species have a neutral sprite and it is always returned so the
+ * default resting mouth renders consistently for every portrait.
+ * Kenkari (masked) additionally uses the neutral sprite as a punch-out mask.
  */
 function _getMouthSpriteUrl(expression, speciesId, gender) {
   const sid = String(speciesId || '').toLowerCase().replace(/_/g, '-');
   const mapping = _MOUTH_SPECIES_MAP[sid] || _MOUTH_SPECIES_MAP[String(speciesId || '').toLowerCase()];
   if (!mapping) return null;
   const expr = String(expression || 'neutral');
-  if (expr === 'neutral' && !mapping.masked) return null;
   const suffix = mapping.gendered
     ? '_' + (String(gender || '').toLowerCase() === 'female' ? 'f' : 'm')
     : '';
@@ -704,29 +718,41 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
   ].filter(Boolean));
 
   let imgMap;
-  try {
-    const entries = await Promise.all(
-      [...neededUrls].map(async (url) => [url, await loadImg(url)])
-    );
-    imgMap = new Map(entries);
-  } catch (err) {
-    console.warn('[portrait] image load error', {
-      message: err?.message || String(err),
-      name: err?.name || 'Error',
-      relPath: err?.relPath || null,
-      attemptedUrls: Array.isArray(err?.attemptedUrls) ? err.attemptedUrls : [],
-    });
-    ctx.fillStyle = '#220000'; ctx.fillRect(0, 0, PORTRAIT_CW, PORTRAIT_CH);
-    ctx.fillStyle = '#ff4444'; ctx.font = '11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Load error', PORTRAIT_CW / 2, PORTRAIT_CH / 2);
-    if (_needsScale) ctx.restore();
-    return;
+  // Fast synchronous path: all images already resolved in cache — avoid async overhead.
+  const _allUrls = [...neededUrls];
+  const _allResolved = _allUrls.every(url => IMG_CACHE.get(url) instanceof Image);
+  if (_allResolved) {
+    imgMap = new Map(_allUrls.map(url => [url, IMG_CACHE.get(url)]));
+  } else {
+    try {
+      const entries = await Promise.all(
+        _allUrls.map(async (url) => [url, await loadImg(url)])
+      );
+      imgMap = new Map(entries);
+    } catch (err) {
+      console.warn('[portrait] image load error', {
+        message: err?.message || String(err),
+        name: err?.name || 'Error',
+        relPath: err?.relPath || null,
+        attemptedUrls: Array.isArray(err?.attemptedUrls) ? err.attemptedUrls : [],
+      });
+      ctx.fillStyle = '#220000'; ctx.fillRect(0, 0, PORTRAIT_CW, PORTRAIT_CH);
+      ctx.fillStyle = '#ff4444'; ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Load error', PORTRAIT_CW / 2, PORTRAIT_CH / 2);
+      if (_needsScale) ctx.restore();
+      return;
+    }
   }
   // Load mouth expression sprite separately — it may not exist for all species/gender combos.
   let mouthImg = null;
   if (mouthSpriteUrl && renderHeadSprite) {
-    try { mouthImg = await loadImg(mouthSpriteUrl); } catch (_) { /* sprite absent — skip */ }
+    const _mouthCached = IMG_CACHE.get(mouthSpriteUrl);
+    if (_mouthCached instanceof Image) {
+      mouthImg = _mouthCached;
+    } else {
+      try { mouthImg = await loadImg(mouthSpriteUrl); } catch (_) { /* sprite absent — skip */ }
+    }
   }
 
   // Capture current time after image loading so blink-state timing is accurate.
@@ -1598,5 +1624,8 @@ window.getPortraitXformPreset = getPortraitXformPreset;
 
 window.loadPortraitCosmetics = loadPortraitCosmetics;
 window.renderPortraitProfile = renderProfile;
+// renderProfile is also exported as window.renderProfile for consumers that check that name
+// (bootstrap.js, scratchbones-lobby.js).
+window.renderProfile = renderProfile;
 window.randomPortraitProfileSeeded = randomProfileSeeded;
 window.drawPortraitLayerWarped = drawPortraitLayerWarped;
