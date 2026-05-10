@@ -5327,7 +5327,7 @@ import { createTutorial } from './tutorial.js';
         const seatIdStr = String(p.id);
         const canvases = root.querySelectorAll(`canvas[data-seat-id="${p.id}"]`);
         for (const canvas of canvases) {
-          if (window.renderProfile) renderProfile(canvas, p.profile, { seatId: seatIdStr });
+          if (window.renderProfile) window.renderProfile(canvas, p.profile, { seatId: seatIdStr });
           // Disgust-emote flip: temporarily mirror the portrait opposite to its CSS-intended
           // state, then revert. actorAvatarFloat = intended un-flipped (transform:none);
           // all other contexts = intended flipped (transform:scaleX(-1)).
@@ -5688,12 +5688,12 @@ import { createTutorial } from './tutorial.js';
         layer.appendChild(container);
         setTimeout(() => container.remove(), reaction.durationMs);
       } else if (reaction.coinSrcs) {
-        // Gloat: cloud at the apex of where the shock fan's tallest particle would be
-        // (anchor centre X, fanRadius=140 above anchor centre Y). Coins rain from there.
+        // Gloat: cloud spawns 110px above the anchor centre (shifted 30px down from original 140px).
+        // Both cloud and coins use cloudY so the entire animation moves together.
         const _fanCX = (anchorRect.left + anchorRect.width / 2) - layerRect.left;
         const _fanCY = (anchorRect.top  + anchorRect.height / 2) - layerRect.top;
         const cloudX = _fanCX / appScaleX;
-        const cloudY = (_fanCY - 140) / appScaleY;
+        const cloudY = (_fanCY - 110) / appScaleY;
         const cloudEl = document.createElement('div');
         cloudEl.className = 'emojiFx emojiFx-gloat-cloud';
         cloudEl.style.left = `${cloudX}px`;
