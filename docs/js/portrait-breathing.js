@@ -64,7 +64,25 @@ const _cPeak = { label: 'contract', points: [
   [0,1],    [0.333333,1], [0.666667,1], [1,1],
 ]};
 
+// Laugh puff peak: subtle outward expansion (~12% vs alarmed's 20%) for staccato heartily-laughing effect.
+const _lPeak = { label: 'laugh-puff', points: [
+  [0,0],    [0.312,0],    [0.688,0],    [1,0],
+  [0,0.198],[0.318,0.198],[0.682,0.198],[1,0.198],
+  [0,0.397],[0.315,0.397],[0.685,0.397],[1,0.397],
+  [0,0.596],[0.315,0.596],[0.685,0.596],[1,0.596],
+  [0,0.798],[0.318,0.798],[0.682,0.798],[1,0.798],
+  [0,1],    [0.333333,1], [0.666667,1], [1,1],
+]};
+const _lNeutral = { label: 'neutral', points: _N4x6 };
+
 const EMOTE_ANIMATIONS = {
+
+  // Five rapid staccato puffs: simulate hearty laughter body shake.
+  laugh: {
+    gridCols: 4, gridRows: 6,
+    poseDurations: [0.045, 0.075, 0.045, 0.075, 0.045, 0.075, 0.045, 0.075, 0.045, 0.075, 0.60],
+    poses: [_lNeutral, _lPeak, _lNeutral, _lPeak, _lNeutral, _lPeak, _lNeutral, _lPeak, _lNeutral, _lPeak, _lNeutral],
+  },
 
   // Single bounce: quick snap to squash (bottom locked), long drawn-out hold, snap back.
   disgust: {
@@ -132,6 +150,9 @@ class BreathingComposer {
 
     // One-shot emoji body overlay state
     this._overlay = null; // { anim, startMs, durationMs, oneshot, global, speciesId, gender }
+
+    // Mouth facial expression state per seat
+    this._expressions = new Map(); // seatId → { expression, expiresAtMs }
   }
 
   get enabled() {
@@ -183,7 +204,9 @@ class BreathingComposer {
    * seatId: the seat whose portrait should deform (null = all seats)
    */
   triggerEmote(emoteName, seatId) {
-    const animKey = emoteName === 'shock' ? 'alarmed' : emoteName;
+    const animKey = emoteName === 'shock' ? 'alarmed'
+                  : emoteName === 'gloat' ? 'alarmed'
+                  : emoteName;
     const baseAnim = EMOTE_ANIMATIONS[animKey];
     if (!baseAnim || !this.enabled) return;
     const anim = _getConfiguredEmoteAnimation(animKey, baseAnim);
@@ -222,6 +245,42 @@ class BreathingComposer {
 
   clearBodyOverlay() {
     this._overlay = null;
+  }
+
+  // ── Facial expression state ──────────────────────────────
+
+  /**
+   * Set mouth expression for a seat.
+   * expression: 'neutral' | 'smile' | 'frown' | 'laugh'
+   * durationMs: how long before returning to neutral (default from config or 10 000ms)
+   */
+  setExpression(seatId, expression, durationMs) {
+    const ms = Number(durationMs) ||
+      Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) ||
+      10000;
+    if (!expression || expression === 'neutral') {
+      this._expressions.delete(String(seatId ?? ''));
+      return;
+    }
+    this._expressions.set(String(seatId ?? ''), {
+      expression: String(expression),
+      expiresAtMs: Date.now() + ms,
+    });
+  }
+
+  /**
+   * Get the current mouth expression for a seat.
+   * Returns 'neutral' when none is active or it has expired.
+   */
+  getExpression(seatId, nowMs) {
+    const key = String(seatId ?? '');
+    const state = this._expressions.get(key);
+    if (!state) return 'neutral';
+    if ((nowMs ?? Date.now()) >= state.expiresAtMs) {
+      this._expressions.delete(key);
+      return 'neutral';
+    }
+    return state.expression;
   }
 
   // ── Point interpolation ──────────────────────────────────

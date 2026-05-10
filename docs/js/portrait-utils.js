@@ -504,6 +504,35 @@ function getProfileSpriteXforms(profile) {
   return records;
 }
 
+// ── Mouth expression helpers ───────────────────────────────
+
+const _MOUTH_SPECIES_MAP = {
+  'mao-ao':   { sprite: 'mao-ao',   gendered: true  },
+  'mao_ao':   { sprite: 'mao-ao',   gendered: true  },
+  'engh-sho': { sprite: 'engh',     gendered: true  },
+  'engh_sho': { sprite: 'engh',     gendered: true  },
+  'tletingan':{ sprite: 'tletingan',gendered: false  }, // only _m exists, shared
+  'kenkari':  { sprite: 'kenkari',  gendered: false  }, // m+f share one sprite
+};
+
+/**
+ * Returns the relative path to the mouth expression sprite for the given
+ * expression, species, and gender, or null when no sprite exists.
+ * Expressions: 'neutral' | 'smile' | 'frown' | 'laugh'
+ * 'neutral' always returns null (no overlay needed — portrait default is neutral).
+ */
+function _getMouthSpriteUrl(expression, speciesId, gender) {
+  if (!expression || expression === 'neutral') return null;
+  const sid = String(speciesId || '').toLowerCase().replace(/_/g, '-');
+  const mapping = _MOUTH_SPECIES_MAP[sid] || _MOUTH_SPECIES_MAP[String(speciesId || '').toLowerCase()];
+  if (!mapping) return null;
+  let suffix = '';
+  if (mapping.gendered) {
+    suffix = '_' + (String(gender || '').toLowerCase() === 'female' ? 'f' : 'm');
+  }
+  return `portraitsprites/expressions/mouth/${expression}_${mapping.sprite}${suffix}.png`;
+}
+
 // ── Rendering ──────────────────────────────────────────────
 
 async function renderProfile(canvas, profile, renderOptions = {}) {
@@ -639,6 +668,14 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
     }
   }
 
+  // Resolve species/gender and mouth expression before building neededUrls so the
+  // mouth sprite URL is included in the prefetch batch.
+  const speciesId = resolvedFighter?.speciesId || fighter?.speciesId || '';
+  const gender    = resolvedFighter?.gender    || fighter?.gender    || '';
+  const _preloadNowMs   = Date.now();
+  const mouthExpression = breathingComposer?.getExpression(seatId, _preloadNowMs) ?? 'neutral';
+  const mouthSpriteUrl  = _getMouthSpriteUrl(mouthExpression, speciesId, gender);
+
   const neededUrls = new Set([
     ...(headUrl ? [headUrl] : []),
     ...urLayerSource.map(m => m.url),
@@ -682,6 +719,12 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
     if (_needsScale) ctx.restore();
     return;
   }
+  // Load mouth expression sprite separately — it may not exist for all species/gender combos.
+  let mouthImg = null;
+  if (mouthSpriteUrl && renderHeadSprite) {
+    try { mouthImg = await loadImg(mouthSpriteUrl); } catch (_) { /* sprite absent — skip */ }
+  }
+
   // Capture current time after image loading so blink-state timing is accurate.
   const nowMs = Date.now();
   const headBlinkState = getBlinkState(headUrl);
@@ -703,9 +746,6 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
       sx: layer?.sx ?? 1,
       sy: layer?.sy ?? 1,
     };
-
-  const speciesId = resolvedFighter?.speciesId || fighter?.speciesId || '';
-  const gender    = resolvedFighter?.gender    || fighter?.gender    || '';
 
   // Pre-compute emote overlay deformation for this portrait (null when no emote is active).
   const emoteDeformedPts = breathingComposer?.getOverlayOnlyPoints(nowMs, seatId) ?? null;
@@ -757,6 +797,7 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
   drawBreathingLayers(overwearLayers);
   drawEmoteLayers(sideLeftLayers);
   if (headUrl) { const img = imgMap.get(headUrl); if (img) drawLayerWithEmote(img, getPortraitXformPreset('B'), filterA); }
+  if (mouthImg) drawLayerWithEmote(mouthImg, getPortraitXformPreset('B'), 'none');
   drawEmoteLayers(rightSideHairLayers);
   drawEmoteLayers(facialHairLayers);
   drawEmoteLayers(frontHairLayers);

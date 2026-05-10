@@ -95,6 +95,26 @@ import { createTutorial } from './tutorial.js';
           './docs/assets/symbols/emoji_alarmed.png',
         ],
       },
+      gloat: {
+        id: 'gloat',
+        label: 'Gloat',
+        src: './docs/assets/symbols/emoji_gloat_cloud.png',
+        tint: 'rgba(200, 215, 232, 0.92)',
+        className: 'emojiFx-gloat',
+        durationMs: 3800,
+        cloudSrc: './docs/assets/symbols/emoji_gloat_cloud.png',
+        coinSrcs: [
+          './docs/assets/symbols/emoji_gloat_coin1.png',
+          './docs/assets/symbols/emoji_gloat_coin2.png',
+          './docs/assets/symbols/emoji_gloat_coin3.png',
+        ],
+        coinColors: [
+          'rgba(77,153,128,0.80)',   // verdigris
+          'rgba(218,212,175,0.82)',  // white bronze
+          'rgba(162,160,160,0.76)',  // tin
+        ],
+        coinCount: 18,
+      },
     };
     function applyRootCssCustomProperties(cssRootVars) {
       const rootStyle = document.documentElement.style;
@@ -4928,6 +4948,9 @@ import { createTutorial } from './tutorial.js';
           const input = document.getElementById('chatInput');
           const text = String(input?.value || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH);
           if (!text) return;
+          // Laugh detection: specific words trigger the laugh avatar animation.
+          const _laughPhrases = new Set(['lol', 'ha', 'haha', 'hahaha']);
+          if (_laughPhrases.has(text.toLowerCase())) triggerLaughAnimation(state.humanSeat);
           if (_isClient) {
             // Immediate visual feedback: play animation now; mark the text so
             // applyNetworkState skips re-animating when the echo arrives from host.
@@ -5540,7 +5563,7 @@ import { createTutorial } from './tutorial.js';
       return 1;
     }
     function renderEmojiReactionPanel() {
-      const reactionOrder = ['love', 'disgust', 'alarmed', 'curious', 'shock'];
+      const reactionOrder = ['love', 'disgust', 'alarmed', 'curious', 'shock', 'gloat'];
       const buttonHtml = reactionOrder.map((id) => {
         const reaction = EMOJI_REACTION_CONFIG[id];
         if (!reaction) return '';
@@ -5660,6 +5683,39 @@ import { createTutorial } from './tutorial.js';
         });
         layer.appendChild(container);
         setTimeout(() => container.remove(), reaction.durationMs);
+      } else if (reaction.coinSrcs) {
+        // Gloat: cloud hovers above avatar, coins rain down from cloud position.
+        const cloudX = startX / appScaleX;
+        const cloudY = (startY - anchorRect.height * 0.28) / appScaleY;
+        const cloudEl = document.createElement('div');
+        cloudEl.className = 'emojiFx emojiFx-gloat-cloud';
+        cloudEl.style.left = `${cloudX}px`;
+        cloudEl.style.top  = `${cloudY}px`;
+        cloudEl.style.setProperty('--gloat-cloud-src', `url('${reaction.cloudSrc}')`);
+        layer.appendChild(cloudEl);
+        const coinCount = reaction.coinCount || 18;
+        const coinColors = reaction.coinColors;
+        const coinSrcs   = reaction.coinSrcs;
+        const spawnedCoins = [];
+        for (let i = 0; i < coinCount; i++) {
+          const coin = document.createElement('div');
+          coin.className = 'emojiFx emojiFx-gloat-coin';
+          const src   = coinSrcs[Math.floor(Math.random() * coinSrcs.length)];
+          const color = coinColors[Math.floor(Math.random() * coinColors.length)];
+          const delay = 0.15 + Math.random() * 2.0;
+          const drift = (Math.random() - 0.5) * 72;
+          const spin  = (Math.random() - 0.5) * 520;
+          coin.style.left = `${cloudX}px`;
+          coin.style.top  = `${cloudY}px`;
+          coin.style.setProperty('--gloat-coin-src',   `url('${src}')`);
+          coin.style.setProperty('--gloat-coin-tint',  color);
+          coin.style.setProperty('--gloat-coin-delay', `${delay}s`);
+          coin.style.setProperty('--gloat-coin-drift', `${drift}px`);
+          coin.style.setProperty('--gloat-coin-spin',  `${spin}deg`);
+          layer.appendChild(coin);
+          spawnedCoins.push(coin);
+        }
+        setTimeout(() => { cloudEl.remove(); spawnedCoins.forEach(c => c.remove()); }, reaction.durationMs + 500);
       } else {
         const fx = document.createElement('div');
         fx.className = `emojiFx ${reaction.className}`;
@@ -5674,7 +5730,24 @@ import { createTutorial } from './tutorial.js';
       }
       window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));
       if (reactionId === 'disgust') triggerDisgustFlip(state.humanSeat);
+      // Set facial expression for the duration configured (default 10 s).
+      const _EMOTE_EXPRESSION_MAP = {
+        disgust: 'frown', shock: 'frown', alarmed: 'frown',
+        gloat: 'smile', love: 'smile',
+        curious: 'neutral',
+      };
+      const _exprTarget = _EMOTE_EXPRESSION_MAP[reactionId];
+      if (_exprTarget && window.portraitBreathingComposer) {
+        const _exprDurMs = Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) || 10000;
+        window.portraitBreathingComposer.setExpression(String(state.humanSeat), _exprTarget, _exprDurMs);
+      }
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
+    }
+    function triggerLaughAnimation(seatId) {
+      const seatIdStr = String(seatId ?? state.humanSeat);
+      window.portraitBreathingComposer?.triggerEmote('laugh', seatIdStr);
+      const _exprDurMs = Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) || 10000;
+      window.portraitBreathingComposer?.setExpression(seatIdStr, 'laugh', _exprDurMs);
     }
     // Returns (creating if needed) a position:fixed overlay on document.body for
     // chat FX. Appending here survives render() which only replaces #app.innerHTML.
