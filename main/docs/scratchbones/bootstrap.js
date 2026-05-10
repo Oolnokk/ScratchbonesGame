@@ -474,6 +474,7 @@ import { createTutorial } from './tutorial.js';
     const DEBUG_EVENT_LOG_LIMIT = Math.max(50, Number(DEBUG_OPTIONS.eventLogLimit) || 300);
     const MAX_RENDERED_CHAT_LOG_ENTRIES = 80;
     const CHAT_MESSAGE_MAX_LENGTH = 180;   // defines chat input maxlength and server-side trim length
+    const FOCUS_CHAT_SHORTCUT = SCRATCHBONES_GAME.gameplayShortcuts?.focusChat || {};
     // Hand panel slot-based layout constants
     const HAND_MAX_VISIBLE_SLOTS = 10;     // max cards visible at once (defines max overlap at full count)
     const HAND_MIN_SLOT_WIDTH_PX = 36;     // minimum slot box width (px in design space)
@@ -6109,6 +6110,24 @@ import { createTutorial } from './tutorial.js';
       editedVars: new Map(),
       ui: null,
     };
+    function isEditableGameplayShortcutTarget(target) {
+      if (!(target instanceof Element)) return false;
+      return Boolean(target.closest('input, textarea, select, button, [contenteditable], .projVarInput'));
+    }
+    function isAuthoredProjectionEditorActive() {
+      return projectionUiState.active && getScratchbonesLayoutMode() === 'authored';
+    }
+    document.addEventListener('keydown', (event) => {
+      if (FOCUS_CHAT_SHORTCUT.enabled === false) return;
+      if (event.key !== FOCUS_CHAT_SHORTCUT.key) return;
+      if (isAuthoredProjectionEditorActive()) return;
+      if (isEditableGameplayShortcutTarget(event.target)) return;
+      const input = document.getElementById('chatInput');
+      if (!input || typeof input.focus !== 'function') return;
+      event.preventDefault();
+      input.focus();
+      if (FOCUS_CHAT_SHORTCUT.selectExistingText !== false && typeof input.select === 'function') input.select();
+    });
     function shouldRenderLayerManagedUi() {
       return !projectionUiState.showUnlayeredPreview;
     }
