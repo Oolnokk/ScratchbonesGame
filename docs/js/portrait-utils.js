@@ -525,7 +525,6 @@ function _getMouthSpriteUrl(expression, speciesId, gender) {
   const mapping = _MOUTH_SPECIES_MAP[sid] || _MOUTH_SPECIES_MAP[String(speciesId || '').toLowerCase()];
   if (!mapping) return null;
   const expr = String(expression || 'neutral');
-  if (expr === 'neutral' && !mapping.masked) return null;
   const suffix = mapping.gendered
     ? '_' + (String(gender || '').toLowerCase() === 'female' ? 'f' : 'm')
     : '';
@@ -801,9 +800,7 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
   drawBreathingLayers(overwearLayers);
   drawEmoteLayers(sideLeftLayers);
   if (headUrl) { const img = imgMap.get(headUrl); if (img) drawLayerWithEmote(img, getPortraitXformPreset('B'), filterA); }
-  // Non-mask species: draw mouth sprite as a colour overlay directly onto the portrait.
   const _isMaskSpecies = mouthImg && _isMouthMask(speciesId);
-  if (mouthImg && !_isMaskSpecies) drawLayerWithEmote(mouthImg, getPortraitXformPreset('B'), 'none');
   drawEmoteLayers(rightSideHairLayers);
   drawEmoteLayers(facialHairLayers);
   drawEmoteLayers(frontHairLayers);
@@ -854,6 +851,8 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
       if (img) drawLayerWithEmote(img, getPortraitXformPreset('B'), 'none');
     }
   }
+  // Non-mask species: mouth sprite overlays ur-head (drawn here so it sits above ur-head).
+  if (mouthImg && !_isMaskSpecies) drawLayerWithEmote(mouthImg, getPortraitXformPreset('B'), 'none');
   drawEmoteLayers(hatUnderLayers);
   drawEmoteLayers(elevatedEyeAccessoryLayers);
   drawBreathingLayers(hoodLayers);
