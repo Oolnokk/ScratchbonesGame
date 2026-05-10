@@ -27,7 +27,7 @@
       --safe: env(safe-area-inset-bottom, 0px);
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { margin: 0; background: transparent; color: var(--text); font-family: 'Khymeryyanroman4', Inter, system-ui, sans-serif; letter-spacing: 0.10em; line-height: 1.45; height: 100%; }
+    html, body { margin: 0; background: transparent; color: var(--text); font-family: 'Khymeryyanroman4', Inter, system-ui, sans-serif; letter-spacing: 0.14em; line-height: 1.45; height: 100%; text-shadow: -1px -1px 0 rgba(0,0,0,0.55), 1px -1px 0 rgba(0,0,0,0.55), -1px 1px 0 rgba(0,0,0,0.55), 1px 1px 0 rgba(0,0,0,0.55); }
     body {
       overscroll-behavior: none;
       overflow: hidden;
@@ -159,7 +159,7 @@
       font-size: 1.15rem;
       line-height: 1.1;
       margin: 0;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.06em;
     }
     .subtitle {
       color: var(--muted);
@@ -242,9 +242,9 @@
     .claimCountBoxRight {
       font-weight: 800;
       color: var(--accent-2);
-      text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      text-shadow: -1px -1px 0 rgba(0,0,0,0.6), 1px -1px 0 rgba(0,0,0,0.6), -1px 1px 0 rgba(0,0,0,0.6), 1px 1px 0 rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.5);
       font-size: calc(1.3rem * var(--layout-fit-font-scale));
-      letter-spacing: 0.04em;
+      letter-spacing: 0.08em;
     }
     .claimRankGlyph {
       width: auto;
@@ -308,7 +308,7 @@
       top: -24px;
       font-size: 0.64rem;
       font-weight: 800;
-      letter-spacing: 0.11em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--muted);
     }
@@ -322,20 +322,6 @@
       top: calc(100% + 30px);
       font-size: calc(var(--layout-cinematic-player-info-font) * 0.72);
       color: var(--accent);
-    }
-    .claimAvatarNameTag {
-      position: absolute;
-      top: calc(100% + 10px);
-      left: 50%;
-      transform: translateX(-50%);
-      min-width: max-content;
-      pointer-events: none;
-      color: var(--accent-2);
-      font-weight: 800;
-      font-size: 1.5rem;
-      letter-spacing: 0.06em;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.72);
-      z-index: 5;
     }
     .claimClusterTextAnchor {
       pointer-events: none;
@@ -367,9 +353,9 @@
     .bettingStatusTitle {
       font-weight: 800;
       color: var(--accent-2);
-      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+      text-shadow: -1px -1px 0 rgba(0,0,0,0.6), 1px -1px 0 rgba(0,0,0,0.6), -1px 1px 0 rgba(0,0,0,0.6), 1px 1px 0 rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.7);
       font-size: clamp(1.7rem, 4.2vw, 2.4rem);
-      letter-spacing: 0.06em;
+      letter-spacing: 0.10em;
     }
     .bettingStatusLine {
       margin-top: 4px;
@@ -407,7 +393,7 @@
       font-size: clamp(0.58rem, 1.55vw, 0.74rem);
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.12em;
       margin-bottom: 6px;
       text-align: center;
       text-shadow: 0 2px 8px rgba(0,0,0,0.7);
@@ -498,6 +484,7 @@
       transform: translateY(4px) scale(var(--layout-table-card-content-scale));
       transform-origin: center center;
     }
+    details.debug { display: none !important; }
     #app.cinematic-mode-active .topbar,
     #app.cinematic-mode-active #sidebarShell,
     #app.cinematic-mode-active .humanSeatZone,
@@ -505,8 +492,7 @@
     #app.cinematic-mode-active .tableViewHeader,
     #app.cinematic-mode-active .tableViewCards,
     #app.cinematic-mode-active .handWrap,
-    #app.cinematic-mode-active .eventLog,
-    #app.cinematic-mode-active details.debug {
+    #app.cinematic-mode-active .eventLog {
       display: none !important;
     }
     #app.cinematic-mode-active .controls {
@@ -608,7 +594,7 @@
       mask-repeat: no-repeat;
       -webkit-mask-position: center;
       mask-position: center;
-      filter: drop-shadow(0 0 6px rgba(255,255,255,0.42));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 6px rgba(255,255,255,0.42));
     }
     .emojiReactionFxLayer {
       position: absolute;
@@ -642,33 +628,34 @@
       mask-repeat: no-repeat;
       -webkit-mask-position: center;
       mask-position: center;
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9));
     }
     .emojiFx-love {
       animation: emojiKissBurst 1.65s ease-out both;
     }
     .emojiFx-love .emojiFxGlyph {
-      filter: drop-shadow(0 0 8px rgba(255, 98, 188, 0.92)) drop-shadow(0 0 18px rgba(255, 96, 194, 0.65));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 98, 188, 0.92)) drop-shadow(0 0 18px rgba(255, 96, 194, 0.65));
       opacity: 0.92;
     }
     .emojiFx-alarmed {
       animation: emojiBurstUp 0.62s both;
     }
     .emojiFx-alarmed .emojiFxGlyph {
-      filter: drop-shadow(0 0 8px rgba(255, 60, 60, 0.95)) drop-shadow(0 0 18px rgba(220, 30, 30, 0.65));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 60, 60, 0.95)) drop-shadow(0 0 18px rgba(220, 30, 30, 0.65));
       opacity: 0.95;
     }
     .emojiFx-curious {
       animation: emojiBurstUp 0.62s both;
     }
     .emojiFx-curious .emojiFxGlyph {
-      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 16px rgba(200, 220, 255, 0.55));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 16px rgba(200, 220, 255, 0.55));
       opacity: 0.92;
     }
     .emojiFx-disgust {
       animation: emojiDisgustDrop 1.55s both;
     }
     .emojiFx-disgust .emojiFxGlyph {
-      filter: drop-shadow(0 0 7px rgba(125, 219, 113, 0.95)) drop-shadow(0 0 16px rgba(79, 153, 62, 0.72));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 7px rgba(125, 219, 113, 0.95)) drop-shadow(0 0 16px rgba(79, 153, 62, 0.72));
     }
     .emojiFx-shock {
       width: 0;
@@ -696,7 +683,7 @@
       mask-repeat: no-repeat;
       -webkit-mask-position: center;
       mask-position: center;
-      filter: drop-shadow(0 0 10px rgba(255, 80, 55, 0.9)) drop-shadow(0 0 28px rgba(255, 120, 40, 0.7)) drop-shadow(0 0 48px rgba(220, 60, 20, 0.45));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 10px rgba(255, 80, 55, 0.9)) drop-shadow(0 0 28px rgba(255, 120, 40, 0.7)) drop-shadow(0 0 48px rgba(220, 60, 20, 0.45));
     }
     @keyframes shockParticle {
       0% {
@@ -872,6 +859,7 @@
       -webkit-mask-position: center;
       mask-position: center;
       filter:
+        drop-shadow(0 0 2px rgba(0,0,0,0.9))
         drop-shadow(0 0 10px rgba(180, 215, 255, 0.95))
         drop-shadow(0 0 24px rgba(150, 195, 240, 0.72))
         drop-shadow(0 0 44px rgba(120, 170, 220, 0.42));
@@ -906,6 +894,7 @@
       -webkit-mask-position: center;
       mask-position: center;
       filter:
+        drop-shadow(0 0 2px rgba(0,0,0,0.9))
         drop-shadow(0 0 5px var(--gloat-coin-tint, rgba(218,212,175,0.9)))
         drop-shadow(0 0 12px rgba(255, 245, 190, 0.48));
     }
@@ -1039,11 +1028,11 @@
       margin-top: calc(var(--layout-app-gap) * -1);
       padding-top: var(--layout-app-gap);
     }
-    .seatName { font-weight: 700; font-size: 0.78rem; }
+    .seatName { font-weight: 700; font-size: 0.78rem; letter-spacing: 0.10em; text-shadow: -1px -1px 0 rgba(0,0,0,0.55), 1px -1px 0 rgba(0,0,0,0.55), -1px 1px 0 rgba(0,0,0,0.55), 1px 1px 0 rgba(0,0,0,0.55); }
     #app.challenge-flow-active .seatName { visibility: hidden; }
     .seatMeta { color: var(--muted); font-size: 0.68rem; margin-top: 4px; }
     .seatStatus { margin-top: 6px; font-size: 0.68rem; }
-    .seatSeed { font-size: 0.68rem; color: var(--accent); font-style: italic; margin-top: 3px; letter-spacing: 0.01em; }
+    .seatSeed { font-size: 0.68rem; color: var(--accent); font-style: italic; margin-top: 3px; letter-spacing: 0.05em; }
     .seatTags { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
     .seatHandPreview {
       display: flex;
@@ -1423,7 +1412,7 @@
       color: var(--muted);
       margin-bottom: 1px;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.10em;
     }
     .chatComposer {
       display: grid;
@@ -2529,7 +2518,7 @@
       display: flex; align-items: center; justify-content: center;
       background: radial-gradient(circle at top, #30211d 0%, #1a1210 42%, #0f0c0b 100%);
       font-family: 'Khymeryyanroman4', Inter, system-ui, sans-serif;
-      letter-spacing: 0.10em; color: #f2d08f;
+      letter-spacing: 0.14em; color: rgba(255,255,255,0.9);
     }
     .sb-card {
       background: rgba(20,12,10,0.97);
@@ -2637,7 +2626,7 @@
 
     /* ── Portrait canvas ────────────────────────────────────── */
     .sb-portrait-canvas {
-      width: 160px; height: 160px; border-radius: 8px;
+      width: 200px; height: 200px; border-radius: 8px;
       background: rgba(242,208,143,0.05); border: 1px solid rgba(242,208,143,0.14);
       image-rendering: pixelated;
     }

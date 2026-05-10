@@ -1964,7 +1964,7 @@ window.SCRATCHBONES_CONFIG = {
       "--accent-2": "#f2d08f",
       "--danger": "#c85a5a",
       "--ok": "#66b17c",
-      "--text": "#f4e8d0",
+      "--text": "rgba(255,255,255,0.9)",
       "--muted": "#cdbb9f",
       "--card": "#f8f1df",
       "--card-text": "#32231d",

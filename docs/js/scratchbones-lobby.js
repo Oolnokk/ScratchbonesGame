@@ -661,7 +661,7 @@
         </div>
         <div class="sb-ap-layout">
           <div class="sb-ap-preview">
-            <canvas id="sb-ap-canvas" width="160" height="160" class="sb-portrait-canvas"></canvas>
+            <canvas id="sb-ap-canvas" width="200" height="200" class="sb-portrait-canvas"></canvas>
           </div>
           <div class="sb-ap-controls">
             <div class="sb-label">Name</div>
@@ -795,7 +795,7 @@
         </div>
         <div class="sb-col-layout">
           <div class="sb-col-preview">
-            <canvas id="sb-col-canvas" width="160" height="160" class="sb-portrait-canvas"></canvas>
+            <canvas id="sb-col-canvas" width="200" height="200" class="sb-portrait-canvas"></canvas>
           </div>
           <div class="sb-col-content">
             <div class="sb-label">Clothing</div>
@@ -899,7 +899,7 @@
         </div>
         <div class="sb-ap-layout">
           <div class="sb-ap-preview">
-            <canvas id="sb-shop-canvas" width="160" height="160" class="sb-portrait-canvas"></canvas>
+            <canvas id="sb-shop-canvas" width="200" height="200" class="sb-portrait-canvas"></canvas>
           </div>
           <div style="flex:1;min-width:0;">
             <div class="sb-shop-note sb-muted" style="font-size:0.8em;padding-bottom:6px;">
