@@ -2755,6 +2755,50 @@ import { createTutorial } from './tutorial.js';
       return chosen.slice(0, Math.max(1, desiredCount));
     }
     function chooseAiPlay(player) {
+      if (!player?.hand?.length) return { type: 'concede' };
+      const profile = getAiDifficultyProfile(player);
+      const rank = String(profile.rank || 'normal').toLowerCase();
+      // Difficulty changes the AI's decision depth, not just its randomness:
+      // easy uses shallow habits, normal keeps the existing heuristic playbook,
+      // and hard-or-higher ranks enumerate and score candidate lines.
+      if (rank === 'easy') return chooseAiPlayNaive(player, profile);
+      if (rank === 'normal') return chooseAiPlayHeuristic(player, profile);
+      return chooseAiPlayScored(player, profile);
+    }
+    function chooseAiPlayNaive(player, profile) {
+      const targetRank = state.declaredRank;
+      const honesty = getAiHonesty(player);
+      const bluffNoise = Math.min(0.45, Math.max(0.05, Number(profile.challengeRandomNudgeMax) || 0.16));
+      if (targetRank === null) {
+        const openingPlan = bestTruthfulOpeningRank(player);
+        const oneTruth = buildTruthfulPlayForRank(player, openingPlan.rank, 1, { saveWilds: true });
+        if (oneTruth.length && rand() < 0.82) {
+          return { type: 'play', declaredRank: openingPlan.rank, cardIds: oneTruth.map(c => c.id) };
+        }
+        const declaredRank = rand() < 0.7 ? openingPlan.rank : rngInt(1, RANK_COUNT);
+        const fallbackCard = player.hand.find(c => !c.wild && c.rank !== declaredRank) || player.hand[0];
+        return { type: 'play', declaredRank, cardIds: [fallbackCard.id] };
+      }
+      const naturalMatches = cardsOfRank(player, targetRank);
+      if (naturalMatches.length) {
+        return { type: 'play', declaredRank: targetRank, cardIds: [naturalMatches[0].id] };
+      }
+      const wilds = wildCards(player);
+      if (wilds.length && rand() < 0.38 + honesty * 0.18) {
+        return { type: 'play', declaredRank: targetRank, cardIds: [wilds[0].id] };
+      }
+      const bluffChance = Math.min(0.92, 0.42 + bluffNoise + (1 - honesty) * 0.28 + (player.hand.length <= 2 ? 0.18 : 0));
+      if (rand() < bluffChance) {
+        return { type: 'play', declaredRank: targetRank, cardIds: buildBluffPlay(player, targetRank, 1).map(c => c.id) };
+      }
+      if (player.chips <= CONFIG.concedeRoundChipLoss && rand() < 0.5) {
+        return { type: 'play', declaredRank: targetRank, cardIds: buildBluffPlay(player, targetRank, 1).map(c => c.id) };
+      }
+      return { type: 'concede' };
+    }
+    function chooseAiPlayHeuristic(player, _profile) {
+      // The baseline keeps the pre-existing heuristic behavior; _profile is accepted
+      // so every dispatched strategy shares the same call signature.
       const targetRank = state.declaredRank;
       const pers = player.personality;
       const honesty = getAiHonesty(player);
@@ -2785,7 +2829,7 @@ import { createTutorial } from './tutorial.js';
           };
         }
         const fallbackCard = player.hand[0];
-        return { type: 'play', declaredRank: rngInt(1, 10), cardIds: [fallbackCard.id] };
+        return { type: 'play', declaredRank: rngInt(1, RANK_COUNT), cardIds: [fallbackCard.id] };
       }
       const normalMatches = cardsOfRank(player, targetRank);
       const wilds = wildCards(player);
@@ -2869,6 +2913,104 @@ import { createTutorial } from './tutorial.js';
       }
       if (wilds.length) return { type: 'play', declaredRank: targetRank, cardIds: [wilds[0].id] };
       return { type: 'concede' };
+    }
+    function buildAiScoredPlayCandidates(player) {
+      const candidates = [];
+      const declaredRanks = state.declaredRank === null
+        ? Array.from({ length: RANK_COUNT }, (_, index) => index + 1)
+        : [state.declaredRank];
+      for (const declaredRank of declaredRanks) {
+        const maxTruthful = cardsOfRank(player, declaredRank).length + wildCards(player).length;
+        for (let count = 1; count <= Math.min(player.hand.length, Math.max(1, maxTruthful)); count++) {
+          const cards = buildTruthfulPlayForRank(player, declaredRank, count, { saveWilds: count <= cardsOfRank(player, declaredRank).length });
+          if (cards.length === count) {
+            candidates.push({ type: 'play', declaredRank, cards, truthful: true });
+          }
+        }
+        const bluffable = player.hand.filter(c => !c.wild && c.rank !== declaredRank).length;
+        if (bluffable > 0) {
+          const bluffLimit = Math.min(player.hand.length, Math.max(1, Math.min(4, bluffable)));
+          for (let count = 1; count <= bluffLimit; count++) {
+            candidates.push({ type: 'play', declaredRank, cards: buildBluffPlay(player, declaredRank, count), truthful: false });
+          }
+        }
+      }
+      if (state.declaredRank !== null) candidates.push({ type: 'concede' });
+      return candidates;
+    }
+    function estimateAiCandidateChallengeRisk(player, candidate, profile) {
+      if (candidate.type !== 'play') return 0;
+      const candidatePlay = {
+        playerIndex: player.id,
+        cards: candidate.cards,
+        declaredRank: candidate.declaredRank,
+      };
+      const challengers = state.players.filter(p => p && !p.eliminated && p.id !== player.id && !hasConcededThisRound(p.id));
+      if (!challengers.length) return 0;
+      let totalRisk = 0;
+      for (const challenger of challengers) {
+        const suspicion = challengeSuspicionScore(challenger.id, candidatePlay, { includeRandom: false });
+        const threshold = getAiDifficultyProfile(challenger).challengeThreshold;
+        const thresholdPressure = clamp01(0.5 + (suspicion - threshold) * 1.8);
+        const readPressure = clamp01(0.5 + suspicionFromReadProfile(ensureReadProfile(challenger.id, player.id), challenger.personality) * 1.6);
+        totalRisk += clamp01(thresholdPressure * 0.72 + readPressure * 0.28);
+      }
+      const averageRisk = totalRisk / challengers.length;
+      const bluffExposure = candidate.truthful ? 0 : 0.26 + Math.min(0.24, candidate.cards.length * 0.06);
+      const difficultyNoise = Math.min(0.12, Number(profile.challengeRandomNudgeMax) || 0);
+      return clamp01(averageRisk + bluffExposure + difficultyNoise * 0.35);
+    }
+    function scoreAiPlayCandidate(player, candidate, profile) {
+      const pers = player.personality || {};
+      const honesty = getAiHonesty(player);
+      const greed = pers.greed ?? 0.5;
+      const aggression = pers.aggression ?? 0.5;
+      if (candidate.type === 'concede') {
+        const affordableLoss = player.chips > CONFIG.concedeRoundChipLoss ? 0.08 : -0.28;
+        const noTruth = state.declaredRank !== null && buildTruthfulPlayForRank(player, state.declaredRank, 1).length === 0;
+        return 0.08 + affordableLoss + (noTruth ? 0.28 + honesty * 0.18 : -0.35) - aggression * 0.16;
+      }
+      const cards = candidate.cards;
+      const count = cards.length;
+      const wildUse = cards.filter(c => c.wild).length;
+      const handAfter = Math.max(0, player.hand.length - count);
+      const clearOut = handAfter === 0;
+      const rankKnownVisible = countKnownRank(candidate.declaredRank);
+      const visibleWilds = countVisibleWilds();
+      const remainingNatural = Math.max(0, COPIES_PER_RANK - rankKnownVisible);
+      const clearOpportunity = clearOut ? 1 : (handAfter <= 2 ? 0.35 : 0);
+      const risk = estimateAiCandidateChallengeRisk(player, candidate, profile);
+      let score = 0;
+      score += candidate.truthful ? 0.62 + honesty * 0.36 : 0.2 + aggression * 0.44 + greed * 0.18;
+      score += count * (candidate.truthful ? 0.16 + greed * 0.06 : 0.08 + aggression * 0.04);
+      score += clearOpportunity * (0.72 + greed * 0.22 + (player.chips <= 3 ? 0.18 : 0));
+      score += player.chips <= 2 && candidate.truthful ? 0.14 : 0;
+      score += player.chips >= 8 && !candidate.truthful ? 0.08 + aggression * 0.06 : 0;
+      score += remainingNatural <= count && candidate.truthful ? 0.12 : 0;
+      score -= wildUse * (candidate.truthful ? (handAfter <= 1 ? 0.02 : 0.11 + honesty * 0.08) : 0.2);
+      score -= risk * (candidate.truthful ? 0.28 : 0.88 + honesty * 0.3);
+      score -= !candidate.truthful && count >= 3 ? 0.08 : 0;
+      score -= visibleWilds >= WILD_COUNT && !candidate.truthful ? 0.06 : 0;
+      score += rand() * 0.035;
+      return score;
+    }
+    function chooseAiPlayScored(player, profile) {
+      const candidates = buildAiScoredPlayCandidates(player);
+      let bestCandidate = null;
+      let bestScore = -Infinity;
+      for (const candidate of candidates) {
+        const score = scoreAiPlayCandidate(player, candidate, profile);
+        if (score > bestScore) {
+          bestScore = score;
+          bestCandidate = candidate;
+        }
+      }
+      if (!bestCandidate || bestCandidate.type === 'concede') return { type: 'concede' };
+      return {
+        type: 'play',
+        declaredRank: bestCandidate.declaredRank,
+        cardIds: bestCandidate.cards.map(c => c.id),
+      };
     }
     function estimateFoldPressureAgainst(actorId, opponentId) {
       const opponent = state.players[opponentId];
