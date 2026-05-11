@@ -131,6 +131,26 @@ let HEAD_XFORM = _portraitConfig.headXform || _PORTRAIT_DEFAULTS.headXform;
 let FIGHTERS = (_portraitConfig.fighters || _PORTRAIT_DEFAULTS.fighters).map(normalizedFighterPortrait);
 let BODYCOLOR_LIMITS = _portraitConfig.bodyColorLimits || _PORTRAIT_DEFAULTS.bodyColorLimits;
 let LAST_RANDOMIZATION_RULES_BY_FIGHTER = {};
+
+function _normalizeSpeciesKey(speciesId) {
+  return String(speciesId || '').trim().toLowerCase().replace(/_/g, '-');
+}
+
+function _configuredRandomizableGenders(speciesId) {
+  const availability = window.SCRATCHBONES_CONFIG?.game?.appearanceEditor?.availability || {};
+  const key = _normalizeSpeciesKey(speciesId);
+  const entry = availability[key] || availability[String(speciesId || '').trim()] || null;
+  const genders = entry?.randomizableGenders || entry?.genders;
+  return Array.isArray(genders) && genders.length
+    ? genders.map(gender => String(gender).toLowerCase()).filter(Boolean)
+    : null;
+}
+
+function _isRandomizableSpeciesGender(speciesId, gender) {
+  const genders = _configuredRandomizableGenders(speciesId);
+  return !genders || genders.includes(String(gender || '').toLowerCase());
+}
+
 const BLINK_STATE_BY_HEAD_URL = new Map();
 
 function getBlinkConfig() {
@@ -551,6 +571,17 @@ function _isMouthMask(speciesId) {
   return !!(_MOUTH_SPECIES_MAP[sid] || _MOUTH_SPECIES_MAP[String(speciesId || '').toLowerCase()])?.masked;
 }
 
+function _getMouthExpressionOpacity(expression, speciesId) {
+  const opacityByExpression = window.SCRATCHBONES_CONFIG?.game?.portrait?.mouthExpressions?.opacityByExpressionAndSpecies;
+  const bySpecies = opacityByExpression?.[String(expression || 'neutral').toLowerCase()];
+  if (!bySpecies || typeof bySpecies !== 'object') return 1;
+  const rawSpeciesId = String(speciesId || '').toLowerCase();
+  const normalizedSpeciesId = rawSpeciesId.replace(/_/g, '-');
+  const opacity = bySpecies[normalizedSpeciesId] ?? bySpecies[rawSpeciesId];
+  const numericOpacity = Number(opacity);
+  return Number.isFinite(numericOpacity) ? Math.max(0, Math.min(1, numericOpacity)) : 1;
+}
+
 // ── Rendering ──────────────────────────────────────────────
 
 async function renderProfile(canvas, profile, renderOptions = {}) {
@@ -693,6 +724,7 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
   const _preloadNowMs   = Date.now();
   const mouthExpression = breathingComposer?.getExpression(seatId, _preloadNowMs) ?? 'neutral';
   const mouthSpriteUrl  = _getMouthSpriteUrl(mouthExpression, speciesId, gender);
+  const mouthOpacity    = _getMouthExpressionOpacity(mouthExpression, speciesId);
 
   const neededUrls = new Set([
     ...(headUrl ? [headUrl] : []),
@@ -784,7 +816,10 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
   const emoteNeutralPts  = emoteDeformedPts ? _buildNeutralGrid(4, 6) : null;
 
   // Draws a single image with emote deformation if active, else plain.
-  const drawLayerWithEmote = (img, xform, filter) => {
+  const drawLayerWithEmote = (img, xform, filter, alpha = 1) => {
+    const numericAlpha = Number(alpha);
+    const opacity = Number.isFinite(numericAlpha) ? Math.max(0, Math.min(1, numericAlpha)) : 1;
+    if (opacity <= 0) return;
     if (emoteDeformedPts) {
       const { ax, ay, sx, sy } = xform;
       const h = PORTRAIT_L * sy;
@@ -792,8 +827,14 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
       const cx = PORTRAIT_CW / 2 + ay * PORTRAIT_L;
       const cy = PORTRAIT_CH / 2 - ax * PORTRAIT_L;
       ctx.save();
+      ctx.globalAlpha = opacity;
       ctx.filter = filter || 'none';
       _drawPortraitLayerWarped(ctx, img, cx - w / 2, cy - h / 2, w, h, emoteNeutralPts, emoteDeformedPts, 4, 6);
+      ctx.restore();
+    } else if (opacity < 1) {
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      drawPortraitLayer(ctx, img, xform, filter);
       ctx.restore();
     } else {
       drawPortraitLayer(ctx, img, xform, filter);
@@ -881,7 +922,7 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
     }
   }
   // Non-mask species: mouth sprite overlays ur-head (drawn here so it sits above ur-head).
-  if (mouthImg && !_isMaskSpecies) drawLayerWithEmote(mouthImg, getPortraitXformPreset('B'), 'none');
+  if (mouthImg && !_isMaskSpecies) drawLayerWithEmote(mouthImg, getPortraitXformPreset('B'), 'none', mouthOpacity);
   drawEmoteLayers(hatUnderLayers);
   drawEmoteLayers(elevatedEyeAccessoryLayers);
   drawBreathingLayers(hoodLayers);
@@ -1177,6 +1218,7 @@ async function loadPortraitCosmetics(configBase) {
         const sData = await sResp.json();
         for (const [genderKey, genderData] of Object.entries(sData)) {
           if (!genderData || typeof genderData !== 'object' || !genderData.bodyColorRanges) continue;
+          if (!_isRandomizableSpeciesGender(sData.speciesId, genderKey)) continue;
           let fighter = FIGHTERS.find(f => genderData.headSprite && f.headUrl === genderData.headSprite);
           if (!fighter && genderData.headSprite && Array.isArray(genderData.portraitBodyLayers)) {
             fighter = normalizedFighterPortrait({

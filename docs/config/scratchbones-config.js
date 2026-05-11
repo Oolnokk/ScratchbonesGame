@@ -43,6 +43,12 @@ window.SCRATCHBONES_CONFIG = {
     },
 
     "appearanceEditor": {
+      "availability": {
+        "tletingan": {
+          "genders": ["male"],
+          "randomizableGenders": ["male"]
+        }
+      },
       "species": {
         "engh-sho": {
           "label": "Engh-sho",
@@ -841,6 +847,14 @@ window.SCRATCHBONES_CONFIG = {
         "collaredTag": "collared",
         "shirtbeardIds": ["kenk_shirtbeard", "kenk_shirtbeard_f"],
         "collarLockedFacialHairIds": ["kenk_shirtbeard", "kenk_shirtbeard_f"]
+      },
+      "mouthExpressions": {
+        "opacityByExpressionAndSpecies": {
+          "neutral": {
+            "mao-ao": 0,
+            "engh-sho": 0
+          }
+        }
       },
       "layering": {
         "hatUnderHoodTag": "hood-layer:under",

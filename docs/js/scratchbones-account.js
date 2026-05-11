@@ -142,13 +142,32 @@
     return result.slice(0, cfg.loadoutSize);
   }
 
+  function normalizeSpeciesKey(speciesId) {
+    return String(speciesId || '').trim().toLowerCase().replace(/_/g, '-');
+  }
+
+  function configuredGendersForSpecies(speciesId) {
+    const availability = window.SCRATCHBONES_CONFIG?.game?.appearanceEditor?.availability || {};
+    const key = normalizeSpeciesKey(speciesId);
+    const entry = availability[key] || availability[String(speciesId || '').trim()] || null;
+    return Array.isArray(entry?.genders) && entry.genders.length
+      ? entry.genders.map(g => String(g).toLowerCase()).filter(Boolean)
+      : null;
+  }
+
   function normalizeAppearance(appearance) {
     const base = defaultAppearance();
     const source = appearance || {};
+    const speciesId = source.speciesId || base.speciesId;
+    const requestedGender = String(source.gender || base.gender).toLowerCase();
+    const configuredGenders = configuredGendersForSpecies(speciesId);
+    const gender = configuredGenders && !configuredGenders.includes(requestedGender)
+      ? configuredGenders[0]
+      : requestedGender;
     return {
-      speciesId: source.speciesId || base.speciesId,
-      gender:    source.gender    || base.gender,
-      cosmetics: { ...(source.cosmetics || {}) },
+      speciesId,
+      gender,
+      cosmetics: gender === requestedGender ? { ...(source.cosmetics || {}) } : {},
       bodyColors: {
         ...base.bodyColors,
         ...(source.bodyColors || {}),
