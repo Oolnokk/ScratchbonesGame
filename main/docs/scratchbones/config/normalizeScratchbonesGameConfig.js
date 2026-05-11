@@ -191,6 +191,26 @@ const DEFAULT_UI_WOBBLY_OUTLINES_CONFIG = {
   ],
 };
 
+
+const DEFAULT_AI_DIFFICULTY_RANK = 'normal';
+const DEFAULT_AI_DIFFICULTY_PROFILES = {
+  easy: {
+    challengeThreshold: 0.64,
+    challengeRandomNudgeMax: 0.22,
+    bettingConfidenceSuspicionWeight: 0.42,
+  },
+  normal: {
+    challengeThreshold: 0.52,
+    challengeRandomNudgeMax: 0.16,
+    bettingConfidenceSuspicionWeight: 0.55,
+  },
+  hard: {
+    challengeThreshold: 0.44,
+    challengeRandomNudgeMax: 0.08,
+    bettingConfidenceSuspicionWeight: 0.68,
+  },
+};
+
 const DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG = {
   minimumNpcClothingArticles: 1,
   clothingSlots: ['hat', 'hood', 'torsoCosmetic', 'armCosmetic'],
@@ -212,6 +232,52 @@ function normalizeFiniteNumber(value, fallback, { min = -Infinity, max = Infinit
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
   return Math.min(max, Math.max(min, numeric));
+}
+
+
+function normalizeAiDifficultyRankName(value, fallback = DEFAULT_AI_DIFFICULTY_RANK, rankProfiles = DEFAULT_AI_DIFFICULTY_PROFILES) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized && rankProfiles[normalized] ? normalized : fallback;
+}
+
+function normalizeAiDifficultyProfile(rawProfile = {}, fallbackProfile = DEFAULT_AI_DIFFICULTY_PROFILES.normal) {
+  const source = rawProfile && typeof rawProfile === 'object' && !Array.isArray(rawProfile) ? rawProfile : {};
+  return {
+    challengeThreshold: normalizeFiniteNumber(source.challengeThreshold, fallbackProfile.challengeThreshold, { min: 0, max: 1 }),
+    challengeRandomNudgeMax: normalizeFiniteNumber(source.challengeRandomNudgeMax, fallbackProfile.challengeRandomNudgeMax, { min: 0, max: 1 }),
+    bettingConfidenceSuspicionWeight: normalizeFiniteNumber(source.bettingConfidenceSuspicionWeight, fallbackProfile.bettingConfidenceSuspicionWeight, { min: 0, max: 2 }),
+  };
+}
+
+function normalizeAiConfig(rawAi = {}) {
+  const source = rawAi && typeof rawAi === 'object' && !Array.isArray(rawAi) ? rawAi : {};
+  const migratedNormalProfile = normalizeAiDifficultyProfile(source, DEFAULT_AI_DIFFICULTY_PROFILES.normal);
+  const rawRanks = source.difficultyRanks && typeof source.difficultyRanks === 'object' && !Array.isArray(source.difficultyRanks)
+    ? source.difficultyRanks
+    : {};
+  const difficultyRanks = {};
+  for (const rank of Object.keys(DEFAULT_AI_DIFFICULTY_PROFILES)) {
+    const fallbackProfile = rank === DEFAULT_AI_DIFFICULTY_RANK ? migratedNormalProfile : DEFAULT_AI_DIFFICULTY_PROFILES[rank];
+    difficultyRanks[rank] = normalizeAiDifficultyProfile(rawRanks[rank], fallbackProfile);
+  }
+  const defaultDifficultyRank = normalizeAiDifficultyRankName(source.defaultDifficultyRank, DEFAULT_AI_DIFFICULTY_RANK, difficultyRanks);
+  const seatDifficultyRanks = {};
+  const rawSeatDifficultyRanks = source.seatDifficultyRanks && typeof source.seatDifficultyRanks === 'object' && !Array.isArray(source.seatDifficultyRanks)
+    ? source.seatDifficultyRanks
+    : {};
+  for (const [key, value] of Object.entries(rawSeatDifficultyRanks)) {
+    const normalizedKey = String(key || '').trim();
+    if (!normalizedKey) continue;
+    seatDifficultyRanks[normalizedKey] = normalizeAiDifficultyRankName(value, defaultDifficultyRank, difficultyRanks);
+  }
+  return {
+    challengeThreshold: migratedNormalProfile.challengeThreshold,
+    challengeRandomNudgeMax: migratedNormalProfile.challengeRandomNudgeMax,
+    bettingConfidenceSuspicionWeight: migratedNormalProfile.bettingConfidenceSuspicionWeight,
+    defaultDifficultyRank,
+    difficultyRanks,
+    seatDifficultyRanks,
+  };
 }
 
 function normalizePunishBoneSpinConfig(value) {
@@ -932,11 +998,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         };
       })(),
     },
-    ai: {
-      challengeThreshold: rawGameConfig.ai?.challengeThreshold ?? 0.52,
-      challengeRandomNudgeMax: rawGameConfig.ai?.challengeRandomNudgeMax ?? 0.16,
-      bettingConfidenceSuspicionWeight: rawGameConfig.ai?.bettingConfidenceSuspicionWeight ?? 0.55,
-    },
+    ai: normalizeAiConfig(rawGameConfig.ai),
     layout: {
       ...(rawGameConfig.layout || {}),
       animation: {
