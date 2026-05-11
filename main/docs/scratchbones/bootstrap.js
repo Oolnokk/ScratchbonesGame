@@ -6248,7 +6248,7 @@ import { createTutorial } from './tutorial.js';
       const player = state.players[seatIndex];
       if (!player) return 'neutral';
       const activePlayers = state.players.filter(p => !p.eliminated);
-      const totalChips = activePlayers.reduce((sum, p) => sum + (p.chips || 0), 0) + (state.tablePot || 0);
+      const totalChips = activePlayers.reduce((sum, p) => sum + (p.chips || 0), 0);
       const avgChips = totalChips / Math.max(1, activePlayers.length);
       return (player.chips || 0) >= avgChips ? 'smile' : 'frown';
     }
@@ -6257,7 +6257,8 @@ import { createTutorial } from './tutorial.js';
       const composer = window.portraitBreathingComposer;
       if (!composer) return;
       for (let i = 0; i < state.players.length; i++) {
-        if (!state.players[i].eliminated) {
+        const player = state.players[i];
+        if (player && !player.eliminated) {
           composer.setDefaultExpression(String(i), computeRestingExpression(i));
         }
       }
