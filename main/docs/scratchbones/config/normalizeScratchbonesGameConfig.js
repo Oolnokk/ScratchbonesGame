@@ -292,6 +292,37 @@ const DEFAULT_PROMOTED_TEXT_METRIC_FIELDS = [
   'padding-left',
 ];
 const DEFAULT_PROMOTED_TEXT_METRIC_ASSIGNMENT_IDS = ['ui-text-over-lighting'];
+const DEFAULT_PROMOTE_BY_ROOT_SELECTORS = [
+  '#aiSidebar',
+  '.humanSeatZone',
+  '.claimCluster',
+  '.stakeVisualPanel',
+  '.challengePromptPane',
+];
+const DEFAULT_EXCLUDE_DESCENDANT_SELECTORS = [
+  '.seatName',
+  '.seatMeta',
+  '.seatChipBadge',
+  '.seatChipBadgeIcon',
+  '.seatStatus',
+  '.seatAvatarBox',
+  '.claimAvatarNameTag',
+  '.claimAvatarCinRole',
+  '.claimAvatarCinName',
+  '.claimAvatarCinTags',
+];
+const DEFAULT_TRANSFORM_SENSITIVE_MARKER_ATTRIBUTES = [
+  'id',
+  'class',
+  'data-proj-id',
+  'data-ui-role',
+  'data-node-type',
+  'data-cinematic',
+];
+const DEFAULT_TRANSFORM_SENSITIVE_MARKER_TERMS = ['avatar', 'portrait', 'cinematic', 'cutscene'];
+const DEFAULT_PRESERVE_TRANSFORM_PROJECT_ID_CONTAINS_RULES = [
+  { prefix: 'claim-', contains: ['anchor', 'text'] },
+];
 
 const DEFAULT_LAYER_MANAGER_CONFIG = {
   enabled: true,
@@ -325,10 +356,19 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   typographyBaselineFields: DEFAULT_TYPOGRAPHY_BASELINE_FIELDS,
   promotedTextMetricFields: DEFAULT_PROMOTED_TEXT_METRIC_FIELDS,
   promotedTextMetricAssignmentIds: DEFAULT_PROMOTED_TEXT_METRIC_ASSIGNMENT_IDS,
+  transformSensitiveMarkerAttributes: DEFAULT_TRANSFORM_SENSITIVE_MARKER_ATTRIBUTES,
+  transformSensitiveMarkerTerms: DEFAULT_TRANSFORM_SENSITIVE_MARKER_TERMS,
+  preservePromotionTransformProjectIds: ['avatar-human'],
+  preservePromotionTransformProjectIdPrefixes: ['avatar-', 'claim-avatar-'],
+  preservePromotionTransformProjectIdContainsRules: DEFAULT_PRESERVE_TRANSFORM_PROJECT_ID_CONTAINS_RULES,
   placementMode: 'authored-space',
   placementCoordinateSpace: 'app',
   roundToPixels: false,
   portalScaleStrategy: 'portal-transform',
+  screenSpaceUseFixed: true,
+  screenSpaceRoundToPixels: false,
+  promoteByRootSelectors: DEFAULT_PROMOTE_BY_ROOT_SELECTORS,
+  excludeDescendantSelectors: DEFAULT_EXCLUDE_DESCENDANT_SELECTORS,
   layerOrder: ['above-lighting-shell', 'above-lighting-content'],
   assignments: [
     {
@@ -427,6 +467,100 @@ function repeatIdsFromCounts(counts = {}) {
     for (let i = 0; i < safeCount; i += 1) result.push(id);
   }
   return result;
+}
+
+
+function normalizeLayerManagerGuard(rawGuard = {}, fallbackGuard = {}) {
+  return {
+    allowlistSelectors: normalizeStringList(rawGuard.allowlistSelectors, fallbackGuard.allowlistSelectors),
+    denylistSelectors: normalizeStringList(rawGuard.denylistSelectors, fallbackGuard.denylistSelectors),
+    marginReset: {
+      allowlistSelectors: normalizeStringList(rawGuard.marginReset?.allowlistSelectors, fallbackGuard.marginReset?.allowlistSelectors),
+      denylistSelectors: normalizeStringList(rawGuard.marginReset?.denylistSelectors, fallbackGuard.marginReset?.denylistSelectors),
+    },
+    fillSize: {
+      allowlistSelectors: normalizeStringList(rawGuard.fillSize?.allowlistSelectors, fallbackGuard.fillSize?.allowlistSelectors),
+      denylistSelectors: normalizeStringList(rawGuard.fillSize?.denylistSelectors, fallbackGuard.fillSize?.denylistSelectors),
+    },
+  };
+}
+
+function normalizeLayerManagerContainsRules(rawRules, fallbackRules) {
+  const source = Array.isArray(rawRules) ? rawRules : fallbackRules;
+  return (source || [])
+    .map((rule) => ({
+      prefix: String(rule?.prefix || '').trim().toLowerCase(),
+      contains: normalizeStringList(rule?.contains || rule?.terms, []).map((entry) => entry.toLowerCase()),
+    }))
+    .filter((rule) => rule.prefix && rule.contains.length);
+}
+
+function normalizeLayerManagerAssignments(rawAssignments, fallbackAssignments) {
+  const source = Array.isArray(rawAssignments) ? rawAssignments : fallbackAssignments;
+  return (source || [])
+    .map((entry, index) => {
+      const selectors = normalizeStringList(entry?.selectors, []);
+      if (!selectors.length) return null;
+      return {
+        id: String(entry?.id || `assignment-${index}`).trim() || `assignment-${index}`,
+        layer: String(entry?.layer || 'overlay').trim() || 'overlay',
+        selectors,
+        preserveSpace: entry?.preserveSpace !== false,
+        keepOriginal: entry?.keepOriginal === true,
+        promotedOpacity: Math.min(1, Math.max(0, finiteNumberOrDefault(entry?.promotedOpacity, 1))),
+        ...(entry?.capturePromotedTextMetrics === true ? { capturePromotedTextMetrics: true } : {}),
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeLayerManagerConfig(rawLayerManager = {}) {
+  const placementMode = normalizeOneOf(
+    rawLayerManager.placementMode,
+    DEFAULT_LAYER_MANAGER_CONFIG.placementMode,
+    ['authored-space', 'screen-space'],
+    { 'authored-coordinate': 'authored-space' },
+  );
+  const placementCoordinateSpace = normalizeOneOf(
+    rawLayerManager.placementCoordinateSpace,
+    DEFAULT_LAYER_MANAGER_CONFIG.placementCoordinateSpace,
+    ['app', 'viewport'],
+  );
+  const portalScaleStrategy = normalizeOneOf(
+    rawLayerManager.portalScaleStrategy,
+    DEFAULT_LAYER_MANAGER_CONFIG.portalScaleStrategy,
+    ['portal-transform', 'dimensions', 'none', 'legacy-screen-space'],
+  );
+  return {
+    ...DEFAULT_LAYER_MANAGER_CONFIG,
+    ...rawLayerManager,
+    enabled: rawLayerManager.enabled !== false,
+    hostZIndex: finiteNumberOrDefault(rawLayerManager.hostZIndex, DEFAULT_LAYER_MANAGER_CONFIG.hostZIndex),
+    defaultPreserveSpace: rawLayerManager.defaultPreserveSpace !== false,
+    normalizePromotedElementBox: rawLayerManager.normalizePromotedElementBox === true,
+    normalizeBoxGuard: normalizeLayerManagerGuard(rawLayerManager.normalizeBoxGuard || {}, DEFAULT_LAYER_MANAGER_CONFIG.normalizeBoxGuard),
+    preservePromotionTransformSelectors: normalizeStringList(rawLayerManager.preservePromotionTransformSelectors, DEFAULT_LAYER_MANAGER_CONFIG.preservePromotionTransformSelectors),
+    disablePreservePromotionTransformSelectors: normalizeStringList(rawLayerManager.disablePreservePromotionTransformSelectors, DEFAULT_LAYER_MANAGER_CONFIG.disablePreservePromotionTransformSelectors),
+    typographyBaselineRootSelector: String(rawLayerManager.typographyBaselineRootSelector || DEFAULT_LAYER_MANAGER_CONFIG.typographyBaselineRootSelector).trim() || DEFAULT_LAYER_MANAGER_CONFIG.typographyBaselineRootSelector,
+    typographyBaselineFields: normalizeStringList(rawLayerManager.typographyBaselineFields, DEFAULT_LAYER_MANAGER_CONFIG.typographyBaselineFields),
+    promotedTextMetricFields: normalizeStringList(rawLayerManager.promotedTextMetricFields, DEFAULT_LAYER_MANAGER_CONFIG.promotedTextMetricFields),
+    promotedTextMetricAssignmentIds: normalizeStringList(rawLayerManager.promotedTextMetricAssignmentIds, DEFAULT_LAYER_MANAGER_CONFIG.promotedTextMetricAssignmentIds),
+    transformSensitiveMarkerAttributes: normalizeStringList(rawLayerManager.transformSensitiveMarkerAttributes, DEFAULT_LAYER_MANAGER_CONFIG.transformSensitiveMarkerAttributes),
+    transformSensitiveMarkerTerms: normalizeStringList(rawLayerManager.transformSensitiveMarkerTerms, DEFAULT_LAYER_MANAGER_CONFIG.transformSensitiveMarkerTerms).map((entry) => entry.toLowerCase()),
+    preservePromotionTransformProjectIds: normalizeStringList(rawLayerManager.preservePromotionTransformProjectIds, DEFAULT_LAYER_MANAGER_CONFIG.preservePromotionTransformProjectIds).map((entry) => entry.toLowerCase()),
+    preservePromotionTransformProjectIdPrefixes: normalizeStringList(rawLayerManager.preservePromotionTransformProjectIdPrefixes, DEFAULT_LAYER_MANAGER_CONFIG.preservePromotionTransformProjectIdPrefixes).map((entry) => entry.toLowerCase()),
+    preservePromotionTransformProjectIdContainsRules: normalizeLayerManagerContainsRules(rawLayerManager.preservePromotionTransformProjectIdContainsRules, DEFAULT_LAYER_MANAGER_CONFIG.preservePromotionTransformProjectIdContainsRules),
+    placementMode,
+    placementCoordinateSpace,
+    roundToPixels: rawLayerManager.roundToPixels === true || rawLayerManager.screenSpaceRoundToPixels === true,
+    portalScaleStrategy: portalScaleStrategy === 'none' ? 'dimensions' : portalScaleStrategy,
+    screenSpaceUseFixed: rawLayerManager.screenSpaceUseFixed !== false,
+    screenSpaceRoundToPixels: rawLayerManager.screenSpaceRoundToPixels === true,
+    promoteByRootSelectors: normalizeStringList(rawLayerManager.promoteByRootSelectors, DEFAULT_LAYER_MANAGER_CONFIG.promoteByRootSelectors),
+    excludeDescendantSelectors: normalizeStringList(rawLayerManager.excludeDescendantSelectors, DEFAULT_LAYER_MANAGER_CONFIG.excludeDescendantSelectors),
+    layerOrder: normalizeStringList(rawLayerManager.layerOrder, DEFAULT_LAYER_MANAGER_CONFIG.layerOrder),
+    assignments: normalizeLayerManagerAssignments(rawLayerManager.assignments, DEFAULT_LAYER_MANAGER_CONFIG.assignments),
+  };
 }
 
 function normalizeTrickBoneDefinitions(rawDefinitions = {}) {
@@ -729,37 +863,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         ...(rawGameConfig.layout?.lighting || {}),
         candlelight: { ...(rawGameConfig.layout?.lighting?.candlelight || {}) },
       },
-      layerManager: (() => {
-        const rawLayerManager = rawGameConfig.layout?.layerManager || {};
-        const placementMode = normalizeOneOf(
-          rawLayerManager.placementMode,
-          DEFAULT_LAYER_MANAGER_CONFIG.placementMode,
-          ['authored-space', 'screen-space'],
-          { 'authored-coordinate': 'authored-space' },
-        );
-        const placementCoordinateSpace = normalizeOneOf(
-          rawLayerManager.placementCoordinateSpace,
-          DEFAULT_LAYER_MANAGER_CONFIG.placementCoordinateSpace,
-          ['app', 'viewport'],
-        );
-        const portalScaleStrategy = normalizeOneOf(
-          rawLayerManager.portalScaleStrategy,
-          DEFAULT_LAYER_MANAGER_CONFIG.portalScaleStrategy,
-          ['portal-transform', 'dimensions', 'none', 'legacy-screen-space'],
-        );
-        return {
-          ...DEFAULT_LAYER_MANAGER_CONFIG,
-          ...rawLayerManager,
-          placementMode,
-          placementCoordinateSpace,
-          roundToPixels: rawLayerManager.roundToPixels === true || rawLayerManager.screenSpaceRoundToPixels === true,
-          portalScaleStrategy: portalScaleStrategy === 'none' ? 'dimensions' : portalScaleStrategy,
-          typographyBaselineFields: normalizeStringList(rawLayerManager.typographyBaselineFields, DEFAULT_LAYER_MANAGER_CONFIG.typographyBaselineFields),
-          promotedTextMetricFields: normalizeStringList(rawLayerManager.promotedTextMetricFields, DEFAULT_LAYER_MANAGER_CONFIG.promotedTextMetricFields),
-          promotedTextMetricAssignmentIds: normalizeStringList(rawLayerManager.promotedTextMetricAssignmentIds, DEFAULT_LAYER_MANAGER_CONFIG.promotedTextMetricAssignmentIds),
-          assignments: Array.isArray(rawLayerManager.assignments) ? rawLayerManager.assignments : DEFAULT_LAYER_MANAGER_CONFIG.assignments,
-        };
-      })(),
+      layerManager: normalizeLayerManagerConfig(rawGameConfig.layout?.layerManager || {}),
     },
     uiText: {
       initialBanner: rawGameConfig.uiText?.initialBanner ?? 'Open a round by selecting one or more cards, then declare a number.',

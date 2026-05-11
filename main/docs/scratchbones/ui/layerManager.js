@@ -23,39 +23,56 @@ function selectorMatchesElement(element, selectors) {
   });
 }
 
-function isTransformSensitivePromotionTarget(element) {
-  if (!element) return false;
-  const marker = [
-    element.id,
-    element.className,
-    element.getAttribute?.('data-proj-id'),
-    element.getAttribute?.('data-ui-role'),
-    element.getAttribute?.('data-node-type'),
-    element.getAttribute?.('data-cinematic'),
-  ]
+function readElementMarkerValue(element, attributeName) {
+  const normalizedName = String(attributeName || '').trim();
+  if (!normalizedName) return '';
+  if (normalizedName === 'id') return element.id;
+  if (normalizedName === 'class') return element.className;
+  return element.getAttribute?.(normalizedName);
+}
+
+function buildElementMarker(element, markerAttributes) {
+  if (!element) return '';
+  return normalizeStringList(markerAttributes)
+    .map((attributeName) => readElementMarkerValue(element, attributeName))
     .filter((value) => typeof value === 'string' && value.trim())
     .join(' ')
     .toLowerCase();
-  return /avatar|portrait|cinematic|cutscene/.test(marker);
 }
 
+function isTransformSensitivePromotionTarget(element, { markerAttributes = [], markerTerms = [] } = {}) {
+  const marker = buildElementMarker(element, markerAttributes);
+  if (!marker) return false;
+  return normalizeStringList(markerTerms)
+    .map((term) => term.toLowerCase())
+    .some((term) => marker.includes(term));
+}
 
-function shouldPreservePromotionTransform(element, { preserveSelectors = [], disableSelectors = [] } = {}) {
+function shouldPreservePromotionTransform(element, {
+  preserveSelectors = [],
+  disableSelectors = [],
+  projectIds = [],
+  projectIdPrefixes = [],
+  projectIdContainsRules = [],
+} = {}) {
   if (!element) return false;
   const projId = String(element.getAttribute?.('data-proj-id') || '').trim().toLowerCase();
   const selectorMatch = (selectors) => selectorMatchesElement(element, selectors);
   if (selectorMatch(disableSelectors)) return false;
   if (selectorMatch(preserveSelectors)) return true;
   if (!projId) return false;
-  if (projId === 'avatar-human' || projId.startsWith('avatar-')) return true;
-  if (projId.startsWith('claim-avatar-')) return true;
-  if (projId.startsWith('claim-') && (projId.includes('anchor') || projId.includes('text'))) return true;
-  return false;
+  if (normalizeStringList(projectIds).map((entry) => entry.toLowerCase()).includes(projId)) return true;
+  if (normalizeStringList(projectIdPrefixes).some((prefix) => projId.startsWith(prefix.toLowerCase()))) return true;
+  return (Array.isArray(projectIdContainsRules) ? projectIdContainsRules : []).some((rule) => {
+    const prefix = String(rule?.prefix || '').trim().toLowerCase();
+    const contains = normalizeStringList(rule?.contains).map((entry) => entry.toLowerCase());
+    return prefix && contains.length && projId.startsWith(prefix) && contains.some((term) => projId.includes(term));
+  });
 }
 
-function canSafelyNormalizePromotedBox(element, computedStyle) {
+function canSafelyNormalizePromotedBox(element, computedStyle, transformSensitiveRules) {
   if (!element || !computedStyle) return false;
-  if (isTransformSensitivePromotionTarget(element)) return false;
+  if (isTransformSensitivePromotionTarget(element, transformSensitiveRules)) return false;
   if (computedStyle.transform && computedStyle.transform !== 'none') return false;
   const width = computedStyle.width;
   const height = computedStyle.height;
@@ -90,25 +107,6 @@ function readSizingToken(inlineValue, computedValue, fallbackPx) {
   return `${Math.max(1, Number(fallbackPx) || 1).toFixed(4)}px`;
 }
 
-function normalizeLayerPlacementMode(value) {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === 'screen-space') return 'screen-space';
-  if (normalized === 'authored-space' || normalized === 'authored-coordinate') return 'authored-space';
-  return 'authored-space';
-}
-
-function normalizeLayerPlacementCoordinateSpace(value) {
-  const normalized = String(value || '').trim().toLowerCase();
-  return normalized === 'viewport' ? 'viewport' : 'app';
-}
-
-function normalizePortalScaleStrategy(value) {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === 'none' || normalized === 'dimensions') return 'dimensions';
-  if (normalized === 'legacy-screen-space') return 'legacy-screen-space';
-  return 'portal-transform';
-}
-
 function roundPlacementValue(value, shouldRound) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
@@ -136,13 +134,13 @@ function restoreManagedElementStyle(element, styleSnapshot) {
 export function createLayerManager({ gameConfig = null, debugLog = null } = {}) {
   const managerConfig = gameConfig?.layout?.layerManager || {};
   const enabled = managerConfig.enabled !== false;
-  const hostZIndex = Number.isFinite(Number(managerConfig.hostZIndex)) ? Number(managerConfig.hostZIndex) : 45;
+  const hostZIndex = Number(managerConfig.hostZIndex);
   const defaultPreserveSpace = managerConfig.defaultPreserveSpace !== false;
   const normalizePromotedElementBox = managerConfig.normalizePromotedElementBox === true;
-  const placementMode = normalizeLayerPlacementMode(managerConfig.placementMode);
-  const placementCoordinateSpace = normalizeLayerPlacementCoordinateSpace(managerConfig.placementCoordinateSpace);
-  const roundToPixels = managerConfig.roundToPixels === true || managerConfig.screenSpaceRoundToPixels === true;
-  const portalScaleStrategy = normalizePortalScaleStrategy(managerConfig.portalScaleStrategy);
+  const placementMode = managerConfig.placementMode;
+  const placementCoordinateSpace = managerConfig.placementCoordinateSpace;
+  const roundToPixels = managerConfig.roundToPixels === true;
+  const portalScaleStrategy = managerConfig.portalScaleStrategy;
   const assignments = Array.isArray(managerConfig.assignments) ? managerConfig.assignments : [];
   const promoteByRootSelectors = normalizeSelectorList(managerConfig.promoteByRootSelectors);
   const excludeDescendantSelectors = normalizeSelectorList(managerConfig.excludeDescendantSelectors);
@@ -164,24 +162,31 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const normalizeFillSizeDenylistSelectors = normalizeSelectorList(normalizeFillSizeGuard.denylistSelectors);
   const preservePromotionTransformSelectors = normalizeSelectorList(managerConfig.preservePromotionTransformSelectors);
   const disablePreservePromotionTransformSelectors = normalizeSelectorList(managerConfig.disablePreservePromotionTransformSelectors);
-  const typographyBaselineRootSelector = typeof managerConfig.typographyBaselineRootSelector === 'string' && managerConfig.typographyBaselineRootSelector.trim()
-    ? managerConfig.typographyBaselineRootSelector.trim()
-    : '#app';
+  const transformSensitiveRules = {
+    markerAttributes: normalizeStringList(managerConfig.transformSensitiveMarkerAttributes),
+    markerTerms: normalizeStringList(managerConfig.transformSensitiveMarkerTerms),
+  };
+  const preservePromotionTransformProjectIds = normalizeStringList(managerConfig.preservePromotionTransformProjectIds);
+  const preservePromotionTransformProjectIdPrefixes = normalizeStringList(managerConfig.preservePromotionTransformProjectIdPrefixes);
+  const preservePromotionTransformProjectIdContainsRules = Array.isArray(managerConfig.preservePromotionTransformProjectIdContainsRules)
+    ? managerConfig.preservePromotionTransformProjectIdContainsRules
+    : [];
+  const typographyBaselineRootSelector = managerConfig.typographyBaselineRootSelector;
   const typographyBaselineFields = normalizeStringList(managerConfig.typographyBaselineFields);
   const promotedTextMetricFields = normalizeStringList(managerConfig.promotedTextMetricFields);
   const promotedTextMetricAssignmentIds = normalizeAssignmentIdList(managerConfig.promotedTextMetricAssignmentIds);
   const buildAssignmentList = () => assignments
-    .map((entry, index) => {
+    .map((entry) => {
       const selectors = normalizeSelectorList(entry?.selectors);
       if (!selectors.length) return null;
-      const id = String(entry?.id || `assignment-${index}`);
+      const id = String(entry.id);
       return {
         id,
-        layer: String(entry?.layer || 'overlay'),
+        layer: String(entry.layer),
         selectors,
-        preserveSpace: entry?.preserveSpace !== false,
-        keepOriginal: entry?.keepOriginal === true,
-        promotedOpacity: Number.isFinite(Number(entry?.promotedOpacity)) ? Math.min(1, Math.max(0, Number(entry.promotedOpacity))) : 1,
+        preserveSpace: entry.preserveSpace === true,
+        keepOriginal: entry.keepOriginal === true,
+        promotedOpacity: Number(entry.promotedOpacity),
         capturePromotedTextMetrics: entry?.capturePromotedTextMetrics === true || promotedTextMetricAssignmentIds.has(id.toLowerCase()),
       };
     })
@@ -440,11 +445,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     portal.appendChild(promotedNode);
     applyStyleSnapshot(promotedNode, textMetricSnapshot);
 
-    const isTransformSensitive = isTransformSensitivePromotionTarget(promotedNode);
+    const isTransformSensitive = isTransformSensitivePromotionTarget(promotedNode, transformSensitiveRules);
     const isNormalizeBoxDenied = selectorMatchesElement(element, normalizeBoxDenylistSelectors);
     const isNormalizeBoxAllowed = !normalizeBoxAllowlistSelectors.length || selectorMatchesElement(element, normalizeBoxAllowlistSelectors);
     const shouldNormalizeBox = normalizePromotedElementBox
-      && canSafelyNormalizePromotedBox(element, computed)
+      && canSafelyNormalizePromotedBox(element, computed, transformSensitiveRules)
       && isNormalizeBoxAllowed
       && !isNormalizeBoxDenied;
     const isNormalizeMarginDenied = selectorMatchesElement(element, normalizeMarginDenylistSelectors);
@@ -468,6 +473,9 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const preservePromotionTransform = shouldPreservePromotionTransform(promotedNode, {
       preserveSelectors: preservePromotionTransformSelectors,
       disableSelectors: disablePreservePromotionTransformSelectors,
+      projectIds: preservePromotionTransformProjectIds,
+      projectIdPrefixes: preservePromotionTransformProjectIdPrefixes,
+      projectIdContainsRules: preservePromotionTransformProjectIdContainsRules,
     });
     const disablePreservePromotionTransform = selectorMatchesElement(promotedNode, disablePreservePromotionTransformSelectors);
     const shouldRetainComputedTransform = !disablePreservePromotionTransform && (preservePromotionTransform || isTransformSensitive);

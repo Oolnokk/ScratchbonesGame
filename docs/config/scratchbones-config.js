@@ -1373,6 +1373,36 @@ window.SCRATCHBONES_CONFIG = {
           ".claimAvatarCinTags"
         ],
         "disablePreservePromotionTransformSelectors": [],
+        "transformSensitiveMarkerAttributes": [
+          "id",
+          "class",
+          "data-proj-id",
+          "data-ui-role",
+          "data-node-type",
+          "data-cinematic"
+        ],
+        "transformSensitiveMarkerTerms": [
+          "avatar",
+          "portrait",
+          "cinematic",
+          "cutscene"
+        ],
+        "preservePromotionTransformProjectIds": [
+          "avatar-human"
+        ],
+        "preservePromotionTransformProjectIdPrefixes": [
+          "avatar-",
+          "claim-avatar-"
+        ],
+        "preservePromotionTransformProjectIdContainsRules": [
+          {
+            "prefix": "claim-",
+            "contains": [
+              "anchor",
+              "text"
+            ]
+          }
+        ],
         "typographyBaselineRootSelector": "#app",
         "typographyBaselineFields": [
           "font-size",
