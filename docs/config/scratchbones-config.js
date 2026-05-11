@@ -882,6 +882,7 @@ window.SCRATCHBONES_CONFIG = {
         "flurryIntervalMs": 280
       },
       "emotes": {
+        "emojiOutlineEnabled": true,
         "disgust": {
           "horizontalDeformationScale": 0.2
         }
