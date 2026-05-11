@@ -264,9 +264,10 @@ function finiteNumberOrDefault(value, fallback) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
-function normalizeOneOf(value, fallback, allowedValues) {
+function normalizeOneOf(value, fallback, allowedValues, aliases = {}) {
   const normalized = String(value || '').trim().toLowerCase();
-  return allowedValues.includes(normalized) ? normalized : fallback;
+  const aliased = aliases[normalized] || normalized;
+  return allowedValues.includes(aliased) ? aliased : fallback;
 }
 
 function normalizeStringList(value, fallback = []) {
@@ -324,7 +325,7 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   typographyBaselineFields: DEFAULT_TYPOGRAPHY_BASELINE_FIELDS,
   promotedTextMetricFields: DEFAULT_PROMOTED_TEXT_METRIC_FIELDS,
   promotedTextMetricAssignmentIds: DEFAULT_PROMOTED_TEXT_METRIC_ASSIGNMENT_IDS,
-  placementMode: 'authored-coordinate',
+  placementMode: 'authored-space',
   placementCoordinateSpace: 'app',
   roundToPixels: false,
   portalScaleStrategy: 'portal-transform',
@@ -733,7 +734,8 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         const placementMode = normalizeOneOf(
           rawLayerManager.placementMode,
           DEFAULT_LAYER_MANAGER_CONFIG.placementMode,
-          ['authored-coordinate', 'screen-space'],
+          ['authored-space', 'screen-space'],
+          { 'authored-coordinate': 'authored-space' },
         );
         const placementCoordinateSpace = normalizeOneOf(
           rawLayerManager.placementCoordinateSpace,

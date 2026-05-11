@@ -1471,7 +1471,7 @@ window.SCRATCHBONES_CONFIG = {
             ]
           }
         },
-        "placementMode": "authored-coordinate",
+        "placementMode": "authored-space",
         "placementCoordinateSpace": "app",
         "roundToPixels": false,
         "portalScaleStrategy": "portal-transform",

@@ -92,7 +92,9 @@ function readSizingToken(inlineValue, computedValue, fallbackPx) {
 
 function normalizeLayerPlacementMode(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  return normalized === 'screen-space' ? 'screen-space' : 'authored-coordinate';
+  if (normalized === 'screen-space') return 'screen-space';
+  if (normalized === 'authored-space' || normalized === 'authored-coordinate') return 'authored-space';
+  return 'authored-space';
 }
 
 function normalizeLayerPlacementCoordinateSpace(value) {
@@ -243,7 +245,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       });
     }
     state.resizeObserver.observe(app);
-    log('debug', 'host-created', { layerCount: roots.size, hostZIndex });
+    log('debug', 'host-created', { layerCount: roots.size, hostZIndex, placementMode });
     return host;
   }
 
@@ -311,38 +313,58 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     return null;
   }
 
+  function applyPortalPlacement(portal, placement) {
+    portal.style.position = 'fixed';
+    portal.style.right = 'auto';
+    portal.style.bottom = 'auto';
+    portal.style.transform = (placement.transformScaleX === 1 && placement.transformScaleY === 1)
+      ? 'none'
+      : `scale(${placement.transformScaleX.toFixed(6)}, ${placement.transformScaleY.toFixed(6)})`;
+    portal.style.transformOrigin = '0 0';
+    portal.style.left = toCssPx(placement.left, roundToPixels);
+    portal.style.top = toCssPx(placement.top, roundToPixels);
+    portal.style.width = toCssPx(placement.width, roundToPixels);
+    portal.style.height = toCssPx(placement.height, roundToPixels);
+  }
+
+  function buildScreenSpacePortalPlacement({ viewportRect, appScaleX, appScaleY }) {
+    const resolvedScaleX = Number.isFinite(appScaleX) && appScaleX > 0 ? appScaleX : 1;
+    const resolvedScaleY = Number.isFinite(appScaleY) && appScaleY > 0 ? appScaleY : 1;
+    const useLegacyScreenSpaceScale = portalScaleStrategy === 'legacy-screen-space';
+    return {
+      left: viewportRect.left,
+      top: viewportRect.top,
+      width: Math.max(1, useLegacyScreenSpaceScale ? viewportRect.width / resolvedScaleX : viewportRect.width),
+      height: Math.max(1, useLegacyScreenSpaceScale ? viewportRect.height / resolvedScaleY : viewportRect.height),
+      transformScaleX: useLegacyScreenSpaceScale ? resolvedScaleX : 1,
+      transformScaleY: useLegacyScreenSpaceScale ? resolvedScaleY : 1,
+    };
+  }
+
+  function buildAuthoredSpacePortalPlacement({ authoredRect, appRect, appScaleX, appScaleY }) {
+    const resolvedScaleX = Number.isFinite(appScaleX) && appScaleX > 0 ? appScaleX : 1;
+    const resolvedScaleY = Number.isFinite(appScaleY) && appScaleY > 0 ? appScaleY : 1;
+    const usePortalTransformScale = portalScaleStrategy === 'portal-transform';
+    return {
+      left: appRect.left + (authoredRect.left * resolvedScaleX),
+      top: appRect.top + (authoredRect.top * resolvedScaleY),
+      width: Math.max(1, usePortalTransformScale ? authoredRect.width : authoredRect.width * resolvedScaleX),
+      height: Math.max(1, usePortalTransformScale ? authoredRect.height : authoredRect.height * resolvedScaleY),
+      transformScaleX: usePortalTransformScale ? resolvedScaleX : 1,
+      transformScaleY: usePortalTransformScale ? resolvedScaleY : 1,
+    };
+  }
+
+  function buildPortalPlacement(capture) {
+    if (placementMode === 'screen-space') return buildScreenSpacePortalPlacement(capture);
+    return buildAuthoredSpacePortalPlacement(capture);
+  }
+
   function updatePortalRect(entry) {
     if (!entry?.portal) return;
     const capture = capturePortalPlacementFrame(entry);
     if (!capture) return;
-    const { authoredRect, viewportRect, appRect, appScaleX, appScaleY } = capture;
-    const resolvedScaleX = Number.isFinite(appScaleX) && appScaleX > 0 ? appScaleX : 1;
-    const resolvedScaleY = Number.isFinite(appScaleY) && appScaleY > 0 ? appScaleY : 1;
-    const useScreenSpace = placementMode === 'screen-space' || placementCoordinateSpace === 'viewport';
-    const useLegacyScreenSpaceScale = useScreenSpace && portalScaleStrategy === 'legacy-screen-space';
-    const usePortalTransformScale = !useScreenSpace && portalScaleStrategy === 'portal-transform';
-    const sourceRect = useScreenSpace ? viewportRect : authoredRect;
-    const visualLeft = useScreenSpace ? sourceRect.left : (appRect.left + (sourceRect.left * resolvedScaleX));
-    const visualTop = useScreenSpace ? sourceRect.top : (appRect.top + (sourceRect.top * resolvedScaleY));
-    const cssWidth = useLegacyScreenSpaceScale
-      ? Math.max(1, sourceRect.width / resolvedScaleX)
-      : (usePortalTransformScale ? Math.max(1, sourceRect.width) : Math.max(1, sourceRect.width * (useScreenSpace ? 1 : resolvedScaleX)));
-    const cssHeight = useLegacyScreenSpaceScale
-      ? Math.max(1, sourceRect.height / resolvedScaleY)
-      : (usePortalTransformScale ? Math.max(1, sourceRect.height) : Math.max(1, sourceRect.height * (useScreenSpace ? 1 : resolvedScaleY)));
-    const transformScaleX = useLegacyScreenSpaceScale || usePortalTransformScale ? resolvedScaleX : 1;
-    const transformScaleY = useLegacyScreenSpaceScale || usePortalTransformScale ? resolvedScaleY : 1;
-    entry.portal.style.position = 'fixed';
-    entry.portal.style.right = 'auto';
-    entry.portal.style.bottom = 'auto';
-    entry.portal.style.transform = (transformScaleX === 1 && transformScaleY === 1)
-      ? 'none'
-      : `scale(${transformScaleX.toFixed(6)}, ${transformScaleY.toFixed(6)})`;
-    entry.portal.style.transformOrigin = '0 0';
-    entry.portal.style.left = toCssPx(visualLeft, roundToPixels);
-    entry.portal.style.top = toCssPx(visualTop, roundToPixels);
-    entry.portal.style.width = toCssPx(cssWidth, roundToPixels);
-    entry.portal.style.height = toCssPx(cssHeight, roundToPixels);
+    applyPortalPlacement(entry.portal, buildPortalPlacement(capture));
   }
 
   function capturePortalPlacementFrame(entry) {
