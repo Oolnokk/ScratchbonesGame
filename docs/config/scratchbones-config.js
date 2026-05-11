@@ -38,6 +38,7 @@ window.SCRATCHBONES_CONFIG = {
       "resetMobileZoomOnSubmit": true,
       "mobileZoomResetDelayMs": 60,
       "mobileZoomResetViewportContent": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      "bubbleSpawnAfterZoomResetMs": 60,
       "laughPhrases": ["lol", "ha", "haha", "hahaha"],
       "bubbleMaxLength": 36,
       "bubbleDurationMs": 2000,

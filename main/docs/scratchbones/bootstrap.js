@@ -508,6 +508,7 @@ import { createTutorial } from './tutorial.js';
     const CHAT_RESET_MOBILE_ZOOM_ON_SUBMIT = CHAT_CONFIG.resetMobileZoomOnSubmit !== false;
     const CHAT_MOBILE_ZOOM_RESET_DELAY_MS = Math.max(0, Number(CHAT_CONFIG.mobileZoomResetDelayMs) || 0);
     const CHAT_MOBILE_ZOOM_RESET_VIEWPORT_CONTENT = String(CHAT_CONFIG.mobileZoomResetViewportContent || '').trim();
+    const CHAT_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS = Math.max(0, Number(CHAT_CONFIG.bubbleSpawnAfterZoomResetMs) || 0);
     const CHAT_LAUGH_PHRASES = new Set((Array.isArray(CHAT_CONFIG.laughPhrases) ? CHAT_CONFIG.laughPhrases : []).map((phrase) => String(phrase).trim().toLowerCase()).filter(Boolean));
     const FOCUS_CHAT_SHORTCUT = SCRATCHBONES_GAME.gameplayShortcuts?.focusChat || {};
     // Hand panel slot-based layout constants
@@ -4991,16 +4992,16 @@ import { createTutorial } from './tutorial.js';
           // Laugh detection: configured words trigger the laugh avatar animation.
           if (CHAT_LAUGH_PHRASES.has(text.toLowerCase())) triggerLaughAnimation(state.humanSeat);
           if (input) input.value = '';
+          const spawnOwnChatBubble = () => spawnChatTextFx(text, state.humanSeat);
           if (_isClient) {
-            // Immediate visual feedback: play animation now; mark the text so
-            // applyNetworkState skips re-animating when the echo arrives from host.
+            // Immediate network send; delay only the local bubble until after mobile
+            // zoom reset so getBoundingClientRect() samples the restored viewport.
             _pendingOwnChatText = text;
-            spawnChatTextFx(text, state.humanSeat);
             _net.sendAction({ type: 'chat', text });
-            resetChatInputZoomAfterSubmit(input);
+            resetChatInputZoomAfterSubmit(input, { afterReset: spawnOwnChatBubble });
           } else {
-            addChatLog(text, hs);
-            resetChatInputZoomAfterSubmit(input);
+            addChatLog(text, hs, { silent: true });
+            resetChatInputZoomAfterSubmit(input, { afterReset: spawnOwnChatBubble });
             render();
           }
         });
@@ -5855,9 +5856,20 @@ import { createTutorial } from './tutorial.js';
       overlay.style.cssText = `position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:${CHAT_CONFIG.bubbleOverlayZIndex};`;
       return overlay;
     }
-    function resetChatInputZoomAfterSubmit(input) {
+    function resetChatInputZoomAfterSubmit(input, { afterReset } = {}) {
+      const queueAfterReset = () => {
+        if (typeof afterReset !== 'function') return;
+        if (CHAT_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS > 0) {
+          window.setTimeout(afterReset, CHAT_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS);
+          return;
+        }
+        afterReset();
+      };
       if (CHAT_BLUR_INPUT_ON_SUBMIT && typeof input?.blur === 'function') input.blur();
-      if (!CHAT_RESET_MOBILE_ZOOM_ON_SUBMIT) return;
+      if (!CHAT_RESET_MOBILE_ZOOM_ON_SUBMIT) {
+        queueAfterReset();
+        return;
+      }
       const resetViewport = () => {
         if (CHAT_MOBILE_ZOOM_RESET_VIEWPORT_CONTENT) {
           const viewportMeta = document.querySelector('meta[name="viewport"]');
@@ -5867,10 +5879,17 @@ import { createTutorial } from './tutorial.js';
           if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
         } catch {}
         syncToVisualViewport();
-        scheduleResponsiveFitPass();
+        runResponsiveFitPassNow();
       };
       resetViewport();
-      if (CHAT_MOBILE_ZOOM_RESET_DELAY_MS > 0) window.setTimeout(resetViewport, CHAT_MOBILE_ZOOM_RESET_DELAY_MS);
+      if (CHAT_MOBILE_ZOOM_RESET_DELAY_MS > 0) {
+        window.setTimeout(() => {
+          resetViewport();
+          queueAfterReset();
+        }, CHAT_MOBILE_ZOOM_RESET_DELAY_MS);
+        return;
+      }
+      queueAfterReset();
     }
 
     function spawnChatBubbleFx(text, { viewportX, viewportY } = {}) {
@@ -7175,25 +7194,29 @@ import { createTutorial } from './tutorial.js';
       });
     })();
     let fitReflowHandle = null;
+    function runResponsiveFitPassNow() {
+      if (fitReflowHandle) {
+        clearTimeout(fitReflowHandle);
+        fitReflowHandle = null;
+      }
+      const app = document.getElementById('app');
+      if (!app) return;
+      applyLayoutContract(app);
+      if (getScratchbonesLayoutMode() === 'authored') {
+        applyAuthoredLayoutMode(app, getScratchbonesAuthoredConfig());
+        renderAuthoredOverlays();
+      } else {
+        applyResponsiveFit(app);
+      }
+      updateTableCardAutoScale(app);
+      syncStationaryCardScreenSpace(app);
+      syncClaimClusterCardSizeFromHand(app);
+      if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
+    }
     function scheduleResponsiveFitPass() {
       if (fitReflowHandle) clearTimeout(fitReflowHandle);
       const fitDebounceMs = Math.max(0, Number(SCRATCHBONES_GAME.layout?.fitter?.reflowDebounceMs) || 120);
-      fitReflowHandle = setTimeout(() => {
-        fitReflowHandle = null;
-        const app = document.getElementById('app');
-        if (!app) return;
-        applyLayoutContract(app);
-        if (getScratchbonesLayoutMode() === 'authored') {
-          applyAuthoredLayoutMode(app, getScratchbonesAuthoredConfig());
-          renderAuthoredOverlays();
-        } else {
-          applyResponsiveFit(app);
-        }
-        updateTableCardAutoScale(app);
-        syncStationaryCardScreenSpace(app);
-        syncClaimClusterCardSizeFromHand(app);
-        if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
-      }, fitDebounceMs);
+      fitReflowHandle = setTimeout(runResponsiveFitPassNow, fitDebounceMs);
     }
     window.addEventListener('resize', scheduleResponsiveFitPass, { passive: true });
     window.addEventListener('orientationchange', scheduleResponsiveFitPass, { passive: true });
