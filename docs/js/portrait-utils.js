@@ -635,7 +635,10 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
     if (!groupLayers.length) continue;
     for (const layer of groupLayers) {
       const target = group?.slot === 'torso' ? torsoClothingLayers : overwearLayers;
-      target.push({ layer, filter: filterFor(group.tintSlot || 'A') });
+      const key = layer.paletteColorKey;
+      const layerTintSlot = (!key || key === 'A') ? group.tintSlot
+        : (group.tintSlot ? `${group.tintSlot}_${key}` : null);
+      target.push({ layer, filter: filterFor(layerTintSlot || 'A') });
     }
   }
 
@@ -1014,6 +1017,8 @@ function _extractLayersFromParts(partsJson, paletteLayerMap) {
           layer?.spriteStyle?.xform?.[partName] ||
           layer?.spriteStyle?.xform?.head ||
           {};
+        const layerRole = layer.layerRole || null;
+        const paletteColorKey = (layerRole && paletteLayerMap) ? (paletteLayerMap[layerRole] || null) : null;
         layers.push({
           url: portraitRelPath(imgUrl),
           ax:  xf.ax     ?? 0,
@@ -1021,6 +1026,7 @@ function _extractLayersFromParts(partsJson, paletteLayerMap) {
           sx:  xf.scaleX ?? xf.scaleMulX ?? 1,
           sy:  xf.scaleY ?? xf.scaleMulY ?? 1,
           pos: layerName === 'back' ? 'back' : 'front',
+          paletteColorKey,
           xformPreset: 'B',
         });
       }
