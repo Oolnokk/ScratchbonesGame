@@ -1356,6 +1356,30 @@ function isMaterialTag(option, expectedTag) {
   return String(option?.materialTag || '').trim().toLowerCase() === expectedTag.trim().toLowerCase();
 }
 
+function portraitRandomizationConfig() {
+  return window.SCRATCHBONES_CONFIG?.game?.portrait?.randomization
+    || window.CONFIG?.portraitRandomization
+    || {};
+}
+
+function portraitRandomizationMaterialTags() {
+  return portraitRandomizationConfig().materialTags || {};
+}
+
+function configuredMaterialTag(name, fallback) {
+  const configured = portraitRandomizationMaterialTags()?.[name];
+  return (typeof configured === 'string' && configured.trim()) ? configured.trim().toLowerCase() : fallback;
+}
+
+function isClothPortraitOption(option, clothMaterialTag) {
+  if (!option || option.id === 'none') return false;
+  if (isMaterialTag(option, clothMaterialTag)) return true;
+  // Older cloth cosmetics predate explicit material tags. Treat untyped
+  // portrait clothing as cloth while preserving tagged non-cloth items such as
+  // leather bandoliers and rigid-fiber hats.
+  return !option.materialTag && (option.slot === 'hood' || option.slot === 'torso' || option.slot === 'overwear');
+}
+
 function applyBodyColorRulesSeeded(bodyColors, rules, rng) {
   if (!bodyColors || !rules || typeof rules !== 'object') return bodyColors;
   const result = {
@@ -1624,6 +1648,7 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
   let bodyColors = randomBodyColorsSeeded(rng, bodyColorRangesByGender?.[fighter.id] ?? bodyColorRangesByGender?.[fighterInput?.id]);
   bodyColors = applyBodyColorRulesSeeded(bodyColors, randomizationRules, rng);
 
+  const randomizationConfig = portraitRandomizationConfig();
   const clothingRule = randomizationRules?.clothingColors;
   const torsoLayers = resolveOptionLayers(torsoCosmetic, fighter);
   const armLayers = resolveOptionLayers(armCosmetic, fighter);
@@ -1632,10 +1657,22 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
   const hasHoodPiece = Boolean(hoodLayers.length);
   const syncAcrossPieces = clothingRule?.syncAcrossPieces === true;
   const ruleRange = clothingRule?.range || null;
-  const clothSourceRange = ruleRange || torsoCosmetic?.colorRange || armCosmetic?.colorRange || null;
+  const clothMaterialTag = configuredMaterialTag('cloth', 'cloth');
+  const clothHoodColorSourceSlots = Array.isArray(randomizationConfig.clothHoodColorSourceSlots)
+    ? randomizationConfig.clothHoodColorSourceSlots
+    : [];
+  const clothingBySlot = { armCosmetic, torsoCosmetic };
+  const clothHoodColorSource = clothHoodColorSourceSlots
+    .map(slot => clothingBySlot[slot])
+    .find(option => isClothPortraitOption(option, clothMaterialTag) && resolveOptionLayers(option, fighter).length)
+    || null;
+  const clothSourceOption = clothHoodColorSource
+    || (isClothPortraitOption(armCosmetic, clothMaterialTag) ? armCosmetic : null)
+    || (isClothPortraitOption(torsoCosmetic, clothMaterialTag) ? torsoCosmetic : null);
+  const clothSourceRange = ruleRange || clothSourceOption?.colorRange || null;
   const hoodMaterialRange = materialColorRangeFor(hood);
   const hoodSourceRange = ruleRange || hoodMaterialRange || hood?.colorRange || null;
-  const clothMaterialTag = window.CONFIG?.portraitRandomization?.materialTags?.cloth || 'cloth';
+  const hoodUsesClothMaterial = isClothPortraitOption(hood, clothMaterialTag);
   const hatUsesClothMaterial = isMaterialTag(hat, clothMaterialTag);
   const hatMaterialRange = materialColorRangeFor(hat);
   const hatSourceRange = hatMaterialRange
@@ -1652,6 +1689,12 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
     bodyColors.HOOD = randomColorFromRangeSeeded(hoodSourceRange, rng);
     if (hasPaletteB(hoodLayers)) {
       bodyColors.HOOD_B = randomColorFromRangeSeeded(hoodSourceRange, rng);
+    }
+  }
+  if (hasHoodPiece && hoodUsesClothMaterial && clothHoodColorSource && bodyColors.CLOTH) {
+    bodyColors.HOOD = bodyColors.CLOTH;
+    if (hasPaletteB(hoodLayers)) {
+      bodyColors.HOOD_B = bodyColors.CLOTH_B || bodyColors.CLOTH;
     }
   }
   if (hatSourceRange) {

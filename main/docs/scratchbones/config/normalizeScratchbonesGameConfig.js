@@ -506,6 +506,10 @@ const DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG = {
     torsoCosmetic: 'torsoPortraitOptions',
     armCosmetic: 'armPortraitOptions',
   },
+  materialTags: {
+    cloth: 'cloth',
+  },
+  clothHoodColorSourceSlots: ['armCosmetic', 'torsoCosmetic'],
 };
 
 function normalizeStringArray(value, fallback) {
@@ -1322,6 +1326,8 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
           clothingSlots: normalizeStringArray(rawRandomization.clothingSlots, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.clothingSlots),
           clothingRepairSlotPreference: normalizeStringArray(rawRandomization.clothingRepairSlotPreference, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.clothingRepairSlotPreference),
           clothingOptionPoolsBySlot: normalizeStringMap(rawRandomization.clothingOptionPoolsBySlot, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.clothingOptionPoolsBySlot),
+          materialTags: normalizeStringMap(rawRandomization.materialTags, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.materialTags),
+          clothHoodColorSourceSlots: normalizeStringArray(rawRandomization.clothHoodColorSourceSlots, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.clothHoodColorSourceSlots),
         };
       })(),
     },
