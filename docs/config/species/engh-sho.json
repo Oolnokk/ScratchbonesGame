@@ -34,7 +34,8 @@
       "appearance::hat::riverlandskasa_wide",
       "fine_hood",
       "tankan_tunic",
-      "bandolier1"
+      "bandolier1",
+      "rough_cloth_poncho"
     ],
     "conditionalCosmetics": [
       {
@@ -333,7 +334,8 @@
       "fine_hood",
       "tankan_tunic",
       "bandolier1",
-      "tankan_bodywrap"
+      "tankan_bodywrap",
+      "rough_cloth_poncho"
     ],
     "conditionalCosmetics": [
       {
