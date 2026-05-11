@@ -657,6 +657,47 @@ import { createTutorial } from './tutorial.js';
     const COPIES_PER_RANK = SCRATCHBONES_GAME.deck.copiesPerRank;
     const PLAYER_NAMES = SCRATCHBONES_GAME.deck.humanNames; // Optional authored names; Mao-ao generation is the fallback for any seat.
     const NAME_SEED_PREFIX = SCRATCHBONES_GAME.nameGeneration.seedPrefix;
+    function normalizeAiDifficultyRank(rank) {
+      const normalized = String(rank || '').trim().toLowerCase();
+      return normalized && AI_CONFIG.difficultyRanks?.[normalized]
+        ? normalized
+        : String(AI_CONFIG.defaultDifficultyRank || 'normal').trim().toLowerCase() || 'normal';
+    }
+    function resolveAiDifficultyRank(playerOrSeatId) {
+      const seatDifficultyRanks = AI_CONFIG.seatDifficultyRanks || {};
+      const fallbackRank = normalizeAiDifficultyRank(AI_CONFIG.defaultDifficultyRank);
+      if (playerOrSeatId && typeof playerOrSeatId === 'object') {
+        if (playerOrSeatId.isHuman === true) return null;
+        if (playerOrSeatId.difficultyRank) return normalizeAiDifficultyRank(playerOrSeatId.difficultyRank);
+        const seatId = playerOrSeatId.id ?? playerOrSeatId.seatId;
+        const npcOrder = playerOrSeatId.npcOrder ?? playerOrSeatId.aiOrder;
+        if (seatId !== undefined && seatDifficultyRanks[String(seatId)] !== undefined) return normalizeAiDifficultyRank(seatDifficultyRanks[String(seatId)]);
+        const npcKeys = npcOrder === undefined ? [] : [String(npcOrder), `npc:${npcOrder}`, `npc${npcOrder}`, `ai:${npcOrder}`, `ai${npcOrder}`];
+        for (const key of npcKeys) {
+          if (seatDifficultyRanks[key] !== undefined) return normalizeAiDifficultyRank(seatDifficultyRanks[key]);
+        }
+        return fallbackRank;
+      }
+      const seatId = playerOrSeatId;
+      if (seatId !== undefined && seatDifficultyRanks[String(seatId)] !== undefined) return normalizeAiDifficultyRank(seatDifficultyRanks[String(seatId)]);
+      return fallbackRank;
+    }
+    function getAiDifficultyProfile(playerOrSeatId) {
+      const rank = resolveAiDifficultyRank(playerOrSeatId);
+      const profiles = AI_CONFIG.difficultyRanks || {};
+      const fallbackRank = normalizeAiDifficultyRank(AI_CONFIG.defaultDifficultyRank);
+      const profile = profiles[rank] || profiles[fallbackRank] || {
+        challengeThreshold: Number(AI_CONFIG.challengeThreshold),
+        challengeRandomNudgeMax: Number(AI_CONFIG.challengeRandomNudgeMax),
+        bettingConfidenceSuspicionWeight: Number(AI_CONFIG.bettingConfidenceSuspicionWeight),
+      };
+      return {
+        rank,
+        challengeThreshold: Number(profile.challengeThreshold),
+        challengeRandomNudgeMax: Number(profile.challengeRandomNudgeMax),
+        bettingConfidenceSuspicionWeight: Number(profile.bettingConfidenceSuspicionWeight),
+      };
+    }
     const CONFIG = {
       startingChips: SCRATCHBONES_GAME.chips.startingChips,
       challengeBaseTransfer: SCRATCHBONES_GAME.chips.challengeBaseTransfer,
@@ -671,9 +712,6 @@ import { createTutorial } from './tutorial.js';
       clearBonusIncrement: SCRATCHBONES_GAME.chips.clearBonusIncrement,
       anteStart: SCRATCHBONES_GAME.chips.anteStart,
       anteIncrement: SCRATCHBONES_GAME.chips.anteIncrement,
-      aiChallengeThreshold: Number(AI_CONFIG.challengeThreshold),
-      aiChallengeRandomNudgeMax: Number(AI_CONFIG.challengeRandomNudgeMax),
-      aiBettingConfidenceSuspicionWeight: Number(AI_CONFIG.bettingConfidenceSuspicionWeight),
       assets: SCRATCHBONES_GAME.assets,
     };
     const STAKE_TIERS = (Array.isArray(CONFIG.challengeStakeTiers) ? CONFIG.challengeStakeTiers : [])
@@ -919,13 +957,16 @@ import { createTutorial } from './tutorial.js';
       // PvP: all seats are human — total equals human count, no AI fills.
       // PvE / PvPvE: full configured table; AI occupies remaining seats.
       const totalPlayers = mode === 'pvp' ? humanSeats.size : SCRATCHBONES_GAME.deck.playerCount;
+      let npcOrder = 0;
       return Array.from({ length: totalPlayers }, (_, index) => {
         const isHuman = humanSeats.has(index);
+        const currentNpcOrder = isHuman ? null : npcOrder++;
         const aiIdentity = generateAiIdentity(index);
         const sessionName = playerNames[index];
         const name = isHuman && sessionName ? sessionName : resolveSeatName(index, aiIdentity.name);
         const appearance = isHuman ? (playerAppearances[index] ?? null) : null;
         const playerLoadout = isHuman ? normalizeTrickBoneLoadout(playerLoadouts[index]) : generateNpcTrickLoadout();
+        const difficultyRank = isHuman ? null : resolveAiDifficultyRank({ id: index, npcOrder: currentNpcOrder });
         return {
           id: index,
           name,
@@ -938,6 +979,7 @@ import { createTutorial } from './tutorial.js';
           seed: aiIdentity.seed,
           gender: appearance ? appearance.gender : aiIdentity.gender,
           personality: isHuman ? null : aiIdentity.personality,
+          difficultyRank,
           reads: {},
           appearance,
           playerLoadout,
@@ -962,6 +1004,7 @@ import { createTutorial } from './tutorial.js';
           chips: p.chips,
           eliminated: p.eliminated,
           isHuman: p.isHuman,
+          difficultyRank: p.difficultyRank || null,
           lastAction: p.lastAction,
           clears: p.clears,
           profile: p.profile || null,
@@ -1714,7 +1757,8 @@ import { createTutorial } from './tutorial.js';
       suspicion += challenger.chips >= 8 ? 0.05 : 0;
       suspicion += isHumanSeat(play.playerIndex) ? 0.1 : 0;
       suspicion += suspicionFromReadProfile(read, pers);
-      if (includeRandom) suspicion += rand() * CONFIG.aiChallengeRandomNudgeMax;
+      const aiProfile = getAiDifficultyProfile(challenger);
+      if (includeRandom) suspicion += rand() * aiProfile.challengeRandomNudgeMax;
       if (pers) {
         suspicion += (pers.suspicion  - 0.5) * 0.34;
         suspicion += (pers.aggression - 0.5) * 0.08;
@@ -1723,7 +1767,8 @@ import { createTutorial } from './tutorial.js';
       return suspicion;
     }
     function aiShouldChallenge(challengerIndex, play) {
-      return challengeSuspicionScore(challengerIndex, play, { includeRandom: true }) >= CONFIG.aiChallengeThreshold;
+      const challenger = state.players[challengerIndex];
+      return challengeSuspicionScore(challengerIndex, play, { includeRandom: true }) >= getAiDifficultyProfile(challenger).challengeThreshold;
     }
     function clampMs(value, minMs, maxMs) {
       return Math.max(minMs, Math.min(maxMs, Math.round(value)));
@@ -2857,7 +2902,7 @@ import { createTutorial } from './tutorial.js';
       const couragePush = pers ? (pers.courage - 0.5) * 0.22 : 0;
       const randomNudge = rand() * 0.12 - 0.06;
       const challengerSuspicion = challengeSuspicionScore(b.challengerId, play, { includeRandom: false });
-      const suspicionWeight = CONFIG.aiBettingConfidenceSuspicionWeight;
+      const suspicionWeight = getAiDifficultyProfile(player).bettingConfidenceSuspicionWeight;
       let confidence = actorId === b.challengerId
         ? (0.5 + challengerSuspicion * suspicionWeight)
         : (0.5 - challengerSuspicion * suspicionWeight);
@@ -5123,6 +5168,17 @@ import { createTutorial } from './tutorial.js';
           eliminated: p.eliminated,
           concededThisRound: hasConcededThisRound(p.id),
           lastAction: p.lastAction,
+          aiDifficulty: p.isHuman ? null : (() => {
+            const profile = getAiDifficultyProfile(p);
+            return {
+              difficultyRank: profile.rank,
+              profile: {
+                challengeThreshold: profile.challengeThreshold,
+                challengeRandomNudgeMax: profile.challengeRandomNudgeMax,
+                bettingConfidenceSuspicionWeight: profile.bettingConfidenceSuspicionWeight,
+              },
+            };
+          })(),
           reads: Object.fromEntries(Object.entries(p.reads || {}).map(([id, read]) => [seatLabel(Number(id)), { truthfulCount: read.truthfulCount, bluffCount: read.bluffCount, repeatRankCount: read.repeatRankCount, quickJudgmentBias: Number(read.quickJudgmentBias.toFixed(2)), currentTruthStreak: read.currentTruthStreak, currentBluffStreak: read.currentBluffStreak, challengeWins: read.challengeWins, challengeLosses: read.challengeLosses }])),
         })),
         config: CONFIG,

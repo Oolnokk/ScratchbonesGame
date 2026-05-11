@@ -916,7 +916,30 @@ window.SCRATCHBONES_CONFIG = {
     "ai": {
       "challengeThreshold": 0.52,
       "challengeRandomNudgeMax": 0.16,
-      "bettingConfidenceSuspicionWeight": 0.55
+      "bettingConfidenceSuspicionWeight": 0.55,
+      "defaultDifficultyRank": "normal",
+      "difficultyRanks": {
+        "easy": {
+          "challengeThreshold": 0.64,
+          "challengeRandomNudgeMax": 0.22,
+          "bettingConfidenceSuspicionWeight": 0.42
+        },
+        "normal": {
+          "challengeThreshold": 0.52,
+          "challengeRandomNudgeMax": 0.16,
+          "bettingConfidenceSuspicionWeight": 0.55
+        },
+        "hard": {
+          "challengeThreshold": 0.44,
+          "challengeRandomNudgeMax": 0.08,
+          "bettingConfidenceSuspicionWeight": 0.68
+        }
+      },
+      "seatDifficultyRanks": {
+        "1": "normal",
+        "2": "normal",
+        "3": "normal"
+      }
     },
     "tutorial": {
       "ringPadPx": 9,
