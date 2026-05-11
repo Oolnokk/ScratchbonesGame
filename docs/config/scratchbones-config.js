@@ -886,7 +886,11 @@ window.SCRATCHBONES_CONFIG = {
           "hood": "hoodOptions",
           "torsoCosmetic": "torsoPortraitOptions",
           "armCosmetic": "armPortraitOptions"
-        }
+        },
+        "materialTags": {
+          "cloth": "cloth"
+        },
+        "clothHoodColorSourceSlots": ["armCosmetic", "torsoCosmetic"]
       },
       "blink": {
         "enabled": true,
