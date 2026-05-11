@@ -5624,13 +5624,9 @@ import { createTutorial } from './tutorial.js';
       const scaleX = parseScaleXFromTransform(style.transform);
       return scaleX < 0;
     }
-    // Spawns one emoji FX burst, preferring the visible claim-cluster actor float
-    // as the origin; falls back to the human seat card when the cluster is hidden.
-    function spawnEmojiReactionFx(reactionId) {
-      const app = document.getElementById('app');
-      const reaction = EMOJI_REACTION_CONFIG[(reactionId || '').trim().toLowerCase()];
-      if (!app || !reaction) return;
-      const hs = String(state.humanSeat);
+    function computeEmojiReactionFxOrigin(seatId = state.humanSeat, app = document.getElementById('app')) {
+      if (!app) return null;
+      const seatIdStr = String(seatId ?? state.humanSeat);
       const actorFloat = app.querySelector('.actorAvatarFloat');
       const actorCanvas = actorFloat?.querySelector('canvas.seatPortrait');
       const reactorFloat = app.querySelector('.reactorAvatarFloat');
@@ -5640,25 +5636,28 @@ import { createTutorial } from './tutorial.js';
       // for layout-fit; querying it directly gives getBoundingClientRect() the correct
       // post-scale screen rect without going through the canvas's own scaleX(-1) transform.
       const humanAvatarBox = humanSeatCard?.querySelector('.seatAvatarBox');
-      // Use claim-cluster float only when the human player IS that actor/reactor.
-      const humanIsActor = actorCanvas?.dataset.seatId === hs && actorFloat?.offsetParent !== null;
-      const humanIsReactor = reactorCanvas?.dataset.seatId === hs && reactorFloat?.offsetParent !== null;
-      let anchorEl, driftDir;
-      if (humanIsActor) {
+      const seatIsActor = actorCanvas?.dataset.seatId === seatIdStr && actorFloat?.offsetParent !== null;
+      const seatIsReactor = reactorCanvas?.dataset.seatId === seatIdStr && reactorFloat?.offsetParent !== null;
+      let anchorEl = null;
+      let driftDir = -1;
+      if (seatIsActor) {
         anchorEl = actorCanvas;
         driftDir = 1;  // actorAvatarFloat uses transform:none — base art faces right
-      } else if (humanIsReactor) {
+      } else if (seatIsReactor) {
         anchorEl = reactorCanvas;
         driftDir = -1; // reactorAvatarFloat uses scaleX(-1) — faces left
-      } else {
+      } else if (seatIdStr === String(state.humanSeat)) {
         anchorEl = humanAvatarBox || humanSeatCard;
         driftDir = -1; // humanSeatCard portrait uses scaleX(-1) — faces left
+      } else {
+        const seatCanvas = app.querySelector(`.seatAvatarBox canvas.seatPortrait[data-seat-id="${seatIdStr}"]`);
+        anchorEl = seatCanvas?.closest('.seatAvatarBox') || seatCanvas || null;
+        driftDir = isSeatAvatarFlipped(seatCanvas) ? -1 : 1;
       }
       // Host the fx layer on #app so it isn't clipped by overflow on any
       // intermediate ancestor (humanSeatCard, humanSeatZone, etc.).
-      const fxHost = app;
-      const layer = ensureEmojiReactionLayer(fxHost);
-      if (!anchorEl || !fxHost || !layer) return;
+      const layer = ensureEmojiReactionLayer(app);
+      if (!anchorEl || !layer) return null;
       const layerRect = layer.getBoundingClientRect();
       const anchorRect = anchorEl.getBoundingClientRect();
       // Resolve origin from the claim-multiply glyph (×) when visible, else use a
@@ -5669,7 +5668,7 @@ import { createTutorial } from './tutorial.js';
       const glyphVisible = !!(refGlyphRect && refGlyphRect.width > 0 && refGlyphRect.height > 0);
       const originXRatio = driftDir === 1 ? 0.82 : 0.18;
       let startX, startY;
-      if ((humanIsActor || humanIsReactor) && glyphVisible) {
+      if ((seatIsActor || seatIsReactor) && glyphVisible) {
         // Spawn directly from the × glyph centre.
         startX = (refGlyphRect.left + refGlyphRect.width / 2) - layerRect.left;
         startY = (refGlyphRect.top + refGlyphRect.height / 2) - layerRect.top;
@@ -5692,9 +5691,26 @@ import { createTutorial } from './tutorial.js';
       // left/top on .emojiFx are in #app's pre-transform coordinate space.  Dividing by
       // the app's CSS scale converts between the two so zoom never offsets the origin.
       const appBCR = app.getBoundingClientRect();
-      const appScaleX = app.offsetWidth > 0 ? appBCR.width / app.offsetWidth : 1;
-      const appScaleY = app.offsetHeight > 0 ? appBCR.height / app.offsetHeight : 1;
-      spawnReactionChatBubbleFx(reaction.id, layerRect.left + startX, layerRect.top + startY);
+      return {
+        layer,
+        layerRect,
+        anchorRect,
+        driftDir,
+        startX,
+        startY,
+        appScaleX: app.offsetWidth > 0 ? appBCR.width / app.offsetWidth : 1,
+        appScaleY: app.offsetHeight > 0 ? appBCR.height / app.offsetHeight : 1,
+      };
+    }
+    // Spawns one emoji FX burst, preferring the visible claim-cluster actor float
+    // as the origin; falls back to the human seat card when the cluster is hidden.
+    function spawnEmojiReactionFx(reactionId) {
+      const app = document.getElementById('app');
+      const reaction = EMOJI_REACTION_CONFIG[(reactionId || '').trim().toLowerCase()];
+      if (!app || !reaction) return;
+      const origin = computeEmojiReactionFxOrigin(state.humanSeat, app);
+      if (!origin) return;
+      const { layer, layerRect, anchorRect, driftDir, startX, startY, appScaleX, appScaleY } = origin;
       if (reaction.fanAngles) {
         const fanCX = (anchorRect.left + anchorRect.width / 2) - layerRect.left;
         const fanCY = (anchorRect.top + anchorRect.height / 2) - layerRect.top;
@@ -5820,14 +5836,6 @@ import { createTutorial } from './tutorial.js';
       overlay.appendChild(fx);
       setTimeout(() => fx.remove(), Math.max(40, Number(CHAT_CONFIG.bubbleDurationMs)));
     }
-    function spawnReactionChatBubbleFx(reactionId, viewportX, viewportY) {
-      const reactionBubbles = CHAT_CONFIG.reactionBubbles || {};
-      if (reactionBubbles.enabled === false) return;
-      const textByReactionId = reactionBubbles.textByReactionId || {};
-      const text = textByReactionId[String(reactionId || '').trim().toLowerCase()];
-      if (!text) return;
-      spawnChatBubbleFx(text, { viewportX, viewportY });
-    }
     // Spawns a chat-text speech bubble at the given seat's avatar, triggering the
     // alarmed body deformation so the avatar visually "speaks" the message.
     function spawnChatTextFx(text, seatId) {
@@ -5835,6 +5843,14 @@ import { createTutorial } from './tutorial.js';
       if (!app || !text) return;
       const seatIdStr = String(seatId);
       window.portraitBreathingComposer?.triggerEmote('alarmed', seatIdStr);
+      const emojiOrigin = computeEmojiReactionFxOrigin(seatIdStr, app);
+      if (emojiOrigin) {
+        spawnChatBubbleFx(text, {
+          viewportX: emojiOrigin.layerRect.left + emojiOrigin.startX,
+          viewportY: emojiOrigin.layerRect.top + emojiOrigin.startY,
+        });
+        return;
+      }
       let anchorEl = null;
       const clusterAnchor = claimClusterAvatarAnchorForPlayer(seatId, app);
       if (clusterAnchor && clusterAnchor.offsetParent !== null) {

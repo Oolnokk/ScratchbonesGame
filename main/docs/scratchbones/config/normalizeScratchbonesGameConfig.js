@@ -189,40 +189,15 @@ const DEFAULT_CHAT_CONFIG = {
   bubbleMaxLength: 36,
   bubbleDurationMs: 2000,
   bubbleOverlayZIndex: 10030,
-  reactionBubbles: {
-    enabled: true,
-    textByReactionId: {
-      love: 'Love!',
-      disgust: 'Gross!',
-      alarmed: 'Alarm!',
-      curious: 'Curious?',
-    },
-  },
 };
-
-function normalizeReactionBubbleTextMap(value, fallback) {
-  const source = value && typeof value === 'object' && !Array.isArray(value)
-    ? { ...fallback, ...value }
-    : fallback;
-  return Object.fromEntries(Object.entries(source)
-    .map(([key, text]) => [String(key || '').trim().toLowerCase(), String(text || '').trim()])
-    .filter(([key, text]) => key && text));
-}
 
 function normalizeChatConfig(value) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  const rawReactionBubbles = source.reactionBubbles && typeof source.reactionBubbles === 'object' && !Array.isArray(source.reactionBubbles)
-    ? source.reactionBubbles
-    : {};
   return {
     messageMaxLength: Math.max(1, Math.floor(normalizeFiniteNumber(source.messageMaxLength, DEFAULT_CHAT_CONFIG.messageMaxLength))),
     bubbleMaxLength: Math.max(1, Math.floor(normalizeFiniteNumber(source.bubbleMaxLength, DEFAULT_CHAT_CONFIG.bubbleMaxLength))),
     bubbleDurationMs: normalizeFiniteNumber(source.bubbleDurationMs, DEFAULT_CHAT_CONFIG.bubbleDurationMs, { min: 40 }),
     bubbleOverlayZIndex: Math.floor(normalizeFiniteNumber(source.bubbleOverlayZIndex, DEFAULT_CHAT_CONFIG.bubbleOverlayZIndex)),
-    reactionBubbles: {
-      enabled: rawReactionBubbles.enabled !== false,
-      textByReactionId: normalizeReactionBubbleTextMap(rawReactionBubbles.textByReactionId, DEFAULT_CHAT_CONFIG.reactionBubbles.textByReactionId),
-    },
   };
 }
 
