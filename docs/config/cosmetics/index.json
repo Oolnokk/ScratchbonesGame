@@ -35,6 +35,10 @@
       "path": "./simple_poncho.json"
     },
     {
+      "id": "rough_cloth_poncho",
+      "path": "./clothes/overwear/rough_cloth_poncho.json"
+    },
+    {
       "id": "anuri_hood",
       "path": "./anuri_hood.json"
     },
@@ -70,7 +74,6 @@
       "id": "appearance::Mao-ao_M::mao-ao_circled_eye_R",
       "path": "./appearance/mao-ao/circled_eye_R.json"
     },
-
     {
       "id": "appearance::Mao-ao_M::mao-ao_shoulder_length_drape",
       "path": "./appearance/mao-ao/shoulder_length_drape.json"
@@ -115,7 +118,6 @@
       "id": "appearance::Mao-ao_F::mao-ao_circled_eye_R",
       "path": "./appearance/mao-ao/circled_eye_R_f.json"
     },
-
     {
       "id": "appearance::Mao-ao_F::mao-ao_shoulder_length_drape",
       "path": "./appearance/mao-ao/shoulder_length_drape.json"
@@ -299,6 +301,14 @@
     {
       "id": "appearance::Kenkari_F::kenk_riverlandskasa_wide",
       "path": "./kenk_riverlandskasa_wide.json"
+    },
+    {
+      "id": "appearance::Kenkari_M::kenk_bowlkasa",
+      "path": "./kenk_bowlkasa.json"
+    },
+    {
+      "id": "appearance::Kenkari_F::kenk_bowlkasa",
+      "path": "./kenk_bowlkasa.json"
     },
     {
       "id": "fine_hood",
