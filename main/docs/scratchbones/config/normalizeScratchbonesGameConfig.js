@@ -184,6 +184,23 @@ const DEFAULT_GAMEPLAY_SHORTCUTS_CONFIG = {
   },
 };
 
+const DEFAULT_CHAT_CONFIG = {
+  messageMaxLength: 180,
+  bubbleMaxLength: 36,
+  bubbleDurationMs: 2000,
+  bubbleOverlayZIndex: 10030,
+};
+
+function normalizeChatConfig(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    messageMaxLength: Math.max(1, Math.floor(normalizeFiniteNumber(source.messageMaxLength, DEFAULT_CHAT_CONFIG.messageMaxLength))),
+    bubbleMaxLength: Math.max(1, Math.floor(normalizeFiniteNumber(source.bubbleMaxLength, DEFAULT_CHAT_CONFIG.bubbleMaxLength))),
+    bubbleDurationMs: normalizeFiniteNumber(source.bubbleDurationMs, DEFAULT_CHAT_CONFIG.bubbleDurationMs, { min: 40 }),
+    bubbleOverlayZIndex: Math.floor(normalizeFiniteNumber(source.bubbleOverlayZIndex, DEFAULT_CHAT_CONFIG.bubbleOverlayZIndex)),
+  };
+}
+
 function normalizeGameplayShortcutsConfig(value) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const rawFocusChat = source.focusChat && typeof source.focusChat === 'object' && !Array.isArray(source.focusChat)
@@ -668,6 +685,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       humanNames: rawGameConfig.deck?.humanNames ?? ['You'],
     },
     gameplayShortcuts: normalizeGameplayShortcutsConfig(rawGameConfig.gameplayShortcuts),
+    chat: normalizeChatConfig(rawGameConfig.chat),
     tutorial: {
       ringPadPx: Math.max(0, finiteNumberOrDefault(rawGameConfig.tutorial?.ringPadPx, DEFAULT_TUTORIAL_CONFIG.ringPadPx)),
       minVisibleAreaRatio: Math.min(1, Math.max(0, finiteNumberOrDefault(rawGameConfig.tutorial?.minVisibleAreaRatio, DEFAULT_TUTORIAL_CONFIG.minVisibleAreaRatio))),

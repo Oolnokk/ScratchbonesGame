@@ -31,6 +31,12 @@ window.SCRATCHBONES_CONFIG = {
         "selectExistingText": true
       }
     },
+    "chat": {
+      "messageMaxLength": 180,
+      "bubbleMaxLength": 36,
+      "bubbleDurationMs": 2000,
+      "bubbleOverlayZIndex": 10030
+    },
     "deck": {
       "rankCount": 10,
       "copiesPerRank": 4,
