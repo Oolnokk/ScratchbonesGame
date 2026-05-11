@@ -103,3 +103,10 @@ Promoted nodes are re-anchored inside their fixed portal (`position:absolute; le
 3. `#app` is positioned by authored layout through a CSS transform, so its viewport-space `getBoundingClientRect()` can change on rotation even when a `ResizeObserver` does not report a new untransformed content size.
 4. The body-hosted `thevmenuCandlelightLayer` therefore must poll the current `#app` viewport rect before drawing. If left/top/width/height changed, candlelight resizes its drawing buffers and restamps the fixed canvas to the live app rect.
 5. The body-hosted layer no longer punches out `#aiSidebar`, `.humanSeatZone`, `.turnSpotlight`, or `.claimCluster`; those destination-out masks were the source of the visible element-shaped cutouts above the candlelight layer and are not needed now that promoted UI already owns its stacking order.
+
+## Projection map debug/edit split
+Current behavior:
+- The `Map` button now opens a debug-first projection view: every body element receives a generation-colored outline, cycling red, orange, yellow, green, blue, indigo, and violet from outer to deeper nesting.
+- Touching or hovering an outlined element reports a prompt-friendly element reference in the editor status/tooltip, preferring `data-proj-id` when present.
+- Moving or resizing authored boxes/sub-elements requires enabling the separate `Edit` button while Map is active. The `Sub` overlay button is only exposed in this edit mode so accidental debug touches cannot mutate layout config.
+- Debug color and button/status labels live under `layout.projectionMapping.debug` in `docs/config/scratchbones-config.js`.
