@@ -346,6 +346,21 @@ describe('appearance', () => {
     assert.ok(app.bodyColors.A, 'slot A should have a value');
     assert.ok(app.bodyColors.B, 'slot B should have a value');
   });
+
+  it('normalizes unavailable Tletingan female appearances to male', () => {
+    const { ScratchbonesAccount: acc } = makeSandbox();
+    acc.createAccount('X');
+    acc.setAppearance({
+      speciesId: 'tletingan',
+      gender: 'female',
+      cosmetics: { hairFront: 'appearance::Tletingan_F::missing' },
+      bodyColors: {},
+    });
+    const app = acc.getAppearance();
+    assert.equal(app.speciesId, 'tletingan');
+    assert.equal(app.gender, 'male');
+    assert.deepEqual(toPlain(app.cosmetics), {});
+  });
 });
 
 // ── Trick-bone loadout ────────────────────────────────────────────────────────

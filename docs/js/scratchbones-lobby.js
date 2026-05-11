@@ -237,7 +237,27 @@
   };
 
   const CONFIG_SPECIES_DATA = window.SCRATCHBONES_CONFIG?.game?.appearanceEditor?.species || {};
-  const SPECIES_DATA = { ...BASE_SPECIES_DATA, ...CONFIG_SPECIES_DATA };
+  const CONFIG_SPECIES_AVAILABILITY = window.SCRATCHBONES_CONFIG?.game?.appearanceEditor?.availability || {};
+
+  function normalizeSpeciesKey(speciesId) {
+    return String(speciesId || '').trim().toLowerCase().replace(/_/g, '-');
+  }
+
+  function withConfiguredSpeciesAvailability(speciesData) {
+    const result = { ...speciesData };
+    for (const [speciesId, availability] of Object.entries(CONFIG_SPECIES_AVAILABILITY)) {
+      const key = normalizeSpeciesKey(speciesId);
+      const existing = result[key] || result[speciesId];
+      if (!existing || !Array.isArray(availability?.genders) || !availability.genders.length) continue;
+      result[key] = {
+        ...existing,
+        genders: availability.genders.map(g => String(g).toLowerCase()).filter(Boolean),
+      };
+    }
+    return result;
+  }
+
+  const SPECIES_DATA = withConfiguredSpeciesAvailability({ ...BASE_SPECIES_DATA, ...CONFIG_SPECIES_DATA });
 
   // ── Lobby state ────────────────────────────────────────────
   const NPC_NAMES = ['Rook', 'Sable', 'Grim', 'Vex'];
