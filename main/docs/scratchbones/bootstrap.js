@@ -682,20 +682,35 @@ import { createTutorial } from './tutorial.js';
       if (seatId !== undefined && seatDifficultyRanks[String(seatId)] !== undefined) return normalizeAiDifficultyRank(seatDifficultyRanks[String(seatId)]);
       return fallbackRank;
     }
+    function finiteProfileNumber(value, fallback) {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : fallback;
+    }
     function getAiDifficultyProfile(playerOrSeatId) {
       const rank = resolveAiDifficultyRank(playerOrSeatId);
       const profiles = AI_CONFIG.difficultyRanks || {};
       const fallbackRank = normalizeAiDifficultyRank(AI_CONFIG.defaultDifficultyRank);
-      const profile = profiles[rank] || profiles[fallbackRank] || {
-        challengeThreshold: Number(AI_CONFIG.challengeThreshold),
-        challengeRandomNudgeMax: Number(AI_CONFIG.challengeRandomNudgeMax),
-        bettingConfidenceSuspicionWeight: Number(AI_CONFIG.bettingConfidenceSuspicionWeight),
-      };
+      const profile = profiles[rank] || profiles[fallbackRank] || {};
+      const legacyThreshold = finiteProfileNumber(AI_CONFIG.challengeThreshold, 0.52);
+      const challengeThreshold = finiteProfileNumber(profile.challengeThreshold, legacyThreshold);
+      const challengeThresholdModifier = finiteProfileNumber(profile.challengeThresholdModifier, finiteProfileNumber(AI_CONFIG.challengeThresholdModifier, 0));
+      const resolvedChallengeThreshold = Math.max(0, Math.min(1, challengeThreshold + challengeThresholdModifier));
       return {
         rank,
-        challengeThreshold: Number(profile.challengeThreshold),
-        challengeRandomNudgeMax: Number(profile.challengeRandomNudgeMax),
-        bettingConfidenceSuspicionWeight: Number(profile.bettingConfidenceSuspicionWeight),
+        challengeThreshold,
+        challengeThresholdModifier,
+        resolvedChallengeThreshold,
+        challengeRandomNudgeMax: finiteProfileNumber(profile.challengeRandomNudgeMax, finiteProfileNumber(AI_CONFIG.challengeRandomNudgeMax, 0.16)),
+        challengeKnownCardWeight: finiteProfileNumber(profile.challengeKnownCardWeight, finiteProfileNumber(AI_CONFIG.challengeKnownCardWeight, 0.27)),
+        challengeReadMemoryWeight: finiteProfileNumber(profile.challengeReadMemoryWeight, finiteProfileNumber(AI_CONFIG.challengeReadMemoryWeight, 1)),
+        challengeHumanTargetBias: finiteProfileNumber(profile.challengeHumanTargetBias, finiteProfileNumber(AI_CONFIG.challengeHumanTargetBias, 0.1)),
+        bettingConfidenceSuspicionWeight: finiteProfileNumber(profile.bettingConfidenceSuspicionWeight, finiteProfileNumber(AI_CONFIG.bettingConfidenceSuspicionWeight, 0.55)),
+        bettingConfidenceRandomNudgeMax: finiteProfileNumber(profile.bettingConfidenceRandomNudgeMax, finiteProfileNumber(AI_CONFIG.bettingConfidenceRandomNudgeMax, 0.06)),
+        bettingFoldFloorAdjustment: finiteProfileNumber(profile.bettingFoldFloorAdjustment, finiteProfileNumber(AI_CONFIG.bettingFoldFloorAdjustment, 0)),
+        bettingRaiseDriveAdjustment: finiteProfileNumber(profile.bettingRaiseDriveAdjustment, finiteProfileNumber(AI_CONFIG.bettingRaiseDriveAdjustment, 0)),
+        bettingOpponentFoldPressureWeight: finiteProfileNumber(profile.bettingOpponentFoldPressureWeight, finiteProfileNumber(AI_CONFIG.bettingOpponentFoldPressureWeight, 1)),
+        bettingRaiseScoreGate: finiteProfileNumber(profile.bettingRaiseScoreGate, finiteProfileNumber(AI_CONFIG.bettingRaiseScoreGate, 0)),
+        bettingRaiseMistakeChance: finiteProfileNumber(profile.bettingRaiseMistakeChance, finiteProfileNumber(AI_CONFIG.bettingRaiseMistakeChance, 0.08)),
       };
     }
     const CONFIG = {
@@ -1745,19 +1760,19 @@ import { createTutorial } from './tutorial.js';
     function challengeSuspicionScore(challengerIndex, play, { includeRandom = true } = {}) {
       const challenger = state.players[challengerIndex];
       const pers = challenger.personality;
+      const aiProfile = getAiDifficultyProfile(challenger);
       const knownRankCount = countKnownRank(play.declaredRank);
       const visibleWilds = countVisibleWilds();
       const impossibleOverage = Math.max(0, knownRankCount + play.cards.length - 4 - visibleWilds);
       const read = ensureReadProfile(challengerIndex, play.playerIndex);
       let suspicion = 0;
-      suspicion += impossibleOverage * 0.27;
+      suspicion += impossibleOverage * aiProfile.challengeKnownCardWeight;
       suspicion += play.cards.length >= 3 ? 0.1 : 0;
       suspicion += play.cards.length >= 5 ? 0.08 : 0;
       suspicion += challenger.chips <= 2 ? -0.18 : 0;
       suspicion += challenger.chips >= 8 ? 0.05 : 0;
-      suspicion += isHumanSeat(play.playerIndex) ? 0.1 : 0;
-      suspicion += suspicionFromReadProfile(read, pers);
-      const aiProfile = getAiDifficultyProfile(challenger);
+      suspicion += isHumanSeat(play.playerIndex) ? aiProfile.challengeHumanTargetBias : 0;
+      suspicion += suspicionFromReadProfile(read, pers) * aiProfile.challengeReadMemoryWeight;
       if (includeRandom) suspicion += rand() * aiProfile.challengeRandomNudgeMax;
       if (pers) {
         suspicion += (pers.suspicion  - 0.5) * 0.34;
@@ -1768,7 +1783,7 @@ import { createTutorial } from './tutorial.js';
     }
     function aiShouldChallenge(challengerIndex, play) {
       const challenger = state.players[challengerIndex];
-      return challengeSuspicionScore(challengerIndex, play, { includeRandom: true }) >= getAiDifficultyProfile(challenger).challengeThreshold;
+      return challengeSuspicionScore(challengerIndex, play, { includeRandom: true }) >= getAiDifficultyProfile(challenger).resolvedChallengeThreshold;
     }
     function clampMs(value, minMs, maxMs) {
       return Math.max(minMs, Math.min(maxMs, Math.round(value)));
@@ -2950,7 +2965,7 @@ import { createTutorial } from './tutorial.js';
       let totalRisk = 0;
       for (const challenger of challengers) {
         const suspicion = challengeSuspicionScore(challenger.id, candidatePlay, { includeRandom: false });
-        const threshold = getAiDifficultyProfile(challenger).challengeThreshold;
+        const threshold = getAiDifficultyProfile(challenger).resolvedChallengeThreshold;
         const thresholdPressure = clamp01(0.5 + (suspicion - threshold) * 1.8);
         const readPressure = clamp01(0.5 + suspicionFromReadProfile(ensureReadProfile(challenger.id, player.id), challenger.personality) * 1.6);
         totalRisk += clamp01(thresholdPressure * 0.72 + readPressure * 0.28);
@@ -3042,27 +3057,30 @@ import { createTutorial } from './tutorial.js';
       const foldPressure = estimateFoldPressureAgainst(actorId, opponentId);
       const bankrollBoost = Math.min(0.18, player.chips / 40);
       const couragePush = pers ? (pers.courage - 0.5) * 0.22 : 0;
-      const randomNudge = rand() * 0.12 - 0.06;
+      const aiProfile = getAiDifficultyProfile(player);
+      const randomNudgeMax = Math.max(0, Number(aiProfile.bettingConfidenceRandomNudgeMax) || 0);
+      const randomNudge = rand() * (randomNudgeMax * 2) - randomNudgeMax;
       const challengerSuspicion = challengeSuspicionScore(b.challengerId, play, { includeRandom: false });
-      const suspicionWeight = getAiDifficultyProfile(player).bettingConfidenceSuspicionWeight;
+      const suspicionWeight = aiProfile.bettingConfidenceSuspicionWeight;
+      const foldPressureWeight = aiProfile.bettingOpponentFoldPressureWeight;
       let confidence = actorId === b.challengerId
         ? (0.5 + challengerSuspicion * suspicionWeight)
         : (0.5 - challengerSuspicion * suspicionWeight);
       confidence += bankrollBoost + couragePush + randomNudge;
-      let raiseDrive = confidence;
-      let foldFloor = pers ? 0.32 - (pers.courage - 0.5) * 0.18 : 0.32;
+      let raiseDrive = confidence + aiProfile.bettingRaiseDriveAdjustment;
+      let foldFloor = (pers ? 0.32 - (pers.courage - 0.5) * 0.18 : 0.32) + aiProfile.bettingFoldFloorAdjustment;
       if (actorId === b.challengerId) {
         confidence += suspicionFromReadProfile(playerRead, pers) * 0.18;
-        raiseDrive += foldPressure * 0.45;
+        raiseDrive += foldPressure * 0.45 * foldPressureWeight;
         raiseDrive += opponentRead && opponentRead.currentBluffStreak > 0 ? Math.min(0.12, opponentRead.currentBluffStreak * 0.05) : 0;
         raiseDrive -= challengerSuspicion < 0 ? Math.min(0.14, Math.abs(challengerSuspicion) * 0.2) : 0;
       } else if (challengerSuspicion < 0) {
-        raiseDrive += (1 - foldPressure) * 0.34;
+        raiseDrive += (1 - foldPressure) * 0.34 * foldPressureWeight;
         raiseDrive += opponentPers ? opponentPers.aggression * 0.12 : 0;
         raiseDrive += Math.min(0.12, Math.max(0, b.currentTierValue - CONFIG.challengeBaseTransfer) * 0.04);
         confidence += 0.06;
       } else {
-        raiseDrive += foldPressure * 0.58;
+        raiseDrive += foldPressure * 0.58 * foldPressureWeight;
         raiseDrive -= (1 - foldPressure) * 0.2;
         raiseDrive += opponentPers ? (0.5 - opponentPers.courage) * 0.16 : 0;
         foldFloor += 0.06;
@@ -3089,18 +3107,31 @@ import { createTutorial } from './tutorial.js';
       const toCall = amountToCall(actorId);
       const player = state.players[actorId];
       const pers = player.personality;
+      const aiProfile = getAiDifficultyProfile(player);
       const raiseTierIds = legalStakeTierIdsForPlayer(actorId);
       const canRaise = legalActions.includes('raise-tier') && raiseTierIds.length > 0;
       const raiseThresh = pers ? 0.68 - (pers.courage - 0.5) * 0.18 : 0.68;
       const hardRaiseThresh = raiseThresh + 0.08;
+      const raiseCandidateScore = (intent.raiseDrive - hardRaiseThresh) + Math.max(0, confidence - intent.foldFloor) * 0.18;
+      const raiseGate = aiProfile.bettingRaiseScoreGate;
+      const mistakeChance = Math.max(0, Math.min(1, aiProfile.bettingRaiseMistakeChance));
+      const raiseSupported = raiseCandidateScore >= raiseGate;
       if (toCall > player.chips) {
         resolveBetAction(actorId, 'fold');
         return;
       }
       if (confidence < intent.foldFloor) {
         resolveBetAction(actorId, 'fold');
-      } else if (canRaise && intent.raiseDrive > hardRaiseThresh && player.chips > toCall) {
-        resolveBetAction(actorId, { type: 'raise-tier', tierId: raiseTierIds[raiseTierIds.length - 1] });
+      } else if (canRaise && player.chips > toCall) {
+        const raisesByMistake = !raiseSupported && rand() < mistakeChance;
+        if (raiseSupported || raisesByMistake) {
+          const underRaiseChance = raiseSupported ? mistakeChance * 0.75 : mistakeChance;
+          const underRaises = raiseTierIds.length > 1 && rand() < underRaiseChance;
+          const tierIndex = underRaises ? Math.floor(rand() * (raiseTierIds.length - 1)) : raiseTierIds.length - 1;
+          resolveBetAction(actorId, { type: 'raise-tier', tierId: raiseTierIds[Math.max(0, Math.min(raiseTierIds.length - 1, tierIndex))] });
+        } else {
+          resolveBetAction(actorId, 'call');
+        }
       } else {
         resolveBetAction(actorId, 'call');
       }
@@ -5316,8 +5347,19 @@ import { createTutorial } from './tutorial.js';
               difficultyRank: profile.rank,
               profile: {
                 challengeThreshold: profile.challengeThreshold,
+                challengeThresholdModifier: profile.challengeThresholdModifier,
+                resolvedChallengeThreshold: profile.resolvedChallengeThreshold,
                 challengeRandomNudgeMax: profile.challengeRandomNudgeMax,
+                challengeKnownCardWeight: profile.challengeKnownCardWeight,
+                challengeReadMemoryWeight: profile.challengeReadMemoryWeight,
+                challengeHumanTargetBias: profile.challengeHumanTargetBias,
                 bettingConfidenceSuspicionWeight: profile.bettingConfidenceSuspicionWeight,
+                bettingConfidenceRandomNudgeMax: profile.bettingConfidenceRandomNudgeMax,
+                bettingFoldFloorAdjustment: profile.bettingFoldFloorAdjustment,
+                bettingRaiseDriveAdjustment: profile.bettingRaiseDriveAdjustment,
+                bettingOpponentFoldPressureWeight: profile.bettingOpponentFoldPressureWeight,
+                bettingRaiseScoreGate: profile.bettingRaiseScoreGate,
+                bettingRaiseMistakeChance: profile.bettingRaiseMistakeChance,
               },
             };
           })(),
