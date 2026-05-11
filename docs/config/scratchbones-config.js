@@ -38,7 +38,8 @@ window.SCRATCHBONES_CONFIG = {
       "resetMobileZoomOnSubmit": true,
       "mobileZoomResetDelayMs": 60,
       "mobileZoomResetViewportContent": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
-      "messageFxSpawnAfterZoomResetMs": 500,
+      "messageBubbleSpawnAfterZoomResetMs": 1500,
+      "messageAnimationSpawnAfterZoomResetMs": 2500,
       "laughPhrases": ["lol", "ha", "haha", "hahaha"],
       "bubbleMaxLength": 36,
       "bubbleDurationMs": 2000,
@@ -900,10 +901,11 @@ window.SCRATCHBONES_CONFIG = {
       "emotes": {
         "laugh": {
           "puffCount": 3,
-          "inflateDurationSeconds": 0.045,
-          "deflateDurationSeconds": 0.075,
+          "inflateDurationSeconds": 0.12,
+          "deflateDurationSeconds": 0.14,
+          "pauseDurationSeconds": 0.18,
           "settleDurationSeconds": 0.60,
-          "mouthLaughMs": 360,
+          "mouthLaughMs": 1140,
           "mouthRestExpression": "smile"
         },
         "disgust": {

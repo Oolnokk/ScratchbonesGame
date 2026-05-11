@@ -77,11 +77,11 @@ const _lNeutral = { label: 'neutral', points: _N4x6 };
 
 const EMOTE_ANIMATIONS = {
 
-  // Three rapid staccato puffs: simulate a "ha ha ha" body shake.
+  // Three distinct staccato puffs: simulate a separated "ha... ha... ha" body shake.
   laugh: {
     gridCols: 4, gridRows: 6,
-    poseDurations: [0.045, 0.075, 0.045, 0.075, 0.045, 0.075, 0.60],
-    poses: [_lNeutral, _lPeak, _lNeutral, _lPeak, _lNeutral, _lPeak, _lNeutral],
+    poseDurations: [0.12, 0.14, 0.18, 0.12, 0.14, 0.18, 0.12, 0.14, 0.60],
+    poses: [_lNeutral, _lPeak, _lNeutral, _lNeutral, _lPeak, _lNeutral, _lNeutral, _lPeak, _lNeutral],
   },
 
   // Single bounce: quick snap to squash (bottom locked), long drawn-out hold, snap back.
@@ -416,8 +416,9 @@ function _getConfiguredEmoteAnimation(animKey, anim) {
 function _getConfiguredLaughAnimation(anim) {
   const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.emotes?.laugh || {};
   const puffCount = Math.max(1, Math.floor(Number(cfg.puffCount) || 3));
-  const inflateDurationSeconds = Math.max(0.001, Number(cfg.inflateDurationSeconds) || 0.045);
-  const deflateDurationSeconds = Math.max(0.001, Number(cfg.deflateDurationSeconds) || 0.075);
+  const inflateDurationSeconds = Math.max(0.001, Number(cfg.inflateDurationSeconds) || 0.12);
+  const deflateDurationSeconds = Math.max(0.001, Number(cfg.deflateDurationSeconds) || 0.14);
+  const pauseDurationSeconds = Math.max(0, Number(cfg.pauseDurationSeconds) || 0.18);
   const settleDurationSeconds = Math.max(0, Number(cfg.settleDurationSeconds) || 0.60);
   const neutralPose = anim.poses?.[0] || _lNeutral;
   const puffPose = anim.poses?.[1] || _lPeak;
@@ -427,6 +428,10 @@ function _getConfiguredLaughAnimation(anim) {
   for (let i = 0; i < puffCount; i += 1) {
     poseDurations.push(inflateDurationSeconds, deflateDurationSeconds);
     poses.push(puffPose, neutralPose);
+    if (i < puffCount - 1 && pauseDurationSeconds > 0) {
+      poseDurations.push(pauseDurationSeconds);
+      poses.push(neutralPose);
+    }
   }
   poseDurations.push(settleDurationSeconds);
 

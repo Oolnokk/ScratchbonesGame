@@ -508,7 +508,8 @@ import { createTutorial } from './tutorial.js';
     const CHAT_RESET_MOBILE_ZOOM_ON_SUBMIT = CHAT_CONFIG.resetMobileZoomOnSubmit !== false;
     const CHAT_MOBILE_ZOOM_RESET_DELAY_MS = Math.max(0, Number(CHAT_CONFIG.mobileZoomResetDelayMs) || 0);
     const CHAT_MOBILE_ZOOM_RESET_VIEWPORT_CONTENT = String(CHAT_CONFIG.mobileZoomResetViewportContent || '').trim();
-    const CHAT_MESSAGE_FX_SPAWN_AFTER_ZOOM_RESET_MS = Math.max(0, Number(CHAT_CONFIG.messageFxSpawnAfterZoomResetMs) || 0);
+    const CHAT_MESSAGE_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS = Math.max(0, Number(CHAT_CONFIG.messageBubbleSpawnAfterZoomResetMs) || 0);
+    const CHAT_MESSAGE_ANIMATION_SPAWN_AFTER_ZOOM_RESET_MS = Math.max(0, Number(CHAT_CONFIG.messageAnimationSpawnAfterZoomResetMs) || 0);
     const CHAT_LAUGH_PHRASES = new Set((Array.isArray(CHAT_CONFIG.laughPhrases) ? CHAT_CONFIG.laughPhrases : []).map((phrase) => String(phrase).trim().toLowerCase()).filter(Boolean));
     const FOCUS_CHAT_SHORTCUT = SCRATCHBONES_GAME.gameplayShortcuts?.focusChat || {};
     // Hand panel slot-based layout constants
@@ -4991,19 +4992,30 @@ import { createTutorial } from './tutorial.js';
           if (!text) return;
           const triggersLaugh = CHAT_LAUGH_PHRASES.has(text.toLowerCase());
           if (input) input.value = '';
-          const playOwnChatFx = () => {
+          const playOwnChatBubble = () => spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: false });
+          const playOwnChatAnimation = () => {
             if (triggersLaugh) triggerLaughAnimation(state.humanSeat);
-            spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: !triggersLaugh });
+            else triggerChatSpeechAnimation(state.humanSeat);
           };
           if (_isClient) {
-            // Immediate network send; delay local chat bubble and portrait animation
-            // until after mobile zoom reset so geometry is sampled in the restored viewport.
+            // Immediate network send; delay local bubble and portrait animation separately
+            // until after mobile zoom reset so geometry/animations start in the restored viewport.
             _pendingOwnChatText = text;
             _net.sendAction({ type: 'chat', text });
-            resetChatInputZoomAfterSubmit(input, { afterReset: playOwnChatFx });
+            resetChatInputZoomAfterSubmit(input, {
+              afterReset: [
+                { delayMs: CHAT_MESSAGE_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatBubble },
+                { delayMs: CHAT_MESSAGE_ANIMATION_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatAnimation },
+              ],
+            });
           } else {
             addChatLog(text, hs, { silent: true });
-            resetChatInputZoomAfterSubmit(input, { afterReset: playOwnChatFx });
+            resetChatInputZoomAfterSubmit(input, {
+              afterReset: [
+                { delayMs: CHAT_MESSAGE_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatBubble },
+                { delayMs: CHAT_MESSAGE_ANIMATION_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatAnimation },
+              ],
+            });
             render();
           }
         });
@@ -5818,10 +5830,11 @@ import { createTutorial } from './tutorial.js';
     }
     function getLaughMouthConfig() {
       const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.emotes?.laugh || {};
+      const puffCount = Math.max(1, Math.floor(Number(cfg.puffCount) || 3));
+      const puffMotionMs = (Number(cfg.inflateDurationSeconds) || 0.12) + (Number(cfg.deflateDurationSeconds) || 0.14);
+      const pauseMs = Number(cfg.pauseDurationSeconds) || 0.18;
       const defaultLaughMs = Math.max(1, Math.round(
-        (Number(cfg.puffCount) || 3) *
-        ((Number(cfg.inflateDurationSeconds) || 0.045) + (Number(cfg.deflateDurationSeconds) || 0.075)) *
-        1000
+        ((puffCount * puffMotionMs) + (Math.max(0, puffCount - 1) * pauseMs)) * 1000
       ));
       return {
         laughMs: Math.max(1, Number(cfg.mouthLaughMs) || defaultLaughMs),
@@ -5860,12 +5873,14 @@ import { createTutorial } from './tutorial.js';
     }
     function resetChatInputZoomAfterSubmit(input, { afterReset } = {}) {
       const queueAfterReset = () => {
-        if (typeof afterReset !== 'function') return;
-        if (CHAT_MESSAGE_FX_SPAWN_AFTER_ZOOM_RESET_MS > 0) {
-          window.setTimeout(afterReset, CHAT_MESSAGE_FX_SPAWN_AFTER_ZOOM_RESET_MS);
-          return;
-        }
-        afterReset();
+        const callbacks = Array.isArray(afterReset) ? afterReset : [afterReset];
+        callbacks.forEach((entry) => {
+          const fn = typeof entry === 'function' ? entry : entry?.fn;
+          if (typeof fn !== 'function') return;
+          const delayMs = Math.max(0, Number(entry?.delayMs) || 0);
+          if (delayMs > 0) window.setTimeout(fn, delayMs);
+          else fn();
+        });
       };
       if (CHAT_BLUR_INPUT_ON_SUBMIT && typeof input?.blur === 'function') input.blur();
       if (!CHAT_RESET_MOBILE_ZOOM_ON_SUBMIT) {
@@ -5907,13 +5922,16 @@ import { createTutorial } from './tutorial.js';
       overlay.appendChild(fx);
       setTimeout(() => fx.remove(), Math.max(40, Number(CHAT_CONFIG.bubbleDurationMs)));
     }
+    function triggerChatSpeechAnimation(seatId) {
+      window.portraitBreathingComposer?.triggerEmote('alarmed', String(seatId));
+    }
     // Spawns a chat-text speech bubble at the given seat's avatar, optionally
     // triggering the alarmed body deformation so the avatar visually "speaks" the message.
     function spawnChatTextFx(text, seatId, { triggerSpeechEmote = true } = {}) {
       const app = document.getElementById('app');
       if (!app || !text) return;
       const seatIdStr = String(seatId);
-      if (triggerSpeechEmote) window.portraitBreathingComposer?.triggerEmote('alarmed', seatIdStr);
+      if (triggerSpeechEmote) triggerChatSpeechAnimation(seatIdStr);
       const emojiOrigin = computeEmojiReactionFxOrigin(seatIdStr, app);
       if (emojiOrigin) {
         spawnChatBubbleFx(text, {
