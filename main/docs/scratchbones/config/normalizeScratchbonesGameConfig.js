@@ -264,6 +264,11 @@ function finiteNumberOrDefault(value, fallback) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+function normalizeOneOf(value, fallback, allowedValues) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return allowedValues.includes(normalized) ? normalized : fallback;
+}
+
 const DEFAULT_LAYER_MANAGER_CONFIG = {
   enabled: true,
   hostZIndex: 45,
@@ -294,7 +299,10 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   disablePreservePromotionTransformSelectors: [],
   typographyBaselineRootSelector: '#app',
   typographyBaselineFields: ['font-size', 'line-height', 'font-family', 'letter-spacing', 'font-weight'],
-  placementMode: 'screen-space',
+  placementMode: 'authored-coordinate',
+  placementCoordinateSpace: 'app',
+  roundToPixels: false,
+  portalScaleStrategy: 'portal-transform',
   layerOrder: ['above-lighting-shell', 'above-lighting-content'],
   assignments: [
     {
@@ -686,10 +694,28 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       },
       layerManager: (() => {
         const rawLayerManager = rawGameConfig.layout?.layerManager || {};
+        const placementMode = normalizeOneOf(
+          rawLayerManager.placementMode,
+          DEFAULT_LAYER_MANAGER_CONFIG.placementMode,
+          ['authored-coordinate', 'screen-space'],
+        );
+        const placementCoordinateSpace = normalizeOneOf(
+          rawLayerManager.placementCoordinateSpace,
+          DEFAULT_LAYER_MANAGER_CONFIG.placementCoordinateSpace,
+          ['app', 'viewport'],
+        );
+        const portalScaleStrategy = normalizeOneOf(
+          rawLayerManager.portalScaleStrategy,
+          DEFAULT_LAYER_MANAGER_CONFIG.portalScaleStrategy,
+          ['portal-transform', 'dimensions', 'none', 'legacy-screen-space'],
+        );
         return {
           ...DEFAULT_LAYER_MANAGER_CONFIG,
           ...rawLayerManager,
-          placementMode: 'screen-space',
+          placementMode,
+          placementCoordinateSpace,
+          roundToPixels: rawLayerManager.roundToPixels === true || rawLayerManager.screenSpaceRoundToPixels === true,
+          portalScaleStrategy: portalScaleStrategy === 'none' ? 'dimensions' : portalScaleStrategy,
         };
       })(),
     },

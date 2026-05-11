@@ -1,7 +1,7 @@
 import { getScratchbonesGameConfig } from './config/normalizeScratchbonesGameConfig.js';
 import { createInitialState } from './state/createInitialState.js';
 import { applyAuthoredLayoutMode as applyAuthoredLayoutModeModule } from './layout/authoredLayout.js';
-import { compareRenderedScreenSpaceModes, createLayoutDiagnosticsState, resetLayoutDiagnosticsState, summarizeRenderedScreenSpaceDrift, summarizeRenderedScreenSpaceDriftByPromotedSubtree, updateLayoutDiagnosticsState } from './layout/diagnostics.js';
+import { buildViewportCases, compareRenderedScreenSpaceModes, createLayoutDiagnosticsState, resetLayoutDiagnosticsState, summarizeRenderedScreenSpaceDrift, summarizeRenderedScreenSpaceDriftByPromotedSubtree, updateLayoutDiagnosticsState } from './layout/diagnostics.js';
 import { createScratchbonesAudio } from './fx/audio.js';
 import { initDebugPanelInterceptor } from './debug/panel.js';
 import { initCandleLight } from './fx/candlelight.js';
@@ -287,6 +287,33 @@ import { createTutorial } from './tutorial.js';
       if (layerHost) queryRoots.push(layerHost);
       const countsByProjId = new Map();
       const snapshot = {};
+      const appRect = app.getBoundingClientRect();
+      const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || 0;
+      const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+      const appLayoutWidth = app.offsetWidth || app.clientWidth || appRect.width || 0;
+      const appLayoutHeight = app.offsetHeight || app.clientHeight || appRect.height || 0;
+      const authoredScaleX = appLayoutWidth > 0 ? appRect.width / appLayoutWidth : 1;
+      const authoredScaleY = appLayoutHeight > 0 ? appRect.height / appLayoutHeight : 1;
+      const visualViewport = window.visualViewport ? {
+        width: Number(window.visualViewport.width.toFixed(3)),
+        height: Number(window.visualViewport.height.toFixed(3)),
+        scale: Number(window.visualViewport.scale.toFixed(3)),
+        offsetLeft: Number(window.visualViewport.offsetLeft.toFixed(3)),
+        offsetTop: Number(window.visualViewport.offsetTop.toFixed(3)),
+      } : null;
+      snapshot.__meta = {
+        viewport: { width: viewportWidth, height: viewportHeight },
+        visualViewport,
+        appRect: {
+          left: Number(appRect.left.toFixed(3)),
+          top: Number(appRect.top.toFixed(3)),
+          width: Number(appRect.width.toFixed(3)),
+          height: Number(appRect.height.toFixed(3)),
+        },
+        authoredScale: { x: Number(authoredScaleX.toFixed(6)), y: Number(authoredScaleY.toFixed(6)) },
+        devicePixelRatio: Number((window.devicePixelRatio || 1).toFixed(3)),
+        pageZoomEstimate: viewportWidth > 0 && window.screen?.width ? Number((window.screen.width / viewportWidth).toFixed(3)) : null,
+      };
       const seenElements = new Set();
       for (const root of queryRoots) {
         root.querySelectorAll('[data-proj-id]').forEach((el) => {
@@ -369,6 +396,7 @@ import { createTutorial } from './tutorial.js';
         renderedScreenSpaceDelta: {
           modeA,
           modeB,
+          viewportCases: buildViewportCases(renderedScreenSpace, modeA, modeB),
           deltas,
         },
         renderedScreenSpaceTopDrift: topDrift,

@@ -86,6 +86,33 @@ function readSizingToken(inlineValue, computedValue, fallbackPx) {
   return `${Math.max(1, Number(fallbackPx) || 1).toFixed(4)}px`;
 }
 
+function normalizeLayerPlacementMode(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'screen-space' ? 'screen-space' : 'authored-coordinate';
+}
+
+function normalizeLayerPlacementCoordinateSpace(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'viewport' ? 'viewport' : 'app';
+}
+
+function normalizePortalScaleStrategy(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'none' || normalized === 'dimensions') return 'dimensions';
+  if (normalized === 'legacy-screen-space') return 'legacy-screen-space';
+  return 'portal-transform';
+}
+
+function roundPlacementValue(value, shouldRound) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return shouldRound ? Math.round(numeric) : numeric;
+}
+
+function toCssPx(value, shouldRound) {
+  return `${roundPlacementValue(value, shouldRound).toFixed(shouldRound ? 0 : 4)}px`;
+}
+
 function restoreManagedElementStyle(element, styleSnapshot) {
   if (!element || !styleSnapshot) return;
   element.style.margin = styleSnapshot.margin;
@@ -106,6 +133,10 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const hostZIndex = Number.isFinite(Number(managerConfig.hostZIndex)) ? Number(managerConfig.hostZIndex) : 45;
   const defaultPreserveSpace = managerConfig.defaultPreserveSpace !== false;
   const normalizePromotedElementBox = managerConfig.normalizePromotedElementBox === true;
+  const placementMode = normalizeLayerPlacementMode(managerConfig.placementMode);
+  const placementCoordinateSpace = normalizeLayerPlacementCoordinateSpace(managerConfig.placementCoordinateSpace);
+  const roundToPixels = managerConfig.roundToPixels === true || managerConfig.screenSpaceRoundToPixels === true;
+  const portalScaleStrategy = normalizePortalScaleStrategy(managerConfig.portalScaleStrategy);
   const assignments = Array.isArray(managerConfig.assignments) ? managerConfig.assignments : [];
   const promoteByRootSelectors = normalizeSelectorList(managerConfig.promoteByRootSelectors);
   const excludeDescendantSelectors = normalizeSelectorList(managerConfig.excludeDescendantSelectors);
@@ -264,34 +295,59 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     if (!entry?.portal) return;
     const capture = capturePortalPlacementFrame(entry);
     if (!capture) return;
-    const { sourceRect, appScaleX, appScaleY } = capture;
+    const { authoredRect, viewportRect, appRect, appScaleX, appScaleY } = capture;
     const resolvedScaleX = Number.isFinite(appScaleX) && appScaleX > 0 ? appScaleX : 1;
     const resolvedScaleY = Number.isFinite(appScaleY) && appScaleY > 0 ? appScaleY : 1;
-    const inverseScaleX = 1 / resolvedScaleX;
-    const inverseScaleY = 1 / resolvedScaleY;
+    const useScreenSpace = placementMode === 'screen-space' || placementCoordinateSpace === 'viewport';
+    const useLegacyScreenSpaceScale = useScreenSpace && portalScaleStrategy === 'legacy-screen-space';
+    const usePortalTransformScale = !useScreenSpace && portalScaleStrategy === 'portal-transform';
+    const sourceRect = useScreenSpace ? viewportRect : authoredRect;
+    const visualLeft = useScreenSpace ? sourceRect.left : (appRect.left + (sourceRect.left * resolvedScaleX));
+    const visualTop = useScreenSpace ? sourceRect.top : (appRect.top + (sourceRect.top * resolvedScaleY));
+    const cssWidth = useLegacyScreenSpaceScale
+      ? Math.max(1, sourceRect.width / resolvedScaleX)
+      : (usePortalTransformScale ? Math.max(1, sourceRect.width) : Math.max(1, sourceRect.width * (useScreenSpace ? 1 : resolvedScaleX)));
+    const cssHeight = useLegacyScreenSpaceScale
+      ? Math.max(1, sourceRect.height / resolvedScaleY)
+      : (usePortalTransformScale ? Math.max(1, sourceRect.height) : Math.max(1, sourceRect.height * (useScreenSpace ? 1 : resolvedScaleY)));
+    const transformScaleX = useLegacyScreenSpaceScale || usePortalTransformScale ? resolvedScaleX : 1;
+    const transformScaleY = useLegacyScreenSpaceScale || usePortalTransformScale ? resolvedScaleY : 1;
     entry.portal.style.position = 'fixed';
     entry.portal.style.right = 'auto';
     entry.portal.style.bottom = 'auto';
-    entry.portal.style.transform = (resolvedScaleX === 1 && resolvedScaleY === 1)
+    entry.portal.style.transform = (transformScaleX === 1 && transformScaleY === 1)
       ? 'none'
-      : `scale(${resolvedScaleX.toFixed(6)}, ${resolvedScaleY.toFixed(6)})`;
+      : `scale(${transformScaleX.toFixed(6)}, ${transformScaleY.toFixed(6)})`;
     entry.portal.style.transformOrigin = '0 0';
-    entry.portal.style.left = `${sourceRect.left.toFixed(4)}px`;
-    entry.portal.style.top = `${sourceRect.top.toFixed(4)}px`;
-    entry.portal.style.width = `${Math.max(1, sourceRect.width * inverseScaleX).toFixed(4)}px`;
-    entry.portal.style.height = `${Math.max(1, sourceRect.height * inverseScaleY).toFixed(4)}px`;
+    entry.portal.style.left = toCssPx(visualLeft, roundToPixels);
+    entry.portal.style.top = toCssPx(visualTop, roundToPixels);
+    entry.portal.style.width = toCssPx(cssWidth, roundToPixels);
+    entry.portal.style.height = toCssPx(cssHeight, roundToPixels);
   }
 
   function capturePortalPlacementFrame(entry) {
     const anchorElement = getPortalAnchorElement(entry);
     if (!anchorElement) return null;
-    const sourceRect = anchorElement.getBoundingClientRect();
+    const viewportRect = anchorElement.getBoundingClientRect();
     const appRect = state.app?.getBoundingClientRect?.();
-    const appLayoutWidth = state.app?.offsetWidth || state.app?.clientWidth || 0;
-    const appLayoutHeight = state.app?.offsetHeight || state.app?.clientHeight || 0;
-    const appScaleX = appRect && appLayoutWidth > 0 ? (appRect.width / appLayoutWidth) : 1;
-    const appScaleY = appRect && appLayoutHeight > 0 ? (appRect.height / appLayoutHeight) : 1;
-    return { sourceRect, appScaleX, appScaleY };
+    if (!appRect) return null;
+    const appLayoutWidth = state.app?.offsetWidth || state.app?.clientWidth || appRect.width || 0;
+    const appLayoutHeight = state.app?.offsetHeight || state.app?.clientHeight || appRect.height || 0;
+    const appScaleX = appLayoutWidth > 0 ? (appRect.width / appLayoutWidth) : 1;
+    const appScaleY = appLayoutHeight > 0 ? (appRect.height / appLayoutHeight) : 1;
+    const resolvedScaleX = Number.isFinite(appScaleX) && appScaleX > 0 ? appScaleX : 1;
+    const resolvedScaleY = Number.isFinite(appScaleY) && appScaleY > 0 ? appScaleY : 1;
+    const authoredRect = {
+      x: (viewportRect.x - appRect.left) / resolvedScaleX,
+      y: (viewportRect.y - appRect.top) / resolvedScaleY,
+      left: (viewportRect.left - appRect.left) / resolvedScaleX,
+      top: (viewportRect.top - appRect.top) / resolvedScaleY,
+      right: (viewportRect.right - appRect.left) / resolvedScaleX,
+      bottom: (viewportRect.bottom - appRect.top) / resolvedScaleY,
+      width: viewportRect.width / resolvedScaleX,
+      height: viewportRect.height / resolvedScaleY,
+    };
+    return { authoredRect, viewportRect, appRect, appScaleX: resolvedScaleX, appScaleY: resolvedScaleY };
   }
 
   function promoteElementToLayer(element, assignment) {
@@ -383,7 +439,6 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       placeholder,
       portal,
       originalElementStyle,
-      placementCapture: capturePortalPlacementFrame({ placeholder, sourceElement: element }),
     };
     state.promoted.push(promotedEntry);
     if (placeholder) state.resizeObserver?.observe(placeholder);
@@ -408,7 +463,9 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       disablePreservePromotionTransform,
       shouldRetainComputedTransform,
       reanchoredAbsolutePosition: true,
-      placementMode: 'screen-space',
+      placementMode,
+      placementCoordinateSpace,
+      portalScaleStrategy,
     });
     return true;
   }
