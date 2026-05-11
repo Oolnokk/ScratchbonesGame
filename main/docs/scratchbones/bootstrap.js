@@ -5620,7 +5620,7 @@ import { createTutorial } from './tutorial.js';
     }
     function renderWobblyOutlines(app, { uiElements = null, emojiElements = null } = {}) {
       if (!app) return;
-      const uiTargets = uiElements || (() => {
+      const uiTargets = (uiElements !== null && uiElements !== undefined) ? uiElements : (() => {
         const merged = new Set();
         app.querySelectorAll('[data-ui-wobbly-outline]').forEach((element) => merged.add(element));
         app.querySelectorAll(BROWN_BOX_OUTLINE_SELECTOR).forEach((element) => merged.add(element));
@@ -5680,7 +5680,9 @@ import { createTutorial } from './tutorial.js';
           WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.4, step: 20, wobble: 1.2, seed: 89, outset: 4 });
         }
       });
-      const emojiTargets = emojiElements || app.querySelectorAll('.emojiReactionGlyph, .emojiFxGlyph, .shockGlyph');
+      const emojiTargets = (emojiElements !== null && emojiElements !== undefined)
+        ? emojiElements
+        : app.querySelectorAll('.emojiReactionGlyph, .emojiFxGlyph, .shockGlyph');
       if (EMOJI_OUTLINE_ENABLED) {
         emojiTargets.forEach((element) => {
           if (!shouldRenderUiOutline(element)) {
