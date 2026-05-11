@@ -153,6 +153,9 @@ class BreathingComposer {
 
     // Mouth facial expression state per seat
     this._expressions = new Map(); // seatId → { expression, expiresAtMs }
+
+    // Persistent default/resting expression per seat (returned when timed expression expires)
+    this._defaultExpressions = new Map(); // seatId → expression string
   }
 
   get enabled() {
@@ -252,7 +255,7 @@ class BreathingComposer {
   /**
    * Set mouth expression for a seat.
    * expression: 'neutral' | 'smile' | 'frown' | 'laugh'
-   * durationMs: how long before returning to neutral (default from config or 10 000ms)
+   * durationMs: how long before returning to the default expression (default from config or 10 000ms)
    */
   setExpression(seatId, expression, durationMs) {
     const ms = Number(durationMs) ||
@@ -269,16 +272,31 @@ class BreathingComposer {
   }
 
   /**
+   * Set the persistent default/resting expression for a seat.
+   * This is returned when no timed expression is active or after one expires.
+   * expression: 'neutral' | 'smile' | 'frown'
+   */
+  setDefaultExpression(seatId, expression) {
+    const key = String(seatId ?? '');
+    if (!expression || expression === 'neutral') {
+      this._defaultExpressions.delete(key);
+    } else {
+      this._defaultExpressions.set(key, String(expression));
+    }
+  }
+
+  /**
    * Get the current mouth expression for a seat.
-   * Returns 'neutral' when none is active or it has expired.
+   * Returns the default expression (or 'neutral') when none is active or it has expired.
    */
   getExpression(seatId, nowMs) {
     const key = String(seatId ?? '');
+    const defaultExpr = this._defaultExpressions.get(key) || 'neutral';
     const state = this._expressions.get(key);
-    if (!state) return 'neutral';
+    if (!state) return defaultExpr;
     if ((nowMs ?? Date.now()) >= state.expiresAtMs) {
       this._expressions.delete(key);
-      return 'neutral';
+      return defaultExpr;
     }
     return state.expression;
   }

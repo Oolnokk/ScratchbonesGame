@@ -2510,6 +2510,7 @@ import { createTutorial } from './tutorial.js';
         state.stats.failedChallenges += 1;
         noteChallengeReadResult(state.betting.challengerId, state.betting.challengedId, false);
       }
+      applyChallengeResultExpressions(winnerId, loserId);
       showFoldCinematic(winnerId, loserId, () => {
         state.betting = null;
         void concludeChallengeFlow(winnerId);
@@ -2533,6 +2534,7 @@ import { createTutorial } from './tutorial.js';
         await animateChallengeAwardToWinner(winnerId, pot);
         winner.chips += pot;
         state.stats.chipsMovedByChallenges += pot;
+        applyChallengeResultExpressions(winnerId, loserId);
         observeRevealedTruthForReads(play, play.truthful);
         if (success) {
           state.stats.successfulChallenges += 1;
@@ -6034,9 +6036,10 @@ import { createTutorial } from './tutorial.js';
           }
           const isShockGlyph = element.classList.contains('shockGlyph');
           WOBBLY_OUTLINE_RENDERER.renderEmojiOutline(element, {
-            lineWidth: isShockGlyph ? 2.3 : 2.6,
+            lineWidth: isShockGlyph ? 5.5 : 6.0,
             wobble: isShockGlyph ? 1.2 : 0.95,
             seed: isShockGlyph ? 43 : 31,
+            color: '#000000',
           });
         });
       } else {
@@ -6174,12 +6177,12 @@ import { createTutorial } from './tutorial.js';
         renderWobblyOutlines(app, { uiElements: [], emojiElements: container.querySelectorAll('.shockGlyph') });
         setTimeout(() => container.remove(), reaction.durationMs);
       } else if (reaction.coinSrcs) {
-        // Gloat: cloud spawns 110px above the anchor centre (shifted 30px down from original 140px).
+        // Gloat: cloud spawns 50px above the anchor centre (closer to avatar).
         // Both cloud and coins use cloudY so the entire animation moves together.
         const _fanCX = (anchorRect.left + anchorRect.width / 2) - layerRect.left;
         const _fanCY = (anchorRect.top  + anchorRect.height / 2) - layerRect.top;
         const cloudX = _fanCX / appScaleX;
-        const cloudY = (_fanCY - 110) / appScaleY;
+        const cloudY = (_fanCY - 50) / appScaleY;
         const cloudEl = document.createElement('div');
         cloudEl.className = 'emojiFx emojiFx-gloat-cloud';
         cloudEl.style.left = `${cloudX}px`;
@@ -6231,20 +6234,42 @@ import { createTutorial } from './tutorial.js';
       }
       window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));
       if (reactionId === 'disgust') triggerDisgustFlip(state.humanSeat);
-      // Set facial expression for the duration configured (default 10 s).
-      const _EMOTE_EXPRESSION_MAP = {
-        disgust: 'frown', shock: 'frown', alarmed: 'frown',
-        gloat: 'smile', love: 'smile',
-        curious: 'neutral',
-      };
-      const _exprTarget = _EMOTE_EXPRESSION_MAP[reactionId];
-      if (_exprTarget && window.portraitBreathingComposer) {
-        window.portraitBreathingComposer.setExpression(String(state.humanSeat), _exprTarget, getPortraitExpressionDurationMs());
+      // Only 'love' changes the facial expression via emoji reactions.
+      if (reactionId === 'love' && window.portraitBreathingComposer) {
+        window.portraitBreathingComposer.setExpression(String(state.humanSeat), 'smile', getPortraitExpressionDurationMs());
       }
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
     function getPortraitExpressionDurationMs() {
       return Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) || 10000;
+    }
+    // Returns 'smile' if the player has at or above average chips, 'frown' otherwise.
+    function computeRestingExpression(seatIndex) {
+      const player = state.players[seatIndex];
+      if (!player) return 'neutral';
+      const activePlayers = state.players.filter(p => !p.eliminated);
+      const totalChips = activePlayers.reduce((sum, p) => sum + (p.chips || 0), 0) + (state.tablePot || 0);
+      const avgChips = totalChips / Math.max(1, activePlayers.length);
+      return (player.chips || 0) >= avgChips ? 'smile' : 'frown';
+    }
+    // Updates the persistent resting expression for all active seats based on current chip counts.
+    function updateAllDefaultExpressions() {
+      const composer = window.portraitBreathingComposer;
+      if (!composer) return;
+      for (let i = 0; i < state.players.length; i++) {
+        if (!state.players[i].eliminated) {
+          composer.setDefaultExpression(String(i), computeRestingExpression(i));
+        }
+      }
+    }
+    // Sets expressions for challenge winner/loser (applies to both human and NPC seats).
+    function applyChallengeResultExpressions(winnerId, loserId) {
+      const composer = window.portraitBreathingComposer;
+      if (!composer) return;
+      const exprDurMs = getPortraitExpressionDurationMs();
+      updateAllDefaultExpressions();
+      composer.setExpression(String(winnerId), 'smile', exprDurMs);
+      composer.setExpression(String(loserId), 'frown', exprDurMs);
     }
     function getLaughMouthConfig() {
       const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.emotes?.laugh || {};
