@@ -131,6 +131,59 @@ const DEFAULT_CSS_ROOT_VARS = {
   '--layout-cinematic-punish-button-card-height': '136px',
 };
 
+
+const DEFAULT_UI_WOBBLY_OUTLINES_CONFIG = {
+  enabled: true,
+  autoColoredBackgrounds: true,
+  minBackgroundAlpha: 0.02,
+  coloredBackgroundSelectors: [
+    '.topbar',
+    '.chip',
+    '.turnSpotlight',
+    '.turnSpotlightAvatar',
+    '.turnSpotlightNameBar',
+    '.aiSeat',
+    '.humanSeatCard',
+    '.humanSeatCard .seatAvatarBox',
+    '.controls',
+    '.controls select',
+    '.controls button',
+    '.handWrap',
+    '.handArrow',
+    '.cardLabel',
+    '.cardGlyph',
+    '.eventLog',
+    '.logItem',
+    '.chatComposerInput',
+    '.chatSendBtn',
+    '.stakeTierBtn',
+    '.challengePromptPane',
+    '.timerTrack',
+    '.timerFill',
+    'details.debug',
+    '.cin-result',
+    '.emojiReactionPanel',
+    '.emojiReactionBtn',
+  ],
+  excludedColoredBackgroundSelectors: [
+    'canvas',
+    'img',
+    'svg',
+    '[data-wobbly-outline]',
+    '.emojiReactionGlyph',
+    '.emojiFxGlyph',
+    '.shockGlyph',
+  ],
+  defaultStyle: { color: '#000000', lineWidth: 7.2, step: 23, wobble: 1.25, seed: 101, outset: 4 },
+  styleRules: [
+    { selector: '[data-ui-wobbly-outline="challenge-prompt"], [data-ui-wobbly-outline="control-panel"], [data-ui-wobbly-outline="betting-controls"]', style: { lineWidth: 7.4, step: 25, wobble: 1.35, seed: 29, outset: 4 } },
+    { selector: '.humanSeatCard', style: { lineWidth: 8.0, step: 25, wobble: 1.35, seed: 59, outset: 4 } },
+    { selector: '.eventLog', style: { lineWidth: 7.2, step: 23, wobble: 1.25, seed: 71, outset: 4 } },
+    { selector: '.aiSeat, .topbar, .controls, .challengePromptPane', style: { lineWidth: 7.4, step: 25, wobble: 1.35, seed: 83, outset: 4 } },
+    { selector: 'button, select, .chip, .stakeTierBtn, .logItem, .cardLabel, .cardGlyph, .handArrow, .chatComposerInput', style: { lineWidth: 3.2, step: 12, wobble: 0.95, seed: 107, outset: 2 } },
+  ],
+};
+
 const DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG = {
   minimumNpcClothingArticles: 1,
   clothingSlots: ['hat', 'hood', 'torsoCosmetic', 'armCosmetic'],
@@ -290,6 +343,44 @@ function normalizeOneOf(value, fallback, allowedValues, aliases = {}) {
 function normalizeStringList(value, fallback = []) {
   const source = Array.isArray(value) ? value : fallback;
   return source.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim());
+}
+
+function normalizeWobblyOutlineStyle(rawStyle, fallbackStyle = {}) {
+  const source = rawStyle && typeof rawStyle === 'object' && !Array.isArray(rawStyle) ? rawStyle : {};
+  const fallback = fallbackStyle && typeof fallbackStyle === 'object' ? fallbackStyle : {};
+  return {
+    color: typeof source.color === 'string' && source.color.trim() ? source.color : (fallback.color || '#000000'),
+    lineWidth: finiteNumberOrDefault(source.lineWidth, finiteNumberOrDefault(fallback.lineWidth, 7.2)),
+    step: finiteNumberOrDefault(source.step, finiteNumberOrDefault(fallback.step, 23)),
+    wobble: finiteNumberOrDefault(source.wobble, finiteNumberOrDefault(fallback.wobble, 1.25)),
+    seed: finiteNumberOrDefault(source.seed, finiteNumberOrDefault(fallback.seed, 101)),
+    outset: finiteNumberOrDefault(source.outset, finiteNumberOrDefault(fallback.outset, 4)),
+  };
+}
+
+function normalizeWobblyOutlineStyleRules(rawRules, fallbackRules, defaultStyle) {
+  const source = Array.isArray(rawRules) ? rawRules : fallbackRules;
+  return source.map((rule) => {
+    if (!rule || typeof rule !== 'object' || typeof rule.selector !== 'string' || !rule.selector.trim()) return null;
+    return {
+      selector: rule.selector.trim(),
+      style: normalizeWobblyOutlineStyle(rule.style, defaultStyle),
+    };
+  }).filter(Boolean);
+}
+
+function normalizeUiWobblyOutlinesConfig(rawConfig = {}) {
+  const raw = rawConfig && typeof rawConfig === 'object' && !Array.isArray(rawConfig) ? rawConfig : {};
+  const defaultStyle = normalizeWobblyOutlineStyle(raw.defaultStyle, DEFAULT_UI_WOBBLY_OUTLINES_CONFIG.defaultStyle);
+  return {
+    enabled: raw.enabled !== false,
+    autoColoredBackgrounds: raw.autoColoredBackgrounds !== false,
+    minBackgroundAlpha: Math.min(1, Math.max(0, finiteNumberOrDefault(raw.minBackgroundAlpha, DEFAULT_UI_WOBBLY_OUTLINES_CONFIG.minBackgroundAlpha))),
+    coloredBackgroundSelectors: normalizeStringList(raw.coloredBackgroundSelectors, DEFAULT_UI_WOBBLY_OUTLINES_CONFIG.coloredBackgroundSelectors),
+    excludedColoredBackgroundSelectors: normalizeStringList(raw.excludedColoredBackgroundSelectors, DEFAULT_UI_WOBBLY_OUTLINES_CONFIG.excludedColoredBackgroundSelectors),
+    defaultStyle,
+    styleRules: normalizeWobblyOutlineStyleRules(raw.styleRules, DEFAULT_UI_WOBBLY_OUTLINES_CONFIG.styleRules, defaultStyle),
+  };
 }
 
 const DEFAULT_TYPOGRAPHY_BASELINE_FIELDS = ['font-size', 'line-height', 'font-family', 'letter-spacing', 'font-weight'];
@@ -896,6 +987,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       challengeBurstText: rawGameConfig.uiText?.challengeBurstText ?? 'LIAR!!!',
       letStandButton: rawGameConfig.uiText?.letStandButton ?? 'Let it stand',
     },
+    uiWobblyOutlines: normalizeUiWobblyOutlinesConfig(rawGameConfig.uiWobblyOutlines),
     assets: {
       preloadCards: rawGameConfig.assets?.cards?.preload?.enabled !== false,
       cardHudBasePath: rawGameConfig.assets?.cards?.hudBasePath ?? './docs/assets/hud/',
