@@ -33,6 +33,7 @@ import { createTutorial } from './tutorial.js';
     const SCRATCHBONES_GAME = getScratchbonesGameConfig({ rootConfig: scratchbonesRootConfig, reportError: reportScratchbonesConfigError, debugEnabled: DEBUG_ENABLED });
     const WOBBLY_OUTLINE_RENDERER = createWobblyOutlineRenderer();
     const EMOJI_OUTLINE_ENABLED = SCRATCHBONES_GAME.portrait?.emotes?.emojiOutlineEnabled !== false;
+    const UI_WOBBLY_OUTLINES_CONFIG = SCRATCHBONES_GAME.uiWobblyOutlines || {};
     const TABLE_LOCATION = String(SCRATCHBONES_GAME.uiText?.tableLocation || '').trim();
     const GAME_TITLE = `SCRATCHBONES! ${TABLE_LOCATION}`;
     if (typeof document !== 'undefined') document.title = GAME_TITLE;
@@ -5609,51 +5610,72 @@ import { createTutorial } from './tutorial.js';
       }).join('');
       return `<div class="emojiReactionPanel" data-proj-id="emoji-panel" data-ui-wobbly-outline="emoji-reaction-panel" aria-label="Emoji reactions">${buttonHtml}</div>`;
     }
-    const BROWN_BOX_OUTLINE_SELECTOR = '.humanSeatCard, .eventLog';
-    const CHALLENGE_PROMPT_OUTLINE_STYLE_IDS = new Set(['challenge-prompt', 'control-panel', 'betting-controls']);
+    function matchesAnySelector(element, selectors) {
+      if (!(element instanceof Element) || !Array.isArray(selectors)) return false;
+      return selectors.some((selector) => {
+        try { return selector && element.matches(selector); }
+        catch (_error) { return false; }
+      });
+    }
+    function backgroundAlpha(backgroundColor) {
+      const value = String(backgroundColor || '').trim().toLowerCase();
+      if (!value || value === 'transparent') return 0;
+      if (value.startsWith('rgba(')) {
+        const parts = value.slice(5, -1).split(',');
+        return Number(parts[3]) || 0;
+      }
+      if (value.startsWith('rgb(') || value.startsWith('#') || /^[a-z]+$/.test(value)) return 1;
+      return 0;
+    }
+    function hasColoredBackground(element, style = window.getComputedStyle(element)) {
+      if (!(element instanceof HTMLElement)) return false;
+      if (matchesAnySelector(element, UI_WOBBLY_OUTLINES_CONFIG.excludedColoredBackgroundSelectors)) return false;
+      const alpha = backgroundAlpha(style.backgroundColor);
+      const image = String(style.backgroundImage || '').trim().toLowerCase();
+      return alpha > (Number(UI_WOBBLY_OUTLINES_CONFIG.minBackgroundAlpha) || 0) || (image && image !== 'none');
+    }
     function shouldRenderUiOutline(element) {
       if (!(element instanceof HTMLElement)) return false;
       if (!element.isConnected) return false;
       const style = window.getComputedStyle(element);
       if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
       if (Number(style.opacity) <= 0.01) return false;
+      if (!hasColoredBackground(element, style)) return false;
       const rect = element.getBoundingClientRect();
       return rect.width >= 2 && rect.height >= 2;
     }
+    function collectUiWobblyOutlineTargets(app) {
+      const merged = new Set();
+      app.querySelectorAll('[data-ui-wobbly-outline]').forEach((element) => merged.add(element));
+      if (UI_WOBBLY_OUTLINES_CONFIG.autoColoredBackgrounds !== false) {
+        const configuredSelectors = UI_WOBBLY_OUTLINES_CONFIG.coloredBackgroundSelectors || [];
+        configuredSelectors.forEach((selector) => {
+          try { app.querySelectorAll(selector).forEach((element) => merged.add(element)); }
+          catch (_error) {}
+        });
+      }
+      return merged;
+    }
+    function resolveUiWobblyOutlineStyle(element) {
+      const defaultStyle = UI_WOBBLY_OUTLINES_CONFIG.defaultStyle || {};
+      const rules = Array.isArray(UI_WOBBLY_OUTLINES_CONFIG.styleRules) ? UI_WOBBLY_OUTLINES_CONFIG.styleRules : [];
+      const matchedRule = rules.find((rule) => rule && matchesAnySelector(element, [rule.selector]));
+      return { ...defaultStyle, ...(matchedRule?.style || {}) };
+    }
     function renderWobblyOutlines(app, { uiElements = null, emojiElements = null } = {}) {
       if (!app) return;
-      const uiTargets = (uiElements !== null && uiElements !== undefined) ? uiElements : (() => {
-        const merged = new Set();
-        app.querySelectorAll('[data-ui-wobbly-outline]').forEach((element) => merged.add(element));
-        app.querySelectorAll(BROWN_BOX_OUTLINE_SELECTOR).forEach((element) => merged.add(element));
-        return merged;
-      })();
-      uiTargets.forEach((element) => {
-        if (!shouldRenderUiOutline(element)) {
-          WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui');
-          return;
-        }
-        const styleId = String(element.getAttribute('data-ui-wobbly-outline') || '');
-        if (styleId === 'emoji-reaction-btn' || styleId === 'emoji-reaction-panel') {
-          WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui');
-          return;
-        }
-        if (CHALLENGE_PROMPT_OUTLINE_STYLE_IDS.has(styleId)) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.4, step: 25, wobble: 1.35, seed: 29, outset: 4 });
-          return;
-        }
-        if (element.classList.contains('humanSeatCard')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 8.0, step: 25, wobble: 1.35, seed: 59, outset: 4 });
-          return;
-        }
-        if (element.classList.contains('eventLog')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.2, step: 23, wobble: 1.25, seed: 71, outset: 4 });
-          return;
-        }
-        if (styleId) {
-          WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui');
-        }
-      });
+      const uiTargets = (uiElements !== null && uiElements !== undefined) ? uiElements : collectUiWobblyOutlineTargets(app);
+      if (UI_WOBBLY_OUTLINES_CONFIG.enabled !== false) {
+        uiTargets.forEach((element) => {
+          if (!shouldRenderUiOutline(element)) {
+            WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui');
+            return;
+          }
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, resolveUiWobblyOutlineStyle(element));
+        });
+      } else {
+        uiTargets.forEach((element) => WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui'));
+      }
       const emojiTargets = (emojiElements !== null && emojiElements !== undefined)
         ? emojiElements
         : app.querySelectorAll('.emojiReactionGlyph, .emojiFxGlyph, .shockGlyph');
