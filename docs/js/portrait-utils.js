@@ -1657,6 +1657,7 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
   const hasHoodPiece = Boolean(hoodLayers.length);
   const syncAcrossPieces = clothingRule?.syncAcrossPieces === true;
   const ruleRange = clothingRule?.range || null;
+  const useSharedClothingRuleRange = syncAcrossPieces && Boolean(ruleRange);
   const clothMaterialTag = configuredMaterialTag('cloth', 'cloth');
   const clothHoodColorSourceSlots = Array.isArray(randomizationConfig.clothHoodColorSourceSlots)
     ? randomizationConfig.clothHoodColorSourceSlots
@@ -1679,19 +1680,26 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
     || (hatUsesClothMaterial ? (ruleRange || hat?.colorRange || null) : (hat?.colorRange || null));
   const hasPaletteB = (layers) => (layers || []).some(layer => layer?.paletteColorKey === 'B');
 
-  if (hasClothPiece && clothSourceRange) {
+  if ((hasClothPiece || (useSharedClothingRuleRange && hasHoodPiece)) && clothSourceRange) {
     bodyColors.CLOTH = randomColorFromRangeSeeded(clothSourceRange, rng);
-    if (hasPaletteB([...torsoLayers, ...armLayers])) {
+    if (useSharedClothingRuleRange || hasPaletteB([...torsoLayers, ...armLayers])) {
       bodyColors.CLOTH_B = randomColorFromRangeSeeded(clothSourceRange, rng);
     }
   }
   if (hasHoodPiece && hoodSourceRange) {
-    bodyColors.HOOD = randomColorFromRangeSeeded(hoodSourceRange, rng);
-    if (hasPaletteB(hoodLayers)) {
-      bodyColors.HOOD_B = randomColorFromRangeSeeded(hoodSourceRange, rng);
+    if (useSharedClothingRuleRange && bodyColors.CLOTH) {
+      bodyColors.HOOD = bodyColors.CLOTH;
+      if (hasPaletteB(hoodLayers)) {
+        bodyColors.HOOD_B = bodyColors.CLOTH_B || bodyColors.CLOTH;
+      }
+    } else {
+      bodyColors.HOOD = randomColorFromRangeSeeded(hoodSourceRange, rng);
+      if (hasPaletteB(hoodLayers)) {
+        bodyColors.HOOD_B = randomColorFromRangeSeeded(hoodSourceRange, rng);
+      }
     }
   }
-  if (hasHoodPiece && hoodUsesClothMaterial && clothHoodColorSource && bodyColors.CLOTH) {
+  if (!useSharedClothingRuleRange && hasHoodPiece && hoodUsesClothMaterial && clothHoodColorSource && bodyColors.CLOTH) {
     bodyColors.HOOD = bodyColors.CLOTH;
     if (hasPaletteB(hoodLayers)) {
       bodyColors.HOOD_B = bodyColors.CLOTH_B || bodyColors.CLOTH;
