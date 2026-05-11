@@ -1699,6 +1699,22 @@ window.SCRATCHBONES_CONFIG = {
         }
       },
       "projectionMapping": {
+        "debug": {
+          "editButtonLabel": "Edit",
+          "editButtonTitle": "Enable map editing: move and resize authored layout boxes or sub-elements.",
+          "editButtonRightPx": 224,
+          "debugStatus": "Map debug mode: touch an outlined element to read its name; enable Edit to move or resize.",
+          "editStatus": "Map edit mode: drag overlays to move; use corner handles to resize.",
+          "generationColors": [
+            { "name": "red", "color": "rgba(255, 64, 64, 0.95)" },
+            { "name": "orange", "color": "rgba(255, 148, 54, 0.95)" },
+            { "name": "yellow", "color": "rgba(255, 232, 82, 0.95)" },
+            { "name": "green", "color": "rgba(76, 220, 112, 0.95)" },
+            { "name": "blue", "color": "rgba(84, 174, 255, 0.95)" },
+            { "name": "indigo", "color": "rgba(106, 112, 255, 0.95)" },
+            { "name": "violet", "color": "rgba(194, 96, 255, 0.95)" }
+          ]
+        },
         "editor": {
           "step": 0.01,
           "panelTitle": "Projection Vars",
