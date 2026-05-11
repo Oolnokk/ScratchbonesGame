@@ -647,6 +647,7 @@ import { createTutorial } from './tutorial.js';
     const AI_THINK_MS = SCRATCHBONES_GAME.timers.aiThinkMs; // Used by: AI turn pacing so mobile play stays readable.
     const AI_DECISION_DELAYS = SCRATCHBONES_GAME.timers.aiDecisionDelays || {};
     const AI_CONFIG = SCRATCHBONES_GAME.ai || {};
+    const AI_DECISION = AI_CONFIG.decision || {};
     const START_HAND_SIZE = SCRATCHBONES_GAME.deck.handSize; // Used by: dealing fresh hands at match start and after a clear.
     const WILD_COUNT = SCRATCHBONES_GAME.deck.wildCount; // Used by: deck construction and bluff validation.
     const TRICK_BONES = SCRATCHBONES_GAME.trickBones || {};
@@ -685,6 +686,13 @@ import { createTutorial } from './tutorial.js';
     function finiteProfileNumber(value, fallback) {
       const numeric = Number(value);
       return Number.isFinite(numeric) ? numeric : fallback;
+    }
+    function aiDecisionNumber(sectionName, key, fallback) {
+      const section = AI_DECISION && AI_DECISION[sectionName];
+      return finiteProfileNumber(section?.[key], fallback);
+    }
+    function impossibleRankOverage(knownRankCount, claimedCardCount) {
+      return Math.max(0, knownRankCount + claimedCardCount - COPIES_PER_RANK - countVisibleWilds());
     }
     function getAiDifficultyProfile(playerOrSeatId) {
       const rank = resolveAiDifficultyRank(playerOrSeatId);
@@ -1699,13 +1707,13 @@ import { createTutorial } from './tutorial.js';
         if (read.lastDeclaredRank === play.declaredRank) {
           read.repeatRankCount += 1;
           read.repeatedCount += 1;
-          read.quickJudgmentBias += 0.06;
+          read.quickJudgmentBias += aiDecisionNumber('readProfile', 'repeatClaimBiasIncrease', 0.06);
         } else {
           read.repeatRankCount = 0;
         }
-        read.quickJudgmentBias += Math.max(0, play.cards.length - 2) * 0.015;
+        read.quickJudgmentBias += Math.max(0, play.cards.length - aiDecisionNumber('readProfile', 'claimSizeBiasFreeCards', 2)) * aiDecisionNumber('readProfile', 'claimSizeBiasWeight', 0.015);
         read.lastDeclaredRank = play.declaredRank;
-        read.quickJudgmentBias = clamp01((read.quickJudgmentBias + 1) / 2) * 2 - 1;
+        read.quickJudgmentBias = Math.max(aiDecisionNumber('readProfile', 'quickJudgmentBiasMin', -1), Math.min(aiDecisionNumber('readProfile', 'quickJudgmentBiasMax', 1), read.quickJudgmentBias));
       }
     }
     function observeRevealedTruthForReads(play, wasTruthful) {
@@ -1717,16 +1725,16 @@ import { createTutorial } from './tutorial.js';
           read.truthfulCount += 1;
           read.currentTruthStreak += 1;
           read.currentBluffStreak = 0;
-          if (read.quickJudgmentBias < 0) read.quickJudgmentBias *= 0.55;
-          read.quickJudgmentBias -= 0.1;
+          if (read.quickJudgmentBias < 0) read.quickJudgmentBias *= aiDecisionNumber('readProfile', 'truthBiasDampenMultiplier', 0.55);
+          read.quickJudgmentBias -= aiDecisionNumber('readProfile', 'truthBiasDecrease', 0.1);
         } else {
           read.bluffCount += 1;
           read.currentBluffStreak += 1;
           read.currentTruthStreak = 0;
-          if (read.quickJudgmentBias > 0) read.quickJudgmentBias *= 0.55;
-          read.quickJudgmentBias += 0.14;
+          if (read.quickJudgmentBias > 0) read.quickJudgmentBias *= aiDecisionNumber('readProfile', 'bluffBiasDampenMultiplier', 0.55);
+          read.quickJudgmentBias += aiDecisionNumber('readProfile', 'bluffBiasIncrease', 0.14);
         }
-        read.quickJudgmentBias = Math.max(-1, Math.min(1, read.quickJudgmentBias));
+        read.quickJudgmentBias = Math.max(aiDecisionNumber('readProfile', 'quickJudgmentBiasMin', -1), Math.min(aiDecisionNumber('readProfile', 'quickJudgmentBiasMax', 1), read.quickJudgmentBias));
       }
     }
     function noteChallengeReadResult(challengerIndex, targetIndex, challengeSucceeded) {
@@ -1734,23 +1742,42 @@ import { createTutorial } from './tutorial.js';
       if (!read) return;
       if (challengeSucceeded) {
         read.challengeWins += 1;
-        read.quickJudgmentBias += 0.18;
+        read.quickJudgmentBias += aiDecisionNumber('readProfile', 'challengeWinBiasIncrease', 0.18);
       } else {
         read.challengeLosses += 1;
-        read.quickJudgmentBias -= 0.14;
+        read.quickJudgmentBias -= aiDecisionNumber('readProfile', 'challengeLossBiasDecrease', 0.14);
       }
-      read.quickJudgmentBias = Math.max(-1, Math.min(1, read.quickJudgmentBias));
+      read.quickJudgmentBias = Math.max(aiDecisionNumber('readProfile', 'quickJudgmentBiasMin', -1), Math.min(aiDecisionNumber('readProfile', 'quickJudgmentBiasMax', 1), read.quickJudgmentBias));
     }
     function suspicionFromReadProfile(read, pers) {
       if (!read) return 0;
       const seenTotal = read.truthfulCount + read.bluffCount;
-      const bluffRate = seenTotal > 0 ? read.bluffCount / seenTotal : 0.5;
-      const repeatPressure = Math.min(0.18, read.repeatRankCount * 0.05 + read.repeatedCount * 0.015);
-      const streakPressure = Math.min(0.22, read.currentBluffStreak * 0.09) - Math.min(0.16, read.currentTruthStreak * 0.05);
-      const challengeMemory = Math.min(0.2, read.challengeWins * 0.08) - Math.min(0.14, read.challengeLosses * 0.05);
-      const snapWeight = pers?.overSuspects ? 0.16 : 0.1;
+      const neutralBluffRate = aiDecisionNumber('readProfile', 'neutralBluffRate', 0.5);
+      const bluffRate = seenTotal > 0 ? read.bluffCount / seenTotal : neutralBluffRate;
+      const repeatPressure = Math.min(
+        aiDecisionNumber('readProfile', 'repeatPressureMax', 0.18),
+        read.repeatRankCount * aiDecisionNumber('readProfile', 'repeatRankCountWeight', 0.05)
+          + read.repeatedCount * aiDecisionNumber('readProfile', 'repeatedCountWeight', 0.015)
+      );
+      const streakPressure = Math.min(
+        aiDecisionNumber('readProfile', 'bluffStreakPressureMax', 0.22),
+        read.currentBluffStreak * aiDecisionNumber('readProfile', 'currentBluffStreakWeight', 0.09)
+      ) - Math.min(
+        aiDecisionNumber('readProfile', 'truthStreakPressureMax', 0.16),
+        read.currentTruthStreak * aiDecisionNumber('readProfile', 'currentTruthStreakWeight', 0.05)
+      );
+      const challengeMemory = Math.min(
+        aiDecisionNumber('readProfile', 'challengeWinPressureMax', 0.2),
+        read.challengeWins * aiDecisionNumber('readProfile', 'challengeWinWeight', 0.08)
+      ) - Math.min(
+        aiDecisionNumber('readProfile', 'challengeLossPressureMax', 0.14),
+        read.challengeLosses * aiDecisionNumber('readProfile', 'challengeLossWeight', 0.05)
+      );
+      const snapWeight = pers?.overSuspects
+        ? aiDecisionNumber('readProfile', 'overSuspectSnapWeight', 0.16)
+        : aiDecisionNumber('readProfile', 'snapWeight', 0.1);
       return (
-        (bluffRate - 0.5) * 0.42 +
+        (bluffRate - neutralBluffRate) * aiDecisionNumber('readProfile', 'bluffRateWeight', 0.42) +
         repeatPressure +
         streakPressure +
         challengeMemory +
@@ -1762,22 +1789,22 @@ import { createTutorial } from './tutorial.js';
       const pers = challenger.personality;
       const aiProfile = getAiDifficultyProfile(challenger);
       const knownRankCount = countKnownRank(play.declaredRank);
-      const visibleWilds = countVisibleWilds();
-      const impossibleOverage = Math.max(0, knownRankCount + play.cards.length - 4 - visibleWilds);
+      const impossibleOverage = impossibleRankOverage(knownRankCount, play.cards.length);
       const read = ensureReadProfile(challengerIndex, play.playerIndex);
       let suspicion = 0;
       suspicion += impossibleOverage * aiProfile.challengeKnownCardWeight;
-      suspicion += play.cards.length >= 3 ? 0.1 : 0;
-      suspicion += play.cards.length >= 5 ? 0.08 : 0;
-      suspicion += challenger.chips <= 2 ? -0.18 : 0;
-      suspicion += challenger.chips >= 8 ? 0.05 : 0;
+      suspicion += play.cards.length >= aiDecisionNumber('challenge', 'cardCountSoftThreshold', 3) ? aiDecisionNumber('challenge', 'cardCountSoftBonus', 0.1) : 0;
+      suspicion += play.cards.length >= aiDecisionNumber('challenge', 'cardCountHardThreshold', 5) ? aiDecisionNumber('challenge', 'cardCountHardBonus', 0.08) : 0;
+      suspicion += challenger.chips <= aiDecisionNumber('challenge', 'lowChipThreshold', 2) ? aiDecisionNumber('challenge', 'lowChipSuspicionAdjustment', -0.18) : 0;
+      suspicion += challenger.chips >= aiDecisionNumber('challenge', 'highChipThreshold', 8) ? aiDecisionNumber('challenge', 'highChipSuspicionAdjustment', 0.05) : 0;
       suspicion += isHumanSeat(play.playerIndex) ? aiProfile.challengeHumanTargetBias : 0;
       suspicion += suspicionFromReadProfile(read, pers) * aiProfile.challengeReadMemoryWeight;
       if (includeRandom) suspicion += rand() * aiProfile.challengeRandomNudgeMax;
       if (pers) {
-        suspicion += (pers.suspicion  - 0.5) * 0.34;
-        suspicion += (pers.aggression - 0.5) * 0.08;
-        if (pers.overSuspects) suspicion += 0.1;
+        const personalityNeutral = aiDecisionNumber('readProfile', 'neutralBluffRate', 0.5);
+        suspicion += (pers.suspicion  - personalityNeutral) * aiDecisionNumber('challenge', 'personalitySuspicionWeight', 0.34);
+        suspicion += (pers.aggression - personalityNeutral) * aiDecisionNumber('challenge', 'personalityAggressionWeight', 0.08);
+        if (pers.overSuspects) suspicion += aiDecisionNumber('challenge', 'overSuspectBonus', 0.1);
       }
       return suspicion;
     }
@@ -1796,9 +1823,9 @@ import { createTutorial } from './tutorial.js';
         const handSize = actor?.hand?.length || 0;
         const matches = targetRank === null ? 0 : cardsOfRank(actor, targetRank).length + wildCards(actor).length;
         const opponentCount = state.players.filter(p => !p.eliminated && p.id !== actorId).length;
-        const styleTempo = 1 - ((pers.courage ?? 0.5) * 0.4 + (pers.aggression ?? 0.5) * 0.3 + (pers.honesty ?? 0.5) * 0.3);
-        const complexity = clamp01(0.22 + (handSize / Math.max(1, START_HAND_SIZE)) * 0.32 + (targetRank === null ? 0.18 : 0.12) + (matches <= 1 ? 0.15 : 0.05) + opponentCount * 0.04);
-        const pace = clamp01(complexity * 0.7 + styleTempo * 0.3 + rand() * 0.12);
+        const styleTempo = 1 - ((pers.courage ?? 0.5) * aiDecisionNumber('delays', 'turnCourageTempoWeight', 0.4) + (pers.aggression ?? 0.5) * aiDecisionNumber('delays', 'turnAggressionTempoWeight', 0.3) + (pers.honesty ?? 0.5) * aiDecisionNumber('delays', 'turnHonestyTempoWeight', 0.3));
+        const complexity = clamp01(aiDecisionNumber('delays', 'turnComplexityBase', 0.22) + (handSize / Math.max(1, START_HAND_SIZE)) * aiDecisionNumber('delays', 'turnHandSizeWeight', 0.32) + (targetRank === null ? aiDecisionNumber('delays', 'turnOpeningRankWeight', 0.18) : aiDecisionNumber('delays', 'turnTargetRankWeight', 0.12)) + (matches <= 1 ? aiDecisionNumber('delays', 'turnFewMatchWeight', 0.15) : aiDecisionNumber('delays', 'turnMatchWeight', 0.05)) + opponentCount * aiDecisionNumber('delays', 'turnOpponentWeight', 0.04));
+        const pace = clamp01(complexity * aiDecisionNumber('delays', 'turnPaceComplexityWeight', 0.7) + styleTempo * aiDecisionNumber('delays', 'turnPaceStyleWeight', 0.3) + rand() * aiDecisionNumber('delays', 'turnRandomWeight', 0.12));
         const minMs = Number(AI_DECISION_DELAYS.turnMinMs) || 420;
         const maxMs = Number(AI_DECISION_DELAYS.turnMaxMs) || 1300;
         return clampMs(minMs + (maxMs - minMs) * pace, minMs, maxMs);
@@ -1808,13 +1835,12 @@ import { createTutorial } from './tutorial.js';
         if (!play) return Number(AI_DECISION_DELAYS.challengeMinMs) || AI_THINK_MS;
         const read = ensureReadProfile(actorId, play.playerIndex);
         const knownRankCount = countKnownRank(play.declaredRank);
-        const visibleWilds = countVisibleWilds();
-        const impossibleOverage = Math.max(0, knownRankCount + play.cards.length - 4 - visibleWilds);
+        const impossibleOverage = impossibleRankOverage(knownRankCount, play.cards.length);
         const readSuspicion = suspicionFromReadProfile(read, pers);
-        const handPressure = state.declaredRank === null ? 0.08 : Math.max(0, 0.2 - (cardsOfRank(actor, state.declaredRank).length * 0.05));
-        const uncertainty = clamp01(0.45 - impossibleOverage * 0.14 + Math.max(0, 0.18 - Math.abs(readSuspicion) * 0.6) + handPressure + rand() * 0.08);
-        const styleTempo = 1 - ((pers.courage ?? 0.5) * 0.46 + (pers.suspicion ?? 0.5) * 0.34 + (pers.aggression ?? 0.5) * 0.2);
-        const pace = clamp01(uncertainty * 0.72 + styleTempo * 0.28);
+        const handPressure = state.declaredRank === null ? aiDecisionNumber('delays', 'challengeOpeningHandPressure', 0.08) : Math.max(0, aiDecisionNumber('delays', 'challengeHandPressureBase', 0.2) - (cardsOfRank(actor, state.declaredRank).length * aiDecisionNumber('delays', 'challengeMatchPressureWeight', 0.05)));
+        const uncertainty = clamp01(aiDecisionNumber('delays', 'challengeUncertaintyBase', 0.45) - impossibleOverage * aiDecisionNumber('delays', 'challengeImpossibleOverageWeight', 0.14) + Math.max(0, aiDecisionNumber('delays', 'challengeReadCertaintyBase', 0.18) - Math.abs(readSuspicion) * aiDecisionNumber('delays', 'challengeReadCertaintyWeight', 0.6)) + handPressure + rand() * aiDecisionNumber('delays', 'challengeRandomWeight', 0.08));
+        const styleTempo = 1 - ((pers.courage ?? 0.5) * aiDecisionNumber('delays', 'challengeCourageTempoWeight', 0.46) + (pers.suspicion ?? 0.5) * aiDecisionNumber('delays', 'challengeSuspicionTempoWeight', 0.34) + (pers.aggression ?? 0.5) * aiDecisionNumber('delays', 'challengeAggressionTempoWeight', 0.2));
+        const pace = clamp01(uncertainty * aiDecisionNumber('delays', 'challengePaceUncertaintyWeight', 0.72) + styleTempo * aiDecisionNumber('delays', 'challengePaceStyleWeight', 0.28));
         const minMs = Number(AI_DECISION_DELAYS.challengeMinMs) || 360;
         const maxMs = Number(AI_DECISION_DELAYS.challengeMaxMs) || 2200;
         return clampMs(minMs + (maxMs - minMs) * pace, minMs, maxMs);
@@ -1822,17 +1848,17 @@ import { createTutorial } from './tutorial.js';
       if (kind === 'betting') {
         const intent = aiBetIntent(actorId);
         const toCall = amountToCall(actorId);
-        const confidenceGap = Math.abs((intent.confidence ?? 0.5) - (intent.foldFloor ?? 0.32));
-        const stakePressure = state.betting ? Math.min(0.25, Math.max(0, state.betting.currentTierValue - CONFIG.challengeBaseTransfer) * 0.03) : 0;
-        const styleTempo = 1 - ((pers.courage ?? 0.5) * 0.5 + (pers.aggression ?? 0.5) * 0.3 + (pers.greed ?? 0.5) * 0.2);
-        const uncertainty = clamp01(0.42 - confidenceGap * 0.6 + Math.min(0.2, toCall * 0.05) + stakePressure + rand() * 0.08);
+        const confidenceGap = Math.abs((intent.confidence ?? aiDecisionNumber('delays', 'bettingNeutralConfidence', 0.5)) - (intent.foldFloor ?? aiDecisionNumber('delays', 'bettingDefaultFoldFloor', 0.32)));
+        const stakePressure = state.betting ? Math.min(aiDecisionNumber('delays', 'bettingStakePressureMax', 0.25), Math.max(0, state.betting.currentTierValue - CONFIG.challengeBaseTransfer) * aiDecisionNumber('delays', 'bettingStakePressureWeight', 0.03)) : 0;
+        const styleTempo = 1 - ((pers.courage ?? 0.5) * aiDecisionNumber('delays', 'bettingCourageTempoWeight', 0.5) + (pers.aggression ?? 0.5) * aiDecisionNumber('delays', 'bettingAggressionTempoWeight', 0.3) + (pers.greed ?? 0.5) * aiDecisionNumber('delays', 'bettingGreedTempoWeight', 0.2));
+        const uncertainty = clamp01(aiDecisionNumber('delays', 'bettingUncertaintyBase', 0.42) - confidenceGap * aiDecisionNumber('delays', 'bettingConfidenceGapWeight', 0.6) + Math.min(aiDecisionNumber('delays', 'bettingCallPressureMax', 0.2), toCall * aiDecisionNumber('delays', 'bettingCallPressureWeight', 0.05)) + stakePressure + rand() * aiDecisionNumber('delays', 'bettingRandomWeight', 0.08));
         const canRaise = getRaiseOptionsForPlayer(actorId).length > 0;
-        const decisiveSpot = (toCall === 0 && !canRaise) || confidenceGap >= 0.42;
-        const pace = clamp01(uncertainty * 0.66 + styleTempo * 0.34);
+        const decisiveSpot = (toCall === 0 && !canRaise) || confidenceGap >= aiDecisionNumber('delays', 'bettingDecisiveConfidenceGap', 0.42);
+        const pace = clamp01(uncertainty * aiDecisionNumber('delays', 'bettingPaceUncertaintyWeight', 0.66) + styleTempo * aiDecisionNumber('delays', 'bettingPaceStyleWeight', 0.34));
         const minMs = Number(AI_DECISION_DELAYS.bettingMinMs) || 200;
         const maxMs = Number(AI_DECISION_DELAYS.bettingMaxMs) || 650;
         if (decisiveSpot) {
-          return clampMs(minMs + Math.max(20, (maxMs - minMs) * 0.12), minMs, maxMs);
+          return clampMs(minMs + Math.max(aiDecisionNumber('delays', 'bettingDecisiveDelayMinOffsetMs', 20), (maxMs - minMs) * aiDecisionNumber('delays', 'bettingDecisiveDelayFraction', 0.12)), minMs, maxMs);
         }
         return clampMs(minMs + (maxMs - minMs) * pace, minMs, maxMs);
       }
@@ -2787,10 +2813,10 @@ import { createTutorial } from './tutorial.js';
       if (targetRank === null) {
         const openingPlan = bestTruthfulOpeningRank(player);
         const oneTruth = buildTruthfulPlayForRank(player, openingPlan.rank, 1, { saveWilds: true });
-        if (oneTruth.length && rand() < 0.82) {
+        if (oneTruth.length && rand() < aiDecisionNumber('play', 'naiveOpeningTruthChance', 0.82)) {
           return { type: 'play', declaredRank: openingPlan.rank, cardIds: oneTruth.map(c => c.id) };
         }
-        const declaredRank = rand() < 0.7 ? openingPlan.rank : rngInt(1, RANK_COUNT);
+        const declaredRank = rand() < aiDecisionNumber('play', 'naiveOpeningBestRankChance', 0.7) ? openingPlan.rank : rngInt(1, RANK_COUNT);
         const fallbackCard = player.hand.find(c => !c.wild && c.rank !== declaredRank) || player.hand[0];
         return { type: 'play', declaredRank, cardIds: [fallbackCard.id] };
       }
@@ -2799,14 +2825,14 @@ import { createTutorial } from './tutorial.js';
         return { type: 'play', declaredRank: targetRank, cardIds: [naturalMatches[0].id] };
       }
       const wilds = wildCards(player);
-      if (wilds.length && rand() < 0.38 + honesty * 0.18) {
+      if (wilds.length && rand() < aiDecisionNumber('play', 'naiveWildTruthBaseChance', 0.38) + honesty * aiDecisionNumber('play', 'naiveWildTruthHonestyWeight', 0.18)) {
         return { type: 'play', declaredRank: targetRank, cardIds: [wilds[0].id] };
       }
-      const bluffChance = Math.min(0.92, 0.42 + bluffNoise + (1 - honesty) * 0.28 + (player.hand.length <= 2 ? 0.18 : 0));
+      const bluffChance = Math.min(aiDecisionNumber('play', 'naiveBluffChanceMax', 0.92), aiDecisionNumber('play', 'naiveBluffChanceBase', 0.42) + bluffNoise + (1 - honesty) * aiDecisionNumber('play', 'naiveBluffHonestyWeight', 0.28) + (player.hand.length <= aiDecisionNumber('play', 'heuristicWildUseLowHandSize', 2) ? aiDecisionNumber('play', 'naiveLowHandBluffBonus', 0.18) : 0));
       if (rand() < bluffChance) {
         return { type: 'play', declaredRank: targetRank, cardIds: buildBluffPlay(player, targetRank, 1).map(c => c.id) };
       }
-      if (player.chips <= CONFIG.concedeRoundChipLoss && rand() < 0.5) {
+      if (player.chips <= CONFIG.concedeRoundChipLoss && rand() < aiDecisionNumber('play', 'naiveBrokeBluffChance', 0.5)) {
         return { type: 'play', declaredRank: targetRank, cardIds: buildBluffPlay(player, targetRank, 1).map(c => c.id) };
       }
       return { type: 'concede' };
@@ -2821,20 +2847,20 @@ import { createTutorial } from './tutorial.js';
       const aggression = pers ? pers.aggression : 0.5;
       if (targetRank === null) {
         const openingPlan = bestTruthfulOpeningRank(player);
-        const canMakeHugeTruth = openingPlan.totalTruthfulCount >= 5;
-        const wantsTruthBait = honesty >= 0.68 && canMakeHugeTruth;
+        const canMakeHugeTruth = openingPlan.totalTruthfulCount >= aiDecisionNumber('play', 'heuristicHugeTruthCount', 5);
+        const wantsTruthBait = honesty >= aiDecisionNumber('play', 'heuristicTruthBaitHonesty', 0.68) && canMakeHugeTruth;
         let desiredCount;
         if (wantsTruthBait) {
-          desiredCount = Math.min(openingPlan.totalTruthfulCount, Math.max(5, Math.min(6, openingPlan.totalTruthfulCount)));
-        } else if (openingPlan.naturalCount >= 3 && rand() < 0.52 + greed * 0.22) {
-          desiredCount = Math.min(openingPlan.naturalCount, rngInt(2, Math.min(4, openingPlan.naturalCount)));
-        } else if (openingPlan.totalTruthfulCount >= 3 && rand() < 0.32 + greed * 0.2) {
-          desiredCount = Math.min(openingPlan.totalTruthfulCount, rngInt(2, Math.min(4, openingPlan.totalTruthfulCount)));
+          desiredCount = Math.min(openingPlan.totalTruthfulCount, Math.max(aiDecisionNumber('play', 'heuristicHugeTruthCount', 5), Math.min(aiDecisionNumber('play', 'heuristicTruthBaitMaxCount', 6), openingPlan.totalTruthfulCount)));
+        } else if (openingPlan.naturalCount >= aiDecisionNumber('play', 'heuristicOpeningNaturalThreshold', 3) && rand() < aiDecisionNumber('play', 'heuristicOpeningNaturalChanceBase', 0.52) + greed * aiDecisionNumber('play', 'heuristicOpeningNaturalGreedWeight', 0.22)) {
+          desiredCount = Math.min(openingPlan.naturalCount, rngInt(aiDecisionNumber('play', 'heuristicMultiPlayMinCount', 2), Math.min(aiDecisionNumber('play', 'heuristicMultiPlayMaxCount', 4), openingPlan.naturalCount)));
+        } else if (openingPlan.totalTruthfulCount >= aiDecisionNumber('play', 'heuristicOpeningTruthfulThreshold', 3) && rand() < aiDecisionNumber('play', 'heuristicOpeningTruthfulChanceBase', 0.32) + greed * aiDecisionNumber('play', 'heuristicOpeningTruthfulGreedWeight', 0.2)) {
+          desiredCount = Math.min(openingPlan.totalTruthfulCount, rngInt(aiDecisionNumber('play', 'heuristicMultiPlayMinCount', 2), Math.min(aiDecisionNumber('play', 'heuristicMultiPlayMaxCount', 4), openingPlan.totalTruthfulCount)));
         } else {
           desiredCount = 1;
         }
         const openingCards = buildTruthfulPlayForRank(player, openingPlan.rank, desiredCount, {
-          saveWilds: honesty >= 0.62 && !wantsTruthBait,
+          saveWilds: honesty >= aiDecisionNumber('play', 'heuristicSaveWildHonesty', 0.62) && !wantsTruthBait,
         });
         if (openingCards.length) {
           return {
@@ -2849,21 +2875,21 @@ import { createTutorial } from './tutorial.js';
       const normalMatches = cardsOfRank(player, targetRank);
       const wilds = wildCards(player);
       const maxTruthful = normalMatches.length + wilds.length;
-      const hasHugeTruth = maxTruthful >= 5;
-      const wantsTruthBait = honesty >= 0.68 && hasHugeTruth;
-      const shouldPreserveWilds = honesty >= 0.62 && wilds.length > 0 && normalMatches.length > 0;
+      const hasHugeTruth = maxTruthful >= aiDecisionNumber('play', 'heuristicHugeTruthCount', 5);
+      const wantsTruthBait = honesty >= aiDecisionNumber('play', 'heuristicTruthBaitHonesty', 0.68) && hasHugeTruth;
+      const shouldPreserveWilds = honesty >= aiDecisionNumber('play', 'heuristicSaveWildHonesty', 0.62) && wilds.length > 0 && normalMatches.length > 0;
       if (wantsTruthBait) {
-        const baitCount = Math.min(maxTruthful, Math.max(5, Math.min(6, maxTruthful)));
+        const baitCount = Math.min(maxTruthful, Math.max(aiDecisionNumber('play', 'heuristicHugeTruthCount', 5), Math.min(aiDecisionNumber('play', 'heuristicTruthBaitMaxCount', 6), maxTruthful)));
         const baitCards = buildTruthfulPlayForRank(player, targetRank, baitCount, { saveWilds: false });
-        if (baitCards.length >= 5) {
+        if (baitCards.length >= aiDecisionNumber('play', 'heuristicHugeTruthCount', 5)) {
           return { type: 'play', declaredRank: targetRank, cardIds: baitCards.map(c => c.id) };
         }
       }
       if (normalMatches.length) {
         let desiredCount = 1;
-        if (normalMatches.length >= 3 && rand() < 0.42 + greed * 0.22) {
-          desiredCount = rngInt(2, Math.min(4, normalMatches.length));
-        } else if (player.hand.length <= 3) {
+        if (normalMatches.length >= aiDecisionNumber('play', 'heuristicNaturalMultiThreshold', 3) && rand() < aiDecisionNumber('play', 'heuristicNaturalMultiChanceBase', 0.42) + greed * aiDecisionNumber('play', 'heuristicNaturalMultiGreedWeight', 0.22)) {
+          desiredCount = rngInt(aiDecisionNumber('play', 'heuristicMultiPlayMinCount', 2), Math.min(aiDecisionNumber('play', 'heuristicMultiPlayMaxCount', 4), normalMatches.length));
+        } else if (player.hand.length <= aiDecisionNumber('play', 'heuristicLowHandSize', 3)) {
           desiredCount = Math.min(normalMatches.length, player.hand.length);
         }
         return {
@@ -2873,41 +2899,41 @@ import { createTutorial } from './tutorial.js';
         };
       }
       if (wilds.length) {
-        if (honesty >= 0.74) {
-          const bluffRiskTolerance = player.chips <= 2
-            ? 0.1 + (1 - honesty) * 0.4
-            : player.chips <= 5
-              ? 0.18 + (1 - honesty) * 0.45
-              : 0.28 + (1 - honesty) * 0.5;
+        if (honesty >= aiDecisionNumber('play', 'heuristicHighHonestyWildThreshold', 0.74)) {
+          const bluffRiskTolerance = player.chips <= aiDecisionNumber('play', 'heuristicLowChipThreshold', 2)
+            ? aiDecisionNumber('play', 'heuristicHighHonestyLowChipBluffBase', 0.1) + (1 - honesty) * aiDecisionNumber('play', 'heuristicHighHonestyLowChipBluffWeight', 0.4)
+            : player.chips <= aiDecisionNumber('play', 'heuristicMidChipThreshold', 5)
+              ? aiDecisionNumber('play', 'heuristicHighHonestyMidChipBluffBase', 0.18) + (1 - honesty) * aiDecisionNumber('play', 'heuristicHighHonestyMidChipBluffWeight', 0.45)
+              : aiDecisionNumber('play', 'heuristicHighHonestyHighChipBluffBase', 0.28) + (1 - honesty) * aiDecisionNumber('play', 'heuristicHighHonestyHighChipBluffWeight', 0.5);
           if (rand() < bluffRiskTolerance) {
             return { type: 'play', declaredRank: targetRank, cardIds: buildBluffPlay(player, targetRank, 1).map(c => c.id) };
           }
           return { type: 'concede' };
         }
-        const useWildsNow = player.hand.length <= 2 || rand() < (0.18 + (1 - honesty) * 0.38);
+        const useWildsNow = player.hand.length <= aiDecisionNumber('play', 'heuristicWildUseLowHandSize', 2) || rand() < (aiDecisionNumber('play', 'heuristicWildUseChanceBase', 0.18) + (1 - honesty) * aiDecisionNumber('play', 'heuristicWildUseHonestyWeight', 0.38));
         if (useWildsNow) {
           return { type: 'play', declaredRank: targetRank, cardIds: [wilds[0].id] };
         }
       }
-      const bluffCountCap = aggression > 0.74 ? 4 : aggression > 0.52 ? 3 : 2;
+      const bluffCountCap = aggression > aiDecisionNumber('play', 'heuristicAggressiveBluffThreshold', 0.74) ? aiDecisionNumber('play', 'heuristicAggressiveBluffCap', 4) : aggression > aiDecisionNumber('play', 'heuristicModerateBluffThreshold', 0.52) ? aiDecisionNumber('play', 'heuristicModerateBluffCap', 3) : aiDecisionNumber('play', 'heuristicCautiousBluffCap', 2);
       const bluffCount = Math.min(
         bluffCountCap,
-        Math.max(1, player.hand.length <= 3 ? player.hand.length : (rand() < 0.4 + greed * 0.2 ? 2 : 1))
+        Math.max(1, player.hand.length <= aiDecisionNumber('play', 'heuristicLowHandSize', 3) ? player.hand.length : (rand() < aiDecisionNumber('play', 'heuristicBluffExtraChanceBase', 0.4) + greed * aiDecisionNumber('play', 'heuristicBluffExtraGreedWeight', 0.2) ? 2 : 1))
       );
-      const bluffRiskTolerance = player.chips <= 2
-        ? 0.12 + aggression * 0.45
-        : player.chips <= 5
-          ? 0.24 + aggression * 0.58
-          : Math.min(0.95, 0.4 + aggression * 0.72);
-      if (honesty <= 0.32 && rand() < bluffRiskTolerance) {
+      const bluffRiskTolerance = player.chips <= aiDecisionNumber('play', 'heuristicLowChipThreshold', 2)
+        ? aiDecisionNumber('play', 'heuristicLowChipBluffBase', 0.12) + aggression * aiDecisionNumber('play', 'heuristicLowChipBluffAggressionWeight', 0.45)
+        : player.chips <= aiDecisionNumber('play', 'heuristicMidChipThreshold', 5)
+          ? aiDecisionNumber('play', 'heuristicMidChipBluffBase', 0.24) + aggression * aiDecisionNumber('play', 'heuristicMidChipBluffAggressionWeight', 0.58)
+          : Math.min(aiDecisionNumber('play', 'heuristicHighChipBluffMax', 0.95), aiDecisionNumber('play', 'heuristicHighChipBluffBase', 0.4) + aggression * aiDecisionNumber('play', 'heuristicHighChipBluffAggressionWeight', 0.72));
+      if (honesty <= aiDecisionNumber('play', 'heuristicLowHonestyThreshold', 0.32) && rand() < bluffRiskTolerance) {
         return {
           type: 'play',
           declaredRank: targetRank,
           cardIds: buildBluffPlay(player, targetRank, Math.max(2, bluffCount)).map(c => c.id),
         };
       }
-      if (honesty > 0.32 && honesty < 0.68) {
-        const trickyRate = Math.min(0.7, 0.18 + aggression * 0.34 + greed * 0.16);
+      if (honesty > aiDecisionNumber('play', 'heuristicLowHonestyThreshold', 0.32) && honesty < aiDecisionNumber('play', 'heuristicMidHonestyThreshold', 0.68)) {
+        const trickyRate = Math.min(aiDecisionNumber('play', 'heuristicTrickyRateMax', 0.7), aiDecisionNumber('play', 'heuristicTrickyRateBase', 0.18) + aggression * aiDecisionNumber('play', 'heuristicTrickyAggressionWeight', 0.34) + greed * aiDecisionNumber('play', 'heuristicTrickyGreedWeight', 0.16));
         if (rand() < trickyRate) {
           return {
             type: 'play',
@@ -2916,7 +2942,7 @@ import { createTutorial } from './tutorial.js';
           };
         }
       }
-      if (rand() < bluffRiskTolerance * 0.72) {
+      if (rand() < bluffRiskTolerance * aiDecisionNumber('play', 'heuristicFallbackBluffRiskMultiplier', 0.72)) {
         return {
           type: 'play',
           declaredRank: targetRank,
@@ -2944,7 +2970,7 @@ import { createTutorial } from './tutorial.js';
         }
         const bluffable = player.hand.filter(c => !c.wild && c.rank !== declaredRank).length;
         if (bluffable > 0) {
-          const bluffLimit = Math.min(player.hand.length, Math.max(1, Math.min(4, bluffable)));
+          const bluffLimit = Math.min(player.hand.length, Math.max(1, Math.min(aiDecisionNumber('play', 'scoredBluffCandidateMaxCount', 4), bluffable)));
           for (let count = 1; count <= bluffLimit; count++) {
             candidates.push({ type: 'play', declaredRank, cards: buildBluffPlay(player, declaredRank, count), truthful: false });
           }
@@ -2966,14 +2992,14 @@ import { createTutorial } from './tutorial.js';
       for (const challenger of challengers) {
         const suspicion = challengeSuspicionScore(challenger.id, candidatePlay, { includeRandom: false });
         const threshold = getAiDifficultyProfile(challenger).resolvedChallengeThreshold;
-        const thresholdPressure = clamp01(0.5 + (suspicion - threshold) * 1.8);
-        const readPressure = clamp01(0.5 + suspicionFromReadProfile(ensureReadProfile(challenger.id, player.id), challenger.personality) * 1.6);
-        totalRisk += clamp01(thresholdPressure * 0.72 + readPressure * 0.28);
+        const thresholdPressure = clamp01(aiDecisionNumber('play', 'riskThresholdPressureBase', 0.5) + (suspicion - threshold) * aiDecisionNumber('play', 'riskThresholdPressureWeight', 1.8));
+        const readPressure = clamp01(aiDecisionNumber('play', 'riskReadPressureBase', 0.5) + suspicionFromReadProfile(ensureReadProfile(challenger.id, player.id), challenger.personality) * aiDecisionNumber('play', 'riskReadPressureWeight', 1.6));
+        totalRisk += clamp01(thresholdPressure * aiDecisionNumber('play', 'riskThresholdBlend', 0.72) + readPressure * aiDecisionNumber('play', 'riskReadBlend', 0.28));
       }
       const averageRisk = totalRisk / challengers.length;
-      const bluffExposure = candidate.truthful ? 0 : 0.26 + Math.min(0.24, candidate.cards.length * 0.06);
-      const difficultyNoise = Math.min(0.12, Number(profile.challengeRandomNudgeMax) || 0);
-      return clamp01(averageRisk + bluffExposure + difficultyNoise * 0.35);
+      const bluffExposure = candidate.truthful ? 0 : aiDecisionNumber('play', 'riskBluffExposureBase', 0.26) + Math.min(aiDecisionNumber('play', 'riskBluffExposureMaxBonus', 0.24), candidate.cards.length * aiDecisionNumber('play', 'riskBluffExposureCardWeight', 0.06));
+      const difficultyNoise = Math.min(aiDecisionNumber('play', 'riskDifficultyNoiseMax', 0.12), Number(profile.challengeRandomNudgeMax) || 0);
+      return clamp01(averageRisk + bluffExposure + difficultyNoise * aiDecisionNumber('play', 'riskDifficultyNoiseWeight', 0.35));
     }
     function scoreAiPlayCandidate(player, candidate, profile) {
       const pers = player.personality || {};
@@ -2981,9 +3007,9 @@ import { createTutorial } from './tutorial.js';
       const greed = pers.greed ?? 0.5;
       const aggression = pers.aggression ?? 0.5;
       if (candidate.type === 'concede') {
-        const affordableLoss = player.chips > CONFIG.concedeRoundChipLoss ? 0.08 : -0.28;
+        const affordableLoss = player.chips > CONFIG.concedeRoundChipLoss ? aiDecisionNumber('play', 'scoreConcedeAffordableBonus', 0.08) : aiDecisionNumber('play', 'scoreConcedeBrokePenalty', -0.28);
         const noTruth = state.declaredRank !== null && buildTruthfulPlayForRank(player, state.declaredRank, 1).length === 0;
-        return 0.08 + affordableLoss + (noTruth ? 0.28 + honesty * 0.18 : -0.35) - aggression * 0.16;
+        return aiDecisionNumber('play', 'scoreConcedeBase', 0.08) + affordableLoss + (noTruth ? aiDecisionNumber('play', 'scoreConcedeNoTruthBase', 0.28) + honesty * aiDecisionNumber('play', 'scoreConcedeNoTruthHonestyWeight', 0.18) : aiDecisionNumber('play', 'scoreConcedeTruthAvailablePenalty', -0.35)) - aggression * aiDecisionNumber('play', 'scoreConcedeAggressionPenaltyWeight', 0.16);
       }
       const cards = candidate.cards;
       const count = cards.length;
@@ -2993,20 +3019,20 @@ import { createTutorial } from './tutorial.js';
       const rankKnownVisible = countKnownRank(candidate.declaredRank);
       const visibleWilds = countVisibleWilds();
       const remainingNatural = Math.max(0, COPIES_PER_RANK - rankKnownVisible);
-      const clearOpportunity = clearOut ? 1 : (handAfter <= 2 ? 0.35 : 0);
+      const clearOpportunity = clearOut ? 1 : (handAfter <= aiDecisionNumber('play', 'scoreLowHandAfterThreshold', 2) ? aiDecisionNumber('play', 'scoreLowHandAfterOpportunity', 0.35) : 0);
       const risk = estimateAiCandidateChallengeRisk(player, candidate, profile);
       let score = 0;
-      score += candidate.truthful ? 0.62 + honesty * 0.36 : 0.2 + aggression * 0.44 + greed * 0.18;
-      score += count * (candidate.truthful ? 0.16 + greed * 0.06 : 0.08 + aggression * 0.04);
-      score += clearOpportunity * (0.72 + greed * 0.22 + (player.chips <= 3 ? 0.18 : 0));
-      score += player.chips <= 2 && candidate.truthful ? 0.14 : 0;
-      score += player.chips >= 8 && !candidate.truthful ? 0.08 + aggression * 0.06 : 0;
-      score += remainingNatural <= count && candidate.truthful ? 0.12 : 0;
-      score -= wildUse * (candidate.truthful ? (handAfter <= 1 ? 0.02 : 0.11 + honesty * 0.08) : 0.2);
-      score -= risk * (candidate.truthful ? 0.28 : 0.88 + honesty * 0.3);
-      score -= !candidate.truthful && count >= 3 ? 0.08 : 0;
-      score -= visibleWilds >= WILD_COUNT && !candidate.truthful ? 0.06 : 0;
-      score += rand() * 0.035;
+      score += candidate.truthful ? aiDecisionNumber('play', 'scoreTruthBase', 0.62) + honesty * aiDecisionNumber('play', 'scoreTruthHonestyWeight', 0.36) : aiDecisionNumber('play', 'scoreBluffBase', 0.2) + aggression * aiDecisionNumber('play', 'scoreBluffAggressionWeight', 0.44) + greed * aiDecisionNumber('play', 'scoreBluffGreedWeight', 0.18);
+      score += count * (candidate.truthful ? aiDecisionNumber('play', 'scoreTruthCountBase', 0.16) + greed * aiDecisionNumber('play', 'scoreTruthCountGreedWeight', 0.06) : aiDecisionNumber('play', 'scoreBluffCountBase', 0.08) + aggression * aiDecisionNumber('play', 'scoreBluffCountAggressionWeight', 0.04));
+      score += clearOpportunity * (aiDecisionNumber('play', 'scoreClearOpportunityBase', 0.72) + greed * aiDecisionNumber('play', 'scoreClearOpportunityGreedWeight', 0.22) + (player.chips <= aiDecisionNumber('play', 'scoreClearOpportunityLowChipThreshold', 3) ? aiDecisionNumber('play', 'scoreClearOpportunityLowChipBonus', 0.18) : 0));
+      score += player.chips <= aiDecisionNumber('play', 'scoreLowChipTruthThreshold', 2) && candidate.truthful ? aiDecisionNumber('play', 'scoreLowChipTruthBonus', 0.14) : 0;
+      score += player.chips >= aiDecisionNumber('play', 'scoreHighChipBluffThreshold', 8) && !candidate.truthful ? aiDecisionNumber('play', 'scoreHighChipBluffBaseBonus', 0.08) + aggression * aiDecisionNumber('play', 'scoreHighChipBluffAggressionBonusWeight', 0.06) : 0;
+      score += remainingNatural <= count && candidate.truthful ? aiDecisionNumber('play', 'scoreTruthLimitedRankBonus', 0.12) : 0;
+      score -= wildUse * (candidate.truthful ? (handAfter <= aiDecisionNumber('play', 'scoreTruthWildLowHandAfterThreshold', 1) ? aiDecisionNumber('play', 'scoreTruthWildLowHandPenalty', 0.02) : aiDecisionNumber('play', 'scoreTruthWildPenaltyBase', 0.11) + honesty * aiDecisionNumber('play', 'scoreTruthWildHonestyPenaltyWeight', 0.08)) : aiDecisionNumber('play', 'scoreBluffWildPenalty', 0.2));
+      score -= risk * (candidate.truthful ? aiDecisionNumber('play', 'scoreTruthRiskPenaltyWeight', 0.28) : aiDecisionNumber('play', 'scoreBluffRiskPenaltyBase', 0.88) + honesty * aiDecisionNumber('play', 'scoreBluffRiskHonestyPenaltyWeight', 0.3));
+      score -= !candidate.truthful && count >= aiDecisionNumber('play', 'scoreLargeBluffCountThreshold', 3) ? aiDecisionNumber('play', 'scoreLargeBluffPenalty', 0.08) : 0;
+      score -= visibleWilds >= WILD_COUNT && !candidate.truthful ? aiDecisionNumber('play', 'scoreAllWildsVisibleBluffPenalty', 0.06) : 0;
+      score += rand() * aiDecisionNumber('play', 'scoreRandomBonusMax', 0.035);
       return score;
     }
     function chooseAiPlayScored(player, profile) {
@@ -3031,20 +3057,20 @@ import { createTutorial } from './tutorial.js';
       const opponent = state.players[opponentId];
       const actorRead = ensureReadProfile(actorId, opponentId);
       const opponentPers = opponent?.personality;
-      let pressure = 0.5;
-      pressure += actorRead ? -Math.min(0.2, actorRead.challengeWins * 0.06) + Math.min(0.12, actorRead.challengeLosses * 0.04) : 0;
-      pressure += opponentPers ? (0.5 - opponentPers.courage) * 0.32 : 0;
-      pressure += opponentPers ? (0.5 - opponentPers.suspicion) * 0.12 : 0;
-      pressure += opponentPers?.overSuspects ? -0.06 : 0;
-      pressure += opponent && opponent.chips <= 2 ? 0.08 : 0;
-      pressure += opponent && opponent.chips >= 8 ? -0.04 : 0;
-      pressure += state.betting ? Math.min(0.14, Math.max(0, state.betting.currentTierValue - CONFIG.challengeBaseTransfer) * 0.05) : 0;
-      return Math.max(0.05, Math.min(0.95, pressure));
+      let pressure = aiDecisionNumber('foldPressure', 'base', 0.5);
+      pressure += actorRead ? -Math.min(aiDecisionNumber('foldPressure', 'challengeWinMaxPenalty', 0.2), actorRead.challengeWins * aiDecisionNumber('foldPressure', 'challengeWinWeight', 0.06)) + Math.min(aiDecisionNumber('foldPressure', 'challengeLossMaxBonus', 0.12), actorRead.challengeLosses * aiDecisionNumber('foldPressure', 'challengeLossWeight', 0.04)) : 0;
+      pressure += opponentPers ? (aiDecisionNumber('foldPressure', 'base', 0.5) - opponentPers.courage) * aiDecisionNumber('foldPressure', 'courageWeight', 0.32) : 0;
+      pressure += opponentPers ? (aiDecisionNumber('foldPressure', 'base', 0.5) - opponentPers.suspicion) * aiDecisionNumber('foldPressure', 'suspicionWeight', 0.12) : 0;
+      pressure += opponentPers?.overSuspects ? -aiDecisionNumber('foldPressure', 'overSuspectPenalty', 0.06) : 0;
+      pressure += opponent && opponent.chips <= aiDecisionNumber('foldPressure', 'lowChipThreshold', 2) ? aiDecisionNumber('foldPressure', 'lowChipBonus', 0.08) : 0;
+      pressure += opponent && opponent.chips >= aiDecisionNumber('foldPressure', 'highChipThreshold', 8) ? -aiDecisionNumber('foldPressure', 'highChipPenalty', 0.04) : 0;
+      pressure += state.betting ? Math.min(aiDecisionNumber('foldPressure', 'stakePressureMax', 0.14), Math.max(0, state.betting.currentTierValue - CONFIG.challengeBaseTransfer) * aiDecisionNumber('foldPressure', 'stakePressureWeight', 0.05)) : 0;
+      return Math.max(aiDecisionNumber('foldPressure', 'min', 0.05), Math.min(aiDecisionNumber('foldPressure', 'max', 0.95), pressure));
     }
     function aiBetIntent(actorId) {
       const b = state.betting;
       if (!b) {
-        return { confidence: 0.5, raiseDrive: 0.5, foldFloor: 0.32 };
+        return { confidence: aiDecisionNumber('betting', 'neutralConfidence', 0.5), raiseDrive: aiDecisionNumber('betting', 'neutralConfidence', 0.5), foldFloor: aiDecisionNumber('betting', 'defaultFoldFloor', 0.32) };
       }
       const play = b.play;
       const player = state.players[actorId];
@@ -3055,40 +3081,40 @@ import { createTutorial } from './tutorial.js';
       const opponentRead = ensureReadProfile(opponentId, actorId);
       const opponentPers = opponent?.personality; // Used by: challenged-side betting incentives and fold-pressure reads.
       const foldPressure = estimateFoldPressureAgainst(actorId, opponentId);
-      const bankrollBoost = Math.min(0.18, player.chips / 40);
-      const couragePush = pers ? (pers.courage - 0.5) * 0.22 : 0;
+      const bankrollBoost = Math.min(aiDecisionNumber('betting', 'bankrollBoostMax', 0.18), player.chips / aiDecisionNumber('betting', 'bankrollBoostDivisor', 40));
+      const couragePush = pers ? (pers.courage - aiDecisionNumber('betting', 'neutralConfidence', 0.5)) * aiDecisionNumber('betting', 'couragePushWeight', 0.22) : 0;
       const aiProfile = getAiDifficultyProfile(player);
       const randomNudgeMax = Math.max(0, Number(aiProfile.bettingConfidenceRandomNudgeMax) || 0);
-      const randomNudge = rand() * (randomNudgeMax * 2) - randomNudgeMax;
+      const randomNudge = rand() * (randomNudgeMax * aiDecisionNumber('betting', 'randomNudgeMultiplier', 2)) - randomNudgeMax;
       const challengerSuspicion = challengeSuspicionScore(b.challengerId, play, { includeRandom: false });
       const suspicionWeight = aiProfile.bettingConfidenceSuspicionWeight;
       const foldPressureWeight = aiProfile.bettingOpponentFoldPressureWeight;
       let confidence = actorId === b.challengerId
-        ? (0.5 + challengerSuspicion * suspicionWeight)
-        : (0.5 - challengerSuspicion * suspicionWeight);
+        ? (aiDecisionNumber('betting', 'neutralConfidence', 0.5) + challengerSuspicion * suspicionWeight)
+        : (aiDecisionNumber('betting', 'neutralConfidence', 0.5) - challengerSuspicion * suspicionWeight);
       confidence += bankrollBoost + couragePush + randomNudge;
       let raiseDrive = confidence + aiProfile.bettingRaiseDriveAdjustment;
-      let foldFloor = (pers ? 0.32 - (pers.courage - 0.5) * 0.18 : 0.32) + aiProfile.bettingFoldFloorAdjustment;
+      let foldFloor = (pers ? aiDecisionNumber('betting', 'defaultFoldFloor', 0.32) - (pers.courage - aiDecisionNumber('betting', 'neutralConfidence', 0.5)) * aiDecisionNumber('betting', 'foldFloorCourageWeight', 0.18) : aiDecisionNumber('betting', 'defaultFoldFloor', 0.32)) + aiProfile.bettingFoldFloorAdjustment;
       if (actorId === b.challengerId) {
-        confidence += suspicionFromReadProfile(playerRead, pers) * 0.18;
-        raiseDrive += foldPressure * 0.45 * foldPressureWeight;
-        raiseDrive += opponentRead && opponentRead.currentBluffStreak > 0 ? Math.min(0.12, opponentRead.currentBluffStreak * 0.05) : 0;
-        raiseDrive -= challengerSuspicion < 0 ? Math.min(0.14, Math.abs(challengerSuspicion) * 0.2) : 0;
+        confidence += suspicionFromReadProfile(playerRead, pers) * aiDecisionNumber('betting', 'readSuspicionWeight', 0.18);
+        raiseDrive += foldPressure * aiDecisionNumber('betting', 'challengerFoldPressureWeight', 0.45) * foldPressureWeight;
+        raiseDrive += opponentRead && opponentRead.currentBluffStreak > 0 ? Math.min(aiDecisionNumber('betting', 'bluffStreakRaiseDriveMax', 0.12), opponentRead.currentBluffStreak * aiDecisionNumber('betting', 'bluffStreakRaiseDriveWeight', 0.05)) : 0;
+        raiseDrive -= challengerSuspicion < 0 ? Math.min(aiDecisionNumber('betting', 'negativeSuspicionRaisePenaltyMax', 0.14), Math.abs(challengerSuspicion) * aiDecisionNumber('betting', 'negativeSuspicionRaisePenaltyWeight', 0.2)) : 0;
       } else if (challengerSuspicion < 0) {
-        raiseDrive += (1 - foldPressure) * 0.34 * foldPressureWeight;
-        raiseDrive += opponentPers ? opponentPers.aggression * 0.12 : 0;
-        raiseDrive += Math.min(0.12, Math.max(0, b.currentTierValue - CONFIG.challengeBaseTransfer) * 0.04);
-        confidence += 0.06;
+        raiseDrive += (1 - foldPressure) * aiDecisionNumber('betting', 'defenderTruthFoldPressureWeight', 0.34) * foldPressureWeight;
+        raiseDrive += opponentPers ? opponentPers.aggression * aiDecisionNumber('betting', 'defenderTruthAggressionWeight', 0.12) : 0;
+        raiseDrive += Math.min(aiDecisionNumber('betting', 'defenderTruthStakePressureMax', 0.12), Math.max(0, b.currentTierValue - CONFIG.challengeBaseTransfer) * aiDecisionNumber('betting', 'defenderTruthStakePressureWeight', 0.04));
+        confidence += aiDecisionNumber('betting', 'defenderTruthConfidenceBonus', 0.06);
       } else {
-        raiseDrive += foldPressure * 0.58 * foldPressureWeight;
-        raiseDrive -= (1 - foldPressure) * 0.2;
-        raiseDrive += opponentPers ? (0.5 - opponentPers.courage) * 0.16 : 0;
-        foldFloor += 0.06;
+        raiseDrive += foldPressure * aiDecisionNumber('betting', 'defenderBluffFoldPressureWeight', 0.58) * foldPressureWeight;
+        raiseDrive -= (1 - foldPressure) * aiDecisionNumber('betting', 'defenderBluffSteadinessPenaltyWeight', 0.2);
+        raiseDrive += opponentPers ? (aiDecisionNumber('betting', 'neutralConfidence', 0.5) - opponentPers.courage) * aiDecisionNumber('betting', 'defenderBluffCourageWeight', 0.16) : 0;
+        foldFloor += aiDecisionNumber('betting', 'defenderBluffFoldFloorBonus', 0.06);
       }
       return {
-        confidence: Math.max(0.05, Math.min(0.95, confidence)),
-        raiseDrive: Math.max(0.05, Math.min(0.98, raiseDrive)),
-        foldFloor: Math.max(0.08, Math.min(0.7, foldFloor)),
+        confidence: Math.max(aiDecisionNumber('betting', 'confidenceMin', 0.05), Math.min(aiDecisionNumber('betting', 'confidenceMax', 0.95), confidence)),
+        raiseDrive: Math.max(aiDecisionNumber('betting', 'raiseDriveMin', 0.05), Math.min(aiDecisionNumber('betting', 'raiseDriveMax', 0.98), raiseDrive)),
+        foldFloor: Math.max(aiDecisionNumber('betting', 'foldFloorMin', 0.08), Math.min(aiDecisionNumber('betting', 'foldFloorMax', 0.7), foldFloor)),
       };
     }
     function aiTakeBettingAction(actorId, precomputedIntent = null) {
@@ -3110,9 +3136,9 @@ import { createTutorial } from './tutorial.js';
       const aiProfile = getAiDifficultyProfile(player);
       const raiseTierIds = legalStakeTierIdsForPlayer(actorId);
       const canRaise = legalActions.includes('raise-tier') && raiseTierIds.length > 0;
-      const raiseThresh = pers ? 0.68 - (pers.courage - 0.5) * 0.18 : 0.68;
-      const hardRaiseThresh = raiseThresh + 0.08;
-      const raiseCandidateScore = (intent.raiseDrive - hardRaiseThresh) + Math.max(0, confidence - intent.foldFloor) * 0.18;
+      const raiseThresh = pers ? aiDecisionNumber('betting', 'raiseThresholdBase', 0.68) - (pers.courage - aiDecisionNumber('betting', 'neutralConfidence', 0.5)) * aiDecisionNumber('betting', 'raiseThresholdCourageWeight', 0.18) : aiDecisionNumber('betting', 'raiseThresholdBase', 0.68);
+      const hardRaiseThresh = raiseThresh + aiDecisionNumber('betting', 'hardRaiseThresholdBonus', 0.08);
+      const raiseCandidateScore = (intent.raiseDrive - hardRaiseThresh) + Math.max(0, confidence - intent.foldFloor) * aiDecisionNumber('betting', 'raiseCandidateConfidenceWeight', 0.18);
       const raiseGate = aiProfile.bettingRaiseScoreGate;
       const mistakeChance = Math.max(0, Math.min(1, aiProfile.bettingRaiseMistakeChance));
       const raiseSupported = raiseCandidateScore >= raiseGate;
@@ -3125,7 +3151,7 @@ import { createTutorial } from './tutorial.js';
       } else if (canRaise && player.chips > toCall) {
         const raisesByMistake = !raiseSupported && rand() < mistakeChance;
         if (raiseSupported || raisesByMistake) {
-          const underRaiseChance = raiseSupported ? mistakeChance * 0.75 : mistakeChance;
+          const underRaiseChance = raiseSupported ? mistakeChance * aiDecisionNumber('betting', 'underRaiseMistakeMultiplier', 0.75) : mistakeChance;
           const underRaises = raiseTierIds.length > 1 && rand() < underRaiseChance;
           const tierIndex = underRaises ? Math.floor(rand() * (raiseTierIds.length - 1)) : raiseTierIds.length - 1;
           resolveBetAction(actorId, { type: 'raise-tier', tierId: raiseTierIds[Math.max(0, Math.min(raiseTierIds.length - 1, tierIndex))] });
