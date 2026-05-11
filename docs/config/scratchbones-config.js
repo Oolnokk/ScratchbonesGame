@@ -1289,7 +1289,7 @@ window.SCRATCHBONES_CONFIG = {
           "log":            { "x": 7,   "y": 680, "width": 477, "height": 220  },
           "turnSpotlight":  { "x": 1122, "y": 12,  "width": 230,  "height": 200 },
           "claimCluster":   { "x": 187,  "y": 290, "width": 1037, "height": 275 },
-          "challengePrompt":{ "x": 960,  "y": 760, "width": 280,  "height": 140 }
+          "challengePrompt":{ "x": 960,  "y": 701, "width": 280,  "height": 187 }
         },
         "subOffsets": {
           "betting-left-contribution-anchor": { "dx": 260, "dy": 150 },
@@ -1327,8 +1327,8 @@ window.SCRATCHBONES_CONFIG = {
         "sidebarWidthPx": 280,
         "appGapPx": 8,
         "appPaddingPx": 8,
-        "seatAvatarPx": 108,
-        "humanSeatAvatarPx": 204,
+        "seatAvatarPx": 96,
+        "humanSeatAvatarPx": 150,
         "cinematicAvatarPx": 132,
         "handCardMinWidthPx": 86,
         "handCardMaxWidthPx": 86,
@@ -2418,8 +2418,11 @@ window.SCRATCHBONES_CONFIG = {
       "--layout-sidebar-width": "280px",
       "--layout-app-gap": "8px",
       "--layout-app-padding": "8px",
-      "--layout-seat-avatar-size": "132px",
-      "--layout-human-seat-avatar-size": "204px",
+      "--layout-seat-avatar-size": "96px",
+      "--layout-human-seat-avatar-size": "150px",
+      "--layout-player-seat-overflow-y": "hidden",
+      "--layout-player-seat-overflow-x": "hidden",
+      "--layout-player-seat-card-overflow": "hidden",
       "--layout-cinematic-avatar-size": "132px",
       "--layout-hand-card-min-width": "86px",
       "--layout-hand-card-max-width": "86px",

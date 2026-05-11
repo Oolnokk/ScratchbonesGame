@@ -3904,6 +3904,11 @@ import { createTutorial } from './tutorial.js';
         if (/^-?\d+(\.\d+)?(px|%|rem|em|vw|vh)$/.test(raw)) return raw;
         return fallback;
       };
+      const cssRootPxNumberOrDefault = (name, fallback) => {
+        const raw = String(SCRATCHBONES_GAME.cssRootVars?.[name] ?? '').trim();
+        const match = raw.match(/^(-?\d+(?:\.\d+)?)px$/i);
+        return match ? Number(match[1]) : fallback;
+      };
       const viewportWidthPx = Math.max(320, Number(viewportLayout.widthPx) || Number(app?.clientWidth) || 320);
       const viewportHeightPx = Math.max(180, Number(viewportLayout.heightPx) || Number(app?.clientHeight) || 180);
       const appWidthPx = Math.max(320, Number(app?.clientWidth) || Number(window?.innerWidth) || 0);
@@ -3923,8 +3928,18 @@ import { createTutorial } from './tutorial.js';
       const sidebarWidthPx = clampNumber(sidebarWidthPxRaw * 0.5, 90, Math.max(140, appWidthPx - 140));
       const appGapPx = clampNumber(Number(layoutSizing.appGapPx) || 8, 0, 40);
       const appPaddingPx = clampNumber(Number(layoutSizing.appPaddingPx) || 8, 0, 48);
-      const seatAvatarPx = clampNumber(Number(layoutSizing.seatAvatarPx) || 132, 72, 280);
-      const humanSeatAvatarPx = clampNumber(Number(layoutSizing.humanSeatAvatarPx) || 204, seatAvatarPx, 360);
+      const rawSeatAvatarPx = Number(layoutSizing.seatAvatarPx);
+      const rawHumanSeatAvatarPx = Number(layoutSizing.humanSeatAvatarPx);
+      const seatAvatarPx = clampNumber(
+        Number.isFinite(rawSeatAvatarPx) ? rawSeatAvatarPx : cssRootPxNumberOrDefault('--layout-seat-avatar-size', 0),
+        72,
+        280
+      );
+      const humanSeatAvatarPx = clampNumber(
+        Number.isFinite(rawHumanSeatAvatarPx) ? rawHumanSeatAvatarPx : cssRootPxNumberOrDefault('--layout-human-seat-avatar-size', seatAvatarPx),
+        seatAvatarPx,
+        360
+      );
       const cinematicAvatarPx = clampNumber(Number(layoutSizing.cinematicAvatarPx) || seatAvatarPx, 72, 320);
       const turnSpotlightAvatarPx = clampNumber(Number(layoutRegions.turnSpotlight.avatarSizePx) || 180, 80, 320);
       const turnSpotlightOffsetXPx = clampNumber(Number(turnSpotlightLayout.offsetXPx) || 10, 0, 120);
@@ -4195,16 +4210,26 @@ import { createTutorial } from './tutorial.js';
     }
     function enforceFitContainerBounds(app) {
       if (!app) return;
+      const playerSeatOverflowY = 'var(--layout-player-seat-overflow-y)';
+      const playerSeatOverflowX = 'var(--layout-player-seat-overflow-x)';
+      const playerSeatCardOverflow = 'var(--layout-player-seat-card-overflow)';
+      const aiSidebar = app.querySelector('#aiSidebar');
+      if (aiSidebar) {
+        aiSidebar.style.overflowY = playerSeatOverflowY;
+        aiSidebar.style.overflowX = playerSeatOverflowX;
+      }
       const humanSeatZone = app.querySelector('.humanSeatZone');
       if (humanSeatZone) {
         humanSeatZone.style.minWidth = '0';
         humanSeatZone.style.maxWidth = '100%';
+        humanSeatZone.style.overflowY = playerSeatOverflowY;
+        humanSeatZone.style.overflowX = playerSeatOverflowX;
       }
       const humanSeatCard = app.querySelector('.humanSeatCard');
       if (humanSeatCard) {
         humanSeatCard.style.minWidth = '0';
         humanSeatCard.style.maxWidth = '100%';
-        humanSeatCard.style.overflow = 'hidden';
+        humanSeatCard.style.overflow = playerSeatCardOverflow;
       }
       const declareRankSelect = app.querySelector('#declareRank');
       if (declareRankSelect) {
@@ -5067,10 +5092,11 @@ import { createTutorial } from './tutorial.js';
                 ${renderSeatCoinRow(p)}
                 <div class="seatStatus">${p.lastAction}</div>
               </div>
-              <div class="seatAvatarBox" data-proj-id="avatar-${p.id}" style="width:var(--layout-seat-avatar-size,132px);height:var(--layout-seat-avatar-size,132px);aspect-ratio:1/1;">
+              ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
+              </div>
+              <div class="seatAvatarBox" data-proj-id="avatar-${p.id}" style="width:var(--layout-seat-avatar-size);height:var(--layout-seat-avatar-size);aspect-ratio:1/1;">
                 <canvas class="seatPortrait" data-seat-id="${p.id}" width="200" height="200"></canvas>
               </div>
-              ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
             </div>
           `).join('')}
         </div>
@@ -5084,7 +5110,7 @@ import { createTutorial } from './tutorial.js';
               ${renderSeatCoinRow(player)}
               <div class="seatStatus">${player.lastAction}</div>
             </div>
-            <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
+            <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size);height:var(--layout-human-seat-avatar-size);aspect-ratio:1/1;">
               <canvas class="seatPortrait" data-seat-id="${hs}" width="200" height="200"></canvas>
             </div>
           </div>
