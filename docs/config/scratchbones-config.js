@@ -1359,6 +1359,32 @@ window.SCRATCHBONES_CONFIG = {
           ".claimAvatarCinTags"
         ],
         "disablePreservePromotionTransformSelectors": [],
+        "typographyBaselineRootSelector": "#app",
+        "typographyBaselineFields": [
+          "font-size",
+          "line-height",
+          "font-family",
+          "letter-spacing",
+          "font-weight"
+        ],
+        "promotedTextMetricFields": [
+          "font-size",
+          "line-height",
+          "font-family",
+          "font-weight",
+          "letter-spacing",
+          "text-align",
+          "white-space",
+          "max-width",
+          "box-sizing",
+          "padding-top",
+          "padding-right",
+          "padding-bottom",
+          "padding-left"
+        ],
+        "promotedTextMetricAssignmentIds": [
+          "ui-text-over-lighting"
+        ],
         "normalizeBoxGuard": {
           "allowlistSelectors": [
             "*"
@@ -1487,6 +1513,7 @@ window.SCRATCHBONES_CONFIG = {
               ".claimAvatarCinRole",
               ".claimAvatarCinName",
               ".claimAvatarCinTags",
+              ".claimClusterTextAnchor",
               ".cinematic-vs-line",
               ".cin-result-copy"
             ],
