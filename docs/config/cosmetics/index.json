@@ -39,6 +39,10 @@
       "path": "./clothes/overwear/rough_cloth_poncho.json"
     },
     {
+      "id": "rugged_poncho",
+      "path": "./clothes/overwear/rugged_poncho.json"
+    },
+    {
       "id": "anuri_hood",
       "path": "./anuri_hood.json"
     },

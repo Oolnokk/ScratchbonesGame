@@ -356,6 +356,7 @@ window.SCRATCHBONES_CONFIG = {
         { "id": "bandolier1",       "label": "Bandolier",         "price": 40, "category": "torso",    "description": "A rugged leather bandolier.", "material": "leather" },
         { "id": "tankan_bodywrap",  "label": "Tankan Body Wrap",  "price": 60, "category": "overwear", "description": "A wrapped ceremonial bodywrap." },
         { "id": "rough_cloth_poncho", "label": "Rough Cloth Poncho", "price": 45, "category": "overwear", "description": "A weathered cloth poncho for keeping trail dust off your shoulders.", "material": "cloth" },
+        { "id": "rugged_poncho", "label": "Rugged Poncho", "price": 70, "category": "overwear", "description": "A reinforced poncho layered with a rugged body wrap.", "material": "cloth" },
         { "id": "fine_hood",        "label": "Fine Hood",         "price": 60, "category": "hood",     "description": "A finely crafted hood with trim." }
       ]
     },
