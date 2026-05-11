@@ -862,6 +862,9 @@ window.SCRATCHBONES_CONFIG = {
           }
         }
       },
+      "expressions": {
+        "durationMs": 10000
+      },
       "layering": {
         "hatUnderHoodTag": "hood-layer:under",
         "eyeAccessoryAboveUnderHoodHatTag": "layer:eye-accessory-above-under-hood-hat"
@@ -888,6 +891,14 @@ window.SCRATCHBONES_CONFIG = {
         "flurryIntervalMs": 280
       },
       "emotes": {
+        "laugh": {
+          "puffCount": 3,
+          "inflateDurationSeconds": 0.045,
+          "deflateDurationSeconds": 0.075,
+          "settleDurationSeconds": 0.60,
+          "mouthLaughMs": 360,
+          "mouthRestExpression": "smile"
+        },
         "disgust": {
           "horizontalDeformationScale": 0.2
         }

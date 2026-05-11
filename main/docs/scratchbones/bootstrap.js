@@ -5799,16 +5799,41 @@ import { createTutorial } from './tutorial.js';
       };
       const _exprTarget = _EMOTE_EXPRESSION_MAP[reactionId];
       if (_exprTarget && window.portraitBreathingComposer) {
-        const _exprDurMs = Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) || 10000;
-        window.portraitBreathingComposer.setExpression(String(state.humanSeat), _exprTarget, _exprDurMs);
+        window.portraitBreathingComposer.setExpression(String(state.humanSeat), _exprTarget, getPortraitExpressionDurationMs());
       }
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
+    function getPortraitExpressionDurationMs() {
+      return Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) || 10000;
+    }
+    function getLaughMouthConfig() {
+      const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.emotes?.laugh || {};
+      const defaultLaughMs = Math.max(1, Math.round(
+        (Number(cfg.puffCount) || 3) *
+        ((Number(cfg.inflateDurationSeconds) || 0.045) + (Number(cfg.deflateDurationSeconds) || 0.075)) *
+        1000
+      ));
+      return {
+        laughMs: Math.max(1, Number(cfg.mouthLaughMs) || defaultLaughMs),
+        restExpression: String(cfg.mouthRestExpression || 'smile'),
+      };
+    }
     function triggerLaughAnimation(seatId) {
       const seatIdStr = String(seatId ?? state.humanSeat);
-      window.portraitBreathingComposer?.triggerEmote('laugh', seatIdStr);
-      const _exprDurMs = Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) || 10000;
-      window.portraitBreathingComposer?.setExpression(seatIdStr, 'laugh', _exprDurMs);
+      const composer = window.portraitBreathingComposer;
+      composer?.triggerEmote('laugh', seatIdStr);
+      if (!composer) return;
+
+      const exprDurMs = getPortraitExpressionDurationMs();
+      const { laughMs, restExpression } = getLaughMouthConfig();
+      const laughWindowMs = Math.min(laughMs, exprDurMs);
+      composer.setExpression(seatIdStr, 'laugh', exprDurMs);
+      if (restExpression && restExpression !== 'laugh' && laughWindowMs < exprDurMs) {
+        setTimeout(() => {
+          if (composer.getExpression(seatIdStr) !== 'laugh') return;
+          composer.setExpression(seatIdStr, restExpression, exprDurMs - laughWindowMs);
+        }, laughWindowMs);
+      }
     }
     // Returns (creating if needed) a position:fixed overlay on document.body for
     // chat FX. Appending here survives render() which only replaces #app.innerHTML.
