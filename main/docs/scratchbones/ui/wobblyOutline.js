@@ -145,8 +145,17 @@ export function createWobblyOutlineRenderer() {
     for (let y = bottom; y >= top; y -= step) pushPoint(left, y, -1, 0);
     // Degenerate zero-size boxes can leave the loops empty; keep a minimal loop.
     if (!points.length) points.push({ x: left, y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: left, y: bottom });
-    rectPathCache.set(key, points);
-    return points;
+    const smoothed = [];
+    for (let index = 0; index < points.length; index += 1) {
+      const point = points[index];
+      const next = points[(index + 1) % points.length];
+      smoothed.push(
+        { x: (point.x * 0.75) + (next.x * 0.25), y: (point.y * 0.75) + (next.y * 0.25) },
+        { x: (point.x * 0.25) + (next.x * 0.75), y: (point.y * 0.25) + (next.y * 0.75) },
+      );
+    }
+    rectPathCache.set(key, smoothed);
+    return smoothed;
   }
 
   function drawWobblyStroke(ctx, points) {
