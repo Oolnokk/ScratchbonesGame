@@ -187,6 +187,11 @@ const DEFAULT_GAMEPLAY_SHORTCUTS_CONFIG = {
 const DEFAULT_CHAT_CONFIG = {
   messageMaxLength: 180,
   inputFocusFontSizePx: 16,
+  blurInputOnSubmit: true,
+  resetMobileZoomOnSubmit: true,
+  mobileZoomResetDelayMs: 60,
+  mobileZoomResetViewportContent: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
+  laughPhrases: ['lol', 'ha', 'haha', 'hahaha'],
   bubbleMaxLength: 36,
   bubbleDurationMs: 2000,
   bubbleOverlayZIndex: 10030,
@@ -197,6 +202,11 @@ function normalizeChatConfig(value) {
   return {
     messageMaxLength: Math.max(1, Math.floor(normalizeFiniteNumber(source.messageMaxLength, DEFAULT_CHAT_CONFIG.messageMaxLength))),
     inputFocusFontSizePx: Math.max(16, Math.floor(normalizeFiniteNumber(source.inputFocusFontSizePx, DEFAULT_CHAT_CONFIG.inputFocusFontSizePx))),
+    blurInputOnSubmit: source.blurInputOnSubmit !== false,
+    resetMobileZoomOnSubmit: source.resetMobileZoomOnSubmit !== false,
+    mobileZoomResetDelayMs: normalizeFiniteNumber(source.mobileZoomResetDelayMs, DEFAULT_CHAT_CONFIG.mobileZoomResetDelayMs, { min: 0 }),
+    mobileZoomResetViewportContent: String(source.mobileZoomResetViewportContent || DEFAULT_CHAT_CONFIG.mobileZoomResetViewportContent).trim() || DEFAULT_CHAT_CONFIG.mobileZoomResetViewportContent,
+    laughPhrases: normalizeStringArray(source.laughPhrases, DEFAULT_CHAT_CONFIG.laughPhrases),
     bubbleMaxLength: Math.max(1, Math.floor(normalizeFiniteNumber(source.bubbleMaxLength, DEFAULT_CHAT_CONFIG.bubbleMaxLength))),
     bubbleDurationMs: normalizeFiniteNumber(source.bubbleDurationMs, DEFAULT_CHAT_CONFIG.bubbleDurationMs, { min: 40 }),
     bubbleOverlayZIndex: Math.floor(normalizeFiniteNumber(source.bubbleOverlayZIndex, DEFAULT_CHAT_CONFIG.bubbleOverlayZIndex)),

@@ -34,6 +34,11 @@ window.SCRATCHBONES_CONFIG = {
     "chat": {
       "messageMaxLength": 180,
       "inputFocusFontSizePx": 16,
+      "blurInputOnSubmit": true,
+      "resetMobileZoomOnSubmit": true,
+      "mobileZoomResetDelayMs": 60,
+      "mobileZoomResetViewportContent": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      "laughPhrases": ["lol", "ha", "haha", "hahaha"],
       "bubbleMaxLength": 36,
       "bubbleDurationMs": 2000,
       "bubbleOverlayZIndex": 10030

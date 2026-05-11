@@ -504,6 +504,11 @@ import { createTutorial } from './tutorial.js';
     const CHAT_CONFIG = SCRATCHBONES_GAME.chat || {};
     const CHAT_MESSAGE_MAX_LENGTH = Math.max(1, Math.floor(Number(CHAT_CONFIG.messageMaxLength)));
     const CHAT_INPUT_FOCUS_FONT_SIZE_PX = Math.floor(Number(CHAT_CONFIG.inputFocusFontSizePx));
+    const CHAT_BLUR_INPUT_ON_SUBMIT = CHAT_CONFIG.blurInputOnSubmit !== false;
+    const CHAT_RESET_MOBILE_ZOOM_ON_SUBMIT = CHAT_CONFIG.resetMobileZoomOnSubmit !== false;
+    const CHAT_MOBILE_ZOOM_RESET_DELAY_MS = Math.max(0, Number(CHAT_CONFIG.mobileZoomResetDelayMs) || 0);
+    const CHAT_MOBILE_ZOOM_RESET_VIEWPORT_CONTENT = String(CHAT_CONFIG.mobileZoomResetViewportContent || '').trim();
+    const CHAT_LAUGH_PHRASES = new Set((Array.isArray(CHAT_CONFIG.laughPhrases) ? CHAT_CONFIG.laughPhrases : []).map((phrase) => String(phrase).trim().toLowerCase()).filter(Boolean));
     const FOCUS_CHAT_SHORTCUT = SCRATCHBONES_GAME.gameplayShortcuts?.focusChat || {};
     // Hand panel slot-based layout constants
     const HAND_MAX_VISIBLE_SLOTS = 10;     // max cards visible at once (defines max overlap at full count)
@@ -4983,20 +4988,21 @@ import { createTutorial } from './tutorial.js';
           const input = document.getElementById('chatInput');
           const text = String(input?.value || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH);
           if (!text) return;
-          // Laugh detection: specific words trigger the laugh avatar animation.
-          const _laughPhrases = new Set(['lol', 'ha', 'haha', 'hahaha']);
-          if (_laughPhrases.has(text.toLowerCase())) triggerLaughAnimation(state.humanSeat);
+          // Laugh detection: configured words trigger the laugh avatar animation.
+          if (CHAT_LAUGH_PHRASES.has(text.toLowerCase())) triggerLaughAnimation(state.humanSeat);
+          if (input) input.value = '';
           if (_isClient) {
             // Immediate visual feedback: play animation now; mark the text so
             // applyNetworkState skips re-animating when the echo arrives from host.
             _pendingOwnChatText = text;
             spawnChatTextFx(text, state.humanSeat);
             _net.sendAction({ type: 'chat', text });
+            resetChatInputZoomAfterSubmit(input);
           } else {
             addChatLog(text, hs);
+            resetChatInputZoomAfterSubmit(input);
             render();
           }
-          if (input) input.value = '';
         });
       }
       app.querySelectorAll('[data-smuggle-seat]').forEach((button) => {
@@ -5849,6 +5855,24 @@ import { createTutorial } from './tutorial.js';
       overlay.style.cssText = `position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:${CHAT_CONFIG.bubbleOverlayZIndex};`;
       return overlay;
     }
+    function resetChatInputZoomAfterSubmit(input) {
+      if (CHAT_BLUR_INPUT_ON_SUBMIT && typeof input?.blur === 'function') input.blur();
+      if (!CHAT_RESET_MOBILE_ZOOM_ON_SUBMIT) return;
+      const resetViewport = () => {
+        if (CHAT_MOBILE_ZOOM_RESET_VIEWPORT_CONTENT) {
+          const viewportMeta = document.querySelector('meta[name="viewport"]');
+          if (viewportMeta) viewportMeta.setAttribute('content', CHAT_MOBILE_ZOOM_RESET_VIEWPORT_CONTENT);
+        }
+        try {
+          if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
+        } catch {}
+        syncToVisualViewport();
+        scheduleResponsiveFitPass();
+      };
+      resetViewport();
+      if (CHAT_MOBILE_ZOOM_RESET_DELAY_MS > 0) window.setTimeout(resetViewport, CHAT_MOBILE_ZOOM_RESET_DELAY_MS);
+    }
+
     function spawnChatBubbleFx(text, { viewportX, viewportY } = {}) {
       const label = String(text || '').trim();
       if (!label || !Number.isFinite(viewportX) || !Number.isFinite(viewportY)) return;
