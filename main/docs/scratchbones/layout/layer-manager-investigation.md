@@ -10,10 +10,10 @@ Date: 2026-04-29
 
 ## Variable path walkthrough (authoritative)
 1. Raw config is normalized by `normalizeScratchbonesGameConfig()`.
-   - `layout.layerManager.placementMode` is normalized, but parity-test layer promotion now runs in forced `"screen-space"` mode.
-2. `createLayerManager({ gameConfig, debugLog })` reads layer assignment + preservation config and always executes in literal `"screen-space"` placement mode for parity testing.
+   - `layout.layerManager.placementMode` is normalized to either `"authored-space"` or `"screen-space"`, with legacy `"authored-coordinate"` treated as `"authored-space"`.
+2. `createLayerManager({ gameConfig, debugLog })` reads layer assignment + preservation config once, resolves the normalized placement mode, and dispatches portal geometry through authored-space or screen-space helpers.
 3. During `sync(app)` in `ui/layerManager.js`, promoted nodes are moved under per-layer portal roots.
-4. `updatePortalRect()` now captures placeholder + app viewport rects in one measurement frame, then copies placeholder geometry to `position: fixed` portal fields (`left/top/width/height`).
+4. `updatePortalRect()` captures placeholder + app viewport rects in one measurement frame, then applies mode-specific geometry to `position: fixed` portal fields (`left/top/width/height`).
 5. Render/export path in `bootstrap.js`:
    - Single-mode export (`buildRenderedTransformsExport`) captures whichever preview mode is currently active.
    - Dual-mode export (`buildRenderedTransformsDualModeExport`) deterministically captures both `original` and `layered` by temporarily toggling preview state in a fixed order, awaiting a render frame each time, then restoring prior UI state.
@@ -26,11 +26,12 @@ Date: 2026-04-29
 
 ## Current behavior corrections
 
-### Placement is now fixed to screen-space in this parity-test path
+### Placement now follows the normalized layer-manager mode
 Current behavior:
 - Promotion host/layer roots/portals use `position: fixed`.
 - Portal geometry is derived from a single capture frame (`placeholder.getBoundingClientRect()` plus app rect metadata for traceability/debug).
-- App-local inverse mapping is disabled for this path.
+- `"screen-space"` placement copies viewport-space portal geometry directly.
+- `"authored-space"` placement maps captured app-local authored coordinates back through the app rect and app scale, using the configured portal scale strategy.
 
 ### Export no longer requires manual mode toggling for complete comparison
 Outdated assumption: users must manually toggle preview modes and export each mode separately.
@@ -40,15 +41,19 @@ Current behavior:
 - Capture order is fixed (`original` then `layered`) and includes a frame wait after each render, reducing race conditions and making drift reports reproducible.
 - Manual single-mode export still exists for spot checks, but it is not required for drift baselining.
 
-## Screen-space placement mechanics (detailed)
-In the active parity-test path:
+## Placement mechanics (detailed)
+Shared mechanics:
 - Host is appended to `document.body` instead of `#app`.
 - Host/layer roots/portals use `position: fixed` + `overflow: visible`.
-- Portal rects are set directly from placeholder viewport rect fields (`left`, `top`, `width`, `height`).
+- A single capture frame records placeholder viewport rects, app viewport rects, and derived app scale.
+
+Mode-specific mechanics:
+- `"screen-space"`: portal rects are set directly from placeholder viewport rect fields (`left`, `top`, `width`, `height`).
+- `"authored-space"`: portal `left`/`top` are rebuilt from app viewport origin plus authored coordinates multiplied by app scale; width/height either remain authored and move scale into the portal transform (`portalScaleStrategy: "portal-transform"`) or are multiplied into dimensions.
 
 Practical effect:
-- Promotion no longer inherits app-local transform scaling/translation math for geometry placement.
-- This minimizes authored-transform-induced drift and clipping interactions with app-local stacking/transform containers.
+- Screen-space mode minimizes authored-transform-induced drift and clipping interactions with app-local stacking/transform containers.
+- Authored-space mode preserves the app-local coordinate model while still promoting nodes into fixed body-level layer roots.
 
 ## Deterministic dual-mode export workflow (recommended)
 1. In projection UI, run the dual-mode rendered transforms export action (the one that emits `projectionPreviewMode: "both"`).
@@ -57,7 +62,7 @@ Practical effect:
 
 Notes:
 - Dual-mode export compares `original` vs `layered` within one deterministic capture session.
-- Placement strategy A/B by `placementMode` is no longer part of the parity path; this path is now fixed to literal viewport-space placement.
+- Placement strategy A/B by `placementMode` is valid again: compare `"authored-space"` and `"screen-space"` by changing `layout.layerManager.placementMode` in config and re-running the deterministic dual-mode export.
 
 ## How to interpret drift output fields
 
@@ -86,6 +91,6 @@ Ranked summary for quick triage:
 Use this as the first stop to find the worst offenders before drilling into raw deltas.
 
 ## Updated conclusion
-The core tradeoff remains: DOM reparenting can still be semantically lossy for context-dependent layout. Reliability in this test path now comes from fixed screen-space placement plus deterministic dual-mode export capture.
+The core tradeoff remains: DOM reparenting can still be semantically lossy for context-dependent layout. Reliability in this test path now comes from explicit placement-mode selection plus deterministic dual-mode export capture.
 
-Promoted nodes now fill their fixed portal (`position:absolute; left/top:0; width/height:100%`) so portal geometry is the sole placement source.
+Promoted nodes are re-anchored inside their fixed portal (`position:absolute; left/top:0`), and eligible normalized boxes fill the portal (`width/height:100%`) so portal geometry remains the placement source for those elements.
