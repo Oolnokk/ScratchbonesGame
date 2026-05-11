@@ -6170,11 +6170,14 @@ import { createTutorial } from './tutorial.js';
     // ── UI projection mapping mode ────────────────────────────────────────
     const projectionUiState = {
       active: false,
+      editMode: false,
       varsPanelOpen: false,
       showUnlayeredPreview: false,
       lastSelectedProjId: null,
       lastSelectedSourceEl: null,
       editedVars: new Map(),
+      debugOutlineElements: new Set(),
+      debugOutlineFrame: 0,
       ui: null,
     };
     function isEditableGameplayShortcutTarget(target) {
@@ -6182,7 +6185,7 @@ import { createTutorial } from './tutorial.js';
       return Boolean(target.closest('input, textarea, select, button, [contenteditable], .projVarInput'));
     }
     function isAuthoredProjectionEditorActive() {
-      return projectionUiState.active && getScratchbonesLayoutMode() === 'authored';
+      return projectionUiState.active && projectionUiState.editMode && getScratchbonesLayoutMode() === 'authored';
     }
     document.addEventListener('keydown', (event) => {
       if (FOCUS_CHAT_SHORTCUT.enabled === false) return;
@@ -6198,12 +6201,142 @@ import { createTutorial } from './tutorial.js';
     function shouldRenderLayerManagedUi() {
       return !projectionUiState.showUnlayeredPreview;
     }
+    function getProjectionDebugConfig() {
+      return SCRATCHBONES_GAME.layout?.projectionMapping?.debug || {};
+    }
+    function normalizeProjectionDebugColors() {
+      const colors = getProjectionDebugConfig().generationColors;
+      return (Array.isArray(colors) ? colors : [])
+        .map((entry) => ({ name: String(entry?.name || '').trim(), color: String(entry?.color || '').trim() }))
+        .filter((entry) => entry.color);
+    }
+    function projectionDebugColorForDepth(depth) {
+      const colors = normalizeProjectionDebugColors();
+      if (!colors.length) return 'rgba(255, 64, 64, 0.9)';
+      return colors[Math.max(0, Number(depth) || 0) % colors.length].color;
+    }
+    function getProjectionDebugRoot(element) {
+      if (!(element instanceof Element)) return null;
+      return element.closest('#app,#uiLayerManagerHost,body');
+    }
+    function getProjectionDebugDepth(element) {
+      const root = getProjectionDebugRoot(element);
+      if (!root || element === root) return 0;
+      let depth = 0;
+      let cursor = element;
+      while (cursor?.parentElement && cursor.parentElement !== root) {
+        depth += 1;
+        cursor = cursor.parentElement;
+      }
+      return depth;
+    }
+    function getProjectionDebugElementName(target) {
+      const element = target instanceof Element ? target : null;
+      if (!element) return '';
+      const projected = element.closest('[data-proj-id]');
+      const subject = projected || element;
+      const projId = String(subject.getAttribute?.('data-proj-id') || '').trim();
+      const tag = subject.tagName ? subject.tagName.toLowerCase() : 'element';
+      const id = subject.id ? `#${subject.id}` : '';
+      const classes = typeof subject.className === 'string'
+        ? subject.className.split(/\s+/).filter(Boolean).slice(0, 4).map((entry) => `.${entry}`).join('')
+        : '';
+      const debugName = subject.getAttribute?.('aria-label') || subject.getAttribute?.('title') || subject.getAttribute?.('name') || '';
+      const depth = getProjectionDebugDepth(subject);
+      const prefix = projId ? `[data-proj-id="${projId}"]` : `${tag}${id}${classes}`;
+      const suffix = debugName && debugName !== projId ? ` · ${debugName}` : '';
+      return `${prefix} · gen ${depth}${suffix}`;
+    }
+    function clearProjectionDebugOutlines() {
+      if (projectionUiState.debugOutlineFrame) {
+        cancelAnimationFrame(projectionUiState.debugOutlineFrame);
+        projectionUiState.debugOutlineFrame = 0;
+      }
+      projectionUiState.debugOutlineElements.forEach((element) => {
+        element.removeAttribute('data-proj-debug-outline');
+        element.removeAttribute('data-proj-debug-name');
+        element.style.removeProperty('--proj-debug-outline-color');
+      });
+      projectionUiState.debugOutlineElements.clear();
+      document.body.classList.remove('proj-mapping-debug');
+    }
+    function refreshProjectionDebugOutlines() {
+      projectionUiState.debugOutlineFrame = 0;
+      if (!projectionUiState.active) {
+        clearProjectionDebugOutlines();
+        return;
+      }
+      document.body.classList.add('proj-mapping-debug');
+      const nextElements = new Set();
+      document.body.querySelectorAll('*').forEach((element) => {
+        if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) return;
+        if (['SCRIPT', 'STYLE', 'LINK', 'META'].includes(element.tagName)) return;
+        nextElements.add(element);
+        element.setAttribute('data-proj-debug-outline', String(getProjectionDebugDepth(element)));
+        element.setAttribute('data-proj-debug-name', getProjectionDebugElementName(element));
+        element.style.setProperty('--proj-debug-outline-color', projectionDebugColorForDepth(getProjectionDebugDepth(element)));
+      });
+      projectionUiState.debugOutlineElements.forEach((element) => {
+        if (nextElements.has(element)) return;
+        element.removeAttribute('data-proj-debug-outline');
+        element.removeAttribute('data-proj-debug-name');
+        element.style.removeProperty('--proj-debug-outline-color');
+      });
+      projectionUiState.debugOutlineElements = nextElements;
+    }
+    function scheduleProjectionDebugOutlines() {
+      if (!projectionUiState.active || projectionUiState.debugOutlineFrame) return;
+      projectionUiState.debugOutlineFrame = requestAnimationFrame(refreshProjectionDebugOutlines);
+    }
+    function injectProjectionMappingDebugStyles() {
+      if (document.getElementById('projMappingDebugStyle')) return;
+      const debugConfig = getProjectionDebugConfig();
+      const editRight = Number(debugConfig.editButtonRightPx);
+      const style = document.createElement('style');
+      style.id = 'projMappingDebugStyle';
+      style.textContent = `
+        #projEditBtn {
+          position: fixed;
+          bottom: calc(10px + var(--safe));
+          right: ${Number.isFinite(editRight) ? editRight : 224}px;
+          z-index: 1000;
+          background: rgba(30,20,18,0.92);
+          border: 1px solid rgba(220,130,255,0.45);
+          color: #d98cff;
+          font-size: 0.72rem;
+          padding: 6px 11px;
+          border-radius: 8px;
+          cursor: pointer;
+          letter-spacing: 0.05em;
+          display: none;
+          pointer-events: auto !important;
+        }
+        #projEditBtn:hover { background: rgba(48,24,56,0.97); }
+        #projEditBtn.active { background: #d98cff; color: #15110f; }
+        #projEditBtn.active:hover { background: #edb9ff; }
+        body.proj-mapping-debug [data-proj-debug-outline] {
+          outline: 1px solid var(--proj-debug-outline-color, rgba(255,64,64,0.9)) !important;
+          outline-offset: -1px !important;
+          cursor: help !important;
+        }
+        body.proj-mapping-debug [data-proj-debug-outline]:hover {
+          outline-width: 3px !important;
+          background-color: color-mix(in srgb, var(--proj-debug-outline-color, rgba(255,64,64,0.9)) 18%, transparent) !important;
+        }
+        body.proj-mapping-debug:not(.proj-editing) .authoredBoxOverlay,
+        body.proj-mapping-debug:not(.proj-editing) .authoredSubOverlay {
+          pointer-events: none !important;
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
     function renderAuthoredOverlays() {
       const overlay = document.getElementById('authoredOverlay');
       const app = document.getElementById('app');
       if (!overlay || !app) return;
       const mode = getScratchbonesLayoutMode();
-      const isActive = projectionUiState.active && mode === 'authored';
+      const isActive = projectionUiState.active && projectionUiState.editMode && mode === 'authored';
       overlay.classList.toggle('active', isActive);
       overlay.innerHTML = '';
       app.querySelectorAll('[data-proj-id]').forEach((el) => el.classList.remove('authored-box-selected'));
@@ -6397,7 +6530,7 @@ import { createTutorial } from './tutorial.js';
       `;
     }
     function bindAuthoredDragAndResize(event) {
-      if (!projectionUiState.active || getScratchbonesLayoutMode() !== 'authored') return false;
+      if (!projectionUiState.active || !projectionUiState.editMode || getScratchbonesLayoutMode() !== 'authored') return false;
       // Sub-layer mode: drag sub-element overlays
       if (authoredEditorState.subLayerMode) {
         const subOverlay = event.target.closest('.authoredSubOverlay');
@@ -6526,7 +6659,20 @@ import { createTutorial } from './tutorial.js';
       const varsCloseBtn = document.getElementById('projVarCloseBtn');
       const subBtn = document.getElementById('projSubBtn');
       if (!btn || !tip || !varsBtn || !exportBtn || !varsPanel || !varsPanelTitle || !varsPanelBody || !varsCopyBtn || !varsCloseBtn) return;
+      injectProjectionMappingDebugStyles();
       projectionUiState.ui = { varsPanelBody, varsPanelTitle };
+      const projectionMapConfig = SCRATCHBONES_GAME.layout?.projectionMapping || {};
+      const projectionEditorConfig = projectionMapConfig.editor || {};
+      const projectionDebugConfig = projectionMapConfig.debug || {};
+      let editBtn = document.getElementById('projEditBtn');
+      if (!editBtn) {
+        editBtn = document.createElement('button');
+        editBtn.id = 'projEditBtn';
+        editBtn.type = 'button';
+        btn.parentElement?.insertBefore(editBtn, varsBtn);
+      }
+      editBtn.textContent = String(projectionDebugConfig.editButtonLabel || 'Edit');
+      editBtn.title = String(projectionDebugConfig.editButtonTitle || 'Enable map editing: move and resize authored layout boxes or sub-elements.');
       let layerPreviewBtn = document.getElementById('projLayerPreviewBtn');
       let transformExportBtn = document.getElementById('projTransformExportBtn');
       if (!layerPreviewBtn) {
@@ -6557,8 +6703,6 @@ import { createTutorial } from './tutorial.js';
           : 'Show UI at original positions before layer-manager promotion.';
       };
       updateLayerPreviewButton();
-      const projectionMapConfig = SCRATCHBONES_GAME.layout?.projectionMapping || {};
-      const projectionEditorConfig = projectionMapConfig.editor || {};
       const varStep = Number(projectionEditorConfig.step) || 0.01;
       const basePanelTitle = String(projectionEditorConfig.panelTitle || 'Projection Vars');
       const transformsExportButtonLabel = String(projectionEditorConfig.transformsExportButtonLabel || 'Toggle + Export Screen Space');
@@ -6695,25 +6839,52 @@ import { createTutorial } from './tutorial.js';
         btn.classList.toggle('active', projectionUiState.active);
         varsBtn.style.display = projectionUiState.active ? 'block' : 'none';
         exportBtn.style.display = projectionUiState.active ? 'block' : 'none';
-        if (subBtn) subBtn.style.display = projectionUiState.active ? 'block' : 'none';
+        editBtn.style.display = projectionUiState.active ? 'block' : 'none';
+        if (subBtn) subBtn.style.display = (projectionUiState.active && projectionUiState.editMode) ? 'block' : 'none';
         if (!projectionUiState.active) {
           tip.style.display = 'none';
           varsPanel.classList.remove('open');
           varsBtn.classList.remove('active');
+          editBtn.classList.remove('active');
+          document.body.classList.remove('proj-editing');
+          projectionUiState.editMode = false;
           projectionUiState.varsPanelOpen = false;
           projectionUiState.showUnlayeredPreview = false;
           updateLayerPreviewButton();
           authoredEditorState.subLayerMode = false;
           authoredEditorState.selectedSubId = null;
           if (subBtn) subBtn.classList.remove('active');
+          clearProjectionDebugOutlines();
+        } else {
+          scheduleProjectionDebugOutlines();
+          updateEditorStatus(String(projectionDebugConfig.debugStatus || 'Map debug mode: touch an outlined element to read its name; enable Edit to move or resize.'));
         }
         render();
         renderAuthoredOverlays();
       });
+      editBtn.style.display = 'none';
+      editBtn.addEventListener('click', () => {
+        if (!projectionUiState.active) return;
+        projectionUiState.editMode = !projectionUiState.editMode;
+        editBtn.classList.toggle('active', projectionUiState.editMode);
+        document.body.classList.toggle('proj-editing', projectionUiState.editMode);
+        if (subBtn) subBtn.style.display = projectionUiState.editMode ? 'block' : 'none';
+        if (!projectionUiState.editMode) {
+          authoredEditorState.subLayerMode = false;
+          authoredEditorState.selectedSubId = null;
+          if (subBtn) subBtn.classList.remove('active');
+          finishAuthoredPointer();
+        }
+        renderAuthoredOverlays();
+        renderAuthoredInspector();
+        updateEditorStatus(projectionUiState.editMode
+          ? String(projectionDebugConfig.editStatus || 'Map edit mode: drag overlays to move; use corner handles to resize.')
+          : String(projectionDebugConfig.debugStatus || 'Map debug mode: touch an outlined element to read its name.'));
+      });
       if (subBtn) {
         subBtn.style.display = 'none';
         subBtn.addEventListener('click', () => {
-          if (!projectionUiState.active) return;
+          if (!projectionUiState.active || !projectionUiState.editMode) return;
           authoredEditorState.subLayerMode = !authoredEditorState.subLayerMode;
           if (!authoredEditorState.subLayerMode) authoredEditorState.selectedSubId = null;
           subBtn.classList.toggle('active', authoredEditorState.subLayerMode);
@@ -6769,6 +6940,9 @@ import { createTutorial } from './tutorial.js';
       });
       document.addEventListener('pointerdown', (event) => {
         if (bindAuthoredDragAndResize(event)) return;
+        if (!projectionUiState.active) return;
+        const debugName = getProjectionDebugElementName(event.target);
+        if (debugName) updateEditorStatus(`Map touched ${debugName}`);
       });
       document.addEventListener('pointermove', (event) => {
         if (authoredEditorState.pointerDrag) {
@@ -6776,9 +6950,10 @@ import { createTutorial } from './tutorial.js';
           return;
         }
         if (!projectionUiState.active) return;
-        const el = event.target.closest('[data-proj-id]');
-        if (el) {
-          tip.textContent = el.getAttribute('data-proj-id');
+        scheduleProjectionDebugOutlines();
+        const debugName = getProjectionDebugElementName(event.target);
+        if (debugName) {
+          tip.textContent = debugName;
           tip.style.display = 'block';
           tip.style.left = (event.clientX + 16) + 'px';
           tip.style.top = Math.max(8, event.clientY - 42) + 'px';
@@ -6788,7 +6963,7 @@ import { createTutorial } from './tutorial.js';
       document.addEventListener('pointercancel', finishAuthoredPointer);
       document.addEventListener('click', (event) => {
         if (!projectionUiState.active) return;
-        if (event.target.closest('#projMapBtn,#projVarBtn,#projVarPanel,#projExportBtn,#projSubBtn,#projLayerPreviewBtn')) return;
+        if (event.target.closest('#projMapBtn,#projVarBtn,#projVarPanel,#projExportBtn,#projSubBtn,#projEditBtn,#projLayerPreviewBtn')) return;
         // Sub-layer mode: select sub overlays
         if (authoredEditorState.subLayerMode) {
           const subOverlay = event.target.closest('.authoredSubOverlay');
@@ -6916,7 +7091,7 @@ import { createTutorial } from './tutorial.js';
         }
       });
       document.addEventListener('keydown', (event) => {
-        if (!projectionUiState.active || getScratchbonesLayoutMode() !== 'authored') return;
+        if (!projectionUiState.active || !projectionUiState.editMode || getScratchbonesLayoutMode() !== 'authored') return;
         if (authoredEditorState.subLayerMode) {
           const projId = authoredEditorState.selectedSubId;
           if (!projId) return;
