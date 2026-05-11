@@ -5832,9 +5832,11 @@ import { createTutorial } from './tutorial.js';
       fx.style.left = `${viewportX}px`;
       fx.style.top = `${viewportY}px`;
       const maxLength = Math.max(1, Math.floor(Number(CHAT_CONFIG.bubbleMaxLength)));
+      const durationMs = Math.max(40, Number(CHAT_CONFIG.bubbleDurationMs));
+      fx.style.animationDuration = `${durationMs}ms`;
       fx.textContent = label.length > maxLength ? label.slice(0, maxLength) + '…' : label;
       overlay.appendChild(fx);
-      setTimeout(() => fx.remove(), Math.max(40, Number(CHAT_CONFIG.bubbleDurationMs)));
+      setTimeout(() => fx.remove(), durationMs);
     }
     // Spawns a chat-text speech bubble at the given seat's avatar, triggering the
     // alarmed body deformation so the avatar visually "speaks" the message.
