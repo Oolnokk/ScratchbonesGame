@@ -5608,7 +5608,8 @@ import { createTutorial } from './tutorial.js';
       }).join('');
       return `<div class="emojiReactionPanel" data-proj-id="emoji-panel" data-ui-wobbly-outline="emoji-reaction-panel" aria-label="Emoji reactions">${buttonHtml}</div>`;
     }
-    const BROWN_BOX_OUTLINE_SELECTOR = '.topbar, .aiSeat, .humanSeatCard, .turnSpotlight, .handWrap, .eventLog, .stakeVisualPanel, .claimRankBox, .claimHandBar, .claimTimesBoxLeft, .claimCountBoxLeft, .claimTimesBoxRight, .claimCountBoxRight';
+    const BROWN_BOX_OUTLINE_SELECTOR = '.humanSeatCard, .eventLog';
+    const CHALLENGE_PROMPT_OUTLINE_STYLE_IDS = new Set(['challenge-prompt', 'control-panel', 'betting-controls']);
     function shouldRenderUiOutline(element) {
       if (!(element instanceof HTMLElement)) return false;
       if (!element.isConnected) return false;
@@ -5632,52 +5633,24 @@ import { createTutorial } from './tutorial.js';
           return;
         }
         const styleId = String(element.getAttribute('data-ui-wobbly-outline') || '');
-        if (styleId === 'emoji-reaction-btn') {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.0, step: 18, wobble: 1.1, seed: 13, outset: 4 });
+        if (styleId === 'emoji-reaction-btn' || styleId === 'emoji-reaction-panel') {
+          WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui');
           return;
         }
-        if (styleId) {
+        if (CHALLENGE_PROMPT_OUTLINE_STYLE_IDS.has(styleId)) {
           WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.4, step: 25, wobble: 1.35, seed: 29, outset: 4 });
-          return;
-        }
-        if (element.classList.contains('topbar')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.8, step: 25, wobble: 1.35, seed: 47, outset: 4 });
-          return;
-        }
-        if (element.classList.contains('aiSeat')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.2, step: 23, wobble: 1.25, seed: 53, outset: 4 });
           return;
         }
         if (element.classList.contains('humanSeatCard')) {
           WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 8.0, step: 25, wobble: 1.35, seed: 59, outset: 4 });
           return;
         }
-        if (element.classList.contains('turnSpotlight')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.2, step: 23, wobble: 1.3, seed: 61, outset: 4 });
-          return;
-        }
-        if (element.classList.contains('handWrap')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.4, step: 25, wobble: 1.3, seed: 67, outset: 4 });
-          return;
-        }
         if (element.classList.contains('eventLog')) {
           WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.2, step: 23, wobble: 1.25, seed: 71, outset: 4 });
           return;
         }
-        if (element.classList.contains('stakeVisualPanel')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.0, step: 24, wobble: 1.25, seed: 73, outset: 4 });
-          return;
-        }
-        if (element.classList.contains('claimRankBox') || element.classList.contains('claimHandBar')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.8, step: 21, wobble: 1.2, seed: 79, outset: 4 });
-          return;
-        }
-        if (element.classList.contains('claimTimesBoxLeft') || element.classList.contains('claimCountBoxLeft')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.4, step: 20, wobble: 1.2, seed: 83, outset: 4 });
-          return;
-        }
-        if (element.classList.contains('claimTimesBoxRight') || element.classList.contains('claimCountBoxRight')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.4, step: 20, wobble: 1.2, seed: 89, outset: 4 });
+        if (styleId) {
+          WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui');
         }
       });
       const emojiTargets = (emojiElements !== null && emojiElements !== undefined)
