@@ -501,7 +501,8 @@ import { createTutorial } from './tutorial.js';
     const DEBUG_TRACE = DEBUG_OPTIONS.trace || {};
     const DEBUG_EVENT_LOG_LIMIT = Math.max(50, Number(DEBUG_OPTIONS.eventLogLimit) || 300);
     const MAX_RENDERED_CHAT_LOG_ENTRIES = 80;
-    const CHAT_MESSAGE_MAX_LENGTH = 180;   // defines chat input maxlength and server-side trim length
+    const CHAT_CONFIG = SCRATCHBONES_GAME.chat || {};
+    const CHAT_MESSAGE_MAX_LENGTH = Math.max(1, Math.floor(Number(CHAT_CONFIG.messageMaxLength)));
     const FOCUS_CHAT_SHORTCUT = SCRATCHBONES_GAME.gameplayShortcuts?.focusChat || {};
     // Hand panel slot-based layout constants
     const HAND_MAX_VISIBLE_SLOTS = 10;     // max cards visible at once (defines max overlap at full count)
@@ -5693,6 +5694,7 @@ import { createTutorial } from './tutorial.js';
       const appBCR = app.getBoundingClientRect();
       const appScaleX = app.offsetWidth > 0 ? appBCR.width / app.offsetWidth : 1;
       const appScaleY = app.offsetHeight > 0 ? appBCR.height / app.offsetHeight : 1;
+      spawnReactionChatBubbleFx(reaction.id, layerRect.left + startX, layerRect.top + startY);
       if (reaction.fanAngles) {
         const fanCX = (anchorRect.left + anchorRect.width / 2) - layerRect.left;
         const fanCY = (anchorRect.top + anchorRect.height / 2) - layerRect.top;
@@ -5800,10 +5802,31 @@ import { createTutorial } from './tutorial.js';
         overlay = document.createElement('div');
         overlay.id = 'scratchbones-chat-fx-overlay';
         overlay.setAttribute('aria-hidden', 'true');
-        overlay.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:9995;';
         document.body.appendChild(overlay);
       }
+      overlay.style.cssText = `position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:${CHAT_CONFIG.bubbleOverlayZIndex};`;
       return overlay;
+    }
+    function spawnChatBubbleFx(text, { viewportX, viewportY } = {}) {
+      const label = String(text || '').trim();
+      if (!label || !Number.isFinite(viewportX) || !Number.isFinite(viewportY)) return;
+      const overlay = getGlobalFxOverlay();
+      const fx = document.createElement('div');
+      fx.className = 'chatTextFx';
+      fx.style.left = `${viewportX}px`;
+      fx.style.top = `${viewportY}px`;
+      const maxLength = Math.max(1, Math.floor(Number(CHAT_CONFIG.bubbleMaxLength)));
+      fx.textContent = label.length > maxLength ? label.slice(0, maxLength) + '…' : label;
+      overlay.appendChild(fx);
+      setTimeout(() => fx.remove(), Math.max(40, Number(CHAT_CONFIG.bubbleDurationMs)));
+    }
+    function spawnReactionChatBubbleFx(reactionId, viewportX, viewportY) {
+      const reactionBubbles = CHAT_CONFIG.reactionBubbles || {};
+      if (reactionBubbles.enabled === false) return;
+      const textByReactionId = reactionBubbles.textByReactionId || {};
+      const text = textByReactionId[String(reactionId || '').trim().toLowerCase()];
+      if (!text) return;
+      spawnChatBubbleFx(text, { viewportX, viewportY });
     }
     // Spawns a chat-text speech bubble at the given seat's avatar, triggering the
     // alarmed body deformation so the avatar visually "speaks" the message.
@@ -5829,18 +5852,12 @@ import { createTutorial } from './tutorial.js';
         }
       }
       if (!anchorEl) return;
-      // Use a body-level fixed overlay so render()'s app.innerHTML replacement can't wipe it.
-      const overlay = getGlobalFxOverlay();
       const anchorRect = anchorEl.getBoundingClientRect();
-      const fx = document.createElement('div');
-      fx.className = 'chatTextFx';
       // Position in viewport space directly — no scale correction needed for position:fixed.
-      fx.style.left = `${anchorRect.left + anchorRect.width / 2}px`;
-      fx.style.top = `${anchorRect.top + anchorRect.height * 0.25}px`;
-      const label = String(text).trim();
-      fx.textContent = label.length > 36 ? label.slice(0, 36) + '…' : label;
-      overlay.appendChild(fx);
-      setTimeout(() => fx.remove(), 2000);
+      spawnChatBubbleFx(text, {
+        viewportX: anchorRect.left + anchorRect.width / 2,
+        viewportY: anchorRect.top + anchorRect.height * 0.25,
+      });
     }
     const clusterCinematicStageRuntime = {
       phaseKey: null,
