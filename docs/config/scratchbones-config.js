@@ -33,6 +33,14 @@ window.SCRATCHBONES_CONFIG = {
     },
     "chat": {
       "messageMaxLength": 180,
+      "inputFocusFontSizePx": 16,
+      "blurInputOnSubmit": true,
+      "resetMobileZoomOnSubmit": true,
+      "mobileZoomResetDelayMs": 60,
+      "mobileZoomResetViewportContent": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      "messageBubbleSpawnAfterZoomResetMs": 1500,
+      "messageAnimationSpawnAfterZoomResetMs": 2500,
+      "laughPhrases": ["lol", "ha", "haha", "hahaha"],
       "bubbleMaxLength": 36,
       "bubbleDurationMs": 2000,
       "bubbleOverlayZIndex": 10030
@@ -862,6 +870,9 @@ window.SCRATCHBONES_CONFIG = {
           }
         }
       },
+      "expressions": {
+        "durationMs": 10000
+      },
       "layering": {
         "hatUnderHoodTag": "hood-layer:under",
         "eyeAccessoryAboveUnderHoodHatTag": "layer:eye-accessory-above-under-hood-hat"
@@ -888,7 +899,15 @@ window.SCRATCHBONES_CONFIG = {
         "flurryIntervalMs": 280
       },
       "emotes": {
-        "emojiOutlineEnabled": true,
+        "laugh": {
+          "puffCount": 3,
+          "inflateDurationSeconds": 0.12,
+          "deflateDurationSeconds": 0.14,
+          "pauseDurationSeconds": 0.18,
+          "settleDurationSeconds": 0.60,
+          "mouthLaughMs": 1140,
+          "mouthRestExpression": "smile"
+        },
         "disgust": {
           "horizontalDeformationScale": 0.2
         }

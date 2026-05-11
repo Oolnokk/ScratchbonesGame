@@ -507,6 +507,14 @@ import { createTutorial } from './tutorial.js';
     const MAX_RENDERED_CHAT_LOG_ENTRIES = 80;
     const CHAT_CONFIG = SCRATCHBONES_GAME.chat || {};
     const CHAT_MESSAGE_MAX_LENGTH = Math.max(1, Math.floor(Number(CHAT_CONFIG.messageMaxLength)));
+    const CHAT_INPUT_FOCUS_FONT_SIZE_PX = Math.floor(Number(CHAT_CONFIG.inputFocusFontSizePx));
+    const CHAT_BLUR_INPUT_ON_SUBMIT = CHAT_CONFIG.blurInputOnSubmit !== false;
+    const CHAT_RESET_MOBILE_ZOOM_ON_SUBMIT = CHAT_CONFIG.resetMobileZoomOnSubmit !== false;
+    const CHAT_MOBILE_ZOOM_RESET_DELAY_MS = Math.max(0, Number(CHAT_CONFIG.mobileZoomResetDelayMs) || 0);
+    const CHAT_MOBILE_ZOOM_RESET_VIEWPORT_CONTENT = String(CHAT_CONFIG.mobileZoomResetViewportContent || '').trim();
+    const CHAT_MESSAGE_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS = Math.max(0, Number(CHAT_CONFIG.messageBubbleSpawnAfterZoomResetMs) || 0);
+    const CHAT_MESSAGE_ANIMATION_SPAWN_AFTER_ZOOM_RESET_MS = Math.max(0, Number(CHAT_CONFIG.messageAnimationSpawnAfterZoomResetMs) || 0);
+    const CHAT_LAUGH_PHRASES = new Set((Array.isArray(CHAT_CONFIG.laughPhrases) ? CHAT_CONFIG.laughPhrases : []).map((phrase) => String(phrase).trim().toLowerCase()).filter(Boolean));
     const FOCUS_CHAT_SHORTCUT = SCRATCHBONES_GAME.gameplayShortcuts?.focusChat || {};
     // Hand panel slot-based layout constants
     const HAND_MAX_VISIBLE_SLOTS = 10;     // max cards visible at once (defines max overlap at full count)
@@ -4904,7 +4912,7 @@ import { createTutorial } from './tutorial.js';
               `).join('')}
             </div>
             <form class="chatComposer" id="chatComposer">
-              <input id="chatInput" class="chatComposerInput" type="text" maxlength="${CHAT_MESSAGE_MAX_LENGTH}" placeholder="Type a message..." autocomplete="off">
+              <input id="chatInput" class="chatComposerInput" type="text" maxlength="${CHAT_MESSAGE_MAX_LENGTH}" placeholder="Type a message..." autocomplete="off" style="font-size:${CHAT_INPUT_FOCUS_FONT_SIZE_PX}px;">
               <button class="chatSendBtn" type="submit">Send</button>
             </form>
           </div>
@@ -4986,20 +4994,34 @@ import { createTutorial } from './tutorial.js';
           const input = document.getElementById('chatInput');
           const text = String(input?.value || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH);
           if (!text) return;
-          // Laugh detection: specific words trigger the laugh avatar animation.
-          const _laughPhrases = new Set(['lol', 'ha', 'haha', 'hahaha']);
-          if (_laughPhrases.has(text.toLowerCase())) triggerLaughAnimation(state.humanSeat);
+          const triggersLaugh = CHAT_LAUGH_PHRASES.has(text.toLowerCase());
+          if (input) input.value = '';
+          const playOwnChatBubble = () => spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: false });
+          const playOwnChatAnimation = () => {
+            if (triggersLaugh) triggerLaughAnimation(state.humanSeat);
+            else triggerChatSpeechAnimation(state.humanSeat);
+          };
           if (_isClient) {
-            // Immediate visual feedback: play animation now; mark the text so
-            // applyNetworkState skips re-animating when the echo arrives from host.
+            // Immediate network send; delay local bubble and portrait animation separately
+            // until after mobile zoom reset so geometry/animations start in the restored viewport.
             _pendingOwnChatText = text;
-            spawnChatTextFx(text, state.humanSeat);
             _net.sendAction({ type: 'chat', text });
+            resetChatInputZoomAfterSubmit(input, {
+              afterReset: [
+                { delayMs: CHAT_MESSAGE_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatBubble },
+                { delayMs: CHAT_MESSAGE_ANIMATION_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatAnimation },
+              ],
+            });
           } else {
-            addChatLog(text, hs);
+            addChatLog(text, hs, { silent: true });
+            resetChatInputZoomAfterSubmit(input, {
+              afterReset: [
+                { delayMs: CHAT_MESSAGE_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatBubble },
+                { delayMs: CHAT_MESSAGE_ANIMATION_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatAnimation },
+              ],
+            });
             render();
           }
-          if (input) input.value = '';
         });
       }
       app.querySelectorAll('[data-smuggle-seat]').forEach((button) => {
@@ -5900,16 +5922,42 @@ import { createTutorial } from './tutorial.js';
       };
       const _exprTarget = _EMOTE_EXPRESSION_MAP[reactionId];
       if (_exprTarget && window.portraitBreathingComposer) {
-        const _exprDurMs = Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) || 10000;
-        window.portraitBreathingComposer.setExpression(String(state.humanSeat), _exprTarget, _exprDurMs);
+        window.portraitBreathingComposer.setExpression(String(state.humanSeat), _exprTarget, getPortraitExpressionDurationMs());
       }
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
+    function getPortraitExpressionDurationMs() {
+      return Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) || 10000;
+    }
+    function getLaughMouthConfig() {
+      const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.emotes?.laugh || {};
+      const puffCount = Math.max(1, Math.floor(Number(cfg.puffCount) || 3));
+      const puffMotionMs = (Number(cfg.inflateDurationSeconds) || 0.12) + (Number(cfg.deflateDurationSeconds) || 0.14);
+      const pauseMs = Number(cfg.pauseDurationSeconds) || 0.18;
+      const defaultLaughMs = Math.max(1, Math.round(
+        ((puffCount * puffMotionMs) + (Math.max(0, puffCount - 1) * pauseMs)) * 1000
+      ));
+      return {
+        laughMs: Math.max(1, Number(cfg.mouthLaughMs) || defaultLaughMs),
+        restExpression: String(cfg.mouthRestExpression || 'smile'),
+      };
+    }
     function triggerLaughAnimation(seatId) {
       const seatIdStr = String(seatId ?? state.humanSeat);
-      window.portraitBreathingComposer?.triggerEmote('laugh', seatIdStr);
-      const _exprDurMs = Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) || 10000;
-      window.portraitBreathingComposer?.setExpression(seatIdStr, 'laugh', _exprDurMs);
+      const composer = window.portraitBreathingComposer;
+      composer?.triggerEmote('laugh', seatIdStr);
+      if (!composer) return;
+
+      const exprDurMs = getPortraitExpressionDurationMs();
+      const { laughMs, restExpression } = getLaughMouthConfig();
+      const laughWindowMs = Math.min(laughMs, exprDurMs);
+      composer.setExpression(seatIdStr, 'laugh', exprDurMs);
+      if (restExpression && restExpression !== 'laugh' && laughWindowMs < exprDurMs) {
+        setTimeout(() => {
+          if (composer.getExpression(seatIdStr) !== 'laugh') return;
+          composer.setExpression(seatIdStr, restExpression, exprDurMs - laughWindowMs);
+        }, laughWindowMs);
+      }
     }
     // Returns (creating if needed) a position:fixed overlay on document.body for
     // chat FX. Appending here survives render() which only replaces #app.innerHTML.
@@ -5924,6 +5972,44 @@ import { createTutorial } from './tutorial.js';
       overlay.style.cssText = `position:fixed;inset:0;pointer-events:none;overflow:visible;z-index:${CHAT_CONFIG.bubbleOverlayZIndex};`;
       return overlay;
     }
+    function resetChatInputZoomAfterSubmit(input, { afterReset } = {}) {
+      const queueAfterReset = () => {
+        const callbacks = Array.isArray(afterReset) ? afterReset : [afterReset];
+        callbacks.forEach((entry) => {
+          const fn = typeof entry === 'function' ? entry : entry?.fn;
+          if (typeof fn !== 'function') return;
+          const delayMs = Math.max(0, Number(entry?.delayMs) || 0);
+          if (delayMs > 0) window.setTimeout(fn, delayMs);
+          else fn();
+        });
+      };
+      if (CHAT_BLUR_INPUT_ON_SUBMIT && typeof input?.blur === 'function') input.blur();
+      if (!CHAT_RESET_MOBILE_ZOOM_ON_SUBMIT) {
+        queueAfterReset();
+        return;
+      }
+      const resetViewport = () => {
+        if (CHAT_MOBILE_ZOOM_RESET_VIEWPORT_CONTENT) {
+          const viewportMeta = document.querySelector('meta[name="viewport"]');
+          if (viewportMeta) viewportMeta.setAttribute('content', CHAT_MOBILE_ZOOM_RESET_VIEWPORT_CONTENT);
+        }
+        try {
+          if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
+        } catch {}
+        syncToVisualViewport();
+        runResponsiveFitPassNow();
+      };
+      resetViewport();
+      if (CHAT_MOBILE_ZOOM_RESET_DELAY_MS > 0) {
+        window.setTimeout(() => {
+          resetViewport();
+          queueAfterReset();
+        }, CHAT_MOBILE_ZOOM_RESET_DELAY_MS);
+        return;
+      }
+      queueAfterReset();
+    }
+
     function spawnChatBubbleFx(text, { viewportX, viewportY } = {}) {
       const label = String(text || '').trim();
       if (!label || !Number.isFinite(viewportX) || !Number.isFinite(viewportY)) return;
@@ -5939,13 +6025,16 @@ import { createTutorial } from './tutorial.js';
       overlay.appendChild(fx);
       setTimeout(() => fx.remove(), durationMs);
     }
-    // Spawns a chat-text speech bubble at the given seat's avatar, triggering the
-    // alarmed body deformation so the avatar visually "speaks" the message.
-    function spawnChatTextFx(text, seatId) {
+    function triggerChatSpeechAnimation(seatId) {
+      window.portraitBreathingComposer?.triggerEmote('alarmed', String(seatId));
+    }
+    // Spawns a chat-text speech bubble at the given seat's avatar, optionally
+    // triggering the alarmed body deformation so the avatar visually "speaks" the message.
+    function spawnChatTextFx(text, seatId, { triggerSpeechEmote = true } = {}) {
       const app = document.getElementById('app');
       if (!app || !text) return;
       const seatIdStr = String(seatId);
-      window.portraitBreathingComposer?.triggerEmote('alarmed', seatIdStr);
+      if (triggerSpeechEmote) triggerChatSpeechAnimation(seatIdStr);
       const emojiOrigin = computeEmojiReactionFxOrigin(seatIdStr, app);
       if (emojiOrigin) {
         spawnChatBubbleFx(text, {
@@ -7228,25 +7317,29 @@ import { createTutorial } from './tutorial.js';
       });
     })();
     let fitReflowHandle = null;
+    function runResponsiveFitPassNow() {
+      if (fitReflowHandle) {
+        clearTimeout(fitReflowHandle);
+        fitReflowHandle = null;
+      }
+      const app = document.getElementById('app');
+      if (!app) return;
+      applyLayoutContract(app);
+      if (getScratchbonesLayoutMode() === 'authored') {
+        applyAuthoredLayoutMode(app, getScratchbonesAuthoredConfig());
+        renderAuthoredOverlays();
+      } else {
+        applyResponsiveFit(app);
+      }
+      updateTableCardAutoScale(app);
+      syncStationaryCardScreenSpace(app);
+      syncClaimClusterCardSizeFromHand(app);
+      if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
+    }
     function scheduleResponsiveFitPass() {
       if (fitReflowHandle) clearTimeout(fitReflowHandle);
       const fitDebounceMs = Math.max(0, Number(SCRATCHBONES_GAME.layout?.fitter?.reflowDebounceMs) || 120);
-      fitReflowHandle = setTimeout(() => {
-        fitReflowHandle = null;
-        const app = document.getElementById('app');
-        if (!app) return;
-        applyLayoutContract(app);
-        if (getScratchbonesLayoutMode() === 'authored') {
-          applyAuthoredLayoutMode(app, getScratchbonesAuthoredConfig());
-          renderAuthoredOverlays();
-        } else {
-          applyResponsiveFit(app);
-        }
-        updateTableCardAutoScale(app);
-        syncStationaryCardScreenSpace(app);
-        syncClaimClusterCardSizeFromHand(app);
-        if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
-      }, fitDebounceMs);
+      fitReflowHandle = setTimeout(runResponsiveFitPassNow, fitDebounceMs);
     }
     window.addEventListener('resize', scheduleResponsiveFitPass, { passive: true });
     window.addEventListener('orientationchange', scheduleResponsiveFitPass, { passive: true });
