@@ -508,7 +508,7 @@ import { createTutorial } from './tutorial.js';
     const CHAT_RESET_MOBILE_ZOOM_ON_SUBMIT = CHAT_CONFIG.resetMobileZoomOnSubmit !== false;
     const CHAT_MOBILE_ZOOM_RESET_DELAY_MS = Math.max(0, Number(CHAT_CONFIG.mobileZoomResetDelayMs) || 0);
     const CHAT_MOBILE_ZOOM_RESET_VIEWPORT_CONTENT = String(CHAT_CONFIG.mobileZoomResetViewportContent || '').trim();
-    const CHAT_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS = Math.max(0, Number(CHAT_CONFIG.bubbleSpawnAfterZoomResetMs) || 0);
+    const CHAT_MESSAGE_FX_SPAWN_AFTER_ZOOM_RESET_MS = Math.max(0, Number(CHAT_CONFIG.messageFxSpawnAfterZoomResetMs) || 0);
     const CHAT_LAUGH_PHRASES = new Set((Array.isArray(CHAT_CONFIG.laughPhrases) ? CHAT_CONFIG.laughPhrases : []).map((phrase) => String(phrase).trim().toLowerCase()).filter(Boolean));
     const FOCUS_CHAT_SHORTCUT = SCRATCHBONES_GAME.gameplayShortcuts?.focusChat || {};
     // Hand panel slot-based layout constants
@@ -4989,19 +4989,21 @@ import { createTutorial } from './tutorial.js';
           const input = document.getElementById('chatInput');
           const text = String(input?.value || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH);
           if (!text) return;
-          // Laugh detection: configured words trigger the laugh avatar animation.
-          if (CHAT_LAUGH_PHRASES.has(text.toLowerCase())) triggerLaughAnimation(state.humanSeat);
+          const triggersLaugh = CHAT_LAUGH_PHRASES.has(text.toLowerCase());
           if (input) input.value = '';
-          const spawnOwnChatBubble = () => spawnChatTextFx(text, state.humanSeat);
+          const playOwnChatFx = () => {
+            if (triggersLaugh) triggerLaughAnimation(state.humanSeat);
+            spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: !triggersLaugh });
+          };
           if (_isClient) {
-            // Immediate network send; delay only the local bubble until after mobile
-            // zoom reset so getBoundingClientRect() samples the restored viewport.
+            // Immediate network send; delay local chat bubble and portrait animation
+            // until after mobile zoom reset so geometry is sampled in the restored viewport.
             _pendingOwnChatText = text;
             _net.sendAction({ type: 'chat', text });
-            resetChatInputZoomAfterSubmit(input, { afterReset: spawnOwnChatBubble });
+            resetChatInputZoomAfterSubmit(input, { afterReset: playOwnChatFx });
           } else {
             addChatLog(text, hs, { silent: true });
-            resetChatInputZoomAfterSubmit(input, { afterReset: spawnOwnChatBubble });
+            resetChatInputZoomAfterSubmit(input, { afterReset: playOwnChatFx });
             render();
           }
         });
@@ -5859,8 +5861,8 @@ import { createTutorial } from './tutorial.js';
     function resetChatInputZoomAfterSubmit(input, { afterReset } = {}) {
       const queueAfterReset = () => {
         if (typeof afterReset !== 'function') return;
-        if (CHAT_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS > 0) {
-          window.setTimeout(afterReset, CHAT_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS);
+        if (CHAT_MESSAGE_FX_SPAWN_AFTER_ZOOM_RESET_MS > 0) {
+          window.setTimeout(afterReset, CHAT_MESSAGE_FX_SPAWN_AFTER_ZOOM_RESET_MS);
           return;
         }
         afterReset();
@@ -5905,13 +5907,13 @@ import { createTutorial } from './tutorial.js';
       overlay.appendChild(fx);
       setTimeout(() => fx.remove(), Math.max(40, Number(CHAT_CONFIG.bubbleDurationMs)));
     }
-    // Spawns a chat-text speech bubble at the given seat's avatar, triggering the
-    // alarmed body deformation so the avatar visually "speaks" the message.
-    function spawnChatTextFx(text, seatId) {
+    // Spawns a chat-text speech bubble at the given seat's avatar, optionally
+    // triggering the alarmed body deformation so the avatar visually "speaks" the message.
+    function spawnChatTextFx(text, seatId, { triggerSpeechEmote = true } = {}) {
       const app = document.getElementById('app');
       if (!app || !text) return;
       const seatIdStr = String(seatId);
-      window.portraitBreathingComposer?.triggerEmote('alarmed', seatIdStr);
+      if (triggerSpeechEmote) window.portraitBreathingComposer?.triggerEmote('alarmed', seatIdStr);
       const emojiOrigin = computeEmojiReactionFxOrigin(seatIdStr, app);
       if (emojiOrigin) {
         spawnChatBubbleFx(text, {
