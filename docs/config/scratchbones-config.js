@@ -33,6 +33,7 @@ window.SCRATCHBONES_CONFIG = {
     },
     "chat": {
       "messageMaxLength": 180,
+      "inputFocusFontSizePx": 16,
       "bubbleMaxLength": 36,
       "bubbleDurationMs": 2000,
       "bubbleOverlayZIndex": 10030

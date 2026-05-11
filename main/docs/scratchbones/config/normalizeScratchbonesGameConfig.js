@@ -186,6 +186,7 @@ const DEFAULT_GAMEPLAY_SHORTCUTS_CONFIG = {
 
 const DEFAULT_CHAT_CONFIG = {
   messageMaxLength: 180,
+  inputFocusFontSizePx: 16,
   bubbleMaxLength: 36,
   bubbleDurationMs: 2000,
   bubbleOverlayZIndex: 10030,
@@ -195,6 +196,7 @@ function normalizeChatConfig(value) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
     messageMaxLength: Math.max(1, Math.floor(normalizeFiniteNumber(source.messageMaxLength, DEFAULT_CHAT_CONFIG.messageMaxLength))),
+    inputFocusFontSizePx: Math.max(16, Math.floor(normalizeFiniteNumber(source.inputFocusFontSizePx, DEFAULT_CHAT_CONFIG.inputFocusFontSizePx))),
     bubbleMaxLength: Math.max(1, Math.floor(normalizeFiniteNumber(source.bubbleMaxLength, DEFAULT_CHAT_CONFIG.bubbleMaxLength))),
     bubbleDurationMs: normalizeFiniteNumber(source.bubbleDurationMs, DEFAULT_CHAT_CONFIG.bubbleDurationMs, { min: 40 }),
     bubbleOverlayZIndex: Math.floor(normalizeFiniteNumber(source.bubbleOverlayZIndex, DEFAULT_CHAT_CONFIG.bubbleOverlayZIndex)),

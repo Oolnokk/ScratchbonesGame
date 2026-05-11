@@ -503,6 +503,7 @@ import { createTutorial } from './tutorial.js';
     const MAX_RENDERED_CHAT_LOG_ENTRIES = 80;
     const CHAT_CONFIG = SCRATCHBONES_GAME.chat || {};
     const CHAT_MESSAGE_MAX_LENGTH = Math.max(1, Math.floor(Number(CHAT_CONFIG.messageMaxLength)));
+    const CHAT_INPUT_FOCUS_FONT_SIZE_PX = Math.floor(Number(CHAT_CONFIG.inputFocusFontSizePx));
     const FOCUS_CHAT_SHORTCUT = SCRATCHBONES_GAME.gameplayShortcuts?.focusChat || {};
     // Hand panel slot-based layout constants
     const HAND_MAX_VISIBLE_SLOTS = 10;     // max cards visible at once (defines max overlap at full count)
@@ -4900,7 +4901,7 @@ import { createTutorial } from './tutorial.js';
               `).join('')}
             </div>
             <form class="chatComposer" id="chatComposer">
-              <input id="chatInput" class="chatComposerInput" type="text" maxlength="${CHAT_MESSAGE_MAX_LENGTH}" placeholder="Type a message..." autocomplete="off">
+              <input id="chatInput" class="chatComposerInput" type="text" maxlength="${CHAT_MESSAGE_MAX_LENGTH}" placeholder="Type a message..." autocomplete="off" style="font-size:${CHAT_INPUT_FOCUS_FONT_SIZE_PX}px;">
               <button class="chatSendBtn" type="submit">Send</button>
             </form>
           </div>
