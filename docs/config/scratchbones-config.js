@@ -1167,6 +1167,45 @@ window.SCRATCHBONES_CONFIG = {
           "underRaiseMistakeMultiplier": 0.75
         }
       },
+      /*
+       * AI difficulty ranks
+       *
+       * Normalized field names are game.ai.defaultDifficultyRank,
+       * game.ai.difficultyRanks, and game.ai.seatDifficultyRanks. The
+       * normalizer currently supports the rank IDs "easy", "normal", and
+       * "hard"; unknown rank IDs fall back to defaultDifficultyRank, and an
+       * unknown or missing defaultDifficultyRank falls back to "normal".
+       *
+       * defaultDifficultyRank applies to every non-human seat unless that
+       * player's difficultyRank is already set or a seatDifficultyRanks entry
+       * matches the seat. seatDifficultyRanks keys may be absolute seat IDs
+       * ("1", "2", "3") or NPC-order aliases ("0", "npc:0",
+       * "npc0", "ai:0", "ai0").
+       *
+       * Rank profiles affect:
+       * - turn choice: "easy" uses the naive playbook, "normal" uses the
+       *   heuristic playbook, and "hard" uses scored candidate selection;
+       * - challenge choice: challengeThreshold plus challengeThresholdModifier
+       *   sets the final suspicion threshold, while challengeKnownCardWeight,
+       *   challengeReadMemoryWeight, challengeHumanTargetBias, and
+       *   challengeRandomNudgeMax shape suspicion;
+       * - betting: bettingConfidenceSuspicionWeight,
+       *   bettingConfidenceRandomNudgeMax, bettingFoldFloorAdjustment,
+       *   bettingRaiseDriveAdjustment, bettingOpponentFoldPressureWeight,
+       *   bettingRaiseScoreGate, and bettingRaiseMistakeChance shape fold/call/
+       *   raise intent;
+       * - delay/randomness: difficulty profile random nudge fields affect
+       *   challenge and betting uncertainty; actual turn/challenge/betting wait
+       *   times are controlled by game.timers.aiDecisionDelays and
+       *   game.ai.decision.delays.
+       *
+       * Minimal override example:
+       *   "defaultDifficultyRank": "hard",
+       *   "seatDifficultyRanks": { "2": "easy" },
+       *   "difficultyRanks": {
+       *     "hard": { "challengeThresholdModifier": -0.04 }
+       *   }
+       */
       "challengeThreshold": 0.52,
       "challengeRandomNudgeMax": 0.16,
       "bettingConfidenceSuspicionWeight": 0.55,

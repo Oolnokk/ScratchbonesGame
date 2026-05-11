@@ -59,6 +59,28 @@ Scratchbones now builds trick bones from player loadouts instead of a fixed deck
 
 The default trick-bone unlocks, six-slot default loadout, per-trick metadata, and NPC trick archetype weights live in `docs/config/scratchbones-config.js` under `game.trickBones`.
 
+## AI difficulty ranks
+
+Scratchbones AI difficulty is configured under `game.ai` in `docs/config/scratchbones-config.js` and normalized by `main/docs/scratchbones/config/normalizeScratchbonesGameConfig.js`. The normalized field names are `defaultDifficultyRank`, `difficultyRanks`, and `seatDifficultyRanks`.
+
+Supported rank IDs are `easy`, `normal`, and `hard`. If `defaultDifficultyRank` is missing or unknown, the normalizer falls back to `normal`; if a per-seat rank is unknown, that seat falls back to the normalized default rank. Per-seat overrides can target absolute seat IDs such as `"1"`, `"2"`, and `"3"`, or NPC-order aliases such as `"0"`, `"npc:0"`, `"npc0"`, `"ai:0"`, and `"ai0"`.
+
+Rank profiles change turn choice, challenge choice, and betting behavior. `easy` uses the naive playbook, `normal` uses the heuristic playbook, and `hard` uses scored candidate selection. Challenge profile fields set the suspicion threshold and card/read/human/random bias. Betting profile fields adjust confidence, fold floors, raise drive, fold pressure, raise gates, and mistake chance. Delays are controlled separately by `game.timers.aiDecisionDelays` plus `game.ai.decision.delays`, while rank profile random nudge fields affect challenge and betting uncertainty.
+
+Minimal override example:
+
+```js
+game: {
+  ai: {
+    defaultDifficultyRank: 'hard',
+    seatDifficultyRanks: { '2': 'easy' },
+    difficultyRanks: {
+      hard: { challengeThresholdModifier: -0.04 }
+    }
+  }
+}
+```
+
 ## Account and Khymeryyans
 
 Scratchbones stores one browser-local account in `localStorage` under `sb_account_v1`. Account-wide Bronze, cosmetic unlocks, dye ownership, and unlocked trick bones are shared across the account. Playable identities are Khymeryyans: each Khymeryyan has its own name, species/gender appearance, equipped cosmetics, applied dyes, and trick bone loadout. The lobby lets players select, create, duplicate, delete, and edit Khymeryyans before offline or online play.
