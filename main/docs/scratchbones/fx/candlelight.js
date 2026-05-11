@@ -25,10 +25,6 @@
     const THEVMENU_CANDLELIGHT_LAYER_Z_INDEX = Number.isFinite(thevmenuLayerZIndexConfig)
       ? Math.round(thevmenuLayerZIndexConfig)
       : 2147483646;
-    const THEVMENU_OCCLUDER_SELECTORS = Array.isArray(candlelightConfig.thevmenuOccluderSelectors)
-      ? candlelightConfig.thevmenuOccluderSelectors.filter(sel => typeof sel === 'string' && sel.trim())
-      : ['#aiSidebar', '.humanSeatZone', '.turnSpotlight', '.claimCluster'];
-
     // Shadow height parameters (demo occluder convention)
     const CARD_SHADOW_HEIGHT = 36;
     const COIN_SHADOW_HEIGHT = 11;
@@ -56,6 +52,7 @@
     }
 
     let w = 0, h = 0, appRef = null;
+    let appViewportGeometry = null;
     let drawRafId = 0;
     let startRetryTimerId = 0;
     let resizeObserver = null;
@@ -545,22 +542,6 @@
       }
       ctx.restore();
     }
-    function punchOutThevmenuOccluders(ctx) {
-      if (!appRef || !THEVMENU_OCCLUDER_SELECTORS.length) return;
-      const appRect = appRef.getBoundingClientRect();
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-out';
-      for (const selector of THEVMENU_OCCLUDER_SELECTORS) {
-        appRef.querySelectorAll(selector).forEach((el) => {
-          const r = el.getBoundingClientRect();
-          const x = r.left - appRect.left;
-          const y = r.top - appRect.top;
-          if (r.width <= 0 || r.height <= 0) return;
-          ctx.fillRect(x, y, r.width, r.height);
-        });
-      }
-      ctx.restore();
-    }
     function drawImmuneDebugOverlay(ctx) {
       if (!DEBUG_IMMUNE_MASKS || !cachedImmune.length) return;
       ctx.save();
@@ -595,8 +576,16 @@
 
     function resize(app) {
       const rect = app.getBoundingClientRect();
+      appViewportGeometry = {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
       w = Math.max(1, Math.round(rect.width));
       h = Math.max(1, Math.round(rect.height));
+      lastGatherMs = 0;
+      lastBacklitMs = 0;
       const dpr = Math.min(devicePixelRatio || 1, 2);
       for (const cv of [shadowCanvas, darkCanvas, glowCanvas, thevmenuCandlelightCanvas]) {
         cv.width  = w * dpr;
@@ -615,8 +604,26 @@
       syncThevmenuLayerGeometry(app);
     }
 
-    function syncThevmenuLayerGeometry(app) {
+    function hasAppViewportGeometryChanged(rect) {
+      if (!appViewportGeometry) return true;
+      return Math.abs(rect.left - appViewportGeometry.left) >= 0.5
+        || Math.abs(rect.top - appViewportGeometry.top) >= 0.5
+        || Math.abs(rect.width - appViewportGeometry.width) >= 0.5
+        || Math.abs(rect.height - appViewportGeometry.height) >= 0.5;
+    }
+
+    function syncCanvasGeometryToApp(app) {
+      if (!app) return;
       const rect = app.getBoundingClientRect();
+      if (hasAppViewportGeometryChanged(rect)) resize(app);
+      else syncThevmenuLayerGeometryFromRect(rect);
+    }
+
+    function syncThevmenuLayerGeometry(app) {
+      syncThevmenuLayerGeometryFromRect(app.getBoundingClientRect());
+    }
+
+    function syncThevmenuLayerGeometryFromRect(rect) {
       thevmenuCandlelightCanvas.style.left = `${rect.left}px`;
       thevmenuCandlelightCanvas.style.top = `${rect.top}px`;
       thevmenuCandlelightCanvas.style.width = `${rect.width}px`;
@@ -743,7 +750,9 @@
     function draw(time) {
       if (!runLoopEnabled) return;
       try {
-        if (!w || !h || !appRef) return;
+        if (!appRef) return;
+        syncCanvasGeometryToApp(appRef);
+        if (!w || !h) return;
 
         // Scale radius to match the current #app height vs reference
         const baseRadius = RADIUS_REF * (h / APP_REF_H);
@@ -853,7 +862,6 @@
 
         thevmenuGlowCtx.clearRect(0, 0, w, h);
         thevmenuGlowCtx.drawImage(glowCanvas, 0, 0);
-        punchOutThevmenuOccluders(thevmenuGlowCtx);
 
         // ── Lerp clone lighting ─────────────────────────────────────────────────
         // Clones on document.body get a CSS filter that approximates their position
@@ -893,6 +901,7 @@
         appMutationObserver = null;
       }
       appRef = null;
+      appViewportGeometry = null;
     }
 
     function handleVisibilityChange() {

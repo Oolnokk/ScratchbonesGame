@@ -94,3 +94,12 @@ Use this as the first stop to find the worst offenders before drilling into raw 
 The core tradeoff remains: DOM reparenting can still be semantically lossy for context-dependent layout. Reliability in this test path now comes from explicit placement-mode selection plus deterministic dual-mode export capture.
 
 Promoted nodes are re-anchored inside their fixed portal (`position:absolute; left/top:0`), and eligible normalized boxes fill the portal (`width/height:100%`) so portal geometry remains the placement source for those elements.
+
+## 2026-05-11 candlelight layer follow-up
+
+### Variable path traced
+1. `docs/config/scratchbones-config.js` defines two candlelight sources under `layout.lighting.candlelight.sources`; both are consumed by `initCandleLight()` in `fx/candlelight.js` and rendered into the shared glow work canvas.
+2. The normal in-app candlelight canvases (`candleShadowCanvas`, `candleDarknessCanvas`, `candleGlowCanvas`) are appended inside `#app`, while `thevmenuCandlelightLayer` is intentionally appended under `document.body` so it can sit above promoted layer-manager UI.
+3. `#app` is positioned by authored layout through a CSS transform, so its viewport-space `getBoundingClientRect()` can change on rotation even when a `ResizeObserver` does not report a new untransformed content size.
+4. The body-hosted `thevmenuCandlelightLayer` therefore must poll the current `#app` viewport rect before drawing. If left/top/width/height changed, candlelight resizes its drawing buffers and restamps the fixed canvas to the live app rect.
+5. The body-hosted layer no longer punches out `#aiSidebar`, `.humanSeatZone`, `.turnSpotlight`, or `.claimCluster`; those destination-out masks were the source of the visible element-shaped cutouts above the candlelight layer and are not needed now that promoted UI already owns its stacking order.
