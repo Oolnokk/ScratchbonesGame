@@ -172,23 +172,41 @@ export function createWobblyOutlineRenderer() {
     wobble = 1.3,
     step = 12,
     seed = 1,
+    outset = 0,
   } = {}) {
     const canvas = ensureOutlineCanvas(target, 'ui');
     if (!canvas) return;
-    const width = Math.max(1, Math.round(target.clientWidth));
-    const height = Math.max(1, Math.round(target.clientHeight));
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
+    const elWidth  = Math.max(1, Math.round(target.clientWidth));
+    const elHeight = Math.max(1, Math.round(target.clientHeight));
+    // Padding extends the canvas outside the element so the stroke (and its
+    // half-width) is fully visible even when the outline centre is beyond the
+    // element edge.  `outset` moves the outline centre outward; `lineWidth`
+    // ensures the outer half of the stroke is never clipped.
+    const padding  = Math.ceil(outset + lineWidth);
+    const canvasW  = elWidth  + 2 * padding;
+    const canvasH  = elHeight + 2 * padding;
+    // Overwrite the default "inset:0 / 100%" sizing so the canvas extends
+    // past the element boundary.
+    canvas.style.inset  = '';
+    canvas.style.left   = `-${padding}px`;
+    canvas.style.top    = `-${padding}px`;
+    canvas.style.width  = `${canvasW}px`;
+    canvas.style.height = `${canvasH}px`;
+    if (canvas.width !== canvasW || canvas.height !== canvasH) {
+      canvas.width  = canvasW;
+      canvas.height = canvasH;
     }
     const ctx = getCanvas2dContext(canvas);
     if (!ctx) return;
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, canvasW, canvasH);
     ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    const path = getWobblyRectPath({ width, height, inset: lineWidth * 0.65, step, wobble, seed });
+    ctx.lineWidth   = lineWidth;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    // With padding the element's edge sits at `padding` inside the canvas.
+    // Drawing the path at inset = lineWidth places the stroke centre
+    // `outset` pixels outside the element edge.
+    const path = getWobblyRectPath({ width: canvasW, height: canvasH, inset: lineWidth, step, wobble, seed });
     drawWobblyStroke(ctx, path);
   }
 

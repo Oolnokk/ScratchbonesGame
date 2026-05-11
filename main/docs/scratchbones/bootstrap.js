@@ -5620,35 +5620,35 @@ import { createTutorial } from './tutorial.js';
       uiTargets.forEach((element) => {
         const styleId = String(element.getAttribute('data-ui-wobbly-outline') || '');
         if (styleId === 'emoji-reaction-btn') {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 2.1, step: 10, wobble: 1.1, seed: 13 });
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 5.3, step: 18, wobble: 1.1, seed: 13, outset: 5 });
           return;
         }
         if (styleId) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 2.6, step: 14, wobble: 1.35, seed: 29 });
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.5, step: 25, wobble: 1.35, seed: 29, outset: 5 });
           return;
         }
         if (element.classList.contains('topbar')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 2.7, step: 14, wobble: 1.35, seed: 47 });
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.8, step: 25, wobble: 1.35, seed: 47, outset: 5 });
           return;
         }
         if (element.classList.contains('aiSeat')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 2.5, step: 13, wobble: 1.25, seed: 53 });
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.3, step: 23, wobble: 1.25, seed: 53, outset: 5 });
           return;
         }
         if (element.classList.contains('humanSeatCard')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 2.8, step: 14, wobble: 1.35, seed: 59 });
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.0, step: 25, wobble: 1.35, seed: 59, outset: 5 });
           return;
         }
         if (element.classList.contains('turnSpotlight')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 2.5, step: 13, wobble: 1.3, seed: 61 });
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.3, step: 23, wobble: 1.3, seed: 61, outset: 5 });
           return;
         }
         if (element.classList.contains('handWrap')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 2.6, step: 14, wobble: 1.3, seed: 67 });
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.5, step: 25, wobble: 1.3, seed: 67, outset: 5 });
           return;
         }
         if (element.classList.contains('eventLog')) {
-          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 2.5, step: 13, wobble: 1.25, seed: 71 });
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 6.3, step: 23, wobble: 1.25, seed: 71, outset: 5 });
         }
       });
       const emojiTargets = emojiElements || app.querySelectorAll('.emojiReactionGlyph, .emojiFxGlyph, .shockGlyph');
