@@ -269,6 +269,29 @@ function normalizeOneOf(value, fallback, allowedValues) {
   return allowedValues.includes(normalized) ? normalized : fallback;
 }
 
+function normalizeStringList(value, fallback = []) {
+  const source = Array.isArray(value) ? value : fallback;
+  return source.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim());
+}
+
+const DEFAULT_TYPOGRAPHY_BASELINE_FIELDS = ['font-size', 'line-height', 'font-family', 'letter-spacing', 'font-weight'];
+const DEFAULT_PROMOTED_TEXT_METRIC_FIELDS = [
+  'font-size',
+  'line-height',
+  'font-family',
+  'font-weight',
+  'letter-spacing',
+  'text-align',
+  'white-space',
+  'max-width',
+  'box-sizing',
+  'padding-top',
+  'padding-right',
+  'padding-bottom',
+  'padding-left',
+];
+const DEFAULT_PROMOTED_TEXT_METRIC_ASSIGNMENT_IDS = ['ui-text-over-lighting'];
+
 const DEFAULT_LAYER_MANAGER_CONFIG = {
   enabled: true,
   hostZIndex: 45,
@@ -298,7 +321,9 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
   ],
   disablePreservePromotionTransformSelectors: [],
   typographyBaselineRootSelector: '#app',
-  typographyBaselineFields: ['font-size', 'line-height', 'font-family', 'letter-spacing', 'font-weight'],
+  typographyBaselineFields: DEFAULT_TYPOGRAPHY_BASELINE_FIELDS,
+  promotedTextMetricFields: DEFAULT_PROMOTED_TEXT_METRIC_FIELDS,
+  promotedTextMetricAssignmentIds: DEFAULT_PROMOTED_TEXT_METRIC_ASSIGNMENT_IDS,
   placementMode: 'authored-coordinate',
   placementCoordinateSpace: 'app',
   roundToPixels: false,
@@ -317,6 +342,17 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
         '.turnSpotlightNameBar',
         '.cin-name',
         '.cin-action-burst',
+        '.challengePromptInfo',
+        '.stakeVisualHeader',
+        '.stakeSlotLabel',
+        '.stakeSlotValue',
+        '.bettingStatusTitle',
+        '.bettingStatusLine',
+        '.claimAvatarNameTag',
+        '.claimAvatarCinRole',
+        '.claimAvatarCinName',
+        '.claimAvatarCinTags',
+        '.claimClusterTextAnchor',
         '.seatHandPreview',
         '.seatHandCard',
         '.seatHandCard img',
@@ -356,9 +392,9 @@ const DEFAULT_LAYER_MANAGER_CONFIG = {
         '.claimCountBoxRight',
         '.claimClusterTextAnchor',
         '.controls',
-        '.challengePromptPane',
         '.eventLog',
         '.stakeVisualPanel',
+        '.challengePromptPane',
         '.challengeBar',
         '.bettingStatusAnchor',
         '.leftContributionAnchor',
@@ -716,6 +752,10 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
           placementCoordinateSpace,
           roundToPixels: rawLayerManager.roundToPixels === true || rawLayerManager.screenSpaceRoundToPixels === true,
           portalScaleStrategy: portalScaleStrategy === 'none' ? 'dimensions' : portalScaleStrategy,
+          typographyBaselineFields: normalizeStringList(rawLayerManager.typographyBaselineFields, DEFAULT_LAYER_MANAGER_CONFIG.typographyBaselineFields),
+          promotedTextMetricFields: normalizeStringList(rawLayerManager.promotedTextMetricFields, DEFAULT_LAYER_MANAGER_CONFIG.promotedTextMetricFields),
+          promotedTextMetricAssignmentIds: normalizeStringList(rawLayerManager.promotedTextMetricAssignmentIds, DEFAULT_LAYER_MANAGER_CONFIG.promotedTextMetricAssignmentIds),
+          assignments: Array.isArray(rawLayerManager.assignments) ? rawLayerManager.assignments : DEFAULT_LAYER_MANAGER_CONFIG.assignments,
         };
       })(),
     },

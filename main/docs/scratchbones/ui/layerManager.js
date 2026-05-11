@@ -8,6 +8,10 @@ function normalizeStringList(value) {
   return value.filter((entry) => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim());
 }
 
+function normalizeAssignmentIdList(value) {
+  return new Set(normalizeStringList(value).map((entry) => entry.toLowerCase()));
+}
+
 function selectorMatchesElement(element, selectors) {
   if (!element || !(element instanceof Element) || !Array.isArray(selectors) || !selectors.length) return false;
   return selectors.some((selector) => {
@@ -161,20 +165,22 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const typographyBaselineRootSelector = typeof managerConfig.typographyBaselineRootSelector === 'string' && managerConfig.typographyBaselineRootSelector.trim()
     ? managerConfig.typographyBaselineRootSelector.trim()
     : '#app';
-  const typographyBaselineFields = normalizeStringList(managerConfig.typographyBaselineFields).length
-    ? normalizeStringList(managerConfig.typographyBaselineFields)
-    : ['font-size', 'line-height', 'font-family', 'letter-spacing', 'font-weight'];
+  const typographyBaselineFields = normalizeStringList(managerConfig.typographyBaselineFields);
+  const promotedTextMetricFields = normalizeStringList(managerConfig.promotedTextMetricFields);
+  const promotedTextMetricAssignmentIds = normalizeAssignmentIdList(managerConfig.promotedTextMetricAssignmentIds);
   const buildAssignmentList = () => assignments
     .map((entry, index) => {
       const selectors = normalizeSelectorList(entry?.selectors);
       if (!selectors.length) return null;
+      const id = String(entry?.id || `assignment-${index}`);
       return {
-        id: String(entry?.id || `assignment-${index}`),
+        id,
         layer: String(entry?.layer || 'overlay'),
         selectors,
         preserveSpace: entry?.preserveSpace !== false,
         keepOriginal: entry?.keepOriginal === true,
         promotedOpacity: Number.isFinite(Number(entry?.promotedOpacity)) ? Math.min(1, Math.max(0, Number(entry.promotedOpacity))) : 1,
+        capturePromotedTextMetrics: entry?.capturePromotedTextMetrics === true || promotedTextMetricAssignmentIds.has(id.toLowerCase()),
       };
     })
     .filter(Boolean);
@@ -253,13 +259,27 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     return baseline;
   }
 
+  function captureTextMetricSnapshot(element, fields = promotedTextMetricFields) {
+    if (!element || !fields.length) return null;
+    const computed = window.getComputedStyle(element);
+    const snapshot = {};
+    for (const field of fields) {
+      const value = computed.getPropertyValue(field);
+      if (value) snapshot[field] = value;
+    }
+    return Object.keys(snapshot).length ? snapshot : null;
+  }
+
+  function applyStyleSnapshot(target, snapshot) {
+    if (!target || !snapshot) return;
+    for (const [field, value] of Object.entries(snapshot)) {
+      if (value) target.style.setProperty(field, value);
+    }
+  }
+
   function applyTypographyBaselineToRoot(root, app) {
     if (!root) return;
-    const baseline = captureTypographyBaseline(app);
-    if (!baseline) return;
-    for (const [field, value] of Object.entries(baseline)) {
-      if (value) root.style.setProperty(field, value);
-    }
+    applyStyleSnapshot(root, captureTypographyBaseline(app));
   }
 
   function clearPromoted() {
@@ -359,6 +379,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     const layoutHeight = element.offsetHeight || element.clientHeight || rect.height;
     if (layoutWidth < 1 || layoutHeight < 1) return false;
     const computed = window.getComputedStyle(element);
+    const textMetricSnapshot = assignment.capturePromotedTextMetrics ? captureTextMetricSnapshot(element) : null;
     const originalElementStyle = snapshotManagedElementStyle(element);
     const usePlaceholder = !assignment.keepOriginal;
     let placeholder = null;
@@ -395,6 +416,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     layerRoot.appendChild(portal);
     const promotedNode = assignment.keepOriginal ? element.cloneNode(true) : element;
     portal.appendChild(promotedNode);
+    applyStyleSnapshot(promotedNode, textMetricSnapshot);
 
     const isTransformSensitive = isTransformSensitivePromotionTarget(promotedNode);
     const isNormalizeBoxDenied = selectorMatchesElement(element, normalizeBoxDenylistSelectors);
@@ -466,6 +488,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       placementMode,
       placementCoordinateSpace,
       portalScaleStrategy,
+      appliedTextMetricFields: textMetricSnapshot ? Object.keys(textMetricSnapshot) : [],
     });
     return true;
   }
