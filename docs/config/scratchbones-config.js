@@ -1424,7 +1424,10 @@ window.SCRATCHBONES_CONFIG = {
             ]
           }
         },
-        "placementMode": "screen-space",
+        "placementMode": "authored-coordinate",
+        "placementCoordinateSpace": "app",
+        "roundToPixels": false,
+        "portalScaleStrategy": "portal-transform",
         "screenSpaceUseFixed": true,
         "screenSpaceRoundToPixels": false,
         "promoteByRootSelectors": [

@@ -2,7 +2,7 @@ export function createLayoutDiagnosticsState() {
   return {
     fitStages: {},
     overlap: { overlaps: [], stage: 'none', snapshot: [] },
-    renderedScreenSpaceDelta: { modeA: null, modeB: null, deltas: [] },
+    renderedScreenSpaceDelta: { modeA: null, modeB: null, deltas: [], viewportCases: [] },
     renderedScreenSpaceTopDrift: [],
     renderedScreenSpaceGroupDrift: [],
     renderedScreenSpaceParity: { policy: null, thresholds: {}, summary: { pass: true, failing: [], warnings: [] } },
@@ -33,10 +33,35 @@ function rectDelta(aRect, bRect) {
   return delta;
 }
 
+function collectRenderedSnapshotMeta(snapshot) {
+  const meta = snapshot?.__meta && typeof snapshot.__meta === 'object' ? snapshot.__meta : {};
+  return {
+    viewport: meta.viewport || null,
+    visualViewport: meta.visualViewport || null,
+    appRect: meta.appRect || null,
+    authoredScale: meta.authoredScale || null,
+    devicePixelRatio: toFiniteNumber(meta.devicePixelRatio),
+    pageZoomEstimate: toFiniteNumber(meta.pageZoomEstimate),
+  };
+}
+
+export function buildViewportCases(renderedScreenSpace, modeA = 'original', modeB = 'layered') {
+  const metaA = collectRenderedSnapshotMeta(renderedScreenSpace?.[modeA]);
+  const metaB = collectRenderedSnapshotMeta(renderedScreenSpace?.[modeB]);
+  return [
+    { mode: modeA, ...metaA },
+    { mode: modeB, ...metaB },
+  ];
+}
+
 export function compareRenderedScreenSpaceModes(renderedScreenSpace, modeA = 'original', modeB = 'layered') {
   const aEntries = renderedScreenSpace?.[modeA] || {};
   const bEntries = renderedScreenSpace?.[modeB] || {};
-  const keys = Array.from(new Set([...Object.keys(aEntries), ...Object.keys(bEntries)])).sort();
+  const metaA = collectRenderedSnapshotMeta(aEntries);
+  const metaB = collectRenderedSnapshotMeta(bEntries);
+  const keys = Array.from(new Set([...Object.keys(aEntries), ...Object.keys(bEntries)]))
+    .filter((key) => !String(key).startsWith('__'))
+    .sort();
   return keys.map((key) => {
     const a = aEntries[key] || null;
     const b = bEntries[key] || null;
@@ -51,6 +76,8 @@ export function compareRenderedScreenSpaceModes(renderedScreenSpace, modeA = 'or
       rectA: a?.rect || null,
       rectB: b?.rect || null,
       rectDelta: rectDelta(a?.rect, b?.rect),
+      viewportCaseA: metaA,
+      viewportCaseB: metaB,
     };
   });
 }
@@ -330,6 +357,7 @@ export function updateLayoutDiagnosticsState(layoutDiagnostics, layoutResult) {
     layoutDiagnostics.renderedScreenSpaceDelta = {
       modeA,
       modeB,
+      viewportCases: buildViewportCases(layoutResult.renderedScreenSpace, modeA, modeB),
       deltas,
     };
     layoutDiagnostics.renderedScreenSpaceTopDrift = summarizeRenderedScreenSpaceDrift(deltas, driftSummary);
@@ -343,7 +371,7 @@ export function resetLayoutDiagnosticsState(layoutDiagnostics) {
   if (!layoutDiagnostics) return layoutDiagnostics;
   layoutDiagnostics.fitStages = {};
   layoutDiagnostics.overlap = { overlaps: [], stage: 'none', snapshot: [] };
-  layoutDiagnostics.renderedScreenSpaceDelta = { modeA: null, modeB: null, deltas: [] };
+  layoutDiagnostics.renderedScreenSpaceDelta = { modeA: null, modeB: null, viewportCases: [], deltas: [] };
   layoutDiagnostics.renderedScreenSpaceTopDrift = [];
   layoutDiagnostics.renderedScreenSpaceGroupDrift = [];
   layoutDiagnostics.renderedScreenSpaceParity = { policy: null, thresholds: {}, summary: { pass: true, failing: [], warnings: [] } };
