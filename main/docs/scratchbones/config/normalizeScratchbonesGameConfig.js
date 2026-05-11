@@ -6,7 +6,7 @@ const DEFAULT_AUTHORED_BOXES = {
   log: { x: 7, y: 680, width: 477, height: 220 },
   turnSpotlight: { x: 1122, y: 12, width: 230, height: 200 },
   claimCluster: { x: 187, y: 290, width: 1037, height: 275 },
-  challengePrompt: { x: 960, y: 760, width: 280, height: 140 },
+  challengePrompt: { x: 960, y: 701, width: 280, height: 187 },
 };
 
 const DEFAULT_PUNISH_BONE_SPIN_CONFIG = {
@@ -41,8 +41,11 @@ const DEFAULT_CSS_ROOT_VARS = {
   '--layout-sidebar-width': '280px',
   '--layout-app-gap': '8px',
   '--layout-app-padding': '8px',
-  '--layout-seat-avatar-size': '132px',
-  '--layout-human-seat-avatar-size': '204px',
+  '--layout-seat-avatar-size': '96px',
+  '--layout-human-seat-avatar-size': '150px',
+  '--layout-player-seat-overflow-y': 'hidden',
+  '--layout-player-seat-overflow-x': 'hidden',
+  '--layout-player-seat-card-overflow': 'hidden',
   '--layout-cinematic-avatar-size': '132px',
   '--layout-hand-card-min-width': '74px',
   '--layout-hand-card-max-width': '104px',
