@@ -37,6 +37,51 @@ import { createTutorial } from './tutorial.js';
     const TABLE_LOCATION = String(SCRATCHBONES_GAME.uiText?.tableLocation || '').trim();
     const GAME_TITLE = `SCRATCHBONES! ${TABLE_LOCATION}`;
     if (typeof document !== 'undefined') document.title = GAME_TITLE;
+    function installHandPanelLayoutOverrides() {
+      if (typeof document === 'undefined' || document.getElementById('scratchbones-hand-panel-layout-overrides')) return;
+      const style = document.createElement('style');
+      style.id = 'scratchbones-hand-panel-layout-overrides';
+      style.textContent = `
+        .handWrap {
+          grid-template-rows: 1fr;
+          align-items: stretch;
+          position: relative;
+        }
+        .handWrap .handHeader {
+          position: absolute;
+          top: calc(var(--layout-hand-wrap-padding-y) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
+          right: calc(var(--layout-hand-wrap-padding-x) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
+          left: calc(var(--layout-hand-wrap-padding-x) * var(--layout-challenge-gap-scale) * var(--layout-fit-gap-scale));
+          z-index: 20;
+          pointer-events: none;
+        }
+        .handWrap .handRail {
+          align-self: stretch;
+          height: 100%;
+          gap: var(--layout-hand-rail-gap);
+        }
+        .handWrap .handScroll {
+          align-items: center;
+          height: 100%;
+        }
+        .handWrap .handCardSlot {
+          align-self: stretch;
+        }
+        .handWrap .handCardSlot > .card {
+          top: 50%;
+          bottom: auto;
+          transform: translateX(-50%) translateY(-50%);
+        }
+        .handWrap .handCardSlot > .card.selected {
+          transform: translateX(-50%) translateY(calc(-50% - var(--layout-hand-selected-lift)));
+        }
+        .handWrap .cardArt {
+          transform: translateY(var(--layout-hand-card-art-visual-center-offset));
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    installHandPanelLayoutOverrides();
     const RENDERED_SCREEN_SPACE_PARITY = SCRATCHBONES_GAME.layout?.diagnostics?.renderedScreenSpaceParity || {};
     const AUTHORED_BOX_KEY_BY_PROJ_ID = {
       'topbar': 'topbar',
@@ -3942,6 +3987,9 @@ import { createTutorial } from './tutorial.js';
       const handWrapPaddingYpx = clampNumber(Number(layoutSizing.handWrapPaddingYpx) || 8, 0, 32);
       const handWrapPaddingXpx = clampNumber(Number(layoutSizing.handWrapPaddingXpx) || 12, 0, 40);
       const handWrapGapPx = clampNumber(Number(layoutSizing.handWrapGapPx) || 6, 0, 24);
+      const handRailGapPx = clampNumber(numberOrDefault(layoutSizing.handRailGapPx, 8), 0, 32);
+      const handSelectedLiftPx = clampNumber(numberOrDefault(layoutSizing.handSelectedLiftPx, 96), 0, 180);
+      const handCardArtVisualCenterOffsetPx = clampNumber(numberOrDefault(layoutSizing.handCardArtVisualCenterOffsetPx, 4), -32, 32);
       const handCardContainerWidthOffsetPx = clampNumber(numberOrDefault(layoutSizing.handCardContainerWidthOffsetPx, 4), 0, 24);
       const handCardLabelInsetLeftPx = clampNumber(numberOrDefault(layoutSizing.handCardLabelInsetLeftPx, 2), 0, 24);
       const handCardLabelInsetBottomPx = clampNumber(numberOrDefault(layoutSizing.handCardLabelInsetBottomPx, 2), 0, 24);
@@ -4047,6 +4095,9 @@ import { createTutorial } from './tutorial.js';
       setCssVar('--layout-hand-wrap-padding-y', `${handWrapPaddingYpx.toFixed(2)}px`);
       setCssVar('--layout-hand-wrap-padding-x', `${handWrapPaddingXpx.toFixed(2)}px`);
       setCssVar('--layout-hand-wrap-gap', `${handWrapGapPx.toFixed(2)}px`);
+      setCssVar('--layout-hand-rail-gap', `${handRailGapPx.toFixed(2)}px`);
+      setCssVar('--layout-hand-selected-lift', `${handSelectedLiftPx.toFixed(2)}px`);
+      setCssVar('--layout-hand-card-art-visual-center-offset', `${handCardArtVisualCenterOffsetPx.toFixed(2)}px`);
       setCssVar('--layout-hand-card-shell-width-offset', `${handCardContainerWidthOffsetPx.toFixed(2)}px`);
       setCssVar('--layout-hand-card-label-inset-left', `${handCardLabelInsetLeftPx.toFixed(2)}px`);
       setCssVar('--layout-hand-card-label-inset-bottom', `${handCardLabelInsetBottomPx.toFixed(2)}px`);
