@@ -7,6 +7,7 @@ import { initDebugPanelInterceptor } from './debug/panel.js';
 import { initCandleLight } from './fx/candlelight.js';
 import { initTrickBoneGlow } from './fx/trickBoneGlow.js';
 import { createLayerManager } from './ui/layerManager.js';
+import { createWobblyOutlineRenderer } from './ui/wobblyOutline.js';
 import { createTutorial } from './tutorial.js';
 
     initDebugPanelInterceptor();
@@ -30,6 +31,9 @@ import { createTutorial } from './tutorial.js';
     }
     // Most recent config-boundary cleanup: Scratchbones now reads only SCRATCHBONES_CONFIG.game.
     const SCRATCHBONES_GAME = getScratchbonesGameConfig({ rootConfig: scratchbonesRootConfig, reportError: reportScratchbonesConfigError, debugEnabled: DEBUG_ENABLED });
+    const WOBBLY_OUTLINE_RENDERER = createWobblyOutlineRenderer();
+    const EMOJI_OUTLINE_ENABLED = SCRATCHBONES_GAME.portrait?.emotes?.emojiOutlineEnabled !== false;
+    const UI_WOBBLY_OUTLINES_CONFIG = SCRATCHBONES_GAME.uiWobblyOutlines || {};
     const TABLE_LOCATION = String(SCRATCHBONES_GAME.uiText?.tableLocation || '').trim();
     const GAME_TITLE = `SCRATCHBONES! ${TABLE_LOCATION}`;
     if (typeof document !== 'undefined') document.title = GAME_TITLE;
@@ -4633,7 +4637,7 @@ import { createTutorial } from './tutorial.js';
         : [];
       const turnPlayer = state.players[state.currentTurn];
       const renderDeclareControls = () => `
-        <div class="controls fit-target fit-0" data-proj-id="challenge-prompt" style="max-height:none;">
+        <div class="controls fit-target fit-0" data-proj-id="challenge-prompt" data-ui-wobbly-outline="control-panel" style="max-height:none;">
           <div class="controlsRow">
             <label>
               Declare number
@@ -4649,7 +4653,7 @@ import { createTutorial } from './tutorial.js';
         </div>
       `;
       const renderChallengePrompt = () => `
-        <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
+        <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" data-ui-wobbly-outline="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
           <div class="challengeBoxHeader">
             <div class="sectionTitle" style="color:var(--danger);">Challenge window</div>
           </div>
@@ -4662,13 +4666,13 @@ import { createTutorial } from './tutorial.js';
       `;
       const renderTrickActionPrompt = () => {
         if (state.smuggleSelection) return `
-          <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
+          <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" data-ui-wobbly-outline="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
             <div class="sectionTitle" style="color:var(--warning);">Smuggle Bone</div>
             <div class="tiny challengePromptInfo">Choose an AI seat (highlighted white; selected yellow), then confirm.</div>
             <div class="challengePromptBtns"><button id="smuggleOffloadBtn">Offload Bones</button></div>
           </div>`;
         if (state.trapSelection) return `
-          <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
+          <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" data-ui-wobbly-outline="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
             <div class="sectionTitle" style="color:var(--danger);">Trap Bone</div>
             <div class="tiny challengePromptInfo">Select ${state.trapSelection.maxCount} card(s) from your hand, then confirm offload.</div>
             <div class="challengePromptBtns"><button id="trapOffloadBtn">Offload Bones</button></div>
@@ -4711,7 +4715,7 @@ import { createTutorial } from './tutorial.js';
         </div>
       `;
       const renderBettingControls = () => `
-        <div class="controls fit-target fit-0" data-proj-id="controls">
+        <div class="controls fit-target fit-0" data-proj-id="controls" data-ui-wobbly-outline="betting-controls">
           ${renderStakeVisual()}
           <div class="challengeBar">
             ${bettingActorHuman ? `
@@ -5065,6 +5069,7 @@ import { createTutorial } from './tutorial.js';
       syncStationaryCardScreenSpace(app);
       syncClaimClusterCardSizeFromHand(app);
       enforceFitContainerBounds(app);
+      renderWobblyOutlines(app);
       if (state.pendingCinematicBetAction) {
         const actionFx = state.pendingCinematicBetAction;
         state.pendingCinematicBetAction = null;
@@ -5623,9 +5628,95 @@ import { createTutorial } from './tutorial.js';
       const buttonHtml = reactionOrder.map((id) => {
         const reaction = EMOJI_REACTION_CONFIG[id];
         if (!reaction) return '';
-        return `<button type="button" class="emojiReactionBtn" data-emoji-reaction="${reaction.id}" title="${escapeHtml(reaction.label)}" aria-label="${escapeHtml(reaction.label)}"><span class="emojiReactionGlyph" style="--emoji-mask-src:url('${escapeHtml(reaction.src)}');--emoji-tint:${escapeHtml(reaction.tint)};"></span></button>`;
+        return `<button type="button" class="emojiReactionBtn" data-ui-wobbly-outline="emoji-reaction-btn" data-emoji-reaction="${reaction.id}" title="${escapeHtml(reaction.label)}" aria-label="${escapeHtml(reaction.label)}"><span class="emojiReactionGlyph" style="--emoji-mask-src:url('${escapeHtml(reaction.src)}');--emoji-tint:${escapeHtml(reaction.tint)};"></span></button>`;
       }).join('');
-      return `<div class="emojiReactionPanel" data-proj-id="emoji-panel" aria-label="Emoji reactions">${buttonHtml}</div>`;
+      return `<div class="emojiReactionPanel" data-proj-id="emoji-panel" data-ui-wobbly-outline="emoji-reaction-panel" aria-label="Emoji reactions">${buttonHtml}</div>`;
+    }
+    function matchesAnySelector(element, selectors) {
+      if (!(element instanceof Element) || !Array.isArray(selectors)) return false;
+      return selectors.some((selector) => {
+        try { return selector && element.matches(selector); }
+        catch (_error) { return false; }
+      });
+    }
+    function backgroundAlpha(backgroundColor) {
+      const value = String(backgroundColor || '').trim().toLowerCase();
+      if (!value || value === 'transparent') return 0;
+      if (value.startsWith('rgba(')) {
+        const parts = value.slice(5, -1).split(',');
+        return Number(parts[3]) || 0;
+      }
+      if (value.startsWith('rgb(') || value.startsWith('#') || /^[a-z]+$/.test(value)) return 1;
+      return 0;
+    }
+    function hasColoredBackground(element, style = window.getComputedStyle(element)) {
+      if (!(element instanceof HTMLElement)) return false;
+      if (matchesAnySelector(element, UI_WOBBLY_OUTLINES_CONFIG.excludedColoredBackgroundSelectors)) return false;
+      const alpha = backgroundAlpha(style.backgroundColor);
+      const image = String(style.backgroundImage || '').trim().toLowerCase();
+      return alpha > (Number(UI_WOBBLY_OUTLINES_CONFIG.minBackgroundAlpha) || 0) || (image && image !== 'none');
+    }
+    function shouldRenderUiOutline(element) {
+      if (!(element instanceof HTMLElement)) return false;
+      if (!element.isConnected) return false;
+      const style = window.getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+      if (Number(style.opacity) <= 0.01) return false;
+      if (!hasColoredBackground(element, style)) return false;
+      const rect = element.getBoundingClientRect();
+      return rect.width >= 2 && rect.height >= 2;
+    }
+    function collectUiWobblyOutlineTargets(app) {
+      const merged = new Set();
+      app.querySelectorAll('[data-ui-wobbly-outline]').forEach((element) => merged.add(element));
+      if (UI_WOBBLY_OUTLINES_CONFIG.autoColoredBackgrounds !== false) {
+        const configuredSelectors = UI_WOBBLY_OUTLINES_CONFIG.coloredBackgroundSelectors || [];
+        configuredSelectors.forEach((selector) => {
+          try { app.querySelectorAll(selector).forEach((element) => merged.add(element)); }
+          catch (_error) {}
+        });
+      }
+      return merged;
+    }
+    function resolveUiWobblyOutlineStyle(element) {
+      const defaultStyle = UI_WOBBLY_OUTLINES_CONFIG.defaultStyle || {};
+      const rules = Array.isArray(UI_WOBBLY_OUTLINES_CONFIG.styleRules) ? UI_WOBBLY_OUTLINES_CONFIG.styleRules : [];
+      const matchedRule = rules.find((rule) => rule && matchesAnySelector(element, [rule.selector]));
+      return { ...defaultStyle, ...(matchedRule?.style || {}) };
+    }
+    function renderWobblyOutlines(app, { uiElements = null, emojiElements = null } = {}) {
+      if (!app) return;
+      const uiTargets = (uiElements !== null && uiElements !== undefined) ? uiElements : collectUiWobblyOutlineTargets(app);
+      if (UI_WOBBLY_OUTLINES_CONFIG.enabled !== false) {
+        uiTargets.forEach((element) => {
+          if (!shouldRenderUiOutline(element)) {
+            WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui');
+            return;
+          }
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, resolveUiWobblyOutlineStyle(element));
+        });
+      } else {
+        uiTargets.forEach((element) => WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui'));
+      }
+      const emojiTargets = (emojiElements !== null && emojiElements !== undefined)
+        ? emojiElements
+        : app.querySelectorAll('.emojiReactionGlyph, .emojiFxGlyph, .shockGlyph');
+      if (EMOJI_OUTLINE_ENABLED) {
+        emojiTargets.forEach((element) => {
+          if (!shouldRenderUiOutline(element)) {
+            WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'emoji');
+            return;
+          }
+          const isShockGlyph = element.classList.contains('shockGlyph');
+          WOBBLY_OUTLINE_RENDERER.renderEmojiOutline(element, {
+            lineWidth: isShockGlyph ? 2.3 : 2.6,
+            wobble: isShockGlyph ? 1.2 : 0.95,
+            seed: isShockGlyph ? 43 : 31,
+          });
+        });
+      } else {
+        emojiTargets.forEach((element) => WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'emoji'));
+      }
     }
     // Creates or returns the FX layer attached to the given anchor element.
     function ensureEmojiReactionLayer(anchorEl) {
@@ -5755,6 +5846,7 @@ import { createTutorial } from './tutorial.js';
           container.appendChild(particle);
         });
         layer.appendChild(container);
+        renderWobblyOutlines(app, { uiElements: [], emojiElements: container.querySelectorAll('.shockGlyph') });
         setTimeout(() => container.remove(), reaction.durationMs);
       } else if (reaction.coinSrcs) {
         // Gloat: cloud spawns 110px above the anchor centre (shifted 30px down from original 140px).
@@ -5809,6 +5901,7 @@ import { createTutorial } from './tutorial.js';
         fx.style.setProperty('--emoji-drift-dir', String(driftDir));
         fx.innerHTML = '<span class="emojiFxGlyph"></span>';
         layer.appendChild(fx);
+        renderWobblyOutlines(app, { uiElements: [], emojiElements: fx.querySelectorAll('.emojiFxGlyph') });
         setTimeout(() => fx.remove(), reaction.durationMs);
       }
       window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));
@@ -5918,9 +6011,11 @@ import { createTutorial } from './tutorial.js';
       fx.style.left = `${viewportX}px`;
       fx.style.top = `${viewportY}px`;
       const maxLength = Math.max(1, Math.floor(Number(CHAT_CONFIG.bubbleMaxLength)));
+      const durationMs = Math.max(40, Number(CHAT_CONFIG.bubbleDurationMs));
+      fx.style.animationDuration = `${durationMs}ms`;
       fx.textContent = label.length > maxLength ? label.slice(0, maxLength) + '…' : label;
       overlay.appendChild(fx);
-      setTimeout(() => fx.remove(), Math.max(40, Number(CHAT_CONFIG.bubbleDurationMs)));
+      setTimeout(() => fx.remove(), durationMs);
     }
     function triggerChatSpeechAnimation(seatId) {
       window.portraitBreathingComposer?.triggerEmote('alarmed', String(seatId));

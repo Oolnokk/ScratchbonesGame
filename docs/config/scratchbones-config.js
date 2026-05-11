@@ -2203,6 +2203,58 @@ window.SCRATCHBONES_CONFIG = {
       "letStandButton": "Let it stand",
       "tableLocation": "Wandering Moon Underclub --- Kumapirra,  Yama Riverlands, Tanka"
     },
+
+    "uiWobblyOutlines": {
+      "enabled": true,
+      "autoColoredBackgrounds": true,
+      "minBackgroundAlpha": 0.02,
+      "coloredBackgroundSelectors": [
+        ".topbar",
+        ".chip",
+        ".turnSpotlight",
+        ".turnSpotlightAvatar",
+        ".turnSpotlightNameBar",
+        ".aiSeat",
+        ".humanSeatCard",
+        ".humanSeatCard .seatAvatarBox",
+        ".controls",
+        ".controls select",
+        ".controls button",
+        ".handWrap",
+        ".handArrow",
+        ".cardLabel",
+        ".cardGlyph",
+        ".eventLog",
+        ".logItem",
+        ".chatComposerInput",
+        ".chatSendBtn",
+        ".stakeTierBtn",
+        ".challengePromptPane",
+        ".timerTrack",
+        ".timerFill",
+        "details.debug",
+        ".cin-result",
+        ".emojiReactionPanel",
+        ".emojiReactionBtn"
+      ],
+      "excludedColoredBackgroundSelectors": [
+        "canvas",
+        "img",
+        "svg",
+        "[data-wobbly-outline]",
+        ".emojiReactionGlyph",
+        ".emojiFxGlyph",
+        ".shockGlyph"
+      ],
+      "defaultStyle": { "color": "#000000", "lineWidth": 7.2, "step": 23, "wobble": 1.25, "seed": 101, "outset": 4 },
+      "styleRules": [
+        { "selector": "[data-ui-wobbly-outline=\"challenge-prompt\"], [data-ui-wobbly-outline=\"control-panel\"], [data-ui-wobbly-outline=\"betting-controls\"]", "style": { "lineWidth": 7.4, "step": 25, "wobble": 1.35, "seed": 29, "outset": 4 } },
+        { "selector": ".humanSeatCard", "style": { "lineWidth": 8, "step": 25, "wobble": 1.35, "seed": 59, "outset": 4 } },
+        { "selector": ".eventLog", "style": { "lineWidth": 7.2, "step": 23, "wobble": 1.25, "seed": 71, "outset": 4 } },
+        { "selector": ".aiSeat, .topbar, .controls, .challengePromptPane", "style": { "lineWidth": 7.4, "step": 25, "wobble": 1.35, "seed": 83, "outset": 4 } },
+        { "selector": "button, select, .chip, .stakeTierBtn, .logItem, .cardLabel, .cardGlyph, .handArrow, .chatComposerInput", "style": { "lineWidth": 3.2, "step": 12, "wobble": 0.95, "seed": 107, "outset": 2 } }
+      ]
+    },
     "assets": {
       "cards": {
         "preload": {
