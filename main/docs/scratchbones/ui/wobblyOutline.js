@@ -188,12 +188,14 @@ export function createWobblyOutlineRenderer() {
     const elWidth  = Math.max(1, Math.round(target.clientWidth));
     const elHeight = Math.max(1, Math.round(target.clientHeight));
     const targetStyle = getComputedStyle(target);
+    const containment = String(targetStyle.contain || '').toLowerCase().split(/\s+/);
     const clipsOutset = [targetStyle.overflow, targetStyle.overflowX, targetStyle.overflowY]
-      .some((value) => value && value !== 'visible');
+      .some((value) => value && value !== 'visible')
+      || containment.some((value) => value === 'paint' || value === 'strict' || value === 'content');
     // Padding normally extends the canvas outside the element so the stroke
     // can sit beyond the element edge. Elements with clipped/scroll overflow
-    // cannot show an outside child canvas, so those draw an inset outline
-    // instead of silently clipping the circle away.
+    // or paint containment cannot show an outside child canvas, so those draw
+    // an inset outline instead of silently clipping the circle away.
     const padding  = clipsOutset ? 0 : Math.ceil(outset + lineWidth);
     const pathInset = clipsOutset ? Math.max(lineWidth / 2, 1) : lineWidth;
     const canvasW  = elWidth  + 2 * padding;
