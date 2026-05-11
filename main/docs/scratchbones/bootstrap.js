@@ -7,6 +7,7 @@ import { initDebugPanelInterceptor } from './debug/panel.js';
 import { initCandleLight } from './fx/candlelight.js';
 import { initTrickBoneGlow } from './fx/trickBoneGlow.js';
 import { createLayerManager } from './ui/layerManager.js';
+import { createWobblyOutlineRenderer } from './ui/wobblyOutline.js';
 import { createTutorial } from './tutorial.js';
 
     initDebugPanelInterceptor();
@@ -30,6 +31,8 @@ import { createTutorial } from './tutorial.js';
     }
     // Most recent config-boundary cleanup: Scratchbones now reads only SCRATCHBONES_CONFIG.game.
     const SCRATCHBONES_GAME = getScratchbonesGameConfig({ rootConfig: scratchbonesRootConfig, reportError: reportScratchbonesConfigError, debugEnabled: DEBUG_ENABLED });
+    const WOBBLY_OUTLINE_RENDERER = createWobblyOutlineRenderer();
+    const EMOJI_OUTLINE_ENABLED = SCRATCHBONES_GAME.portrait?.emotes?.emojiOutlineEnabled !== false;
     const TABLE_LOCATION = String(SCRATCHBONES_GAME.uiText?.tableLocation || '').trim();
     const GAME_TITLE = `SCRATCHBONES! ${TABLE_LOCATION}`;
     if (typeof document !== 'undefined') document.title = GAME_TITLE;
@@ -4625,7 +4628,7 @@ import { createTutorial } from './tutorial.js';
         : [];
       const turnPlayer = state.players[state.currentTurn];
       const renderDeclareControls = () => `
-        <div class="controls fit-target fit-0" data-proj-id="challenge-prompt" style="max-height:none;">
+        <div class="controls fit-target fit-0" data-proj-id="challenge-prompt" data-ui-wobbly-outline="control-panel" style="max-height:none;">
           <div class="controlsRow">
             <label>
               Declare number
@@ -4641,7 +4644,7 @@ import { createTutorial } from './tutorial.js';
         </div>
       `;
       const renderChallengePrompt = () => `
-        <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
+        <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" data-ui-wobbly-outline="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
           <div class="challengeBoxHeader">
             <div class="sectionTitle" style="color:var(--danger);">Challenge window</div>
           </div>
@@ -4654,13 +4657,13 @@ import { createTutorial } from './tutorial.js';
       `;
       const renderTrickActionPrompt = () => {
         if (state.smuggleSelection) return `
-          <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
+          <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" data-ui-wobbly-outline="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
             <div class="sectionTitle" style="color:var(--warning);">Smuggle Bone</div>
             <div class="tiny challengePromptInfo">Choose an AI seat (highlighted white; selected yellow), then confirm.</div>
             <div class="challengePromptBtns"><button id="smuggleOffloadBtn">Offload Bones</button></div>
           </div>`;
         if (state.trapSelection) return `
-          <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
+          <div class="challengePromptPane fit-target fit-0" id="challengePromptPane" data-proj-id="challenge-prompt" data-ui-wobbly-outline="challenge-prompt" style="padding:var(--layout-challenge-pane-padding-y,8px) var(--layout-challenge-pane-padding-x,10px);">
             <div class="sectionTitle" style="color:var(--danger);">Trap Bone</div>
             <div class="tiny challengePromptInfo">Select ${state.trapSelection.maxCount} card(s) from your hand, then confirm offload.</div>
             <div class="challengePromptBtns"><button id="trapOffloadBtn">Offload Bones</button></div>
@@ -4703,7 +4706,7 @@ import { createTutorial } from './tutorial.js';
         </div>
       `;
       const renderBettingControls = () => `
-        <div class="controls fit-target fit-0" data-proj-id="controls">
+        <div class="controls fit-target fit-0" data-proj-id="controls" data-ui-wobbly-outline="betting-controls">
           ${renderStakeVisual()}
           <div class="challengeBar">
             ${bettingActorHuman ? `
@@ -5043,6 +5046,7 @@ import { createTutorial } from './tutorial.js';
       syncStationaryCardScreenSpace(app);
       syncClaimClusterCardSizeFromHand(app);
       enforceFitContainerBounds(app);
+      renderWobblyOutlines(app);
       if (state.pendingCinematicBetAction) {
         const actionFx = state.pendingCinematicBetAction;
         state.pendingCinematicBetAction = null;
@@ -5601,9 +5605,74 @@ import { createTutorial } from './tutorial.js';
       const buttonHtml = reactionOrder.map((id) => {
         const reaction = EMOJI_REACTION_CONFIG[id];
         if (!reaction) return '';
-        return `<button type="button" class="emojiReactionBtn" data-emoji-reaction="${reaction.id}" title="${escapeHtml(reaction.label)}" aria-label="${escapeHtml(reaction.label)}"><span class="emojiReactionGlyph" style="--emoji-mask-src:url('${escapeHtml(reaction.src)}');--emoji-tint:${escapeHtml(reaction.tint)};"></span></button>`;
+        return `<button type="button" class="emojiReactionBtn" data-ui-wobbly-outline="emoji-reaction-btn" data-emoji-reaction="${reaction.id}" title="${escapeHtml(reaction.label)}" aria-label="${escapeHtml(reaction.label)}"><span class="emojiReactionGlyph" style="--emoji-mask-src:url('${escapeHtml(reaction.src)}');--emoji-tint:${escapeHtml(reaction.tint)};"></span></button>`;
       }).join('');
-      return `<div class="emojiReactionPanel" data-proj-id="emoji-panel" aria-label="Emoji reactions">${buttonHtml}</div>`;
+      return `<div class="emojiReactionPanel" data-proj-id="emoji-panel" data-ui-wobbly-outline="emoji-reaction-panel" aria-label="Emoji reactions">${buttonHtml}</div>`;
+    }
+    const BROWN_BOX_OUTLINE_SELECTOR = '.humanSeatCard, .eventLog';
+    const CHALLENGE_PROMPT_OUTLINE_STYLE_IDS = new Set(['challenge-prompt', 'control-panel', 'betting-controls']);
+    function shouldRenderUiOutline(element) {
+      if (!(element instanceof HTMLElement)) return false;
+      if (!element.isConnected) return false;
+      const style = window.getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+      if (Number(style.opacity) <= 0.01) return false;
+      const rect = element.getBoundingClientRect();
+      return rect.width >= 2 && rect.height >= 2;
+    }
+    function renderWobblyOutlines(app, { uiElements = null, emojiElements = null } = {}) {
+      if (!app) return;
+      const uiTargets = (uiElements !== null && uiElements !== undefined) ? uiElements : (() => {
+        const merged = new Set();
+        app.querySelectorAll('[data-ui-wobbly-outline]').forEach((element) => merged.add(element));
+        app.querySelectorAll(BROWN_BOX_OUTLINE_SELECTOR).forEach((element) => merged.add(element));
+        return merged;
+      })();
+      uiTargets.forEach((element) => {
+        if (!shouldRenderUiOutline(element)) {
+          WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui');
+          return;
+        }
+        const styleId = String(element.getAttribute('data-ui-wobbly-outline') || '');
+        if (styleId === 'emoji-reaction-btn' || styleId === 'emoji-reaction-panel') {
+          WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui');
+          return;
+        }
+        if (CHALLENGE_PROMPT_OUTLINE_STYLE_IDS.has(styleId)) {
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.4, step: 25, wobble: 1.35, seed: 29, outset: 4 });
+          return;
+        }
+        if (element.classList.contains('humanSeatCard')) {
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 8.0, step: 25, wobble: 1.35, seed: 59, outset: 4 });
+          return;
+        }
+        if (element.classList.contains('eventLog')) {
+          WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, { lineWidth: 7.2, step: 23, wobble: 1.25, seed: 71, outset: 4 });
+          return;
+        }
+        if (styleId) {
+          WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'ui');
+        }
+      });
+      const emojiTargets = (emojiElements !== null && emojiElements !== undefined)
+        ? emojiElements
+        : app.querySelectorAll('.emojiReactionGlyph, .emojiFxGlyph, .shockGlyph');
+      if (EMOJI_OUTLINE_ENABLED) {
+        emojiTargets.forEach((element) => {
+          if (!shouldRenderUiOutline(element)) {
+            WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'emoji');
+            return;
+          }
+          const isShockGlyph = element.classList.contains('shockGlyph');
+          WOBBLY_OUTLINE_RENDERER.renderEmojiOutline(element, {
+            lineWidth: isShockGlyph ? 2.3 : 2.6,
+            wobble: isShockGlyph ? 1.2 : 0.95,
+            seed: isShockGlyph ? 43 : 31,
+          });
+        });
+      } else {
+        emojiTargets.forEach((element) => WOBBLY_OUTLINE_RENDERER.clearOutline(element, 'emoji'));
+      }
     }
     // Creates or returns the FX layer attached to the given anchor element.
     function ensureEmojiReactionLayer(anchorEl) {
@@ -5733,6 +5802,7 @@ import { createTutorial } from './tutorial.js';
           container.appendChild(particle);
         });
         layer.appendChild(container);
+        renderWobblyOutlines(app, { uiElements: [], emojiElements: container.querySelectorAll('.shockGlyph') });
         setTimeout(() => container.remove(), reaction.durationMs);
       } else if (reaction.coinSrcs) {
         // Gloat: cloud spawns 110px above the anchor centre (shifted 30px down from original 140px).
@@ -5787,6 +5857,7 @@ import { createTutorial } from './tutorial.js';
         fx.style.setProperty('--emoji-drift-dir', String(driftDir));
         fx.innerHTML = '<span class="emojiFxGlyph"></span>';
         layer.appendChild(fx);
+        renderWobblyOutlines(app, { uiElements: [], emojiElements: fx.querySelectorAll('.emojiFxGlyph') });
         setTimeout(() => fx.remove(), reaction.durationMs);
       }
       window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));

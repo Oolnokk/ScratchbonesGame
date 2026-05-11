@@ -798,6 +798,10 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
     },
     portrait: {
       ...(rawGameConfig.portrait || {}),
+      emotes: {
+        ...(rawGameConfig.portrait?.emotes || {}),
+        emojiOutlineEnabled: rawGameConfig.portrait?.emotes?.emojiOutlineEnabled !== false,
+      },
       randomization: (() => {
         const rawRandomization = rawGameConfig.portrait?.randomization || {};
         const minimumNpcClothingArticles = Number(rawRandomization.minimumNpcClothingArticles);
