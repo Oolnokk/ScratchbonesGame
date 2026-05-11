@@ -5652,6 +5652,7 @@ import { createTutorial } from './tutorial.js';
     function hasColoredBackground(element, style = window.getComputedStyle(element)) {
       if (!(element instanceof HTMLElement)) return false;
       if (matchesAnySelector(element, UI_WOBBLY_OUTLINES_CONFIG.excludedColoredBackgroundSelectors)) return false;
+      if (matchesAnySelector(element, UI_WOBBLY_OUTLINES_CONFIG.backgroundOptionalSelectors)) return true;
       const alpha = backgroundAlpha(style.backgroundColor);
       const image = String(style.backgroundImage || '').trim().toLowerCase();
       return alpha > (Number(UI_WOBBLY_OUTLINES_CONFIG.minBackgroundAlpha) || 0) || (image && image !== 'none');
@@ -5659,6 +5660,8 @@ import { createTutorial } from './tutorial.js';
     function shouldRenderUiOutline(element) {
       if (!(element instanceof HTMLElement)) return false;
       if (!element.isConnected) return false;
+      if ((element instanceof HTMLButtonElement || element.getAttribute('role') === 'button')
+        && (element.disabled || element.getAttribute('aria-disabled') === 'true')) return false;
       const style = window.getComputedStyle(element);
       if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
       if (Number(style.opacity) <= 0.01) return false;
@@ -5672,6 +5675,11 @@ import { createTutorial } from './tutorial.js';
       if (UI_WOBBLY_OUTLINES_CONFIG.autoColoredBackgrounds !== false) {
         const configuredSelectors = UI_WOBBLY_OUTLINES_CONFIG.coloredBackgroundSelectors || [];
         configuredSelectors.forEach((selector) => {
+          try { app.querySelectorAll(selector).forEach((element) => merged.add(element)); }
+          catch (_error) {}
+        });
+        const activeButtonSelectors = UI_WOBBLY_OUTLINES_CONFIG.activeButtonSelectors || [];
+        activeButtonSelectors.forEach((selector) => {
           try { app.querySelectorAll(selector).forEach((element) => merged.add(element)); }
           catch (_error) {}
         });

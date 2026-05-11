@@ -2220,12 +2220,12 @@ window.SCRATCHBONES_CONFIG = {
         ".controls",
         ".controls select",
         ".controls button",
+        ".chatLogBody",
         ".handWrap",
         ".handArrow",
         ".cardLabel",
         ".cardGlyph",
         ".eventLog",
-        ".logItem",
         ".chatComposerInput",
         ".chatSendBtn",
         ".stakeTierBtn",
@@ -2236,6 +2236,12 @@ window.SCRATCHBONES_CONFIG = {
         ".cin-result",
         ".emojiReactionPanel",
         ".emojiReactionBtn"
+      ],
+      "backgroundOptionalSelectors": [
+        ".chatLogBody"
+      ],
+      "activeButtonSelectors": [
+        "button:not(:disabled):not([aria-disabled=\"true\"])"
       ],
       "excludedColoredBackgroundSelectors": [
         "canvas",
@@ -2251,8 +2257,9 @@ window.SCRATCHBONES_CONFIG = {
         { "selector": "[data-ui-wobbly-outline=\"challenge-prompt\"], [data-ui-wobbly-outline=\"control-panel\"], [data-ui-wobbly-outline=\"betting-controls\"]", "style": { "lineWidth": 7.4, "step": 25, "wobble": 1.35, "seed": 29, "outset": 4 } },
         { "selector": ".humanSeatCard", "style": { "lineWidth": 8, "step": 25, "wobble": 1.35, "seed": 59, "outset": 4 } },
         { "selector": ".eventLog", "style": { "lineWidth": 7.2, "step": 23, "wobble": 1.25, "seed": 71, "outset": 4 } },
+        { "selector": ".chatLogBody", "style": { "lineWidth": 4.2, "step": 16, "wobble": 1, "seed": 79, "outset": 2 } },
         { "selector": ".aiSeat, .topbar, .controls, .challengePromptPane", "style": { "lineWidth": 7.4, "step": 25, "wobble": 1.35, "seed": 83, "outset": 4 } },
-        { "selector": "button, select, .chip, .stakeTierBtn, .logItem, .cardLabel, .cardGlyph, .handArrow, .chatComposerInput", "style": { "lineWidth": 3.2, "step": 12, "wobble": 0.95, "seed": 107, "outset": 2 } }
+        { "selector": "button, select, .chip, .stakeTierBtn, .cardLabel, .cardGlyph, .handArrow, .chatComposerInput", "style": { "lineWidth": 3.2, "step": 12, "wobble": 0.95, "seed": 107, "outset": 2 } }
       ]
     },
     "assets": {
