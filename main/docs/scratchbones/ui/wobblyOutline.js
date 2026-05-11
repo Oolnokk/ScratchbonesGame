@@ -1,5 +1,9 @@
+const EMOJI_OUTLINE_MIN_STEPS = 24;
+const EMOJI_OUTLINE_STEP_PIXELS = 18;
+const EMOJI_OUTLINE_MIN_OFFSET_RADIUS = 0.2;
+
 function createSeededRandom(seedValue) {
-  let seed = (Number(seedValue) || 1) >>> 0;
+  let seed = Number(seedValue ?? 1) >>> 0;
   return function next() {
     seed = (seed + 0x6D2B79F5) | 0;
     let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -22,7 +26,7 @@ function readMaskImageUrl(element, variableName = '--emoji-mask-src') {
 }
 
 function getCanvas2dContext(canvas) {
-  return canvas.getContext('2d', { alpha: true, willReadFrequently: false });
+  return canvas.getContext('2d', { alpha: true });
 }
 
 export function createWobblyOutlineRenderer() {
@@ -57,7 +61,13 @@ export function createWobblyOutlineRenderer() {
     const promise = new Promise((resolve) => {
       const image = new Image();
       image.decoding = 'async';
-      image.onload = () => resolve(image);
+      image.onload = () => {
+        if (typeof image.decode === 'function') {
+          image.decode().then(() => resolve(image)).catch(() => resolve(image));
+        } else {
+          resolve(image);
+        }
+      };
       image.onerror = () => resolve(null);
       image.src = key;
     });
@@ -91,10 +101,13 @@ export function createWobblyOutlineRenderer() {
     const ctx = getCanvas2dContext(bitmap);
     if (!ctx) return bitmap;
     const rng = createSeededRandom(seed);
-    const steps = Math.max(24, Math.round((Math.PI * 2 * Math.max(width, height)) / 18));
+    // Canvas-space perimeter approximation keeps step density stable across
+    // different glyph aspect ratios without retracing the exact alpha contour.
+    const perimeter = Math.max(1, 2 * (width + height));
+    const steps = Math.max(EMOJI_OUTLINE_MIN_STEPS, Math.round(perimeter / EMOJI_OUTLINE_STEP_PIXELS));
     for (let i = 0; i < steps; i += 1) {
       const angle = (i / steps) * Math.PI * 2;
-      const offsetRadius = Math.max(0.2, lineWidth + (rng() - 0.5) * 2 * wobble);
+      const offsetRadius = Math.max(EMOJI_OUTLINE_MIN_OFFSET_RADIUS, lineWidth + (rng() - 0.5) * 2 * wobble);
       const dx = Math.cos(angle) * offsetRadius;
       const dy = Math.sin(angle) * offsetRadius;
       drawMaskSilhouette(ctx, image, dx, dy, width, height, color);
@@ -130,6 +143,7 @@ export function createWobblyOutlineRenderer() {
     for (let y = top; y <= bottom; y += step) pushPoint(right, y, 1, 0);
     for (let x = right; x >= left; x -= step) pushPoint(x, bottom, 0, 1);
     for (let y = bottom; y >= top; y -= step) pushPoint(left, y, -1, 0);
+    // Degenerate zero-size boxes can leave the loops empty; keep a minimal loop.
     if (!points.length) points.push({ x: left, y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: left, y: bottom });
     rectPathCache.set(key, points);
     return points;

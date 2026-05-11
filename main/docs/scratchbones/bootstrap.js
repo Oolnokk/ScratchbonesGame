@@ -5608,11 +5608,12 @@ import { createTutorial } from './tutorial.js';
       }).join('');
       return `<div class="emojiReactionPanel" data-proj-id="emoji-panel" data-ui-wobbly-outline="emoji-reaction-panel" aria-label="Emoji reactions">${buttonHtml}</div>`;
     }
-    function renderWobblyOutlines(app) {
+    function renderWobblyOutlines(app, { uiElements = null, emojiElements = null } = {}) {
       if (!app) return;
-      app.querySelectorAll('[data-ui-wobbly-outline]').forEach((element) => {
+      const uiTargets = uiElements || app.querySelectorAll('[data-ui-wobbly-outline]');
+      uiTargets.forEach((element) => {
         const styleId = String(element.getAttribute('data-ui-wobbly-outline') || '');
-        const isButton = styleId.includes('btn');
+        const isButton = styleId === 'emoji-reaction-btn';
         WOBBLY_OUTLINE_RENDERER.renderRectOutline(element, {
           lineWidth: isButton ? 2.1 : 2.6,
           step: isButton ? 10 : 14,
@@ -5620,13 +5621,14 @@ import { createTutorial } from './tutorial.js';
           seed: isButton ? 13 : 29,
         });
       });
-      const emojiTargets = app.querySelectorAll('.emojiReactionGlyph, .emojiFxGlyph, .shockGlyph');
+      const emojiTargets = emojiElements || app.querySelectorAll('.emojiReactionGlyph, .emojiFxGlyph, .shockGlyph');
       if (EMOJI_OUTLINE_ENABLED) {
         emojiTargets.forEach((element) => {
+          const isShockGlyph = element.classList.contains('shockGlyph');
           WOBBLY_OUTLINE_RENDERER.renderEmojiOutline(element, {
-            lineWidth: element.classList.contains('shockGlyph') ? 2.3 : 2.6,
-            wobble: element.classList.contains('shockGlyph') ? 1.2 : 0.95,
-            seed: element.classList.contains('shockGlyph') ? 43 : 31,
+            lineWidth: isShockGlyph ? 2.3 : 2.6,
+            wobble: isShockGlyph ? 1.2 : 0.95,
+            seed: isShockGlyph ? 43 : 31,
           });
         });
       } else {
@@ -5744,7 +5746,7 @@ import { createTutorial } from './tutorial.js';
           container.appendChild(particle);
         });
         layer.appendChild(container);
-        renderWobblyOutlines(app);
+        renderWobblyOutlines(app, { uiElements: [], emojiElements: container.querySelectorAll('.shockGlyph') });
         setTimeout(() => container.remove(), reaction.durationMs);
       } else if (reaction.coinSrcs) {
         // Gloat: cloud spawns 110px above the anchor centre (shifted 30px down from original 140px).
@@ -5788,7 +5790,6 @@ import { createTutorial } from './tutorial.js';
             spawnedCoins.push(coin);
           }
         }
-        renderWobblyOutlines(app);
         setTimeout(() => { cloudEl.remove(); spawnedCoins.forEach(c => c.remove()); }, reaction.durationMs + 500);
       } else {
         const fx = document.createElement('div');
@@ -5800,7 +5801,7 @@ import { createTutorial } from './tutorial.js';
         fx.style.setProperty('--emoji-drift-dir', String(driftDir));
         fx.innerHTML = '<span class="emojiFxGlyph"></span>';
         layer.appendChild(fx);
-        renderWobblyOutlines(app);
+        renderWobblyOutlines(app, { uiElements: [], emojiElements: fx.querySelectorAll('.emojiFxGlyph') });
         setTimeout(() => fx.remove(), reaction.durationMs);
       }
       window.portraitBreathingComposer?.triggerEmote(reactionId, String(state.humanSeat));
