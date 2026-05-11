@@ -1224,8 +1224,14 @@ import { createTutorial } from './tutorial.js';
       openNewRound(declarerId);
       return true;
     }
+    function getHumanPlayer() {
+      return state.players[state.humanSeat] || null;
+    }
+    function getHumanHand() {
+      return getHumanPlayer()?.hand || [];
+    }
     function selectedCards() {
-      return state.players[state.humanSeat].hand.filter(c => state.selectedCardIds.has(c.id));
+      return getHumanHand().filter(c => state.selectedCardIds.has(c.id));
     }
     function normalizeLogKind(kind) {
       return String(kind || 'event').toLowerCase() === 'chat' ? 'chat' : 'event';
@@ -3005,7 +3011,7 @@ import { createTutorial } from './tutorial.js';
     async function applyTrapTransferOnDefendedChallenge(play, challengedId, challengerId) {
       if (!play.cards.some((card) => card.trickType === 'trap')) return null;
       if (isHumanSeat(challengedId)) {
-        const maxCount = Math.min(play.cards.length, state.players[state.humanSeat].hand.length);
+        const maxCount = Math.min(play.cards.length, getHumanHand().length);
         if (maxCount <= 0) {
           addLog('Trap Bone fizzles: no cards available to offload.');
           return null;
@@ -7005,7 +7011,7 @@ import { createTutorial } from './tutorial.js';
 
     function buildTutorialContext() {
       const humanSeat = state.humanSeat;
-      const humanHand = state.players[humanSeat]?.hand || [];
+      const humanHand = getHumanHand();
       const selectedCardIds = state.selectedCardIds instanceof Set ? state.selectedCardIds : new Set();
       const copyCard = (card) => card ? {
         id: card.id,
