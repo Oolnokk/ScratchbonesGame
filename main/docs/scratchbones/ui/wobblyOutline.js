@@ -187,18 +187,22 @@ export function createWobblyOutlineRenderer() {
     if (!canvas) return;
     const elWidth  = Math.max(1, Math.round(target.clientWidth));
     const elHeight = Math.max(1, Math.round(target.clientHeight));
-    // Padding extends the canvas outside the element so the stroke (and its
-    // half-width) is fully visible even when the outline centre is beyond the
-    // element edge.  `outset` moves the outline centre outward; `lineWidth`
-    // ensures the outer half of the stroke is never clipped.
-    const padding  = Math.ceil(outset + lineWidth);
+    const targetStyle = getComputedStyle(target);
+    const clipsOutset = [targetStyle.overflow, targetStyle.overflowX, targetStyle.overflowY]
+      .some((value) => value && value !== 'visible');
+    // Padding normally extends the canvas outside the element so the stroke
+    // can sit beyond the element edge. Elements with clipped/scroll overflow
+    // cannot show an outside child canvas, so those draw an inset outline
+    // instead of silently clipping the circle away.
+    const padding  = clipsOutset ? 0 : Math.ceil(outset + lineWidth);
+    const pathInset = clipsOutset ? Math.max(lineWidth / 2, 1) : lineWidth;
     const canvasW  = elWidth  + 2 * padding;
     const canvasH  = elHeight + 2 * padding;
     // Overwrite the default "inset:0 / 100%" sizing so the canvas extends
-    // past the element boundary.
+    // past the element boundary when the target's overflow can display it.
     canvas.style.inset  = '';
-    canvas.style.left   = `-${padding}px`;
-    canvas.style.top    = `-${padding}px`;
+    canvas.style.left   = padding ? `-${padding}px` : '0';
+    canvas.style.top    = padding ? `-${padding}px` : '0';
     canvas.style.width  = `${canvasW}px`;
     canvas.style.height = `${canvasH}px`;
     if (canvas.width !== canvasW || canvas.height !== canvasH) {
@@ -215,7 +219,7 @@ export function createWobblyOutlineRenderer() {
     // With padding the element's edge sits at `padding` inside the canvas.
     // Drawing the path at inset = lineWidth places the stroke centre
     // `outset` pixels outside the element edge.
-    const path = getWobblyRectPath({ width: canvasW, height: canvasH, inset: lineWidth, step, wobble, seed });
+    const path = getWobblyRectPath({ width: canvasW, height: canvasH, inset: pathInset, step, wobble, seed });
     drawWobblyStroke(ctx, path);
   }
 
