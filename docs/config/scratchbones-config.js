@@ -842,16 +842,16 @@ window.SCRATCHBONES_CONFIG = {
     },
     "timers": {
       "challengeSeconds": 7,
-      "challengeIntroMs": 2200,
-      "aiThinkMs": 650,
+      "challengeIntroMs": 1100,
+      "aiThinkMs": 325,
       "aiDecisionDelays": {
-        "turnMinMs": 420,
-        "turnMaxMs": 1300,
-        "challengeMinMs": 360,
-        "challengeMaxMs": 2200,
-        "bettingMinMs": 200,
-        "bettingMaxMs": 650,
-        "challengeStaggerMs": 220
+        "turnMinMs": 210,
+        "turnMaxMs": 650,
+        "challengeMinMs": 180,
+        "challengeMaxMs": 1100,
+        "bettingMinMs": 100,
+        "bettingMaxMs": 325,
+        "challengeStaggerMs": 110
       }
     },
     "portrait": {
