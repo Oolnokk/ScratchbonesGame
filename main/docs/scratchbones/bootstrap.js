@@ -692,6 +692,7 @@ import { createTutorial } from './tutorial.js';
     const AI_THINK_MS = SCRATCHBONES_GAME.timers.aiThinkMs; // Used by: AI turn pacing so mobile play stays readable.
     const AI_DECISION_DELAYS = SCRATCHBONES_GAME.timers.aiDecisionDelays || {};
     const AI_CONFIG = SCRATCHBONES_GAME.ai || {};
+    const AI_RENOWN_DISPLAY = AI_CONFIG.renownDisplay || {};
     const AI_DECISION = AI_CONFIG.decision || {};
     const START_HAND_SIZE = SCRATCHBONES_GAME.deck.handSize; // Used by: dealing fresh hands at match start and after a clear.
     const WILD_COUNT = SCRATCHBONES_GAME.deck.wildCount; // Used by: deck construction and bluff validation.
@@ -853,6 +854,20 @@ import { createTutorial } from './tutorial.js';
       const fontSizeRem = Math.max(0.5, Number(SEAT_CHIP_BADGE.fontSizeRem) || 0.82);
       const color = String(SEAT_CHIP_BADGE.color || 'var(--text)');
       return `<div class="seatChipBadge" style="display:inline-flex;align-items:center;gap:${gapPx}px;color:${escapeHtml(color)};font-size:${fontSizeRem}rem;font-weight:700;margin:3px 0 1px;"><img class="seatChipBadgeIcon" style="width:${iconSizePx}px;height:${iconSizePx}px;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));" src="${escapeHtml(stakeCoinSrcForTier(coinTierId))}" data-fallback-src="${escapeHtml(stakeCoinSrcForTier(STAKE_COIN_FALLBACK_TIER_ID))}" alt="Chip coin"><span class="seatChipBadgeCount">${chipCount}</span></div>`;
+    }
+
+
+    function renderAiRenownBadge(player) {
+      if (!player || player.isHuman || AI_RENOWN_DISPLAY.enabled === false) return '';
+      const rank = resolveAiDifficultyRank(player);
+      const level = AI_RENOWN_DISPLAY.levels?.[rank] || {};
+      const fallbackLabel = String(AI_RENOWN_DISPLAY.fallbackLabel || '').trim();
+      const label = String(level.label || [fallbackLabel, rank].filter(Boolean).join(': ')).trim();
+      const title = String(level.title || '').trim();
+      const separator = String(AI_RENOWN_DISPLAY.separator || '');
+      const text = title ? `${label}${separator}${title}` : label;
+      const ariaLabel = String(level.ariaLabel || text).trim();
+      return `<div class="seatTags seatRenown" title="${escapeHtml(ariaLabel)}" aria-label="${escapeHtml(ariaLabel)}">${escapeHtml(text)}</div>`;
     }
 
 
@@ -5065,6 +5080,7 @@ import { createTutorial } from './tutorial.js';
               <div class="seatInfo" data-proj-id="info-${p.id}" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
                 <div class="seatName">${escapeHtml(p.name)}</div>
                 <div class="seatMeta">Cards ${p.hand.length} · Clears ${p.clears}</div>
+                ${renderAiRenownBadge(p)}
                 ${renderSeatChipBadge(p)}
                 ${renderSeatCoinRow(p)}
                 <div class="seatStatus">${p.lastAction}</div>

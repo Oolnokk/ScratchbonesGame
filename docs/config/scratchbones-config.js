@@ -1180,7 +1180,8 @@ window.SCRATCHBONES_CONFIG = {
        * AI difficulty ranks
        *
        * Normalized field names are game.ai.defaultDifficultyRank,
-       * game.ai.difficultyRanks, and game.ai.seatDifficultyRanks. The
+       * game.ai.difficultyRanks, game.ai.seatDifficultyRanks, and
+       * game.ai.renownDisplay. The
        * normalizer currently supports the rank IDs "easy", "normal", and
        * "hard"; unknown rank IDs fall back to defaultDifficultyRank, and an
        * unknown or missing defaultDifficultyRank falls back to "normal".
@@ -1189,7 +1190,8 @@ window.SCRATCHBONES_CONFIG = {
        * player's difficultyRank is already set or a seatDifficultyRanks entry
        * matches the seat. seatDifficultyRanks keys may be absolute seat IDs
        * ("1", "2", "3") or NPC-order aliases ("0", "npc:0",
-       * "npc0", "ai:0", "ai0").
+       * "npc0", "ai:0", "ai0"). renownDisplay maps each hidden
+       * difficulty rank to a visible renown level rendered in AI player seats.
        *
        * Rank profiles affect:
        * - turn choice: "easy" uses the naive playbook, "normal" uses the
@@ -1234,6 +1236,28 @@ window.SCRATCHBONES_CONFIG = {
           "challengeThreshold": 0.44,
           "challengeRandomNudgeMax": 0.08,
           "bettingConfidenceSuspicionWeight": 0.68
+        }
+      },
+      "renownDisplay": {
+        "enabled": true,
+        "separator": " · ",
+        "fallbackLabel": "Renown",
+        "levels": {
+          "easy": {
+            "label": "Renown I",
+            "title": "Greenhorn",
+            "ariaLabel": "AI difficulty: Renown I, Greenhorn"
+          },
+          "normal": {
+            "label": "Renown II",
+            "title": "Seasoned",
+            "ariaLabel": "AI difficulty: Renown II, Seasoned"
+          },
+          "hard": {
+            "label": "Renown III",
+            "title": "Notorious",
+            "ariaLabel": "AI difficulty: Renown III, Notorious"
+          }
         }
       },
       "seatDifficultyRanks": {
