@@ -2061,17 +2061,28 @@ import { createTutorial } from './tutorial.js';
       const exact = STAKE_TIERS.find((tier) => tier.value === Number(value));
       return exact?.id || null;
     }
+    function maxMatchableStakeForPlayer(playerId) {
+      const player = state.players[playerId];
+      if (!state.betting || !player || player.eliminated) return 0;
+      return getContribution(playerId) + Math.max(0, Number(player.chips) || 0);
+    }
+    function maxMutuallyMatchableStakeFor(playerId) {
+      if (!state.betting) return 0;
+      const opponentId = getOpponentId(playerId);
+      return Math.min(maxMatchableStakeForPlayer(playerId), maxMatchableStakeForPlayer(opponentId));
+    }
     function legalStakeTierIdsForPlayer(playerId) {
       if (!state.betting) return [];
       const player = state.players[playerId];
       if (!player || player.eliminated) return [];
       const currentTier = currentStakeTier();
+      const maxMatchableStake = maxMutuallyMatchableStakeFor(playerId);
       if (state.betting.phase === 'opening') {
-        return STAKE_TIERS.filter((tier) => player.chips >= tier.value).map((tier) => tier.id);
+        return STAKE_TIERS.filter((tier) => tier.value <= maxMatchableStake).map((tier) => tier.id);
       }
       return STAKE_TIERS
         .filter((tier) => tier.value > currentTier.value)
-        .filter((tier) => player.chips >= Math.max(0, tier.value - getContribution(playerId)))
+        .filter((tier) => tier.value <= maxMatchableStake)
         .map((tier) => tier.id);
     }
     function legalBettingActionsFor(playerId) {
@@ -2115,9 +2126,6 @@ import { createTutorial } from './tutorial.js';
     function amountToCall(id) {
       if (!state.betting) return 0;
       return Math.max(0, state.betting.currentTierValue - getContribution(id));
-    }
-    function canPlayerAfford(id, amount) {
-      return state.players[id] && !state.players[id].eliminated && state.players[id].chips >= amount;
     }
     function recordContribution(id, amount) {
       if (!state.betting || amount <= 0) return 0;
@@ -2374,7 +2382,7 @@ import { createTutorial } from './tutorial.js';
         if (command === 'open-tier' && state.betting.phase === 'opening') {
           const chosenTierId = targetTierId;
           const chosenTierValue = stakeTierValueById(chosenTierId);
-          if (!chosenTierValue || !canPlayerAfford(playerId, chosenTierValue)) return;
+          if (!chosenTierValue || !legalStakeTierIdsForPlayer(playerId).includes(chosenTierId)) return;
           console.log('[betting-tier] selected tier', { playerId, tierId: chosenTierId, value: chosenTierValue, action: 'open-tier' });
           await animateStakeOpen(playerId, chosenTierId);
           state.betting.currentTierId = chosenTierId;
@@ -2395,6 +2403,7 @@ import { createTutorial } from './tutorial.js';
           return;
         }
         if (command === 'call') {
+          if (!legalBettingActionsFor(playerId).includes('call')) return;
           const tierId = state.betting.currentTierId;
           await animateStakeCall(playerId, tierId);
           const paid = recordContribution(playerId, toCall);
@@ -2417,8 +2426,8 @@ import { createTutorial } from './tutorial.js';
             return;
           }
           const amountNeeded = newStake - getContribution(playerId);
-          if (!canPlayerAfford(playerId, amountNeeded)) {
-            await resolveBetAction(playerId, 'fold', { allowWhileLocked: true });
+          if (!legalStakeTierIdsForPlayer(playerId).includes(newTierId)) {
+            await resolveBetAction(playerId, 'call', { allowWhileLocked: true });
             return;
           }
           await animateStakeRaise(playerId, newTierId);
@@ -4808,6 +4817,7 @@ import { createTutorial } from './tutorial.js';
       const humanCallAmount = state.betting ? amountToCall(hs) : 0;
       const humanLegalActions = state.betting && bettingActorHuman ? legalBettingActionsFor(hs) : [];
       const humanRaiseTierIds = state.betting && bettingActorHuman ? legalStakeTierIdsForPlayer(hs) : [];
+      const humanCanCall = humanLegalActions.includes('call');
       const humanCanRaise = humanLegalActions.includes('raise-tier') && humanRaiseTierIds.length > 0;
       if (state.betting) {
         const bettingUiDebug = {
@@ -5033,7 +5043,7 @@ import { createTutorial } from './tutorial.js';
             ${bettingActorHuman ? `
               ${state.betting.phase === 'opening'
                 ? `${renderStakeTierButtons('open')}${renderPunishToggleButton(state.betting.actionInFlight)}`
-                : `<button class="secondary" id="betCallBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Call ${humanCallAmount}</button>
+                : `<button class="secondary" id="betCallBtn" ${state.betting.actionInFlight || !humanCanCall ? 'disabled' : ''}>Call ${humanCallAmount}</button>
                    ${humanCanRaise ? renderStakeTierButtons('raise') : ''}
                    ${renderPunishToggleButton(state.betting.actionInFlight)}
                    <button class="danger" id="betFoldBtn" ${state.betting.actionInFlight ? 'disabled' : ''}>Fold</button>`}
@@ -6538,6 +6548,7 @@ import { createTutorial } from './tutorial.js';
         const openingMode = state.betting.phase === 'opening';
         const legalActions = legalBettingActionsFor(bettingActorId);
         const legalTierIds = legalStakeTierIdsForPlayer(bettingActorId);
+        const canCall = legalActions.includes('call');
         const canRaise = legalActions.includes('raise-tier') && legalTierIds.length > 0;
         const actorCanAct = bettingActorHuman;
         const bettingLocked = !!state.betting.actionInFlight;
@@ -6550,7 +6561,7 @@ import { createTutorial } from './tutorial.js';
         const bettingActionsHtml = actorCanAct
           ? (openingMode
             ? `${renderTierButtons('open')}${punishToggleHtml}<div class="duelChoiceControls"><button class="danger" id="betFoldBtn" ${bettingLocked ? 'disabled' : ''}>Fold</button></div>`
-            : `${canRaise ? renderTierButtons('raise') : ''}${punishToggleHtml}<div class="duelChoiceControls"><button class="secondary" id="betCallBtn" ${bettingLocked ? 'disabled' : ''}>Call ${humanCallAmount}</button><button class="danger" id="betFoldBtn" ${bettingLocked ? 'disabled' : ''}>Fold</button></div>`)
+            : `${canRaise ? renderTierButtons('raise') : ''}${punishToggleHtml}<div class="duelChoiceControls"><button class="secondary" id="betCallBtn" ${bettingLocked || !canCall ? 'disabled' : ''}>Call ${humanCallAmount}</button><button class="danger" id="betFoldBtn" ${bettingLocked ? 'disabled' : ''}>Fold</button></div>`)
           : `<div class="tiny">${seatLabel(bettingActorId)} is deciding the next betting action.</div>`;
         const challengerContributionTierId = tierIdForContributionValue(getContribution(state.betting.challengerId));
         const challengedContributionTierId = tierIdForContributionValue(getContribution(state.betting.challengedId));
