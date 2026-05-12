@@ -252,6 +252,17 @@ const DEFAULT_AI_DIFFICULTY_PROFILES = {
   },
 };
 
+const DEFAULT_AI_RENOWN_DISPLAY = {
+  enabled: true,
+  separator: ' · ',
+  fallbackLabel: 'Renown',
+  levels: {
+    easy: { label: 'Renown I', title: 'Greenhorn', ariaLabel: 'AI difficulty: Renown I, Greenhorn' },
+    normal: { label: 'Renown II', title: 'Seasoned', ariaLabel: 'AI difficulty: Renown II, Seasoned' },
+    hard: { label: 'Renown III', title: 'Notorious', ariaLabel: 'AI difficulty: Renown III, Notorious' },
+  },
+};
+
 
 const DEFAULT_AI_DECISION_CONFIG = {
   readProfile: {
@@ -560,6 +571,31 @@ function normalizeAiDecisionConfig(rawDecision = {}, fallbackDecision = DEFAULT_
   return normalized;
 }
 
+function normalizeAiRenownDisplayConfig(rawDisplay = {}, rankProfiles = DEFAULT_AI_DIFFICULTY_PROFILES) {
+  const source = rawDisplay && typeof rawDisplay === 'object' && !Array.isArray(rawDisplay) ? rawDisplay : {};
+  const fallback = DEFAULT_AI_RENOWN_DISPLAY;
+  const rawLevels = source.levels && typeof source.levels === 'object' && !Array.isArray(source.levels) ? source.levels : {};
+  const levels = {};
+  for (const rank of Object.keys(rankProfiles)) {
+    const fallbackLevel = fallback.levels[rank] || {};
+    const rawLevel = rawLevels[rank] && typeof rawLevels[rank] === 'object' && !Array.isArray(rawLevels[rank]) ? rawLevels[rank] : {};
+    const label = String(rawLevel.label ?? fallbackLevel.label ?? fallback.fallbackLabel).trim();
+    const title = String(rawLevel.title ?? fallbackLevel.title ?? rank).trim();
+    const ariaLabel = String(rawLevel.ariaLabel ?? fallbackLevel.ariaLabel ?? `${fallback.fallbackLabel}: ${label}${title ? fallback.separator + title : ''}`).trim();
+    levels[rank] = {
+      label: label || fallback.fallbackLabel,
+      title,
+      ariaLabel: ariaLabel || `${fallback.fallbackLabel}: ${label || rank}`,
+    };
+  }
+  return {
+    enabled: source.enabled !== false,
+    separator: String(source.separator ?? fallback.separator).trim() || fallback.separator,
+    fallbackLabel: String(source.fallbackLabel ?? fallback.fallbackLabel).trim() || fallback.fallbackLabel,
+    levels,
+  };
+}
+
 function normalizeAiDifficultyProfile(rawProfile = {}, fallbackProfile = DEFAULT_AI_DIFFICULTY_PROFILES.normal) {
   const source = rawProfile && typeof rawProfile === 'object' && !Array.isArray(rawProfile) ? rawProfile : {};
   return {
@@ -619,6 +655,7 @@ function normalizeAiConfig(rawAi = {}) {
     defaultDifficultyRank,
     difficultyRanks,
     seatDifficultyRanks,
+    renownDisplay: normalizeAiRenownDisplayConfig(source.renownDisplay, difficultyRanks),
   };
 }
 
