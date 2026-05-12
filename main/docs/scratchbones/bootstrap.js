@@ -6241,16 +6241,21 @@ import { createTutorial } from './tutorial.js';
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
     function getPortraitExpressionDurationMs() {
-      return Number(window.SCRATCHBONES_CONFIG?.game?.portrait?.expressions?.durationMs) || 10000;
+      return SCRATCHBONES_GAME.portrait?.expressions?.durationMs;
     }
-    // Returns 'smile' if the player has at or above average chips, 'frown' otherwise.
+    // Returns neutral while chips are near average, smile above the configured band, and frown below it.
     function computeRestingExpression(seatIndex) {
       const player = state.players[seatIndex];
       if (!player) return 'neutral';
       const activePlayers = state.players.filter(p => !p.eliminated);
       const totalChips = activePlayers.reduce((sum, p) => sum + (p.chips || 0), 0);
       const avgChips = totalChips / Math.max(1, activePlayers.length);
-      return (player.chips || 0) >= avgChips ? 'smile' : 'frown';
+      if (avgChips <= 0) return 'neutral';
+      const neutralBandRatio = SCRATCHBONES_GAME.portrait?.expressions?.restingChipNeutralBandRatio ?? 0;
+      const playerChips = player.chips || 0;
+      if (playerChips > avgChips * (1 + neutralBandRatio)) return 'smile';
+      if (playerChips < avgChips * (1 - neutralBandRatio)) return 'frown';
+      return 'neutral';
     }
     // Updates the persistent resting expression for all active seats based on current chip counts.
     function updateAllDefaultExpressions() {
@@ -6273,16 +6278,16 @@ import { createTutorial } from './tutorial.js';
       composer.setExpression(String(loserId), 'frown', exprDurMs);
     }
     function getLaughMouthConfig() {
-      const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.emotes?.laugh || {};
-      const puffCount = Math.max(1, Math.floor(Number(cfg.puffCount) || 3));
-      const puffMotionMs = (Number(cfg.inflateDurationSeconds) || 0.12) + (Number(cfg.deflateDurationSeconds) || 0.14);
-      const pauseMs = Number(cfg.pauseDurationSeconds) || 0.18;
+      const cfg = SCRATCHBONES_GAME.portrait?.emotes?.laugh;
+      const puffCount = Math.max(1, Math.floor(Number(cfg.puffCount)));
+      const puffMotionMs = Number(cfg.inflateDurationSeconds) + Number(cfg.deflateDurationSeconds);
+      const pauseMs = Number(cfg.pauseDurationSeconds);
       const defaultLaughMs = Math.max(1, Math.round(
         ((puffCount * puffMotionMs) + (Math.max(0, puffCount - 1) * pauseMs)) * 1000
       ));
       return {
         laughMs: Math.max(1, Number(cfg.mouthLaughMs) || defaultLaughMs),
-        restExpression: String(cfg.mouthRestExpression || 'smile'),
+        restExpression: String(cfg.mouthRestExpression),
       };
     }
     function triggerLaughAnimation(seatId) {

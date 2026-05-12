@@ -1,3 +1,14 @@
+const DEFAULT_PORTRAIT_EXPRESSION_DURATION_MS = 10000;
+const DEFAULT_RESTING_CHIP_NEUTRAL_BAND_RATIO = 0.15;
+const DEFAULT_PORTRAIT_LAUGH_EMOTE_CONFIG = {
+  puffCount: 3,
+  inflateDurationSeconds: 0.12,
+  deflateDurationSeconds: 0.14,
+  pauseDurationSeconds: 0.18,
+  mouthLaughMs: 1140,
+  mouthRestExpression: 'smile',
+};
+
 const DEFAULT_AUTHORED_BOXES = {
   topbar: { x: -2, y: 11, width: 1123, height: 106 },
   sidebar: { x: 1354, y: 14, width: 251, height: 681 },
@@ -1311,8 +1322,30 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
     },
     portrait: {
       ...(rawGameConfig.portrait || {}),
+      expressions: {
+        ...(rawGameConfig.portrait?.expressions || {}),
+        durationMs: Math.max(1, Number(rawGameConfig.portrait?.expressions?.durationMs) || DEFAULT_PORTRAIT_EXPRESSION_DURATION_MS),
+        restingChipNeutralBandRatio: (() => {
+          const rawNeutralBandRatio = Number(rawGameConfig.portrait?.expressions?.restingChipNeutralBandRatio);
+          return Number.isFinite(rawNeutralBandRatio)
+            ? Math.max(0, rawNeutralBandRatio)
+            : DEFAULT_RESTING_CHIP_NEUTRAL_BAND_RATIO;
+        })(),
+      },
       emotes: {
         ...(rawGameConfig.portrait?.emotes || {}),
+        laugh: (() => {
+          const rawLaugh = rawGameConfig.portrait?.emotes?.laugh || {};
+          return {
+            ...rawLaugh,
+            puffCount: Math.max(1, Math.floor(Number(rawLaugh.puffCount) || DEFAULT_PORTRAIT_LAUGH_EMOTE_CONFIG.puffCount)),
+            inflateDurationSeconds: Math.max(0, Number(rawLaugh.inflateDurationSeconds) || DEFAULT_PORTRAIT_LAUGH_EMOTE_CONFIG.inflateDurationSeconds),
+            deflateDurationSeconds: Math.max(0, Number(rawLaugh.deflateDurationSeconds) || DEFAULT_PORTRAIT_LAUGH_EMOTE_CONFIG.deflateDurationSeconds),
+            pauseDurationSeconds: Math.max(0, Number(rawLaugh.pauseDurationSeconds) || DEFAULT_PORTRAIT_LAUGH_EMOTE_CONFIG.pauseDurationSeconds),
+            mouthLaughMs: Math.max(1, Number(rawLaugh.mouthLaughMs) || DEFAULT_PORTRAIT_LAUGH_EMOTE_CONFIG.mouthLaughMs),
+            mouthRestExpression: String(rawLaugh.mouthRestExpression || DEFAULT_PORTRAIT_LAUGH_EMOTE_CONFIG.mouthRestExpression),
+          };
+        })(),
         emojiOutlineEnabled: rawGameConfig.portrait?.emotes?.emojiOutlineEnabled !== false,
       },
       randomization: (() => {

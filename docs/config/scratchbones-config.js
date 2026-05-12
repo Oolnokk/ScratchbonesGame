@@ -875,7 +875,8 @@ window.SCRATCHBONES_CONFIG = {
         }
       },
       "expressions": {
-        "durationMs": 10000
+        "durationMs": 10000,
+        "restingChipNeutralBandRatio": 0.15
       },
       "layering": {
         "hatUnderHoodTag": "hood-layer:under",
