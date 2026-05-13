@@ -1600,32 +1600,6 @@ import { createTutorial } from './tutorial.js';
       const flyWaitMs = (Number(SCRATCHBONES_GAME.layout?.animation?.baseDurationMs) || 280) + 80;
       await sleep(flyWaitMs);
     }
-    function refillHandsAfterClearInTurnOrder(clearerIndex) {
-      const deck = createDeck();
-      const drawOrder = [];
-      for (let offset = 0; offset < state.players.length; offset++) {
-        drawOrder.push((clearerIndex + offset) % state.players.length);
-      }
-      let dealtInPass = true;
-      while (deck.length && dealtInPass) {
-        dealtInPass = false;
-        for (const playerIndex of drawOrder) {
-          if (!deck.length) break;
-          const player = state.players[playerIndex];
-          if (player.eliminated || player.hand.length >= START_HAND_SIZE) continue;
-          player.hand.push(deck.shift());
-          dealtInPass = true;
-        }
-      }
-      for (const player of state.players) {
-        if (player.eliminated) {
-          player.hand = [];
-          continue;
-        }
-        player.hand.sort(sortCards);
-        player.lastAction = player.lastAction === 'Out of chips' ? player.lastAction : 'Waiting';
-      }
-    }
     async function refillHandsAfterClearInTurnOrderAnimated(clearerIndex) {
       const deck = createDeck();
       const drawOrder = [];
@@ -5474,8 +5448,7 @@ import { createTutorial } from './tutorial.js';
           });
         });
         document.getElementById('cinContinueBtn')?.addEventListener('click', () => {
-          if (_isClient) { state.cinematicMode = null; render(); }
-          else closeCinematic(true);
+          closeCinematic(true);
         });
         document.getElementById('chatComposer')?.addEventListener('submit', (event) => {
           event.preventDefault();
