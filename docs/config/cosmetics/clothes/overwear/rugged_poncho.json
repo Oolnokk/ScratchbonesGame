@@ -83,7 +83,7 @@
             "back_wrap": {
               "layerRole": "wrap",
               "image": {
-                "url": "./assets/cosmetics/clothes/overwear/portrait/tankanbodywrap_mao-ao.png",
+                "url": "./assets/cosmetics/clothes/overwear/portrait/ruggedshoulders_m.png",
                 "colors": [
                   "B"
                 ]
@@ -135,7 +135,7 @@
             "back_wrap": {
               "layerRole": "wrap",
               "image": {
-                "url": "./assets/cosmetics/clothes/overwear/portrait/tankanbodywrap_mao-ao_f.png",
+                "url": "./assets/cosmetics/clothes/overwear/portrait/ruggedshoulders_f.png",
                 "colors": [
                   "B"
                 ]
@@ -187,7 +187,7 @@
             "back_wrap": {
               "layerRole": "wrap",
               "image": {
-                "url": "./assets/cosmetics/clothes/overwear/portrait/tankanbodywrap_tl_m.png",
+                "url": "./assets/cosmetics/clothes/overwear/portrait/ruggedshoulders_tl_m.png",
                 "colors": [
                   "B"
                 ]
@@ -239,7 +239,7 @@
             "back_wrap": {
               "layerRole": "wrap",
               "image": {
-                "url": "./assets/cosmetics/clothes/overwear/portrait/tankanbodywrap_kenk_m.png",
+                "url": "./assets/cosmetics/clothes/overwear/portrait/ruggedshoulders_kenk_m.png",
                 "colors": [
                   "B"
                 ]
@@ -291,7 +291,7 @@
             "back_wrap": {
               "layerRole": "wrap",
               "image": {
-                "url": "./assets/cosmetics/clothes/overwear/portrait/tankanwrap_kenk_f.png",
+                "url": "./assets/cosmetics/clothes/overwear/portrait/ruggedshoulders_kenk_f.png",
                 "colors": [
                   "B"
                 ]
@@ -343,7 +343,7 @@
             "back_wrap": {
               "layerRole": "wrap",
               "image": {
-                "url": "./assets/cosmetics/clothes/overwear/portrait/tankanbodywrap_engh_f.png",
+                "url": "./assets/cosmetics/clothes/overwear/portrait/ruggedshoulders_engh_f.png",
                 "colors": [
                   "B"
                 ]
