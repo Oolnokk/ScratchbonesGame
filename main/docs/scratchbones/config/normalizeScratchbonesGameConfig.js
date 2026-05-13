@@ -20,6 +20,25 @@ const DEFAULT_AUTHORED_BOXES = {
   challengePrompt: { x: 960, y: 760, width: 280, height: 140 },
 };
 
+
+const DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG = {
+  enabled: true,
+  fontSize: '7.5rem',
+  letterSpacing: '0.12em',
+  color: 'rgba(255, 130, 40, 0.55)',
+  textShadow: '0 0 8px rgba(255, 50, 0, 0.9), 0 0 22px rgba(200, 20, 0, 0.55), 0 0 50px rgba(140, 10, 0, 0.4)',
+  initialOpacity: 0,
+  opacity: 1,
+  animationEnabled: true,
+  animation: 'scratchbonesCinTankanIn 0.65s ease-out 0.05s forwards, tankanFlicker 2.4s ease-in-out 0.8s infinite',
+  zIndex: 5,
+  edgeInsetPx: 10,
+  minGapPx: 16,
+  gapWidthRatio: 0.015,
+  fallbackAvatarHalfWidthPx: 132,
+  fallbackAvatarCenterYOffsetPx: 100,
+};
+
 const DEFAULT_PUNISH_BONE_SPIN_CONFIG = {
   spinDurationMs: 720,
   reducedMotionSpinDurationMs: 7200,
@@ -113,6 +132,14 @@ const DEFAULT_CSS_ROOT_VARS = {
   '--layout-cinematic-player-info-font': '1.05rem',
   '--layout-cinematic-burst-font': '2rem',
   '--layout-cinematic-burst-duration': '2.1s',
+  '--layout-cinematic-tankan-font-size': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.fontSize,
+  '--layout-cinematic-tankan-letter-spacing': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.letterSpacing,
+  '--layout-cinematic-tankan-color': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.color,
+  '--layout-cinematic-tankan-text-shadow': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.textShadow,
+  '--layout-cinematic-tankan-initial-opacity': String(DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.initialOpacity),
+  '--layout-cinematic-tankan-opacity': String(DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.opacity),
+  '--layout-cinematic-tankan-animation': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.animation,
+  '--layout-cinematic-tankan-z-index': String(DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.zIndex),
   '--layout-liar-burst-font': '3.2rem',
   '--layout-liar-burst-duration': '3.2s',
   '--layout-liar-burst-end-y': '-180%',
@@ -559,6 +586,38 @@ function normalizeFiniteNumber(value, fallback, { min = -Infinity, max = Infinit
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
   return Math.min(max, Math.max(min, numeric));
+}
+
+
+function normalizeNonEmptyString(value, fallback) {
+  const normalized = String(value ?? '').trim();
+  return normalized || fallback;
+}
+
+function normalizeTableCinematicTankanColumnsConfig(value = {}) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const animationEnabled = source.animationEnabled !== false;
+  const opacity = normalizeFiniteNumber(source.opacity, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.opacity, { min: 0, max: 1 });
+  const initialOpacity = normalizeFiniteNumber(source.initialOpacity, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.initialOpacity, { min: 0, max: 1 });
+  return {
+    enabled: source.enabled !== false,
+    fontSize: normalizeNonEmptyString(source.fontSize, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.fontSize),
+    letterSpacing: normalizeNonEmptyString(source.letterSpacing, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.letterSpacing),
+    color: normalizeNonEmptyString(source.color, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.color),
+    textShadow: normalizeNonEmptyString(source.textShadow, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.textShadow),
+    initialOpacity: animationEnabled ? initialOpacity : opacity,
+    opacity,
+    animationEnabled,
+    animation: animationEnabled
+      ? normalizeNonEmptyString(source.animation, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.animation)
+      : 'none',
+    zIndex: Math.round(normalizeFiniteNumber(source.zIndex, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.zIndex, { min: 0, max: 2147483647 })),
+    edgeInsetPx: normalizeFiniteNumber(source.edgeInsetPx, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.edgeInsetPx, { min: 0, max: 512 }),
+    minGapPx: normalizeFiniteNumber(source.minGapPx, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.minGapPx, { min: 0, max: 512 }),
+    gapWidthRatio: normalizeFiniteNumber(source.gapWidthRatio, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.gapWidthRatio, { min: 0, max: 0.5 }),
+    fallbackAvatarHalfWidthPx: normalizeFiniteNumber(source.fallbackAvatarHalfWidthPx, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.fallbackAvatarHalfWidthPx, { min: 0, max: 960 }),
+    fallbackAvatarCenterYOffsetPx: normalizeFiniteNumber(source.fallbackAvatarCenterYOffsetPx, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS_CONFIG.fallbackAvatarCenterYOffsetPx, { min: -960, max: 960 }),
+  };
 }
 
 
@@ -1277,6 +1336,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
     fallback: trickBoneDefinitionIds,
     allowShort: true,
   });
+  const normalizedTankanColumns = normalizeTableCinematicTankanColumnsConfig(rawGameConfig.layout?.tableView?.cinematic?.tankanColumns);
   return {
     debug: {
       enabled: rawGameConfig.debug?.enabled !== false,
@@ -1525,6 +1585,13 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
           };
         })(),
       },
+      tableView: {
+        ...(rawGameConfig.layout?.tableView || {}),
+        cinematic: {
+          ...(rawGameConfig.layout?.tableView?.cinematic || {}),
+          tankanColumns: normalizedTankanColumns,
+        },
+      },
       cinematic: {
         enableLegacyBoxedBranch: rawGameConfig.layout?.cinematic?.enableLegacyBoxedBranch === true,
       },
@@ -1644,6 +1711,14 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       return {
         ...DEFAULT_CSS_ROOT_VARS,
         ...(rawGameConfig.cssRootVars || {}),
+        '--layout-cinematic-tankan-font-size': normalizedTankanColumns.fontSize,
+        '--layout-cinematic-tankan-letter-spacing': normalizedTankanColumns.letterSpacing,
+        '--layout-cinematic-tankan-color': normalizedTankanColumns.color,
+        '--layout-cinematic-tankan-text-shadow': normalizedTankanColumns.textShadow,
+        '--layout-cinematic-tankan-initial-opacity': String(normalizedTankanColumns.initialOpacity),
+        '--layout-cinematic-tankan-opacity': String(normalizedTankanColumns.opacity),
+        '--layout-cinematic-tankan-animation': normalizedTankanColumns.animation,
+        '--layout-cinematic-tankan-z-index': String(normalizedTankanColumns.zIndex),
         '--punish-bone-spin-duration': `${punishBoneSpin.spinDurationMs}ms`,
         '--punish-bone-spin-reduced-motion-duration': `${punishBoneSpin.reducedMotionSpinDurationMs}ms`,
         '--punish-bone-spin-start-rotation': '0turn',

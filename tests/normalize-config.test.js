@@ -170,3 +170,50 @@ describe('normalizeScratchbonesGameConfig trick bones', () => {
     assert.equal(config.trickBones.summaryDisplay.amountFontFamily, 'CustomCountFont, sans-serif');
   });
 });
+
+describe('normalizeScratchbonesGameConfig cinematic tankan columns', () => {
+  it('normalizes tankan visual style and placement config', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      layout: {
+        tableView: {
+          cinematic: {
+            tankanColumns: {
+              fontSize: '9rem',
+              letterSpacing: '0.2em',
+              color: 'orange',
+              textShadow: '0 0 2px red',
+              initialOpacity: -1,
+              opacity: 2,
+              animationEnabled: false,
+              zIndex: -20,
+              edgeInsetPx: 24,
+              minGapPx: 40,
+              gapWidthRatio: 0.75,
+              fallbackAvatarHalfWidthPx: 150,
+              fallbackAvatarCenterYOffsetPx: -120,
+            },
+          },
+        },
+      },
+    });
+
+    const tankanColumns = config.layout.tableView.cinematic.tankanColumns;
+    assert.equal(tankanColumns.fontSize, '9rem');
+    assert.equal(tankanColumns.letterSpacing, '0.2em');
+    assert.equal(tankanColumns.color, 'orange');
+    assert.equal(tankanColumns.textShadow, '0 0 2px red');
+    assert.equal(tankanColumns.opacity, 1);
+    assert.equal(tankanColumns.initialOpacity, 1);
+    assert.equal(tankanColumns.animationEnabled, false);
+    assert.equal(tankanColumns.animation, 'none');
+    assert.equal(tankanColumns.zIndex, 0);
+    assert.equal(tankanColumns.edgeInsetPx, 24);
+    assert.equal(tankanColumns.minGapPx, 40);
+    assert.equal(tankanColumns.gapWidthRatio, 0.5);
+    assert.equal(tankanColumns.fallbackAvatarHalfWidthPx, 150);
+    assert.equal(tankanColumns.fallbackAvatarCenterYOffsetPx, -120);
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-font-size'], '9rem');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-animation'], 'none');
+  });
+});

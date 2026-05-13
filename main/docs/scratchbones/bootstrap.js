@@ -245,6 +245,44 @@ import { createTutorial } from './tutorial.js';
       document.head.appendChild(style);
     }
     installTrickBoneSummaryLayoutOverrides();
+
+    function installTankanColumnVisualStyleOverrides() {
+      if (typeof document === 'undefined') return;
+      const tankanColumns = SCRATCHBONES_GAME.layout?.tableView?.cinematic?.tankanColumns || {};
+      const rootStyle = document.documentElement.style;
+      const setTankanVar = (name, value) => {
+        if (value === undefined || value === null) return;
+        rootStyle.setProperty(name, String(value));
+      };
+      setTankanVar('--layout-cinematic-tankan-font-size', tankanColumns.fontSize);
+      setTankanVar('--layout-cinematic-tankan-letter-spacing', tankanColumns.letterSpacing);
+      setTankanVar('--layout-cinematic-tankan-color', tankanColumns.color);
+      setTankanVar('--layout-cinematic-tankan-text-shadow', tankanColumns.textShadow);
+      setTankanVar('--layout-cinematic-tankan-initial-opacity', tankanColumns.initialOpacity);
+      setTankanVar('--layout-cinematic-tankan-opacity', tankanColumns.opacity);
+      setTankanVar('--layout-cinematic-tankan-animation', tankanColumns.animation);
+      setTankanVar('--layout-cinematic-tankan-z-index', tankanColumns.zIndex);
+      if (document.getElementById('scratchbones-tankan-column-visual-style-overrides')) return;
+      const style = document.createElement('style');
+      style.id = 'scratchbones-tankan-column-visual-style-overrides';
+      style.textContent = `
+        .cin-tankan {
+          font-size: var(--layout-cinematic-tankan-font-size);
+          letter-spacing: var(--layout-cinematic-tankan-letter-spacing);
+          color: var(--layout-cinematic-tankan-color);
+          text-shadow: var(--layout-cinematic-tankan-text-shadow);
+          opacity: var(--layout-cinematic-tankan-initial-opacity);
+          animation: var(--layout-cinematic-tankan-animation);
+          z-index: var(--layout-cinematic-tankan-z-index);
+        }
+        @keyframes scratchbonesCinTankanIn {
+          from { opacity: var(--layout-cinematic-tankan-initial-opacity); }
+          to { opacity: var(--layout-cinematic-tankan-opacity); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    installTankanColumnVisualStyleOverrides();
     const RENDERED_SCREEN_SPACE_PARITY = SCRATCHBONES_GAME.layout?.diagnostics?.renderedScreenSpaceParity || {};
     const AUTHORED_BOX_KEY_BY_PROJ_ID = {
       'topbar': 'topbar',
@@ -6973,12 +7011,21 @@ import { createTutorial } from './tutorial.js';
         clearChallengeTankanColumns(app);
         return;
       }
-      const DEFAULT_AVATAR_HALF_WIDTH_PX = 132;
-      const DEFAULT_AVATAR_CENTER_Y_PX = 100;
-      const TANKAN_EDGE_INSET_PX = 10;
+      const tankanColumns = SCRATCHBONES_GAME.layout?.tableView?.cinematic?.tankanColumns || {};
+      if (tankanColumns.enabled === false) {
+        clearChallengeTankanColumns(app);
+        return;
+      }
+      const tankanNumber = (value) => {
+        const numericValue = Number(value);
+        return Number.isFinite(numericValue) ? numericValue : 0;
+      };
+      const fallbackAvatarHalfWidthPx = tankanNumber(tankanColumns.fallbackAvatarHalfWidthPx);
+      const fallbackAvatarCenterYOffsetPx = tankanNumber(tankanColumns.fallbackAvatarCenterYOffsetPx);
+      const tankanEdgeInsetPx = tankanNumber(tankanColumns.edgeInsetPx);
       // Keep side text tight to each avatar edge per claim-cluster cinematic placement.
-      const MIN_TANKAN_GAP_PX = 16;
-      const TANKAN_GAP_WIDTH_RATIO = 0.015;
+      const minTankanGapPx = tankanNumber(tankanColumns.minGapPx);
+      const tankanGapWidthRatio = tankanNumber(tankanColumns.gapWidthRatio);
       const appRect = app.getBoundingClientRect();
       if (!(appRect.width > 0)) return;
       const actorAnchor = app.querySelector('.actorAvatarFloat .claimAvatarShell') || app.querySelector('.actorAvatarFloat');
@@ -6989,19 +7036,19 @@ import { createTutorial } from './tutorial.js';
       const reactorVisible = reactorRect && reactorRect.width > 0 && reactorRect.height > 0;
       const leftAvatarEdge = actorVisible
         ? (actorRect.left - appRect.left)
-        : ((appRect.width * 0.5) - DEFAULT_AVATAR_HALF_WIDTH_PX);
+        : ((appRect.width * 0.5) - fallbackAvatarHalfWidthPx);
       const rightAvatarEdge = reactorVisible
         ? (reactorRect.right - appRect.left)
-        : ((appRect.width * 0.5) + DEFAULT_AVATAR_HALF_WIDTH_PX);
+        : ((appRect.width * 0.5) + fallbackAvatarHalfWidthPx);
       const actorCenterY = actorVisible
         ? ((actorRect.top - appRect.top) + (actorRect.height * 0.5))
-        : ((appRect.height * 0.5) - DEFAULT_AVATAR_CENTER_Y_PX);
+        : ((appRect.height * 0.5) - fallbackAvatarCenterYOffsetPx);
       const reactorCenterY = reactorVisible
         ? ((reactorRect.top - appRect.top) + (reactorRect.height * 0.5))
-        : ((appRect.height * 0.5) + DEFAULT_AVATAR_CENTER_Y_PX);
-      const sideGapPx = Math.max(MIN_TANKAN_GAP_PX, Math.round(appRect.width * TANKAN_GAP_WIDTH_RATIO));
-      let leftX = Math.max(TANKAN_EDGE_INSET_PX, leftAvatarEdge - sideGapPx);
-      let rightX = Math.min(appRect.width - TANKAN_EDGE_INSET_PX, rightAvatarEdge + sideGapPx);
+        : ((appRect.height * 0.5) + fallbackAvatarCenterYOffsetPx);
+      const sideGapPx = Math.max(minTankanGapPx, Math.round(appRect.width * tankanGapWidthRatio));
+      const leftX = Math.max(tankanEdgeInsetPx, leftAvatarEdge - sideGapPx);
+      const rightX = Math.min(appRect.width - tankanEdgeInsetPx, rightAvatarEdge + sideGapPx);
       const ensureColumn = (side) => {
         let node = app.querySelector(`.cin-tankan.${side}`);
         if (!node) {

@@ -1602,7 +1602,24 @@ window.SCRATCHBONES_CONFIG = {
           "liarBurstOffsetXPx": -232,
           "betActionBurstClampInsetPx": 24,
           "revealDurationMs": 4200,
-          "foldDurationMs": 2600
+          "foldDurationMs": 2600,
+          "tankanColumns": {
+            "enabled": true,
+            "fontSize": "7.5rem",
+            "letterSpacing": "0.12em",
+            "color": "rgba(255, 130, 40, 0.55)",
+            "textShadow": "0 0 8px rgba(255, 50, 0, 0.9), 0 0 22px rgba(200, 20, 0, 0.55), 0 0 50px rgba(140, 10, 0, 0.4)",
+            "initialOpacity": 0,
+            "opacity": 1,
+            "animationEnabled": true,
+            "animation": "scratchbonesCinTankanIn 0.65s ease-out 0.05s forwards, tankanFlicker 2.4s ease-in-out 0.8s infinite",
+            "zIndex": 5,
+            "edgeInsetPx": 10,
+            "minGapPx": 16,
+            "gapWidthRatio": 0.015,
+            "fallbackAvatarHalfWidthPx": 132,
+            "fallbackAvatarCenterYOffsetPx": 100
+          }
         }
       },
       "regions": {
@@ -2708,6 +2725,14 @@ window.SCRATCHBONES_CONFIG = {
       "--layout-cinematic-player-info-font": "1.05rem",
       "--layout-cinematic-burst-font": "2rem",
       "--layout-cinematic-burst-duration": "2.1s",
+      "--layout-cinematic-tankan-font-size": "7.5rem",
+      "--layout-cinematic-tankan-letter-spacing": "0.12em",
+      "--layout-cinematic-tankan-color": "rgba(255, 130, 40, 0.55)",
+      "--layout-cinematic-tankan-text-shadow": "0 0 8px rgba(255, 50, 0, 0.9), 0 0 22px rgba(200, 20, 0, 0.55), 0 0 50px rgba(140, 10, 0, 0.4)",
+      "--layout-cinematic-tankan-initial-opacity": "0",
+      "--layout-cinematic-tankan-opacity": "1",
+      "--layout-cinematic-tankan-animation": "scratchbonesCinTankanIn 0.65s ease-out 0.05s forwards, tankanFlicker 2.4s ease-in-out 0.8s infinite",
+      "--layout-cinematic-tankan-z-index": "5",
       "--layout-liar-burst-font": "3.2rem",
       "--layout-liar-burst-duration": "3.2s",
       "--layout-liar-burst-end-y": "-180%",
