@@ -1011,7 +1011,11 @@ window.SCRATCHBONES_CONFIG = {
           "highChipSuspicionAdjustment": 0.05,
           "personalitySuspicionWeight": 0.34,
           "personalityAggressionWeight": 0.08,
-          "overSuspectBonus": 0.1
+          "overSuspectBonus": 0.1,
+          "cardCountingSuspicionWeight": 0.35,
+          "cardCountingImpossibleWeight": 0.22,
+          "cardCountingDeckPressureWeight": 0.08,
+          "cardCountingAbundanceReliefWeight": 0.12
         },
         "delays": {
           "turnComplexityBase": 0.22,
@@ -1247,7 +1251,9 @@ window.SCRATCHBONES_CONFIG = {
        * - turn choice: "easy" uses the naive playbook, "normal" uses the
        *   heuristic playbook, and "hard" uses scored candidate selection;
        * - challenge choice: challengeThreshold plus challengeThresholdModifier
-       *   sets the final suspicion threshold, while challengeKnownCardWeight,
+       *   sets the final suspicion threshold, while cardCountingAccuracy controls
+       *   how reliably an NPC tracks deck, hand, wild, and rank availability;
+       *   challengeKnownCardWeight,
        *   challengeReadMemoryWeight, challengeHumanTargetBias, and
        *   challengeRandomNudgeMax shape suspicion;
        * - betting: bettingConfidenceSuspicionWeight,
@@ -1270,22 +1276,26 @@ window.SCRATCHBONES_CONFIG = {
        */
       "challengeThreshold": 0.52,
       "challengeRandomNudgeMax": 0.16,
+      "cardCountingAccuracy": 0.65,
       "bettingConfidenceSuspicionWeight": 0.55,
       "defaultDifficultyRank": "normal",
       "difficultyRanks": {
         "easy": {
           "challengeThreshold": 0.64,
           "challengeRandomNudgeMax": 0.22,
+          "cardCountingAccuracy": 0.35,
           "bettingConfidenceSuspicionWeight": 0.42
         },
         "normal": {
           "challengeThreshold": 0.52,
           "challengeRandomNudgeMax": 0.16,
+          "cardCountingAccuracy": 0.65,
           "bettingConfidenceSuspicionWeight": 0.55
         },
         "hard": {
           "challengeThreshold": 0.44,
           "challengeRandomNudgeMax": 0.08,
+          "cardCountingAccuracy": 0.9,
           "bettingConfidenceSuspicionWeight": 0.68
         },
         "boss": {

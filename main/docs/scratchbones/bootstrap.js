@@ -844,6 +844,7 @@ import { createTutorial } from './tutorial.js';
         challengeRandomNudgeMax: finiteProfileNumber(profile.challengeRandomNudgeMax, finiteProfileNumber(AI_CONFIG.challengeRandomNudgeMax, 0.16)),
         challengeKnownCardWeight: finiteProfileNumber(profile.challengeKnownCardWeight, finiteProfileNumber(AI_CONFIG.challengeKnownCardWeight, 0.27)),
         challengeReadMemoryWeight: finiteProfileNumber(profile.challengeReadMemoryWeight, finiteProfileNumber(AI_CONFIG.challengeReadMemoryWeight, 1)),
+        cardCountingAccuracy: Math.max(0, Math.min(1, finiteProfileNumber(profile.cardCountingAccuracy, finiteProfileNumber(AI_CONFIG.cardCountingAccuracy, 0.65)))),
         challengeHumanTargetBias: finiteProfileNumber(profile.challengeHumanTargetBias, finiteProfileNumber(AI_CONFIG.challengeHumanTargetBias, 0.1)),
         bettingConfidenceSuspicionWeight: finiteProfileNumber(profile.bettingConfidenceSuspicionWeight, finiteProfileNumber(AI_CONFIG.bettingConfidenceSuspicionWeight, 0.55)),
         bettingConfidenceRandomNudgeMax: finiteProfileNumber(profile.bettingConfidenceRandomNudgeMax, finiteProfileNumber(AI_CONFIG.bettingConfidenceRandomNudgeMax, 0.06)),
@@ -1828,6 +1829,113 @@ import { createTutorial } from './tutorial.js';
       }
       return count;
     }
+    function countCardsInPlay({ excludePlay = null } = {}) {
+      let count = 0;
+      for (const play of state.pile) {
+        if (excludePlay && play === excludePlay) continue;
+        count += play.cards?.length || 0;
+      }
+      return count;
+    }
+    function claimedRankCountInPlay(rank, { excludePlay = null } = {}) {
+      let count = 0;
+      for (const play of state.pile) {
+        if (excludePlay && play === excludePlay) continue;
+        if (play.declaredRank === rank) count += play.cards?.length || 0;
+      }
+      return count;
+    }
+    function actualRankCountInPlay(rank, { excludePlay = null } = {}) {
+      let count = 0;
+      for (const play of state.pile) {
+        if (excludePlay && play === excludePlay) continue;
+        for (const card of play.cards || []) {
+          if (!card.wild && card.rank === rank) count++;
+        }
+      }
+      return count;
+    }
+    function actualWildCountInPlay({ excludePlay = null } = {}) {
+      let count = 0;
+      for (const play of state.pile) {
+        if (excludePlay && play === excludePlay) continue;
+        for (const card of play.cards || []) if (card.wild) count++;
+      }
+      return count;
+    }
+    function totalScratchbonesDeckCards() {
+      return (RANK_COUNT * COPIES_PER_RANK) + WILD_COUNT;
+    }
+    function aiCardCountingSnapshot(observerIndex, { excludePlay = null } = {}) {
+      const observer = state.players[observerIndex];
+      const aiProfile = getAiDifficultyProfile(observer);
+      const accuracy = aiProfile.cardCountingAccuracy;
+      const handCountsByPlayer = state.players.map(player => (player && !player.eliminated ? player.hand?.length || 0 : 0));
+      const totalCardsInHands = handCountsByPlayer.reduce((sum, count) => sum + count, 0);
+      const cardsInPlay = countCardsInPlay({ excludePlay });
+      const deckCount = Math.max(0, totalScratchbonesDeckCards() - totalCardsInHands - cardsInPlay);
+      const ownHand = observer?.hand || [];
+      const ownWilds = ownHand.filter(card => card.wild).length;
+      const ownRanks = new Map();
+      for (const card of ownHand) {
+        if (!card.wild) ownRanks.set(card.rank, (ownRanks.get(card.rank) || 0) + 1);
+      }
+      const rankCounts = new Map();
+      for (let rank = 1; rank <= RANK_COUNT; rank++) {
+        const ownRankCount = ownRanks.get(rank) || 0;
+        const claimedInPlay = claimedRankCountInPlay(rank, { excludePlay });
+        const actualInPlay = actualRankCountInPlay(rank, { excludePlay });
+        const perceivedInPlay = claimedInPlay + (actualInPlay - claimedInPlay) * accuracy;
+        rankCounts.set(rank, {
+          own: ownRankCount,
+          claimedInPlay,
+          perceivedInPlay,
+          unavailable: Math.max(0, ownRankCount + perceivedInPlay),
+          possibleOutsideObserver: Math.max(0, COPIES_PER_RANK - ownRankCount - perceivedInPlay),
+        });
+      }
+      const wildsInPlay = actualWildCountInPlay({ excludePlay }) * accuracy;
+      return {
+        accuracy,
+        deckCount,
+        handCountsByPlayer,
+        totalCardsInHands,
+        cardsInPlay,
+        ownWilds,
+        wildsInPlay,
+        possibleWildsOutsideObserver: Math.max(0, WILD_COUNT - ownWilds - wildsInPlay),
+        rankCounts,
+      };
+    }
+    function aiRankPossibilityOutlook(observerIndex, play) {
+      const snapshot = aiCardCountingSnapshot(observerIndex, { excludePlay: play });
+      const observer = state.players[observerIndex];
+      const declaredRank = play.declaredRank;
+      const rankInfo = snapshot.rankCounts.get(declaredRank) || { possibleOutsideObserver: COPIES_PER_RANK, unavailable: 0 };
+      const declarer = state.players[play.playerIndex];
+      const claimCount = play.cards?.length || 0;
+      const declarerHandBeforeClaim = (declarer?.hand?.length || 0) + claimCount;
+      const observerHandCount = observer?.hand?.length || 0;
+      const unknownPoolOutsideObserver = Math.max(1, totalScratchbonesDeckCards() - observerHandCount - snapshot.cardsInPlay);
+      const possibleTruthCardsOutsideObserver = rankInfo.possibleOutsideObserver + snapshot.possibleWildsOutsideObserver;
+      const supportRate = Math.max(0, Math.min(1, possibleTruthCardsOutsideObserver / unknownPoolOutsideObserver));
+      const expectedTruthCardsInDeclarerHand = declarerHandBeforeClaim * supportRate;
+      const impossibleOverage = Math.max(0, claimCount - possibleTruthCardsOutsideObserver);
+      const truthPressure = Math.max(0, Math.min(1, (claimCount - expectedTruthCardsInDeclarerHand) / Math.max(1, claimCount)));
+      const abundanceRelief = Math.max(0, Math.min(1, (expectedTruthCardsInDeclarerHand - claimCount) / Math.max(1, declarerHandBeforeClaim)));
+      const deckPressure = Math.max(0, Math.min(1, 1 - (snapshot.deckCount / Math.max(1, totalScratchbonesDeckCards()))));
+      return {
+        snapshot,
+        declaredRank,
+        claimCount,
+        possibleTruthCardsOutsideObserver,
+        expectedTruthCardsInDeclarerHand,
+        impossibleOverage,
+        truthPressure,
+        abundanceRelief,
+        deckPressure,
+      };
+    }
     function ensureReadProfile(observerIndex, targetIndex) {
       const observer = state.players[observerIndex];
       if (!observer) return null;
@@ -1939,9 +2047,14 @@ import { createTutorial } from './tutorial.js';
       const aiProfile = getAiDifficultyProfile(challenger);
       const knownRankCount = countKnownRank(play.declaredRank);
       const impossibleOverage = impossibleRankOverage(knownRankCount, play.cards.length);
+      const rankOutlook = aiRankPossibilityOutlook(challengerIndex, play);
       const read = ensureReadProfile(challengerIndex, play.playerIndex);
       let suspicion = 0;
       suspicion += impossibleOverage * aiProfile.challengeKnownCardWeight;
+      suspicion += rankOutlook.truthPressure * aiDecisionNumber('challenge', 'cardCountingSuspicionWeight', 0.35);
+      suspicion += rankOutlook.impossibleOverage * aiDecisionNumber('challenge', 'cardCountingImpossibleWeight', 0.22);
+      suspicion += rankOutlook.deckPressure * rankOutlook.truthPressure * aiDecisionNumber('challenge', 'cardCountingDeckPressureWeight', 0.08);
+      suspicion -= rankOutlook.abundanceRelief * aiDecisionNumber('challenge', 'cardCountingAbundanceReliefWeight', 0.12);
       suspicion += play.cards.length >= aiDecisionNumber('challenge', 'cardCountSoftThreshold', 3) ? aiDecisionNumber('challenge', 'cardCountSoftBonus', 0.1) : 0;
       suspicion += play.cards.length >= aiDecisionNumber('challenge', 'cardCountHardThreshold', 5) ? aiDecisionNumber('challenge', 'cardCountHardBonus', 0.08) : 0;
       suspicion += challenger.chips <= aiDecisionNumber('challenge', 'lowChipThreshold', 2) ? aiDecisionNumber('challenge', 'lowChipSuspicionAdjustment', -0.18) : 0;
@@ -1985,9 +2098,10 @@ import { createTutorial } from './tutorial.js';
         const read = ensureReadProfile(actorId, play.playerIndex);
         const knownRankCount = countKnownRank(play.declaredRank);
         const impossibleOverage = impossibleRankOverage(knownRankCount, play.cards.length);
+        const rankOutlook = aiRankPossibilityOutlook(actorId, play);
         const readSuspicion = suspicionFromReadProfile(read, pers);
         const handPressure = state.declaredRank === null ? aiDecisionNumber('delays', 'challengeOpeningHandPressure', 0.08) : Math.max(0, aiDecisionNumber('delays', 'challengeHandPressureBase', 0.2) - (cardsOfRank(actor, state.declaredRank).length * aiDecisionNumber('delays', 'challengeMatchPressureWeight', 0.05)));
-        const uncertainty = clamp01(aiDecisionNumber('delays', 'challengeUncertaintyBase', 0.45) - impossibleOverage * aiDecisionNumber('delays', 'challengeImpossibleOverageWeight', 0.14) + Math.max(0, aiDecisionNumber('delays', 'challengeReadCertaintyBase', 0.18) - Math.abs(readSuspicion) * aiDecisionNumber('delays', 'challengeReadCertaintyWeight', 0.6)) + handPressure + rand() * aiDecisionNumber('delays', 'challengeRandomWeight', 0.08));
+        const uncertainty = clamp01(aiDecisionNumber('delays', 'challengeUncertaintyBase', 0.45) - (impossibleOverage + rankOutlook.impossibleOverage) * aiDecisionNumber('delays', 'challengeImpossibleOverageWeight', 0.14) + Math.max(0, aiDecisionNumber('delays', 'challengeReadCertaintyBase', 0.18) - Math.abs(readSuspicion) * aiDecisionNumber('delays', 'challengeReadCertaintyWeight', 0.6)) + handPressure + rand() * aiDecisionNumber('delays', 'challengeRandomWeight', 0.08));
         const styleTempo = 1 - ((pers.courage ?? 0.5) * aiDecisionNumber('delays', 'challengeCourageTempoWeight', 0.46) + (pers.suspicion ?? 0.5) * aiDecisionNumber('delays', 'challengeSuspicionTempoWeight', 0.34) + (pers.aggression ?? 0.5) * aiDecisionNumber('delays', 'challengeAggressionTempoWeight', 0.2));
         const pace = clamp01(uncertainty * aiDecisionNumber('delays', 'challengePaceUncertaintyWeight', 0.72) + styleTempo * aiDecisionNumber('delays', 'challengePaceStyleWeight', 0.28));
         const minMs = Number(AI_DECISION_DELAYS.challengeMinMs) || 360;
