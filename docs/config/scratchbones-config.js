@@ -1602,7 +1602,14 @@ window.SCRATCHBONES_CONFIG = {
           "liarBurstOffsetXPx": -232,
           "betActionBurstClampInsetPx": 24,
           "revealDurationMs": 4200,
-          "foldDurationMs": 2600
+          "foldDurationMs": 2600,
+          "tankanColumns": {
+            "fallbackAvatarHalfWidthPx": 132,
+            "fallbackAvatarCenterOffsetYPx": 100,
+            "edgeInsetPx": 10,
+            "minGapPx": 16,
+            "gapWidthRatio": 0.015
+          }
         }
       },
       "regions": {
@@ -2646,6 +2653,7 @@ window.SCRATCHBONES_CONFIG = {
       "--layout-seat-avatar-size": "132px",
       "--layout-human-seat-avatar-size": "204px",
       "--layout-cinematic-avatar-size": "132px",
+      "--layout-tankan-edge-inset": "10px",
       "--layout-hand-card-min-width": "86px",
       "--layout-hand-card-max-width": "86px",
       "--layout-hand-card-min-height": "164px",

@@ -110,3 +110,18 @@ Current behavior:
 - Touching or hovering an outlined element reports a prompt-friendly element reference in the editor status/tooltip, preferring `data-proj-id` when present.
 - Moving or resizing authored boxes/sub-elements requires enabling the separate `Edit` button while Map is active. The `Sub` overlay button is only exposed in this edit mode so accidental debug touches cannot mutate layout config.
 - Debug color and button/status labels live under `layout.projectionMapping.debug` in `docs/config/scratchbones-config.js`.
+
+## 2026-05-13 challenge Tankanscript column layout QA
+
+### Variable path traced
+1. `docs/config/scratchbones-config.js` owns the challenge Tankanscript layout constants under `layout.tableView.cinematic.tankanColumns`; `edgeInsetPx` is also mirrored into `--layout-tankan-edge-inset` for runtime CSS overrides.
+2. `mountChallengeTankanColumns()` receives the challenge label text, strips terminal punctuation, and clears `.cin-tankan` nodes when no text remains.
+3. The actor and reactor anchor rects come from `.actorAvatarFloat .claimAvatarShell` / `.reactorAvatarFloat .claimAvatarShell`, with `.actorAvatarFloat` / `.reactorAvatarFloat` as anchor fallbacks.
+4. If either anchor is hidden or missing, the column uses the configured fallback avatar half-width and center-y offset around the measured `#app` center; this preserves the previous missing-anchor behavior.
+5. After each column is appended or updated, `getBoundingClientRect()` is read from the rendered `.cin-tankan` node and compared against the live `#app` rect plus the configured edge inset. Any overflow shifts the node's app-local `left` / `top` values back inside the allowed rect.
+
+### Manual QA notes
+- Trigger a challenge reveal at a narrow viewport and verify both vertical Tankanscript columns are visible without crossing the `#app` edge inset.
+- Repeat at the authored-layout reference size and a wide desktop viewport; the columns should remain tight to the actor/reactor sides unless the rendered text would overflow.
+- Temporarily hide either cinematic avatar anchor in DevTools and retrigger the reveal; the fallback positions should still render columns inside `#app` instead of clearing them.
+- Inspect the injected `#scratchbones-challenge-tankan-layout-overrides` style to confirm the legacy monolith `.cin-tankan.right { right: ... }` rule is neutralized at runtime rather than edited in `ScratchbonesBluffGame.html`.

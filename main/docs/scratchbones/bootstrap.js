@@ -180,6 +180,25 @@ import { createTutorial } from './tutorial.js';
       document.head.appendChild(style);
     }
     installSeatResponsiveLayoutOverrides();
+    function installChallengeTankanLayoutOverrides() {
+      if (typeof document === 'undefined' || document.getElementById('scratchbones-challenge-tankan-layout-overrides')) return;
+      const style = document.createElement('style');
+      style.id = 'scratchbones-challenge-tankan-layout-overrides';
+      style.textContent = `
+        #app .cin-tankan {
+          box-sizing: border-box;
+          max-width: calc(100% - (var(--layout-tankan-edge-inset) * 2));
+          max-height: calc(100% - (var(--layout-tankan-edge-inset) * 2));
+          overflow: visible;
+        }
+        #app .cin-tankan.left,
+        #app .cin-tankan.right {
+          right: auto !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    installChallengeTankanLayoutOverrides();
     function installTrickBoneSummaryLayoutOverrides() {
       if (typeof document === 'undefined' || document.getElementById('scratchbones-trick-bone-summary-layout-overrides')) return;
       const style = document.createElement('style');
@@ -4389,6 +4408,7 @@ import { createTutorial } from './tutorial.js';
       const liarBurstDurationSec = clampNumber(Number(cinematicLayout.liarBurstDurationSec) || 3.2, 0.6, 8);
       const liarBurstEndYPct = clampNumber(Number(cinematicLayout.liarBurstEndYPct) || -180, -320, -110);
       const liarBurstOffsetXPx = Number.isFinite(Number(cinematicLayout.liarBurstOffsetXPx)) ? Number(cinematicLayout.liarBurstOffsetXPx) : -232;
+      const tankanColumnEdgeInsetPx = clampNumber(numberOrDefault(cinematicLayout.tankanColumns?.edgeInsetPx, 10), 0, 120);
       const bettingTitleOffsetY = cssLengthOrDefault(bettingLayout.titleOffsetY, '-80%');
       const bettingChoiceOffsetY = cssLengthOrDefault(bettingLayout.choiceOffsetY, '115%');
       const bettingLeftSlotOffsetX = cssLengthOrDefault(bettingLayout.leftSlotOffsetX, '260px');
@@ -4508,6 +4528,7 @@ import { createTutorial } from './tutorial.js';
       setCssVar('--layout-liar-burst-duration', `${liarBurstDurationSec.toFixed(3)}s`);
       setCssVar('--layout-liar-burst-end-y', `${liarBurstEndYPct.toFixed(2)}%`);
       setCssVar('--layout-liar-burst-offset-x', `${liarBurstOffsetXPx.toFixed(2)}px`);
+      setCssVar('--layout-tankan-edge-inset', `${tankanColumnEdgeInsetPx.toFixed(2)}px`);
       setCssVar('--layout-ui-tabletop-url', tabletopImageSrc ? `url("${tabletopImageSrc}")` : 'none');
       setCssVar('--layout-flame-x', `${(flameXPct * 100).toFixed(2)}%`);
       setCssVar('--layout-flame-y', `${(flameYPct * 100).toFixed(2)}%`);
@@ -6973,35 +6994,48 @@ import { createTutorial } from './tutorial.js';
         clearChallengeTankanColumns(app);
         return;
       }
-      const DEFAULT_AVATAR_HALF_WIDTH_PX = 132;
-      const DEFAULT_AVATAR_CENTER_Y_PX = 100;
-      const TANKAN_EDGE_INSET_PX = 10;
-      // Keep side text tight to each avatar edge per claim-cluster cinematic placement.
-      const MIN_TANKAN_GAP_PX = 16;
-      const TANKAN_GAP_WIDTH_RATIO = 0.015;
+      const tankanConfig = SCRATCHBONES_GAME.layout?.tableView?.cinematic?.tankanColumns || {};
+      const configuredCinematicAvatarPx = Number(SCRATCHBONES_GAME.layout?.sizing?.cinematicAvatarPx);
+      const defaultAvatarHalfWidthPx = Number.isFinite(Number(tankanConfig.fallbackAvatarHalfWidthPx))
+        ? Number(tankanConfig.fallbackAvatarHalfWidthPx)
+        : (Number.isFinite(configuredCinematicAvatarPx) ? configuredCinematicAvatarPx : 0);
+      const defaultAvatarCenterOffsetYPx = Number.isFinite(Number(tankanConfig.fallbackAvatarCenterOffsetYPx))
+        ? Number(tankanConfig.fallbackAvatarCenterOffsetYPx)
+        : defaultAvatarHalfWidthPx;
+      const edgeInsetPx = Math.max(0, Number(tankanConfig.edgeInsetPx) || 0);
+      const minGapPx = Math.max(0, Number(tankanConfig.minGapPx) || 0);
+      const gapWidthRatio = Math.max(0, Number(tankanConfig.gapWidthRatio) || 0);
       const appRect = app.getBoundingClientRect();
-      if (!(appRect.width > 0)) return;
+      const appCssWidth = app.clientWidth || appRect.width;
+      const appCssHeight = app.clientHeight || appRect.height;
+      if (!(appRect.width > 0) || !(appRect.height > 0) || !(appCssWidth > 0) || !(appCssHeight > 0)) return;
+      const scaleX = appRect.width / appCssWidth || 1;
+      const scaleY = appRect.height / appCssHeight || 1;
       const actorAnchor = app.querySelector('.actorAvatarFloat .claimAvatarShell') || app.querySelector('.actorAvatarFloat');
       const reactorAnchor = app.querySelector('.reactorAvatarFloat .claimAvatarShell') || app.querySelector('.reactorAvatarFloat');
       const actorRect = actorAnchor?.getBoundingClientRect?.();
       const reactorRect = reactorAnchor?.getBoundingClientRect?.();
       const actorVisible = actorRect && actorRect.width > 0 && actorRect.height > 0;
       const reactorVisible = reactorRect && reactorRect.width > 0 && reactorRect.height > 0;
+      const renderedToAppX = (viewportX) => (viewportX - appRect.left) / scaleX;
+      const renderedToAppY = (viewportY) => (viewportY - appRect.top) / scaleY;
       const leftAvatarEdge = actorVisible
-        ? (actorRect.left - appRect.left)
-        : ((appRect.width * 0.5) - DEFAULT_AVATAR_HALF_WIDTH_PX);
+        ? renderedToAppX(actorRect.left)
+        : ((appCssWidth * 0.5) - defaultAvatarHalfWidthPx);
       const rightAvatarEdge = reactorVisible
-        ? (reactorRect.right - appRect.left)
-        : ((appRect.width * 0.5) + DEFAULT_AVATAR_HALF_WIDTH_PX);
+        ? renderedToAppX(reactorRect.right)
+        : ((appCssWidth * 0.5) + defaultAvatarHalfWidthPx);
       const actorCenterY = actorVisible
-        ? ((actorRect.top - appRect.top) + (actorRect.height * 0.5))
-        : ((appRect.height * 0.5) - DEFAULT_AVATAR_CENTER_Y_PX);
+        ? renderedToAppY(actorRect.top + (actorRect.height * 0.5))
+        : ((appCssHeight * 0.5) - defaultAvatarCenterOffsetYPx);
       const reactorCenterY = reactorVisible
-        ? ((reactorRect.top - appRect.top) + (reactorRect.height * 0.5))
-        : ((appRect.height * 0.5) + DEFAULT_AVATAR_CENTER_Y_PX);
-      const sideGapPx = Math.max(MIN_TANKAN_GAP_PX, Math.round(appRect.width * TANKAN_GAP_WIDTH_RATIO));
-      let leftX = Math.max(TANKAN_EDGE_INSET_PX, leftAvatarEdge - sideGapPx);
-      let rightX = Math.min(appRect.width - TANKAN_EDGE_INSET_PX, rightAvatarEdge + sideGapPx);
+        ? renderedToAppY(reactorRect.top + (reactorRect.height * 0.5))
+        : ((appCssHeight * 0.5) + defaultAvatarCenterOffsetYPx);
+      const sideGapPx = Math.max(minGapPx, Math.round(appCssWidth * gapWidthRatio));
+      const minCssLeft = edgeInsetPx;
+      const maxCssLeft = Math.max(minCssLeft, appCssWidth - edgeInsetPx);
+      const leftX = clampNumber(leftAvatarEdge - sideGapPx, minCssLeft, maxCssLeft);
+      const rightX = clampNumber(rightAvatarEdge + sideGapPx, minCssLeft, maxCssLeft);
       const ensureColumn = (side) => {
         let node = app.querySelector(`.cin-tankan.${side}`);
         if (!node) {
@@ -7014,16 +7048,38 @@ import { createTutorial } from './tutorial.js';
       };
       const leftColumn = ensureColumn('left');
       const rightColumn = ensureColumn('right');
-      leftColumn.textContent = text;
-      rightColumn.textContent = text;
-      leftColumn.style.left = `${Math.round(leftX)}px`;
-      leftColumn.style.top = `${Math.round(actorCenterY)}px`;
-      leftColumn.style.right = 'auto';
-      leftColumn.style.transform = 'translateY(-50%)';
-      rightColumn.style.left = `${Math.round(rightX)}px`;
-      rightColumn.style.top = `${Math.round(reactorCenterY)}px`;
-      rightColumn.style.right = 'auto';
-      rightColumn.style.transform = 'translateY(-50%)';
+      const applyInitialColumnStyle = (node, x, y) => {
+        node.textContent = text;
+        node.style.left = `${Math.round(x)}px`;
+        node.style.top = `${Math.round(y)}px`;
+        node.style.right = 'auto';
+        node.style.transform = 'translateY(-50%)';
+      };
+      applyInitialColumnStyle(leftColumn, leftX, actorCenterY);
+      applyInitialColumnStyle(rightColumn, rightX, reactorCenterY);
+      const keepRenderedBoundsInsideApp = (node, x, y) => {
+        const rect = node.getBoundingClientRect();
+        if (!(rect.width > 0) || !(rect.height > 0)) return { x, y };
+        const minRenderedX = appRect.left + edgeInsetPx;
+        const maxRenderedX = appRect.right - edgeInsetPx;
+        const minRenderedY = appRect.top + edgeInsetPx;
+        const maxRenderedY = appRect.bottom - edgeInsetPx;
+        let adjustedX = x;
+        let adjustedY = y;
+        if (rect.left < minRenderedX) adjustedX += (minRenderedX - rect.left) / scaleX;
+        if (rect.right > maxRenderedX) adjustedX -= (rect.right - maxRenderedX) / scaleX;
+        if (rect.top < minRenderedY) adjustedY += (minRenderedY - rect.top) / scaleY;
+        if (rect.bottom > maxRenderedY) adjustedY -= (rect.bottom - maxRenderedY) / scaleY;
+        adjustedX = clampNumber(adjustedX, minCssLeft, maxCssLeft);
+        adjustedY = clampNumber(adjustedY, edgeInsetPx, Math.max(edgeInsetPx, appCssHeight - edgeInsetPx));
+        return { x: adjustedX, y: adjustedY };
+      };
+      const adjustedLeft = keepRenderedBoundsInsideApp(leftColumn, leftX, actorCenterY);
+      const adjustedRight = keepRenderedBoundsInsideApp(rightColumn, rightX, reactorCenterY);
+      leftColumn.style.left = `${Math.round(adjustedLeft.x)}px`;
+      leftColumn.style.top = `${Math.round(adjustedLeft.y)}px`;
+      rightColumn.style.left = `${Math.round(adjustedRight.x)}px`;
+      rightColumn.style.top = `${Math.round(adjustedRight.y)}px`;
     }
     function clearClaimClusterBettingLayer(app = document.getElementById('app')) {
       if (!app) return;
