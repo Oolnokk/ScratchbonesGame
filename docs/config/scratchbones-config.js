@@ -2724,7 +2724,7 @@ window.SCRATCHBONES_CONFIG = {
       "--layout-card-shadow-spread": "-2px",
       "--layout-card-shadow-alpha": "0.34",
       "--layout-card-contact-alpha": "0.2",
-      "--layout-trick-info-glyph-size": "28px",
+      "--layout-trick-info-glyph-size": "14px",
       "--layout-trick-info-gap": "6px",
       "--layout-trick-info-item-gap": "4px",
       "--layout-trick-info-margin-top": "6px",
