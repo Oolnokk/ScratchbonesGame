@@ -3717,7 +3717,7 @@ import { createTutorial } from './tutorial.js';
       return src || null;
     }
     function trickSummaryMetrics(context = 'seat') {
-      const glyphSizePx = Math.max(1, Number(TRICK_BONE_SUMMARY_DISPLAY.glyphSizePx) || 28);
+      const glyphSizePx = Math.max(1, Number(TRICK_BONE_SUMMARY_DISPLAY.glyphSizePx) || 14);
       const multiplyGlyphScale = Math.max(0.1, Math.min(1, Number(TRICK_BONE_SUMMARY_DISPLAY.multiplyGlyphScale) || 0.75));
       const gapPx = Math.max(0, Number(TRICK_BONE_SUMMARY_DISPLAY.gapPx) || 6);
       const rowGapPx = Math.max(0, Number(TRICK_BONE_SUMMARY_DISPLAY.rowGapPx) || 4);
@@ -3728,12 +3728,12 @@ import { createTutorial } from './tutorial.js';
       const isDeck = context === 'deck';
       const color = isDeck
         ? String(TRICK_BONE_SUMMARY_DISPLAY.deckColor || '#fff')
-        : String(TRICK_BONE_SUMMARY_DISPLAY.seatColor || 'var(--text)');
+        : String(TRICK_BONE_SUMMARY_DISPLAY.seatColor || '#fff');
       const glyphFilter = isDeck
         ? String(TRICK_BONE_SUMMARY_DISPLAY.deckGlyphFilter || 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))')
-        : String(TRICK_BONE_SUMMARY_DISPLAY.glyphFilter || 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))');
-      const multiplyGlyphFilter = String(TRICK_BONE_SUMMARY_DISPLAY.multiplyGlyphFilter || 'invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))');
-      const arrowText = String(TRICK_BONE_SUMMARY_DISPLAY.arrowText || '->');
+        : String(TRICK_BONE_SUMMARY_DISPLAY.glyphFilter || 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))');
+      const multiplyGlyphFilter = String(TRICK_BONE_SUMMARY_DISPLAY.multiplyGlyphFilter || 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))');
+      const arrowText = String(TRICK_BONE_SUMMARY_DISPLAY.arrowText || '\u00A0');
       return { glyphSizePx, multiplyGlyphScale, gapPx, rowGapPx, marginTopPx, maxWidthPx, fontSizeRem, letterSpacingEm, color, glyphFilter, multiplyGlyphFilter, arrowText };
     }
     function renderTrickBoneSymbolContainer(trickType, { className = '', context = 'seat' } = {}) {
@@ -3775,7 +3775,7 @@ import { createTutorial } from './tutorial.js';
       const metrics = trickSummaryMetrics(context);
       const rowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px auto ${metrics.glyphSizePx}px auto minmax(1.5em,auto);align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};`;
       const arrowStyle = `color:${metrics.color};font-weight:700;`;
-      const amountStyle = `color:${metrics.color};font-weight:800;text-align:left;`;
+      const amountStyle = `color:${metrics.color};font-weight:800;text-align:left;font-size:250%;line-height:1;`;
       return entries.map(([trickType, count]) => `
         <span class="${escapeHtml(itemClassName)}" title="${escapeHtml(trickBoneDisplayLabel(trickType))}: ${count}" style="${escapeHtml(rowStyle)}">
           ${renderTrickBoneSymbolContainer(trickType, { context })}
