@@ -154,19 +154,51 @@ describe('normalizeScratchbonesGameConfig trick bones', () => {
     const config = normalizeScratchbonesGameConfig({
       trickBones: {
         summaryDisplay: {
-          seatAmountFontSize: '140%',
-          deckAmountFontSize: '220%',
+          seatAmountFontSize: ' 1.2rem ',
+          deckAmountFontSize: '14px',
           seatAmountColumnMinEm: 0,
           deckAmountColumnMinEm: 2.4,
-          amountFontFamily: 'CustomCountFont, sans-serif',
+          amountFontFamily: ' CustomCountFont, sans-serif ',
+        },
+      },
+    });
+
+    assert.equal(config.trickBones.summaryDisplay.seatAmountFontSize, '1.2rem');
+    assert.equal(config.trickBones.summaryDisplay.deckAmountFontSize, '14px');
+    assert.equal(config.trickBones.summaryDisplay.seatAmountColumnMinEm, 1.2);
+    assert.equal(config.trickBones.summaryDisplay.deckAmountColumnMinEm, 2.4);
+    assert.equal(config.trickBones.summaryDisplay.amountFontFamily, 'CustomCountFont, sans-serif');
+  });
+
+  it('falls invalid trick summary font sizes and blank font families back to defaults', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      trickBones: {
+        summaryDisplay: {
+          seatAmountFontSize: 'huge',
+          deckAmountFontSize: '   ',
+          amountFontFamily: '   ',
+        },
+      },
+    });
+
+    assert.equal(config.trickBones.summaryDisplay.seatAmountFontSize, '160%');
+    assert.equal(config.trickBones.summaryDisplay.deckAmountFontSize, '250%');
+    assert.equal(config.trickBones.summaryDisplay.amountFontFamily, "'Khymeryyanroman4', Inter, system-ui, sans-serif");
+  });
+
+  it('keeps percentage trick summary amount font sizes valid', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      trickBones: {
+        summaryDisplay: {
+          seatAmountFontSize: '140%',
+          deckAmountFontSize: '220%',
         },
       },
     });
 
     assert.equal(config.trickBones.summaryDisplay.seatAmountFontSize, '140%');
     assert.equal(config.trickBones.summaryDisplay.deckAmountFontSize, '220%');
-    assert.equal(config.trickBones.summaryDisplay.seatAmountColumnMinEm, 1.2);
-    assert.equal(config.trickBones.summaryDisplay.deckAmountColumnMinEm, 2.4);
-    assert.equal(config.trickBones.summaryDisplay.amountFontFamily, 'CustomCountFont, sans-serif');
   });
 });

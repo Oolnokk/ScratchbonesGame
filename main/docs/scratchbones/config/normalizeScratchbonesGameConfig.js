@@ -1,5 +1,9 @@
 const DEFAULT_PORTRAIT_EXPRESSION_DURATION_MS = 10000;
 const DEFAULT_RESTING_CHIP_NEUTRAL_BAND_RATIO = 0.15;
+const DEFAULT_TRICK_SUMMARY_SEAT_AMOUNT_FONT_SIZE = '160%';
+const DEFAULT_TRICK_SUMMARY_DECK_AMOUNT_FONT_SIZE = '250%';
+const DEFAULT_TRICK_SUMMARY_AMOUNT_FONT_FAMILY = "'Khymeryyanroman4', Inter, system-ui, sans-serif";
+const CSS_LENGTH_OR_PERCENT_PATTERN = /^(?:\d+|\d*\.\d+)(?:px|rem|em|%)$/i;
 const DEFAULT_PORTRAIT_LAUGH_EMOTE_CONFIG = {
   puffCount: 3,
   inflateDurationSeconds: 0.12,
@@ -1210,6 +1214,18 @@ function normalizeTrickBoneDefinitions(rawDefinitions = {}) {
   return definitions;
 }
 
+function normalizeSimpleCssLengthOrPercentage(rawValue, fallback) {
+  const value = String(rawValue ?? '').trim();
+  if (!value || !CSS_LENGTH_OR_PERCENT_PATTERN.test(value)) return fallback;
+  const numericValue = Number.parseFloat(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? value : fallback;
+}
+
+function normalizeFontFamily(rawValue, fallback) {
+  const value = String(rawValue ?? '').trim();
+  return value || fallback;
+}
+
 function normalizeTrickIdArray(rawIds, { definitions, fallback = [], size = null, allowShort = false } = {}) {
   const validIds = new Set(Object.keys(definitions || {}));
   const source = Array.isArray(rawIds) ? rawIds : fallback;
@@ -1319,11 +1335,11 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         maxWidthPx: Math.max(1, Number(rawGameConfig.trickBones?.summaryDisplay?.maxWidthPx) || 220),
         fontSizeRem: Math.max(0.1, Number(rawGameConfig.trickBones?.summaryDisplay?.fontSizeRem) || 0.68),
         letterSpacingEm: Math.max(0, Number(rawGameConfig.trickBones?.summaryDisplay?.letterSpacingEm) || 0.05),
-        seatAmountFontSize: String(rawGameConfig.trickBones?.summaryDisplay?.seatAmountFontSize || '160%'),
-        deckAmountFontSize: String(rawGameConfig.trickBones?.summaryDisplay?.deckAmountFontSize || '250%'),
+        seatAmountFontSize: normalizeSimpleCssLengthOrPercentage(rawGameConfig.trickBones?.summaryDisplay?.seatAmountFontSize, DEFAULT_TRICK_SUMMARY_SEAT_AMOUNT_FONT_SIZE),
+        deckAmountFontSize: normalizeSimpleCssLengthOrPercentage(rawGameConfig.trickBones?.summaryDisplay?.deckAmountFontSize, DEFAULT_TRICK_SUMMARY_DECK_AMOUNT_FONT_SIZE),
         seatAmountColumnMinEm: Math.max(0.1, Number(rawGameConfig.trickBones?.summaryDisplay?.seatAmountColumnMinEm) || 1.2),
         deckAmountColumnMinEm: Math.max(0.1, Number(rawGameConfig.trickBones?.summaryDisplay?.deckAmountColumnMinEm) || 1.5),
-        amountFontFamily: String(rawGameConfig.trickBones?.summaryDisplay?.amountFontFamily || "'Khymeryyanroman4', Inter, system-ui, sans-serif"),
+        amountFontFamily: normalizeFontFamily(rawGameConfig.trickBones?.summaryDisplay?.amountFontFamily, DEFAULT_TRICK_SUMMARY_AMOUNT_FONT_FAMILY),
         seatColor: String(rawGameConfig.trickBones?.summaryDisplay?.seatColor || '#fff'),
         deckColor: String(rawGameConfig.trickBones?.summaryDisplay?.deckColor || '#fff'),
         arrowText: String(rawGameConfig.trickBones?.summaryDisplay?.arrowText || '\u00A0'),
