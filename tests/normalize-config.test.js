@@ -93,3 +93,25 @@ describe('normalizeScratchbonesGameConfig portrait randomization', () => {
     assert.equal(config.portrait.randomization.clothingFallbackTintSlotsBySlot.bad, undefined);
   });
 });
+
+
+describe('getScratchbonesGameConfig window config write-back', () => {
+  it('stores normalized defaults back on the root config for legacy window readers', async () => {
+    const { getScratchbonesGameConfig } = await loadNormalizer();
+    const rootConfig = { game: {} };
+    const config = getScratchbonesGameConfig({
+      rootConfig,
+      reportError: (message) => message,
+      debugEnabled: true,
+    });
+
+    assert.equal(rootConfig.game, config);
+    assert.deepEqual(rootConfig.game.portrait.randomization.npcRequiredClothingPaletteKeys, ['B', 'C']);
+    assert.deepEqual(rootConfig.game.portrait.randomization.clothingFallbackTintSlotsBySlot, {
+      hat: 'HAT',
+      hood: 'HOOD',
+      torsoCosmetic: 'CLOTH',
+      armCosmetic: 'CLOTH',
+    });
+  });
+});
