@@ -6936,43 +6936,42 @@ import { createTutorial } from './tutorial.js';
       if (!app) return;
       app.querySelectorAll('.cin-tankan').forEach((node) => node.remove());
     }
-    function mountChallengeTankanColumns(app, cinematicMode) {
-      if (!app || !cinematicMode) return;
-      const FALLBACK_TANKAN_SIDE_TEXT = 'LIAR';
+    function mountChallengeTankanColumns(app, sideText) {
+      if (!app) return;
+      const text = String(sideText || '').replace(/[!！?？]+$/g, '').trim();
+      if (!text) {
+        clearChallengeTankanColumns(app);
+        return;
+      }
       const DEFAULT_AVATAR_HALF_WIDTH_PX = 132;
+      const DEFAULT_AVATAR_CENTER_Y_PX = 100;
       const TANKAN_EDGE_INSET_PX = 10;
-      const MIN_TANKAN_GAP_PX = 84;
-      const TANKAN_GAP_WIDTH_RATIO = 0.07;
-      const MIN_TANKAN_SEPARATION_PX = 220;
-      const TANKAN_SEPARATION_WIDTH_RATIO = 0.28;
-      const getChallengeSideText = () => {
-        return (String(cinematicMode.sideText || CONFIG.uiText?.challengeBurstText || '')
-          .replace(/[!！?？]+$/g, '')
-          .trim() || FALLBACK_TANKAN_SIDE_TEXT);
-      };
+      // Keep side text tight to each avatar edge per claim-cluster cinematic placement.
+      const MIN_TANKAN_GAP_PX = 16;
+      const TANKAN_GAP_WIDTH_RATIO = 0.015;
       const appRect = app.getBoundingClientRect();
       if (!(appRect.width > 0)) return;
       const actorAnchor = app.querySelector('.actorAvatarFloat .claimAvatarShell') || app.querySelector('.actorAvatarFloat');
       const reactorAnchor = app.querySelector('.reactorAvatarFloat .claimAvatarShell') || app.querySelector('.reactorAvatarFloat');
-      const avatarRects = [actorAnchor, reactorAnchor]
-        .map((node) => node?.getBoundingClientRect?.())
-        .filter((rect) => rect && rect.width > 0 && rect.height > 0);
-      const leftAvatarEdge = avatarRects.length
-        ? Math.min(...avatarRects.map((rect) => rect.left - appRect.left))
-        : (appRect.width * 0.5) - DEFAULT_AVATAR_HALF_WIDTH_PX;
-      const rightAvatarEdge = avatarRects.length
-        ? Math.max(...avatarRects.map((rect) => rect.right - appRect.left))
-        : (appRect.width * 0.5) + DEFAULT_AVATAR_HALF_WIDTH_PX;
+      const actorRect = actorAnchor?.getBoundingClientRect?.();
+      const reactorRect = reactorAnchor?.getBoundingClientRect?.();
+      const actorVisible = actorRect && actorRect.width > 0 && actorRect.height > 0;
+      const reactorVisible = reactorRect && reactorRect.width > 0 && reactorRect.height > 0;
+      const leftAvatarEdge = actorVisible
+        ? (actorRect.left - appRect.left)
+        : ((appRect.width * 0.5) - DEFAULT_AVATAR_HALF_WIDTH_PX);
+      const rightAvatarEdge = reactorVisible
+        ? (reactorRect.right - appRect.left)
+        : ((appRect.width * 0.5) + DEFAULT_AVATAR_HALF_WIDTH_PX);
+      const actorCenterY = actorVisible
+        ? ((actorRect.top - appRect.top) + (actorRect.height * 0.5))
+        : ((appRect.height * 0.5) - DEFAULT_AVATAR_CENTER_Y_PX);
+      const reactorCenterY = reactorVisible
+        ? ((reactorRect.top - appRect.top) + (reactorRect.height * 0.5))
+        : ((appRect.height * 0.5) + DEFAULT_AVATAR_CENTER_Y_PX);
       const sideGapPx = Math.max(MIN_TANKAN_GAP_PX, Math.round(appRect.width * TANKAN_GAP_WIDTH_RATIO));
       let leftX = Math.max(TANKAN_EDGE_INSET_PX, leftAvatarEdge - sideGapPx);
       let rightX = Math.min(appRect.width - TANKAN_EDGE_INSET_PX, rightAvatarEdge + sideGapPx);
-      const minSeparation = Math.max(MIN_TANKAN_SEPARATION_PX, Math.round(appRect.width * TANKAN_SEPARATION_WIDTH_RATIO));
-      if ((rightX - leftX) < minSeparation) {
-        const center = (leftX + rightX) * 0.5;
-        leftX = Math.max(TANKAN_EDGE_INSET_PX, center - (minSeparation * 0.5));
-        rightX = Math.min(appRect.width - TANKAN_EDGE_INSET_PX, center + (minSeparation * 0.5));
-      }
-      const sideText = getChallengeSideText();
       const ensureColumn = (side) => {
         let node = app.querySelector(`.cin-tankan.${side}`);
         if (!node) {
@@ -6985,14 +6984,16 @@ import { createTutorial } from './tutorial.js';
       };
       const leftColumn = ensureColumn('left');
       const rightColumn = ensureColumn('right');
-      leftColumn.textContent = sideText;
-      rightColumn.textContent = sideText;
+      leftColumn.textContent = text;
+      rightColumn.textContent = text;
       leftColumn.style.left = `${Math.round(leftX)}px`;
+      leftColumn.style.top = `${Math.round(actorCenterY)}px`;
       leftColumn.style.right = 'auto';
       leftColumn.style.transform = 'translateY(-50%)';
       rightColumn.style.left = `${Math.round(rightX)}px`;
+      rightColumn.style.top = `${Math.round(reactorCenterY)}px`;
       rightColumn.style.right = 'auto';
-      rightColumn.style.transform = 'translateY(-50%) scaleX(-1)';
+      rightColumn.style.transform = 'translateY(-50%)';
     }
     function clearClaimClusterBettingLayer(app = document.getElementById('app')) {
       if (!app) return;
@@ -7060,7 +7061,6 @@ import { createTutorial } from './tutorial.js';
     function mountClusterHeadlineCinematic(app, { cinematicMode, cinematicPhase, bettingActorHuman, humanCallAmount }) {
       const textAnchor = app?.querySelector('.claimClusterTextAnchor');
       if (!textAnchor || !cinematicMode) return;
-      mountChallengeTankanColumns(app, cinematicMode);
       if (cinematicPhase === 'betting') {
         clearHeadlineCinematics(app);
         const bettingLayer = app.querySelector('.claimClusterBettingLayer');
@@ -7202,16 +7202,36 @@ import { createTutorial } from './tutorial.js';
       if (!app || !state.cinematicMode) return;
       const anchor = claimClusterAvatarAnchorForPlayer(playerId, app);
       if (!anchor) return;
-      const label = command === 'call' ? 'Call!' : command === 'raise-tier' ? 'Raise!' : command === 'open-tier' ? 'Stake!' : 'Fold!';
+      if (command !== 'call' && command !== 'raise-tier' && command !== 'fold') return;
+      const actionAnnouncement = command === 'call'
+        ? { label: 'Call!', cssClass: 'burst-call' }
+        : command === 'raise-tier'
+        ? { label: 'Raise!', cssClass: 'burst-raise' }
+        : { label: 'Fold!', cssClass: 'burst-fold' };
+      const { label, cssClass } = actionAnnouncement;
+      mountChallengeTankanColumns(app, label);
       const overlay = ensureAvatarOverlay(anchor);
       if (!overlay) return;
       const burstShell = document.createElement('div');
-      const cls = command === 'call' ? 'burst-call' : (command === 'raise-tier' || command === 'open-tier') ? 'burst-raise' : 'burst-fold';
       burstShell.className = 'fx-burst-shell';
-      burstShell.innerHTML = `<div class="cin-action-burst ${cls}">${escapeHtml(label)}</div>`;
+      burstShell.innerHTML = `<div class="cin-action-burst ${cssClass}">${escapeHtml(label)}</div>`;
       overlay.appendChild(burstShell);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
-      setTimeout(() => burstShell.remove(), Math.max(1000, Math.round((Number(getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration').replace('s', '')) || 2.1) * 1400)));
+      const burstDurationCss = String(
+        getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration') || '',
+      ).trim().toLowerCase();
+      let burstDurationSeconds;
+      const burstDurationMatch = burstDurationCss.match(/^(-?\d*\.?\d+)\s*(ms|s)?$/);
+      if (burstDurationMatch) {
+        const numericValue = Number(burstDurationMatch[1]);
+        burstDurationSeconds = burstDurationMatch[2] === 'ms' ? (numericValue / 1000) : numericValue;
+      }
+      if (!Number.isFinite(burstDurationSeconds) || burstDurationSeconds <= 0) burstDurationSeconds = 2.1;
+      const burstDurationMs = Math.max(1000, Math.round(burstDurationSeconds * 1400));
+      setTimeout(() => {
+        burstShell.remove();
+        clearChallengeTankanColumns(app);
+      }, burstDurationMs);
     }
 // Phase 2a: Reveal (no fold)
     function showRevealCinematic(challengerIndex, challengedIndex, play, success, onClose) {
