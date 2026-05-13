@@ -71,7 +71,7 @@ The built-in rank IDs are `easy`, `normal`, and `hard`, and the config can also 
 
 AI decision flow is intentionally layered rather than omniscient:
 
-1. **Turn choice** selects a playbook from the resolved rank. `easy` uses a naive habit loop, `normal` uses the heuristic playbook, and `hard` or any custom higher rank uses scored candidate selection.
+1. **Turn choice** first checks personality-neutral opportunity overrides, then selects a playbook from the resolved rank. Those overrides make every archetype willing to tell a large/round-clearing truth, spend a Trap Bone truthfully, fire a high-value Smuggle bluff, or bluff with a last/trick/non-matching bone instead of conceding when there is no truthful active line. After that, `easy` uses a naive habit loop, `normal` uses the heuristic playbook, and `hard` or any custom higher rank uses scored candidate selection.
 2. **Challenge choice** computes suspicion from visible rank counts, remembered reads, personality, human-target bias, and a rank-specific random nudge, then compares it with the rank's resolved challenge threshold.
 3. **Betting choice** turns challenge suspicion, bankroll pressure, courage, remembered reads, perceived opponent fold pressure, and rank-specific raise/fold tuning into fold/call/raise intent.
 4. **Timing** stays separate from skill: actual turn/challenge/betting wait times come from `game.timers.aiDecisionDelays` plus `game.ai.decision.delays`, while rank random nudge fields control uncertainty.

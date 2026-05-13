@@ -169,6 +169,70 @@ import { createTutorial } from './tutorial.js';
       document.head.appendChild(style);
     }
     installSeatResponsiveLayoutOverrides();
+    function installTrickBoneSummaryLayoutOverrides() {
+      if (typeof document === 'undefined' || document.getElementById('scratchbones-trick-bone-summary-layout-overrides')) return;
+      const style = document.createElement('style');
+      style.id = 'scratchbones-trick-bone-summary-layout-overrides';
+      style.textContent = `
+        .trickDeckInfo,
+        .seatTrickLoadoutInfo {
+          display: flex;
+          flex-direction: column;
+          gap: var(--layout-trick-info-item-gap);
+          margin-top: var(--layout-trick-info-margin-top);
+          max-width: var(--layout-trick-info-max-width);
+          letter-spacing: var(--layout-trick-info-letter-spacing);
+        }
+        .trickDeckInfo {
+          align-self: center;
+          margin-top: 0;
+        }
+        .trickDeckInfoRows,
+        .seatTrickLoadoutInfoRows {
+          display: flex;
+          flex-direction: column;
+          gap: var(--layout-trick-info-item-gap);
+        }
+        .trickDeckInfoItem,
+        .seatTrickLoadoutInfoItem {
+          display: grid;
+          grid-template-columns: var(--layout-trick-info-glyph-size) auto var(--layout-trick-info-glyph-size) minmax(1.5em, auto);
+          align-items: center;
+          column-gap: var(--layout-trick-info-gap);
+          white-space: nowrap;
+        }
+        .trickSymbolContainer,
+        .trickMultiplyGlyphContainer {
+          width: var(--layout-trick-info-glyph-size);
+          height: var(--layout-trick-info-glyph-size);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 var(--layout-trick-info-glyph-size);
+        }
+        .trickSymbolImg,
+        .trickMultiplyGlyphImg {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          filter: var(--layout-trick-symbol-filter);
+        }
+        .trickMultiplyGlyphImg[data-invert="true"] {
+          filter: invert(1) var(--layout-trick-symbol-filter);
+        }
+        .trickInfoArrow {
+          color: var(--muted);
+          font-weight: 700;
+        }
+        .trickInfoAmount {
+          color: var(--text);
+          font-weight: 800;
+          text-align: left;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    installTrickBoneSummaryLayoutOverrides();
     const RENDERED_SCREEN_SPACE_PARITY = SCRATCHBONES_GAME.layout?.diagnostics?.renderedScreenSpaceParity || {};
     const AUTHORED_BOX_KEY_BY_PROJ_ID = {
       'topbar': 'topbar',
@@ -845,6 +909,7 @@ import { createTutorial } from './tutorial.js';
         challengeRandomNudgeMax: finiteProfileNumber(profile.challengeRandomNudgeMax, finiteProfileNumber(AI_CONFIG.challengeRandomNudgeMax, 0.16)),
         challengeKnownCardWeight: finiteProfileNumber(profile.challengeKnownCardWeight, finiteProfileNumber(AI_CONFIG.challengeKnownCardWeight, 0.27)),
         challengeReadMemoryWeight: finiteProfileNumber(profile.challengeReadMemoryWeight, finiteProfileNumber(AI_CONFIG.challengeReadMemoryWeight, 1)),
+        cardCountingAccuracy: Math.max(0, Math.min(1, finiteProfileNumber(profile.cardCountingAccuracy, finiteProfileNumber(AI_CONFIG.cardCountingAccuracy, 0.65)))),
         challengeHumanTargetBias: finiteProfileNumber(profile.challengeHumanTargetBias, finiteProfileNumber(AI_CONFIG.challengeHumanTargetBias, 0.1)),
         bettingConfidenceSuspicionWeight: finiteProfileNumber(profile.bettingConfidenceSuspicionWeight, finiteProfileNumber(AI_CONFIG.bettingConfidenceSuspicionWeight, 0.55)),
         bettingConfidenceRandomNudgeMax: finiteProfileNumber(profile.bettingConfidenceRandomNudgeMax, finiteProfileNumber(AI_CONFIG.bettingConfidenceRandomNudgeMax, 0.06)),
@@ -1803,6 +1868,115 @@ import { createTutorial } from './tutorial.js';
       }
       return count;
     }
+    function countCardsInPlay({ excludePlay = null } = {}) {
+      let count = 0;
+      for (const play of state.pile) {
+        if (excludePlay && play === excludePlay) continue;
+        count += play.cards?.length || 0;
+      }
+      return count;
+    }
+    function claimedRankCountInPlay(rank, { excludePlay = null } = {}) {
+      let count = 0;
+      for (const play of state.pile) {
+        if (excludePlay && play === excludePlay) continue;
+        if (play.declaredRank === rank) count += play.cards?.length || 0;
+      }
+      return count;
+    }
+    function actualRankCountInPlay(rank, { excludePlay = null } = {}) {
+      let count = 0;
+      for (const play of state.pile) {
+        if (excludePlay && play === excludePlay) continue;
+        for (const card of play.cards || []) {
+          if (!card.wild && card.rank === rank) count++;
+        }
+      }
+      return count;
+    }
+    function actualWildCountInPlay({ excludePlay = null } = {}) {
+      let count = 0;
+      for (const play of state.pile) {
+        if (excludePlay && play === excludePlay) continue;
+        for (const card of play.cards || []) if (card.wild) count++;
+      }
+      return count;
+    }
+    function totalScratchbonesDeckCards() {
+      return (RANK_COUNT * COPIES_PER_RANK) + WILD_COUNT;
+    }
+    function aiCardCountingSnapshot(observerIndex, { excludePlay = null } = {}) {
+      const observer = state.players[observerIndex];
+      const aiProfile = getAiDifficultyProfile(observer);
+      const accuracy = aiProfile.cardCountingAccuracy;
+      const handCountsByPlayer = state.players.map(player => (player && !player.eliminated ? player.hand?.length || 0 : 0));
+      const totalCardsInHands = handCountsByPlayer.reduce((sum, count) => sum + count, 0);
+      const cardsInPlay = countCardsInPlay({ excludePlay });
+      const deckCount = Math.max(0, totalScratchbonesDeckCards() - totalCardsInHands - cardsInPlay);
+      const ownHand = observer?.hand || [];
+      const ownWilds = ownHand.filter(card => card.wild).length;
+      const ownRanks = new Map();
+      for (const card of ownHand) {
+        if (!card.wild) ownRanks.set(card.rank, (ownRanks.get(card.rank) || 0) + 1);
+      }
+      const rankCounts = new Map();
+      for (let rank = 1; rank <= RANK_COUNT; rank++) {
+        const ownRankCount = ownRanks.get(rank) || 0;
+        const claimedInPlay = claimedRankCountInPlay(rank, { excludePlay });
+        const actualInPlay = actualRankCountInPlay(rank, { excludePlay });
+        const perceivedInPlay = claimedInPlay + (actualInPlay - claimedInPlay) * accuracy;
+        rankCounts.set(rank, {
+          own: ownRankCount,
+          claimedInPlay,
+          perceivedInPlay,
+          unavailable: Math.max(0, ownRankCount + perceivedInPlay),
+          possibleOutsideObserver: Math.max(0, COPIES_PER_RANK - ownRankCount - perceivedInPlay),
+        });
+      }
+      const wildsInPlay = actualWildCountInPlay({ excludePlay }) * accuracy;
+      return {
+        accuracy,
+        deckCount,
+        handCountsByPlayer,
+        totalCardsInHands,
+        cardsInPlay,
+        ownWilds,
+        wildsInPlay,
+        possibleWildsOutsideObserver: Math.max(0, WILD_COUNT - ownWilds - wildsInPlay),
+        rankCounts,
+      };
+    }
+    function aiRankPossibilityOutlook(observerIndex, play, { claimCardsAlreadyRemovedFromHand = true } = {}) {
+      const snapshot = aiCardCountingSnapshot(observerIndex, { excludePlay: play });
+      const observer = state.players[observerIndex];
+      const declaredRank = play.declaredRank;
+      const rankInfo = snapshot.rankCounts.get(declaredRank) || { possibleOutsideObserver: COPIES_PER_RANK, unavailable: 0 };
+      const declarer = state.players[play.playerIndex];
+      const claimCount = play.cards?.length || 0;
+      const declarerHandBeforeClaim = (declarer?.hand?.length || 0) + (claimCardsAlreadyRemovedFromHand
+        ? claimCount
+        : 0);
+      const observerHandCount = observer?.hand?.length || 0;
+      const unknownPoolOutsideObserver = Math.max(1, totalScratchbonesDeckCards() - observerHandCount - snapshot.cardsInPlay);
+      const possibleTruthCardsOutsideObserver = rankInfo.possibleOutsideObserver + snapshot.possibleWildsOutsideObserver;
+      const supportRate = Math.max(0, Math.min(1, possibleTruthCardsOutsideObserver / unknownPoolOutsideObserver));
+      const expectedTruthCardsInDeclarerHand = declarerHandBeforeClaim * supportRate;
+      const impossibleOverage = Math.max(0, claimCount - possibleTruthCardsOutsideObserver);
+      const truthPressure = Math.max(0, Math.min(1, (claimCount - expectedTruthCardsInDeclarerHand) / Math.max(1, claimCount)));
+      const abundanceRelief = Math.max(0, Math.min(1, (expectedTruthCardsInDeclarerHand - claimCount) / Math.max(1, declarerHandBeforeClaim)));
+      const deckPressure = Math.max(0, Math.min(1, 1 - (snapshot.deckCount / Math.max(1, totalScratchbonesDeckCards()))));
+      return {
+        snapshot,
+        declaredRank,
+        claimCount,
+        possibleTruthCardsOutsideObserver,
+        expectedTruthCardsInDeclarerHand,
+        impossibleOverage,
+        truthPressure,
+        abundanceRelief,
+        deckPressure,
+      };
+    }
     function ensureReadProfile(observerIndex, targetIndex) {
       const observer = state.players[observerIndex];
       if (!observer) return null;
@@ -1908,15 +2082,20 @@ import { createTutorial } from './tutorial.js';
         read.quickJudgmentBias * snapWeight
       );
     }
-    function challengeSuspicionScore(challengerIndex, play, { includeRandom = true } = {}) {
+    function challengeSuspicionScore(challengerIndex, play, { includeRandom = true, claimCardsAlreadyRemovedFromHand = true } = {}) {
       const challenger = state.players[challengerIndex];
       const pers = challenger.personality;
       const aiProfile = getAiDifficultyProfile(challenger);
       const knownRankCount = countKnownRank(play.declaredRank);
       const impossibleOverage = impossibleRankOverage(knownRankCount, play.cards.length);
+      const rankOutlook = aiRankPossibilityOutlook(challengerIndex, play, { claimCardsAlreadyRemovedFromHand });
       const read = ensureReadProfile(challengerIndex, play.playerIndex);
       let suspicion = 0;
       suspicion += impossibleOverage * aiProfile.challengeKnownCardWeight;
+      suspicion += rankOutlook.truthPressure * aiDecisionNumber('challenge', 'cardCountingSuspicionWeight', 0.35);
+      suspicion += rankOutlook.impossibleOverage * aiDecisionNumber('challenge', 'cardCountingImpossibleWeight', 0.22);
+      suspicion += rankOutlook.deckPressure * rankOutlook.truthPressure * aiDecisionNumber('challenge', 'cardCountingDeckPressureWeight', 0.08);
+      suspicion -= rankOutlook.abundanceRelief * aiDecisionNumber('challenge', 'cardCountingAbundanceReliefWeight', 0.12);
       suspicion += play.cards.length >= aiDecisionNumber('challenge', 'cardCountSoftThreshold', 3) ? aiDecisionNumber('challenge', 'cardCountSoftBonus', 0.1) : 0;
       suspicion += play.cards.length >= aiDecisionNumber('challenge', 'cardCountHardThreshold', 5) ? aiDecisionNumber('challenge', 'cardCountHardBonus', 0.08) : 0;
       suspicion += challenger.chips <= aiDecisionNumber('challenge', 'lowChipThreshold', 2) ? aiDecisionNumber('challenge', 'lowChipSuspicionAdjustment', -0.18) : 0;
@@ -1960,9 +2139,10 @@ import { createTutorial } from './tutorial.js';
         const read = ensureReadProfile(actorId, play.playerIndex);
         const knownRankCount = countKnownRank(play.declaredRank);
         const impossibleOverage = impossibleRankOverage(knownRankCount, play.cards.length);
+        const rankOutlook = aiRankPossibilityOutlook(actorId, play);
         const readSuspicion = suspicionFromReadProfile(read, pers);
         const handPressure = state.declaredRank === null ? aiDecisionNumber('delays', 'challengeOpeningHandPressure', 0.08) : Math.max(0, aiDecisionNumber('delays', 'challengeHandPressureBase', 0.2) - (cardsOfRank(actor, state.declaredRank).length * aiDecisionNumber('delays', 'challengeMatchPressureWeight', 0.05)));
-        const uncertainty = clamp01(aiDecisionNumber('delays', 'challengeUncertaintyBase', 0.45) - impossibleOverage * aiDecisionNumber('delays', 'challengeImpossibleOverageWeight', 0.14) + Math.max(0, aiDecisionNumber('delays', 'challengeReadCertaintyBase', 0.18) - Math.abs(readSuspicion) * aiDecisionNumber('delays', 'challengeReadCertaintyWeight', 0.6)) + handPressure + rand() * aiDecisionNumber('delays', 'challengeRandomWeight', 0.08));
+        const uncertainty = clamp01(aiDecisionNumber('delays', 'challengeUncertaintyBase', 0.45) - (impossibleOverage + rankOutlook.impossibleOverage) * aiDecisionNumber('delays', 'challengeImpossibleOverageWeight', 0.14) + Math.max(0, aiDecisionNumber('delays', 'challengeReadCertaintyBase', 0.18) - Math.abs(readSuspicion) * aiDecisionNumber('delays', 'challengeReadCertaintyWeight', 0.6)) + handPressure + rand() * aiDecisionNumber('delays', 'challengeRandomWeight', 0.08));
         const styleTempo = 1 - ((pers.courage ?? 0.5) * aiDecisionNumber('delays', 'challengeCourageTempoWeight', 0.46) + (pers.suspicion ?? 0.5) * aiDecisionNumber('delays', 'challengeSuspicionTempoWeight', 0.34) + (pers.aggression ?? 0.5) * aiDecisionNumber('delays', 'challengeAggressionTempoWeight', 0.2));
         const pace = clamp01(uncertainty * aiDecisionNumber('delays', 'challengePaceUncertaintyWeight', 0.72) + styleTempo * aiDecisionNumber('delays', 'challengePaceStyleWeight', 0.28));
         const minMs = Number(AI_DECISION_DELAYS.challengeMinMs) || 360;
@@ -2930,8 +3110,78 @@ import { createTutorial } from './tutorial.js';
       if (!chosen.length && player.hand.length) chosen.push(player.hand[0]);
       return chosen.slice(0, Math.max(1, desiredCount));
     }
+    function buildTruthfulPlayWithTrapForRank(player, rank, desiredCount) {
+      const trapWilds = wildCards(player).filter(c => c.trickType === 'trap');
+      if (!trapWilds.length) return [];
+      const natural = cardsOfRank(player, rank).slice();
+      const otherWilds = wildCards(player).filter(c => c.trickType !== 'trap');
+      const chosen = [];
+      while (natural.length && chosen.length < Math.max(0, desiredCount - 1)) chosen.push(natural.shift());
+      chosen.push(trapWilds.shift());
+      while (natural.length && chosen.length < desiredCount) chosen.push(natural.shift());
+      while (otherWilds.length && chosen.length < desiredCount) chosen.push(otherWilds.shift());
+      while (trapWilds.length && chosen.length < desiredCount) chosen.push(trapWilds.shift());
+      return chosen.length === desiredCount ? chosen : [];
+    }
+    function buildSmuggleOpportunityPlay(player, declaredRank) {
+      const smuggle = player.hand.find(c => c.trickType === 'smuggle');
+      if (!smuggle) return [];
+      const maxClaimCount = Math.max(1, aiDecisionNumber('play', 'opportunitySmuggleMaxClaimCount', 4));
+      const movable = player.hand.filter(c => c.id !== smuggle.id && c.trickType !== 'smuggle');
+      const offRankMovable = movable.filter(c => !c.wild && c.rank !== declaredRank);
+      const otherMovable = movable.filter(c => !offRankMovable.some(offRank => offRank.id === c.id));
+      const movedCards = [...offRankMovable, ...otherMovable].slice(0, Math.max(0, maxClaimCount - 1));
+      return movedCards.length ? [smuggle, ...movedCards] : [smuggle];
+    }
+    function chooseAiOpportunityPlay(player) {
+      const targetRank = state.declaredRank;
+      if (targetRank !== null && player.hand.length === 1 && AI_DECISION?.play?.opportunityForceLastCard !== false) {
+        return { type: 'play', declaredRank: targetRank, cardIds: [player.hand[0].id] };
+      }
+      const opportunityTruthCount = aiDecisionNumber('play', 'opportunityTruthCount', 5);
+      const opportunityTruthMaxCount = aiDecisionNumber('play', 'opportunityTruthMaxCount', 6);
+      if (targetRank === null) {
+        const openingPlan = bestTruthfulOpeningRank(player);
+        if (openingPlan.totalTruthfulCount >= opportunityTruthCount) {
+          const desiredCount = Math.min(openingPlan.totalTruthfulCount, Math.max(opportunityTruthCount, Math.min(opportunityTruthMaxCount, openingPlan.totalTruthfulCount)));
+          const cards = buildTruthfulPlayForRank(player, openingPlan.rank, desiredCount, { saveWilds: false });
+          if (cards.length) return { type: 'play', declaredRank: openingPlan.rank, cardIds: cards.map(c => c.id) };
+        }
+        return null;
+      }
+      const maxTruthful = cardsOfRank(player, targetRank).length + wildCards(player).length;
+      const clearHandAfterThreshold = aiDecisionNumber('play', 'opportunityTruthClearHandAfterThreshold', 1);
+      if (maxTruthful >= opportunityTruthCount || (maxTruthful > 0 && player.hand.length - maxTruthful <= clearHandAfterThreshold)) {
+        const desiredCount = Math.min(maxTruthful, Math.max(1, Math.min(opportunityTruthMaxCount, maxTruthful)));
+        const cards = buildTruthfulPlayForRank(player, targetRank, desiredCount, { saveWilds: false });
+        if (cards.length) return { type: 'play', declaredRank: targetRank, cardIds: cards.map(c => c.id) };
+      }
+      const trapMinCount = aiDecisionNumber('play', 'opportunityTrapMinCount', 2);
+      if (wildCards(player).some(c => c.trickType === 'trap') && maxTruthful >= trapMinCount) {
+        const desiredCount = Math.min(maxTruthful, Math.max(trapMinCount, Math.min(opportunityTruthMaxCount, maxTruthful)));
+        const cards = buildTruthfulPlayWithTrapForRank(player, targetRank, desiredCount);
+        if (cards.length) return { type: 'play', declaredRank: targetRank, cardIds: cards.map(c => c.id) };
+      }
+      const smuggleCards = buildSmuggleOpportunityPlay(player, targetRank);
+      const smuggleMovedCount = Math.max(0, smuggleCards.length - 1);
+      const smuggleMinMovedCards = aiDecisionNumber('play', 'opportunitySmuggleMinMovedCards', 2);
+      const smuggleLowHandAfter = aiDecisionNumber('play', 'opportunitySmuggleLowHandAfterThreshold', 2);
+      if (smuggleCards.length && (smuggleMovedCount >= smuggleMinMovedCards || (smuggleMovedCount > 0 && player.hand.length - smuggleCards.length <= smuggleLowHandAfter))) {
+        return { type: 'play', declaredRank: targetRank, cardIds: smuggleCards.map(c => c.id) };
+      }
+      if (maxTruthful === 0 && AI_DECISION?.play?.opportunityForcePlayableTrickBone !== false) {
+        const trickCard = player.hand.find(c => c.trickType);
+        if (trickCard) return { type: 'play', declaredRank: targetRank, cardIds: [trickCard.id] };
+      }
+      if (maxTruthful === 0 && AI_DECISION?.play?.opportunityForceNoTruthBluff !== false) {
+        return { type: 'play', declaredRank: targetRank, cardIds: buildBluffPlay(player, targetRank, 1).map(c => c.id) };
+      }
+      return null;
+    }
     function chooseAiPlay(player) {
       if (!player?.hand?.length) return { type: 'concede' };
+      const opportunityPlay = chooseAiOpportunityPlay(player);
+      if (opportunityPlay) return opportunityPlay;
       const profile = getAiDifficultyProfile(player);
       const rank = String(profile.rank || 'normal').toLowerCase();
       // Difficulty changes the AI's decision depth, not just its randomness:
@@ -3125,7 +3375,11 @@ import { createTutorial } from './tutorial.js';
       if (!challengers.length) return 0;
       let totalRisk = 0;
       for (const challenger of challengers) {
-        const suspicion = challengeSuspicionScore(challenger.id, candidatePlay, { includeRandom: false });
+        // Candidate cards are still in the AI hand and the synthetic play is not in the pile yet.
+        const suspicion = challengeSuspicionScore(challenger.id, candidatePlay, {
+          includeRandom: false,
+          claimCardsAlreadyRemovedFromHand: false,
+        });
         const threshold = getAiDifficultyProfile(challenger).resolvedChallengeThreshold;
         const thresholdPressure = clamp01(aiDecisionNumber('play', 'riskThresholdPressureBase', 0.5) + (suspicion - threshold) * aiDecisionNumber('play', 'riskThresholdPressureWeight', 1.8));
         const readPressure = clamp01(aiDecisionNumber('play', 'riskReadPressureBase', 0.5) + suspicionFromReadProfile(ensureReadProfile(challenger.id, player.id), challenger.personality) * aiDecisionNumber('play', 'riskReadPressureWeight', 1.6));
@@ -3500,6 +3754,12 @@ import { createTutorial } from './tutorial.js';
       const containerStyle = `width:${metrics.glyphSizePx}px;height:${metrics.glyphSizePx}px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 ${metrics.glyphSizePx}px;`;
       const imageStyle = `width:${glyphSizePx}px;height:${glyphSizePx}px;object-fit:contain;filter:${metrics.multiplyGlyphFilter};`;
       return `<span class="trickMultiplyGlyphContainer${extraClass ? ` ${escapeHtml(extraClass)}` : ''}" style="${escapeHtml(containerStyle)}">${src ? `<img class="trickMultiplyGlyphImg ${context === 'deck' ? 'trickDeckInfoMultiplyGlyph' : 'seatTrickLoadoutMultiplyGlyph'}" src="${escapeHtml(src)}" alt="Multiply" loading="lazy" style="${escapeHtml(imageStyle)}">` : `<span aria-hidden="true" style="font-size:${glyphSizePx}px;line-height:1;">×</span>`}</span>`;
+    }
+    function renderTrickMultiplyGlyphContainer({ className = '' } = {}) {
+      const src = String(CONFIG.assets.claimMultiplyGlyphSrc || '').trim();
+      const extraClass = String(className || '').trim();
+      const shouldInvert = CONFIG.assets.claimMultiplyGlyphInvert !== false;
+      return `<span class="trickMultiplyGlyphContainer${extraClass ? ` ${escapeHtml(extraClass)}` : ''}">${src ? `<img class="trickMultiplyGlyphImg" src="${escapeHtml(src)}" alt="Multiply" loading="lazy" data-invert="${shouldInvert ? 'true' : 'false'}">` : '<span aria-hidden="true">×</span>'}</span>`;
     }
     function trickBoneDisplayLabel(trickType) {
       const key = String(trickType || '').trim();

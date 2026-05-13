@@ -212,6 +212,7 @@ const DEFAULT_AI_DIFFICULTY_PROFILES = {
     challengeKnownCardWeight: 0.22,
     challengeReadMemoryWeight: 0.65,
     challengeHumanTargetBias: 0.06,
+    cardCountingAccuracy: 0.35,
     bettingConfidenceSuspicionWeight: 0.42,
     bettingConfidenceRandomNudgeMax: 0.10,
     bettingFoldFloorAdjustment: -0.03,
@@ -227,6 +228,7 @@ const DEFAULT_AI_DIFFICULTY_PROFILES = {
     challengeKnownCardWeight: 0.27,
     challengeReadMemoryWeight: 1,
     challengeHumanTargetBias: 0.1,
+    cardCountingAccuracy: 0.65,
     bettingConfidenceSuspicionWeight: 0.55,
     bettingConfidenceRandomNudgeMax: 0.06,
     bettingFoldFloorAdjustment: 0,
@@ -242,6 +244,7 @@ const DEFAULT_AI_DIFFICULTY_PROFILES = {
     challengeKnownCardWeight: 0.32,
     challengeReadMemoryWeight: 1.25,
     challengeHumanTargetBias: 0.12,
+    cardCountingAccuracy: 0.9,
     bettingConfidenceSuspicionWeight: 0.68,
     bettingConfidenceRandomNudgeMax: 0.025,
     bettingFoldFloorAdjustment: 0.02,
@@ -305,6 +308,10 @@ const DEFAULT_AI_DECISION_CONFIG = {
     personalitySuspicionWeight: 0.34,
     personalityAggressionWeight: 0.08,
     overSuspectBonus: 0.1,
+    cardCountingSuspicionWeight: 0.35,
+    cardCountingImpossibleWeight: 0.22,
+    cardCountingDeckPressureWeight: 0.08,
+    cardCountingAbundanceReliefWeight: 0.12,
   },
   delays: {
     turnComplexityBase: 0.22,
@@ -616,6 +623,7 @@ function normalizeAiDifficultyProfile(rawProfile = {}, fallbackProfile = DEFAULT
     challengeKnownCardWeight: normalizeFiniteNumber(source.challengeKnownCardWeight, fallbackProfile.challengeKnownCardWeight, { min: 0, max: 2 }),
     challengeReadMemoryWeight: normalizeFiniteNumber(source.challengeReadMemoryWeight, fallbackProfile.challengeReadMemoryWeight, { min: 0, max: 3 }),
     challengeHumanTargetBias: normalizeFiniteNumber(source.challengeHumanTargetBias, fallbackProfile.challengeHumanTargetBias, { min: -1, max: 1 }),
+    cardCountingAccuracy: normalizeFiniteNumber(source.cardCountingAccuracy, fallbackProfile.cardCountingAccuracy, { min: 0, max: 1 }),
     bettingConfidenceSuspicionWeight: normalizeFiniteNumber(source.bettingConfidenceSuspicionWeight, fallbackProfile.bettingConfidenceSuspicionWeight, { min: 0, max: 2 }),
     bettingConfidenceRandomNudgeMax: normalizeFiniteNumber(source.bettingConfidenceRandomNudgeMax, fallbackProfile.bettingConfidenceRandomNudgeMax, { min: 0, max: 1 }),
     bettingFoldFloorAdjustment: normalizeFiniteNumber(source.bettingFoldFloorAdjustment, fallbackProfile.bettingFoldFloorAdjustment, { min: -1, max: 1 }),
@@ -775,7 +783,7 @@ const DEFAULT_TUTORIAL_CONFIG = {
     },
     'trick-bones': {
       title: 'Trick Bone Cards',
-      text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: when your claim passes without challenge, every non-Smuggle claimed card leaves the table and goes into another player\'s hand; human Smuggle users choose the target seat.\nTrap Bone: if your challenged Trap claim is truthful and the challenge fails, transfer up to the claim size from your hand to the challenger; human defenders choose cards with the Trap selection.\nPunish Bone: during challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.',
+      text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: when your claim passes without challenge, every non-Smuggle claimed card leaves the table and goes into another player\'s hand; human Smuggle users choose the target seat.\nTrap Bone: if your challenged Trap claim is truthful and the challenge fails, transfer up to the claim size from your hand to the challenger; human defenders choose cards with the Trap selection.\nPunish Bone: wild. During challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.',
     },
     claim: {
       title: 'The Claim Display',
@@ -1069,7 +1077,7 @@ const DEFAULT_TRICK_GLYPH_SRC = {
 const DEFAULT_TRICK_BONE_DEFINITIONS = {
   smuggle: { id: 'smuggle', label: 'Smuggle Bone', description: 'When your Smuggle claim passes without challenge, its non-Smuggle claimed cards leave the table and go into another player\'s hand; human Smuggle users choose the target seat.', wild: false },
   trap: { id: 'trap', label: 'Trap Bone', description: 'If your challenged Trap claim is truthful and the challenge fails, transfer up to the claim size from your hand to the challenger; human defenders choose cards with state.trapSelection.', wild: true },
-  punish: { id: 'punish', label: 'Punish Bone', description: 'During challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.', wild: false },
+  punish: { id: 'punish', label: 'Punish Bone', description: 'Wild. During challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.', wild: true },
 };
 
 function repeatIdsFromCounts(counts = {}) {
@@ -1186,7 +1194,7 @@ function normalizeTrickBoneDefinitions(rawDefinitions = {}) {
       id,
       label: String(rawDefinition?.label || id),
       description: String(rawDefinition?.description || ''),
-      wild: rawDefinition?.wild === true,
+      wild: id === 'punish' ? true : rawDefinition?.wild === true,
     };
   }
   return definitions;

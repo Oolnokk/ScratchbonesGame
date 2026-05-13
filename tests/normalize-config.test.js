@@ -38,6 +38,25 @@ describe('normalizeScratchbonesGameConfig AI difficulty ranks', () => {
     assert.equal(config.ai.difficultyRanks.boss.challengeRandomNudgeMax, 0.035);
   });
 
+
+  it('normalizes card-counting accuracy by difficulty rank', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      ai: {
+        difficultyRanks: {
+          easy: { cardCountingAccuracy: -1 },
+          hard: { cardCountingAccuracy: 1.25 },
+          boss: { extends: 'hard', cardCountingAccuracy: 0.98 },
+        },
+      },
+    });
+
+    assert.equal(config.ai.difficultyRanks.easy.cardCountingAccuracy, 0);
+    assert.equal(config.ai.difficultyRanks.normal.cardCountingAccuracy, 0.65);
+    assert.equal(config.ai.difficultyRanks.hard.cardCountingAccuracy, 1);
+    assert.equal(config.ai.difficultyRanks.boss.cardCountingAccuracy, 0.98);
+  });
+
   it('falls unknown custom rank inheritance back to normal safely', async () => {
     const { normalizeScratchbonesGameConfig } = await loadNormalizer();
     const config = normalizeScratchbonesGameConfig({
@@ -113,5 +132,20 @@ describe('getScratchbonesGameConfig window config write-back', () => {
       torsoCosmetic: 'CLOTH',
       armCosmetic: 'CLOTH',
     });
+  });
+});
+
+describe('normalizeScratchbonesGameConfig trick bones', () => {
+  it('keeps Punish Bones wild even when raw config marks them non-wild', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      trickBones: {
+        definitions: {
+          punish: { wild: false },
+        },
+      },
+    });
+
+    assert.equal(config.trickBones.definitions.punish.wild, true);
   });
 });

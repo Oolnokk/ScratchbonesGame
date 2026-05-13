@@ -1672,9 +1672,10 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
     }
   }
 
-  const hasClothingVariant = (o) => o.id === 'none' || resolveOptionLayers(o, fighter).length > 0;
-  const filteredTorso = (torsoPortraitOptions ?? []).filter(hasClothingVariant);
-  const filteredArm   = (armPortraitOptions   ?? []).filter(hasClothingVariant);
+  const hasAllowedClothingVariant = (o) => (o.id === 'none' || isAllowedId(o.id))
+    && (o.id === 'none' || resolveOptionLayers(o, fighter).length > 0);
+  const filteredTorso = (torsoPortraitOptions ?? []).filter(hasAllowedClothingVariant);
+  const filteredArm   = (armPortraitOptions   ?? []).filter(hasAllowedClothingVariant);
   const torsoCosmetic = weightedPickRng(filteredTorso.length ? filteredTorso : [{ id: 'none', label: 'No Torso Clothing', tintSlot: null, layers: [] }], weights?.torso, rng);
   const armCosmetic   = weightedPickRng(filteredArm.length   ? filteredArm   : [{ id: 'none', label: 'No Arm Clothing',   tintSlot: null, layers: [] }], weights?.overwear, rng);
 

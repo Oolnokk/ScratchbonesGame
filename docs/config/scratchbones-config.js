@@ -399,7 +399,6 @@ window.SCRATCHBONES_CONFIG = {
         { "id": "tankan_tunic",     "label": "Tankan Tunic",      "price": 50, "category": "torso",    "description": "A fitted tankan-style tunic." },
         { "id": "bandolier1",       "label": "Bandolier",         "price": 40, "category": "torso",    "description": "A rugged leather bandolier.", "material": "leather" },
         { "id": "tankan_bodywrap",  "label": "Tankan Body Wrap",  "price": 60, "category": "overwear", "description": "A wrapped ceremonial bodywrap." },
-        { "id": "rough_cloth_poncho", "label": "Rough Cloth Poncho", "price": 45, "category": "overwear", "description": "A weathered cloth poncho for keeping trail dust off your shoulders.", "material": "cloth" },
         { "id": "rugged_poncho", "label": "Rugged Poncho", "price": 70, "category": "overwear", "description": "A reinforced poncho layered with a rugged body wrap.", "material": "cloth" },
         { "id": "fine_hood",        "label": "Fine Hood",         "price": 60, "category": "hood",     "description": "A finely crafted hood with trim." }
       ]
@@ -1027,7 +1026,11 @@ window.SCRATCHBONES_CONFIG = {
           "highChipSuspicionAdjustment": 0.05,
           "personalitySuspicionWeight": 0.34,
           "personalityAggressionWeight": 0.08,
-          "overSuspectBonus": 0.1
+          "overSuspectBonus": 0.1,
+          "cardCountingSuspicionWeight": 0.35,
+          "cardCountingImpossibleWeight": 0.22,
+          "cardCountingDeckPressureWeight": 0.08,
+          "cardCountingAbundanceReliefWeight": 0.12
         },
         "delays": {
           "turnComplexityBase": 0.22,
@@ -1133,6 +1136,16 @@ window.SCRATCHBONES_CONFIG = {
           "heuristicTrickyAggressionWeight": 0.34,
           "heuristicTrickyGreedWeight": 0.16,
           "heuristicFallbackBluffRiskMultiplier": 0.72,
+          "opportunityTruthCount": 5,
+          "opportunityTruthMaxCount": 6,
+          "opportunityTruthClearHandAfterThreshold": 1,
+          "opportunityTrapMinCount": 2,
+          "opportunitySmuggleMinMovedCards": 2,
+          "opportunitySmuggleMaxClaimCount": 4,
+          "opportunitySmuggleLowHandAfterThreshold": 2,
+          "opportunityForceLastCard": true,
+          "opportunityForceNoTruthBluff": true,
+          "opportunityForcePlayableTrickBone": true,
           "scoredBluffCandidateMaxCount": 4,
           "riskThresholdPressureBase": 0.5,
           "riskThresholdPressureWeight": 1.8,
@@ -1263,7 +1276,9 @@ window.SCRATCHBONES_CONFIG = {
        * - turn choice: "easy" uses the naive playbook, "normal" uses the
        *   heuristic playbook, and "hard" uses scored candidate selection;
        * - challenge choice: challengeThreshold plus challengeThresholdModifier
-       *   sets the final suspicion threshold, while challengeKnownCardWeight,
+       *   sets the final suspicion threshold, while cardCountingAccuracy controls
+       *   how reliably an NPC tracks deck, hand, wild, and rank availability;
+       *   challengeKnownCardWeight,
        *   challengeReadMemoryWeight, challengeHumanTargetBias, and
        *   challengeRandomNudgeMax shape suspicion;
        * - betting: bettingConfidenceSuspicionWeight,
@@ -1286,22 +1301,26 @@ window.SCRATCHBONES_CONFIG = {
        */
       "challengeThreshold": 0.52,
       "challengeRandomNudgeMax": 0.16,
+      "cardCountingAccuracy": 0.65,
       "bettingConfidenceSuspicionWeight": 0.55,
       "defaultDifficultyRank": "normal",
       "difficultyRanks": {
         "easy": {
           "challengeThreshold": 0.64,
           "challengeRandomNudgeMax": 0.22,
+          "cardCountingAccuracy": 0.35,
           "bettingConfidenceSuspicionWeight": 0.42
         },
         "normal": {
           "challengeThreshold": 0.52,
           "challengeRandomNudgeMax": 0.16,
+          "cardCountingAccuracy": 0.65,
           "bettingConfidenceSuspicionWeight": 0.55
         },
         "hard": {
           "challengeThreshold": 0.44,
           "challengeRandomNudgeMax": 0.08,
+          "cardCountingAccuracy": 0.9,
           "bettingConfidenceSuspicionWeight": 0.68
         },
         "boss": {
