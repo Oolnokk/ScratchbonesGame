@@ -4425,6 +4425,7 @@ import { createTutorial } from './tutorial.js';
       const avatarAdditiveZoomScale = clampNumber(Number(tableVisualFit.avatarAdditiveZoomScale) || 1.2, 0.8, 1.6);
       const claimAvatarOverlayZIndex = Math.max(1, Math.round(Number(tableVisualFit.claimAvatarOverlayZIndex) || 9990));
       const cinematicLayout = tableViewLayout.cinematic || {};
+      const tankanColumnsLayout = cinematicLayout.tankanColumns || {};
       const cinematicPlayerInfoOffsetPx = clampNumber(Number(cinematicLayout.playerInfoOffsetPx) || 12, -40, 160);
       const cinematicPlayerInfoFontRem = clampNumber(Number(cinematicLayout.playerInfoFontRem) || 1.05, 0.6, 3);
       const claimTitleOffsetYPx = clampNumber(Number(cinematicLayout.claimTitleOffsetYPx) || -150, -420, 160);

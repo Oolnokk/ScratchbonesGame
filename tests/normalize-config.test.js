@@ -279,4 +279,29 @@ describe('normalizeScratchbonesGameConfig cinematic tankan columns', () => {
     assert.equal(config.cssRootVars['--layout-cinematic-tankan-rise-offset'], '18px');
     assert.equal(config.cssRootVars['--layout-cinematic-tankan-z-index'], '12002');
   });
+
+  it('clamps edgeInsetPx to 120 and rejects invalid fontSize and letterSpacing values', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      layout: {
+        tableView: {
+          cinematic: {
+            tankanColumns: {
+              edgeInsetPx: 200,
+              fontSize: '-2rem',
+              letterSpacing: '10%',
+            },
+          },
+        },
+      },
+    });
+
+    const tankanColumns = config.layout.tableView.cinematic.tankanColumns;
+    assert.equal(tankanColumns.edgeInsetPx, 120);
+    assert.equal(config.cssRootVars['--layout-tankan-edge-inset'], '120px');
+    assert.equal(tankanColumns.fontSize, 'clamp(1.4rem, 3vw, 3.2rem)');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-font-size'], 'clamp(1.4rem, 3vw, 3.2rem)');
+    assert.equal(tankanColumns.letterSpacing, '0.08em');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-letter-spacing'], '0.08em');
+  });
 });
