@@ -1123,6 +1123,7 @@ import { createTutorial } from './tutorial.js';
       const playerNames = session.playerNames || {};
       const playerAppearances = session.playerAppearances || {};
       const playerLoadouts = session.playerLoadouts || {};
+      const playerDifficultyRanks = session.playerDifficultyRanks || {};
       const mode = session.mode || 'pve';
       // PvP: all seats are human — total equals human count, no AI fills.
       // PvE / PvPvE: full configured table; AI occupies remaining seats.
@@ -1136,7 +1137,8 @@ import { createTutorial } from './tutorial.js';
         const name = isHuman && sessionName ? sessionName : resolveSeatName(index, aiIdentity.name);
         const appearance = isHuman ? (playerAppearances[index] ?? null) : null;
         const playerLoadout = isHuman ? normalizeTrickBoneLoadout(playerLoadouts[index]) : generateNpcTrickLoadout();
-        const difficultyRank = isHuman ? null : resolveAiDifficultyRank({ id: index, npcOrder: currentNpcOrder });
+        const sessionDifficultyRank = playerDifficultyRanks[index] ?? playerDifficultyRanks[String(index)];
+        const difficultyRank = isHuman ? null : resolveAiDifficultyRank({ id: index, npcOrder: currentNpcOrder, difficultyRank: sessionDifficultyRank });
         return {
           id: index,
           name,

@@ -1,11 +1,17 @@
 (function () {
   'use strict';
 
-  const MODES = [
+  const LOBBY_CONFIG = window.SCRATCHBONES_CONFIG?.game?.lobby || {};
+  const AI_CONFIG = window.SCRATCHBONES_CONFIG?.game?.ai || {};
+  const PVE_SUBMENU_CONFIG = AI_CONFIG.pveSubmenu || {};
+  const DEFAULT_MODES = [
     { id: 'pvpve', label: 'PvPvE', desc: 'Online: 1+ Human + AI fill', humanRange: null },
     { id: 'pve',   label: 'PvE',   desc: 'Offline vs AI',              humanRange: null },
     { id: 'pvp',   label: 'PvP',   desc: 'Online: All Human players',  humanRange: [2, 4] },
   ];
+  const MODES = Array.isArray(LOBBY_CONFIG.modes) && LOBBY_CONFIG.modes.length
+    ? LOBBY_CONFIG.modes
+    : DEFAULT_MODES;
 
   // ── Species UI data ────────────────────────────────────────
   // colorOptions: shared preset list for both A and B selectors.
@@ -264,6 +270,9 @@
 
   let _screen = 'create';
   let _selectedMode = 'pve';
+  let _selectedPveMode = String(PVE_SUBMENU_CONFIG.defaultMode || 'regular');
+  let _selectedPveMinDifficulty = String(PVE_SUBMENU_CONFIG.defaultMinRank || 'easy');
+  let _selectedPveMaxDifficulty = String(PVE_SUBMENU_CONFIG.defaultMaxRank || 'hard');
   let _selectedPlayerCount = 2;
   let _postGameMessage = '';
   let _scratchbonesReady = false;
@@ -302,6 +311,54 @@
   function cap(str) { return String(str).charAt(0).toUpperCase() + String(str).slice(1); }
 
   function overlay() { return document.getElementById('sb-lobby'); }
+
+  function getPveSubmenuOptions() {
+    const configuredOptions = Array.isArray(PVE_SUBMENU_CONFIG.options) ? PVE_SUBMENU_CONFIG.options : [];
+    return configuredOptions.length ? configuredOptions : [
+      { id: 'regular', label: 'Regular Play', desc: 'Use configured NPC difficulty.' },
+      { id: 'difficulty-test', label: 'NPC Difficulty Test', desc: 'Randomize NPC difficulty in the selected range.' },
+    ];
+  }
+
+  function getDifficultyRankOrder() {
+    const configuredOrder = Array.isArray(PVE_SUBMENU_CONFIG.rankOrder) ? PVE_SUBMENU_CONFIG.rankOrder : [];
+    const configuredRanks = AI_CONFIG.difficultyRanks && typeof AI_CONFIG.difficultyRanks === 'object'
+      ? Object.keys(AI_CONFIG.difficultyRanks)
+      : [];
+    const merged = [...configuredOrder, ...configuredRanks]
+      .map(rank => String(rank || '').trim().toLowerCase())
+      .filter(Boolean);
+    return [...new Set(merged)];
+  }
+
+  function difficultyRankLabel(rank) {
+    const display = AI_CONFIG.renownDisplay?.levels?.[rank];
+    if (!display) return cap(rank);
+    return [display.label, display.title].filter(Boolean).join(AI_CONFIG.renownDisplay?.separator || ' · ');
+  }
+
+  function normalizeSelectedPveDifficultyRange() {
+    const ranks = getDifficultyRankOrder();
+    if (!ranks.length) return [];
+    if (!ranks.includes(_selectedPveMinDifficulty)) _selectedPveMinDifficulty = ranks[0];
+    if (!ranks.includes(_selectedPveMaxDifficulty)) _selectedPveMaxDifficulty = ranks[ranks.length - 1];
+    let minIndex = ranks.indexOf(_selectedPveMinDifficulty);
+    let maxIndex = ranks.indexOf(_selectedPveMaxDifficulty);
+    if (minIndex > maxIndex) {
+      const swap = minIndex;
+      minIndex = maxIndex;
+      maxIndex = swap;
+      _selectedPveMinDifficulty = ranks[minIndex];
+      _selectedPveMaxDifficulty = ranks[maxIndex];
+    }
+    return ranks.slice(minIndex, maxIndex + 1);
+  }
+
+  function randomPveDifficultyRank() {
+    const ranks = normalizeSelectedPveDifficultyRange();
+    if (!ranks.length) return null;
+    return ranks[Math.floor(Math.random() * ranks.length)];
+  }
 
   function wsUrl() {
     return (window.SCRATCHBONES_CONFIG && window.SCRATCHBONES_CONFIG.wsUrl)
@@ -571,6 +628,38 @@
         <span class="sb-mode-desc">${esc(m.desc)}</span>
       </button>`).join('');
 
+    const pveSubmenu = _selectedMode === 'pve' ? (() => {
+      normalizeSelectedPveDifficultyRange();
+      const options = getPveSubmenuOptions();
+      const ranks = getDifficultyRankOrder();
+      const rankOptions = ranks.map(rank =>
+        `<option value="${esc(rank)}">${esc(difficultyRankLabel(rank))}</option>`
+      ).join('');
+      const rangePicker = _selectedPveMode === 'difficulty-test' ? `
+        <div class="sb-player-row" style="margin-top:6px;gap:8px;align-items:center;">
+          <span>${esc(PVE_SUBMENU_CONFIG.rangeLabel || 'Random difficulty range:')}</span>
+          <select id="sb-pve-min-difficulty" style="flex:1;min-width:0;">
+            ${rankOptions.replace(`value="${esc(_selectedPveMinDifficulty)}"`, `value="${esc(_selectedPveMinDifficulty)}" selected`)}
+          </select>
+          <span>${esc(PVE_SUBMENU_CONFIG.rangeSeparator || 'to')}</span>
+          <select id="sb-pve-max-difficulty" style="flex:1;min-width:0;">
+            ${rankOptions.replace(`value="${esc(_selectedPveMaxDifficulty)}"`, `value="${esc(_selectedPveMaxDifficulty)}" selected`)}
+          </select>
+        </div>` : '';
+      return `
+        <div class="sb-pve-submenu" style="margin:8px 0 10px 12px;padding:10px;border:1px solid rgba(242,208,143,0.22);border-radius:12px;background:rgba(22,16,14,0.34);">
+          <div class="sb-label" style="margin-top:0;">${esc(PVE_SUBMENU_CONFIG.label || 'PvE Options')}</div>
+          <div class="sb-mode-picker">
+            ${options.map(option => `
+              <button class="sb-mode-btn${_selectedPveMode === option.id ? ' selected' : ''}" data-pve-mode="${esc(option.id)}">
+                <span class="sb-mode-label">${esc(option.label)}</span>
+                <span class="sb-mode-desc">${esc(option.desc)}</span>
+              </button>`).join('')}
+          </div>
+          ${rangePicker}
+        </div>`;
+    })() : '';
+
     const playerPicker = _selectedMode === 'pvp' ? `
       <div class="sb-player-row">
         <span>Human players:</span>
@@ -606,6 +695,7 @@
         </div>
         <div class="sb-label">Game Mode</div>
         <div class="sb-mode-picker">${modeButtons}</div>
+        ${pveSubmenu}
         ${playerPicker}
         <div class="sb-actions">
           <button class="sb-btn-ghost" id="sb-appearance-btn">Edit Khymeryyan</button>
@@ -1162,12 +1252,30 @@
       render();
     });
 
-    el.querySelectorAll('.sb-mode-btn').forEach(btn => {
+    el.querySelectorAll('.sb-mode-btn[data-mode]').forEach(btn => {
       btn.addEventListener('click', () => {
         _selectedMode = btn.dataset.mode;
         if (_selectedMode === 'pvp' && _selectedPlayerCount < 2) _selectedPlayerCount = 2;
         render();
       });
+    });
+
+    el.querySelectorAll('.sb-mode-btn[data-pve-mode]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _selectedPveMode = btn.dataset.pveMode;
+        render();
+      });
+    });
+
+    document.getElementById('sb-pve-min-difficulty')?.addEventListener('change', (event) => {
+      _selectedPveMinDifficulty = event.target.value;
+      normalizeSelectedPveDifficultyRange();
+      render();
+    });
+    document.getElementById('sb-pve-max-difficulty')?.addEventListener('change', (event) => {
+      _selectedPveMaxDifficulty = event.target.value;
+      normalizeSelectedPveDifficultyRange();
+      render();
     });
 
     el.querySelectorAll('.sb-count-btn').forEach(btn => {
@@ -1536,19 +1644,25 @@
     render();
   }
 
-  function buildSingleHumanPveSession(startMode = 'pve') {
+  function buildSingleHumanPveSession(startMode = 'pve', options = {}) {
     const khymeryyan = getFullKhymeryyan();
     const username = khymeryyan?.name || 'Player';
     const ap = getFullAppearance();
-    const totalPlayers = 4;
+    const totalPlayers = Math.max(1, Number(window.SCRATCHBONES_CONFIG?.game?.deck?.playerCount) || 4);
     const humanSeat = 0;
     const playerNames = { [humanSeat]: username };
     const playerAppearances = { [humanSeat]: ap };
     const playerLoadouts = { [humanSeat]: getLocalPlayerLoadout() };
+    const playerDifficultyRanks = {};
+    const useDifficultyTest = options.useDifficultyTest ?? (startMode === 'pve' && _selectedPveMode === 'difficulty-test');
     let npcIndex = 0;
     for (let seat = 0; seat < totalPlayers; seat++) {
       if (seat !== humanSeat) {
         playerNames[seat] = NPC_NAMES[npcIndex % NPC_NAMES.length];
+        if (useDifficultyTest) {
+          const rank = randomPveDifficultyRank();
+          if (rank) playerDifficultyRanks[seat] = rank;
+        }
         npcIndex++;
       }
     }
@@ -1558,6 +1672,8 @@
       playerNames,
       playerAppearances,
       playerLoadouts,
+      playerDifficultyRanks,
+      pveMode: _selectedPveMode,
     };
   }
 
@@ -1572,7 +1688,7 @@
 
   function startTutorialGame() {
     if (!window.ScratchbonesAccount?.isCreated()) return;
-    buildSingleHumanPveSession('pve');
+    buildSingleHumanPveSession('pve', { useDifficultyTest: false });
     _postGameMessage = '';
     hide();
     if (_scratchbonesReady && window.scratchbonesStartTutorial) {

@@ -56,6 +56,14 @@ window.SCRATCHBONES_CONFIG = {
       ]
     },
 
+    "lobby": {
+      "modes": [
+        { "id": "pvpve", "label": "PvPvE", "desc": "Online: 1+ Human + AI fill", "humanRange": null },
+        { "id": "pve", "label": "PvE", "desc": "Offline vs AI", "humanRange": null },
+        { "id": "pvp", "label": "PvP", "desc": "Online: All Human players", "humanRange": [2, 4] }
+      ]
+    },
+
     "appearanceEditor": {
       "availability": {
         "tletingan": {
@@ -950,6 +958,19 @@ window.SCRATCHBONES_CONFIG = {
       }
     },
     "ai": {
+      "pveSubmenu": {
+        "label": "PvE Options",
+        "defaultMode": "regular",
+        "defaultMinRank": "easy",
+        "defaultMaxRank": "hard",
+        "rangeLabel": "Random difficulty range:",
+        "rangeSeparator": "to",
+        "rankOrder": ["easy", "normal", "hard", "boss"],
+        "options": [
+          { "id": "regular", "label": "Regular Play", "desc": "Use configured NPC difficulty." },
+          { "id": "difficulty-test", "label": "NPC Difficulty Test", "desc": "Randomize each NPC difficulty in the selected range." }
+        ]
+      },
       "decision": {
         "readProfile": {
           "neutralBluffRate": 0.5,
