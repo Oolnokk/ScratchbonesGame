@@ -58,3 +58,38 @@ describe('normalizeScratchbonesGameConfig AI difficulty ranks', () => {
     assert.equal(config.ai.difficultyRanks.boss.bettingRaiseMistakeChance, 0);
   });
 });
+
+describe('normalizeScratchbonesGameConfig portrait randomization', () => {
+  it('defaults NPC clothing palette repair to B and C tint slots', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({});
+
+    assert.deepEqual(config.portrait.randomization.npcRequiredClothingPaletteKeys, ['B', 'C']);
+    assert.deepEqual(config.portrait.randomization.clothingFallbackTintSlotsBySlot, {
+      hat: 'HAT',
+      hood: 'HOOD',
+      torsoCosmetic: 'CLOTH',
+      armCosmetic: 'CLOTH',
+    });
+  });
+
+  it('normalizes custom NPC clothing palette repair settings', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      portrait: {
+        randomization: {
+          npcRequiredClothingPaletteKeys: [' B ', '', 'C', null, 'D'],
+          clothingFallbackTintSlotsBySlot: {
+            hat: ' CUSTOM_HAT ',
+            bad: '',
+          },
+        },
+      },
+    });
+
+    assert.deepEqual(config.portrait.randomization.npcRequiredClothingPaletteKeys, ['B', 'C', 'D']);
+    assert.equal(config.portrait.randomization.clothingFallbackTintSlotsBySlot.hat, 'CUSTOM_HAT');
+    assert.equal(config.portrait.randomization.clothingFallbackTintSlotsBySlot.hood, 'HOOD');
+    assert.equal(config.portrait.randomization.clothingFallbackTintSlotsBySlot.bad, undefined);
+  });
+});

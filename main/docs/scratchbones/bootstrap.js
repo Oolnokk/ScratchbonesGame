@@ -5750,6 +5750,9 @@ import { createTutorial } from './tutorial.js';
         profile[repair.slot] = repair.candidates[Math.floor(rng() * repair.candidates.length)];
         visibleClothingCount = countVisiblePortraitClothing(profile, clothingSlots);
       }
+      if (typeof window.ensurePortraitClothingPaletteColors === 'function') {
+        window.ensurePortraitClothingPaletteColors(profile, rng);
+      }
       return profile;
     }
     function generatePlayerProfile(player) {
