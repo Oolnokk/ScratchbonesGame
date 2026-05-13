@@ -1490,7 +1490,7 @@ window.SCRATCHBONES_CONFIG = {
           "seatStatusMarginTopPx": 6,
           "handPreviewGapPx": 2,
           "handPreviewMarginTopPx": 5,
-          "handPreviewCardWidthPx": 14,
+          "handPreviewCardWidthPx": 10,
           "titlePaddingTopScale": 0.67,
           "titlePaddingXScale": 1.11,
           "titlePaddingBottomScale": 0.22,
@@ -1929,6 +1929,8 @@ window.SCRATCHBONES_CONFIG = {
             ".seatChipBadge",
             ".seatChipBadgeIcon",
             ".seatStatus",
+            ".seatTrickLoadoutInfo",
+            ".seatTrickLoadoutInfoItem",
             ".turnSpotlightNameBar",
             ".cin-result-copy",
             ".cinematic-vs-line",
@@ -1952,6 +1954,8 @@ window.SCRATCHBONES_CONFIG = {
               ".seatChipBadge",
               ".seatChipBadgeIcon",
               ".seatStatus",
+              ".seatTrickLoadoutInfo",
+              ".seatTrickLoadoutInfoItem",
               ".turnSpotlightNameBar",
               ".cin-result-copy",
               ".cinematic-vs-line",
@@ -1976,6 +1980,8 @@ window.SCRATCHBONES_CONFIG = {
               ".seatChipBadge",
               ".seatChipBadgeIcon",
               ".seatStatus",
+              ".seatTrickLoadoutInfo",
+              ".seatTrickLoadoutInfoItem",
               ".turnSpotlightNameBar",
               ".cin-result-copy",
               ".cinematic-vs-line",
@@ -2004,6 +2010,8 @@ window.SCRATCHBONES_CONFIG = {
           ".seatChipBadge",
           ".seatChipBadgeIcon",
           ".seatStatus",
+          ".seatTrickLoadoutInfo",
+          ".seatTrickLoadoutInfoItem",
           ".seatAvatarBox",
           ".claimAvatarNameTag",
           ".claimAvatarCinRole",
@@ -2024,6 +2032,8 @@ window.SCRATCHBONES_CONFIG = {
               ".seatChipBadge",
               ".seatChipBadgeIcon",
               ".seatStatus",
+              ".seatTrickLoadoutInfo",
+              ".seatTrickLoadoutInfoItem",
               ".turnSpotlightNameBar",
               ".cin-name",
               ".cin-action-burst",
@@ -2042,6 +2052,8 @@ window.SCRATCHBONES_CONFIG = {
               ".claimAvatarCinName",
               ".claimAvatarCinTags",
               ".claimClusterTextAnchor",
+              ".trickDeckInfo",
+              ".trickDeckInfoItem",
               ".cinematic-vs-line",
               ".cin-result-copy"
             ],
@@ -2458,7 +2470,7 @@ window.SCRATCHBONES_CONFIG = {
               "--layout-seat-avatar-size",
               "--layout-sidebar-content-scale"
             ],
-            ".seatName, .seatMeta, .seatChipBadge, .seatStatus, .seatSeed, .seatTags": [
+            ".seatName, .seatMeta, .seatChipBadge, .seatStatus, .seatTrickLoadoutInfo, .seatSeed, .seatTags": [
               "--layout-sidebar-content-scale"
             ]
           },
@@ -2467,7 +2479,7 @@ window.SCRATCHBONES_CONFIG = {
               "--layout-seat-avatar-size",
               "--layout-sidebar-content-scale"
             ],
-            ".seatName, .seatMeta, .seatChipBadge, .seatStatus, .seatSeed, .seatTags": [
+            ".seatName, .seatMeta, .seatChipBadge, .seatStatus, .seatTrickLoadoutInfo, .seatSeed, .seatTags": [
               "--layout-sidebar-content-scale"
             ]
           },
@@ -2475,7 +2487,7 @@ window.SCRATCHBONES_CONFIG = {
             ".seatAvatarBox, .seatPortrait": [
               "--layout-human-seat-avatar-size"
             ],
-            ".seatName, .seatMeta, .seatStatus, .humanSeatChipBadge": [
+            ".seatName, .seatMeta, .seatStatus, .seatTrickLoadoutInfo, .humanSeatChipBadge": [
               "--layout-sidebar-content-scale"
             ]
           },

@@ -169,6 +169,70 @@ import { createTutorial } from './tutorial.js';
       document.head.appendChild(style);
     }
     installSeatResponsiveLayoutOverrides();
+    function installTrickBoneSummaryLayoutOverrides() {
+      if (typeof document === 'undefined' || document.getElementById('scratchbones-trick-bone-summary-layout-overrides')) return;
+      const style = document.createElement('style');
+      style.id = 'scratchbones-trick-bone-summary-layout-overrides';
+      style.textContent = `
+        .trickDeckInfo,
+        .seatTrickLoadoutInfo {
+          display: flex;
+          flex-direction: column;
+          gap: var(--layout-trick-info-item-gap);
+          margin-top: var(--layout-trick-info-margin-top);
+          max-width: var(--layout-trick-info-max-width);
+          letter-spacing: var(--layout-trick-info-letter-spacing);
+        }
+        .trickDeckInfo {
+          align-self: center;
+          margin-top: 0;
+        }
+        .trickDeckInfoRows,
+        .seatTrickLoadoutInfoRows {
+          display: flex;
+          flex-direction: column;
+          gap: var(--layout-trick-info-item-gap);
+        }
+        .trickDeckInfoItem,
+        .seatTrickLoadoutInfoItem {
+          display: grid;
+          grid-template-columns: var(--layout-trick-info-glyph-size) auto var(--layout-trick-info-glyph-size) minmax(1.5em, auto);
+          align-items: center;
+          column-gap: var(--layout-trick-info-gap);
+          white-space: nowrap;
+        }
+        .trickSymbolContainer,
+        .trickMultiplyGlyphContainer {
+          width: var(--layout-trick-info-glyph-size);
+          height: var(--layout-trick-info-glyph-size);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 var(--layout-trick-info-glyph-size);
+        }
+        .trickSymbolImg,
+        .trickMultiplyGlyphImg {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          filter: var(--layout-trick-symbol-filter);
+        }
+        .trickMultiplyGlyphImg[data-invert="true"] {
+          filter: invert(1) var(--layout-trick-symbol-filter);
+        }
+        .trickInfoArrow {
+          color: var(--muted);
+          font-weight: 700;
+        }
+        .trickInfoAmount {
+          color: var(--text);
+          font-weight: 800;
+          text-align: left;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    installTrickBoneSummaryLayoutOverrides();
     const RENDERED_SCREEN_SPACE_PARITY = SCRATCHBONES_GAME.layout?.diagnostics?.renderedScreenSpaceParity || {};
     const AUTHORED_BOX_KEY_BY_PROJ_ID = {
       'topbar': 'topbar',
@@ -3472,6 +3536,12 @@ import { createTutorial } from './tutorial.js';
       const extraClass = String(className || '').trim();
       return `<span class="trickSymbolContainer${extraClass ? ` ${escapeHtml(extraClass)}` : ''}" data-trick-symbol="${escapeHtml(key)}">${src ? `<img class="trickSymbolImg" src="${escapeHtml(src)}" alt="${escapeHtml(key)} trick symbol" loading="lazy" data-optional-symbol="true">` : ''}</span>`;
     }
+    function renderTrickMultiplyGlyphContainer({ className = '' } = {}) {
+      const src = String(CONFIG.assets.claimMultiplyGlyphSrc || '').trim();
+      const extraClass = String(className || '').trim();
+      const shouldInvert = CONFIG.assets.claimMultiplyGlyphInvert !== false;
+      return `<span class="trickMultiplyGlyphContainer${extraClass ? ` ${escapeHtml(extraClass)}` : ''}">${src ? `<img class="trickMultiplyGlyphImg" src="${escapeHtml(src)}" alt="Multiply" loading="lazy" data-invert="${shouldInvert ? 'true' : 'false'}">` : '<span aria-hidden="true">×</span>'}</span>`;
+    }
     function trickBoneDisplayLabel(trickType) {
       const key = String(trickType || '').trim();
       const configuredLabel = String(TRICK_BONE_DEFINITIONS[key]?.label || '').trim();
@@ -3487,13 +3557,28 @@ import { createTutorial } from './tutorial.js';
         .filter(([trickType, count]) => trickType && count > 0)
         .sort(([typeA], [typeB]) => trickBoneDisplayLabel(typeA).localeCompare(trickBoneDisplayLabel(typeB)));
     }
+    function renderTrickCountRows(entries, itemClassName) {
+      return entries.map(([trickType, count]) => `
+        <span class="${escapeHtml(itemClassName)}" title="${escapeHtml(trickBoneDisplayLabel(trickType))}: ${count}">
+          ${renderTrickBoneSymbolContainer(trickType)}
+          <span class="trickInfoArrow" aria-hidden="true">→</span>
+          ${renderTrickMultiplyGlyphContainer()}
+          <span class="trickInfoAmount" aria-label="${escapeHtml(trickBoneDisplayLabel(trickType))} amount ${count}">${count}</span>
+        </span>
+      `).join('');
+    }
     function renderTrickDeckInfo(composition = deckCompositionSnapshot()) {
       const entries = sortedTrickCountEntries(composition?.trickCounts);
-      const total = entries.reduce((sum, [, count]) => sum + count, 0);
       const rows = entries.length
-        ? entries.map(([trickType, count]) => `<span class="trickDeckInfoItem">${renderTrickBoneSymbolContainer(trickType)}<span>${escapeHtml(trickBoneDisplayLabel(trickType))} × ${count}</span></span>`).join('')
-        : '<span class="trickDeckInfoItem">No Trick Bones</span>';
-      return `<div class="trickDeckInfo" data-trick-deck-info="true"><div class="trickDeckInfoTitle tiny">Deck Trick Bones: ${total}</div><div class="trickDeckInfoRows tiny">${rows}</div></div>`;
+        ? renderTrickCountRows(entries, 'trickDeckInfoItem')
+        : '<span class="trickDeckInfoItem trickDeckInfoEmpty">No Trick Bones</span>';
+      return `<div class="trickDeckInfo" data-trick-deck-info="true" aria-label="Deck trick bone counts"><div class="trickDeckInfoRows tiny">${rows}</div></div>`;
+    }
+    function renderSeatTrickLoadoutInfo(player) {
+      const entries = sortedTrickCountEntries(trickCountsFromLoadouts([player?.playerLoadout || []]));
+      if (!entries.length) return '';
+      const rows = renderTrickCountRows(entries, 'seatTrickLoadoutInfoItem');
+      return `<div class="seatTrickLoadoutInfo" data-seat-trick-loadout-info="${Number(player?.id ?? -1)}" aria-label="${escapeHtml(seatLabel(player))} trick bone loadout"><div class="seatTrickLoadoutInfoRows tiny">${rows}</div></div>`;
     }
     function formatChallengePrompt(lastPlay) {
       return SCRATCHBONES_GAME.uiText.challengePromptTemplate
@@ -5232,6 +5317,7 @@ import { createTutorial } from './tutorial.js';
                 ${renderAiRenownBadge(p)}
                 ${renderSeatChipBadge(p)}
                 ${renderSeatCoinRow(p)}
+                ${renderSeatTrickLoadoutInfo(p)}
                 <div class="seatStatus">${p.lastAction}</div>
               </div>
               <div class="seatAvatarBox" data-proj-id="avatar-${p.id}" style="width:var(--layout-seat-avatar-size,132px);height:var(--layout-seat-avatar-size,132px);aspect-ratio:1/1;">
@@ -5249,6 +5335,7 @@ import { createTutorial } from './tutorial.js';
               <div class="seatMeta">Cards ${player.hand.length} · Clears ${player.clears}</div>
               ${renderSeatChipBadge(player)}
               ${renderSeatCoinRow(player)}
+              ${renderSeatTrickLoadoutInfo(player)}
               <div class="seatStatus">${player.lastAction}</div>
             </div>
             <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
