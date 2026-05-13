@@ -6926,6 +6926,59 @@ import { createTutorial } from './tutorial.js';
       textAnchor.style.pointerEvents = 'none';
       clusterCinematicStageRuntime.bettingUiKey = null;
     }
+    function clearChallengeTankanColumns(app = document.getElementById('app')) {
+      if (!app) return;
+      app.querySelectorAll('.cin-tankan').forEach((node) => node.remove());
+    }
+    function mountChallengeTankanColumns(app, cinematicMode) {
+      if (!app || !cinematicMode) return;
+      const appRect = app.getBoundingClientRect();
+      if (!(appRect.width > 0)) return;
+      const actorAnchor = app.querySelector('.actorAvatarFloat .claimAvatarShell') || app.querySelector('.actorAvatarFloat');
+      const reactorAnchor = app.querySelector('.reactorAvatarFloat .claimAvatarShell') || app.querySelector('.reactorAvatarFloat');
+      const avatarRects = [actorAnchor, reactorAnchor]
+        .map((node) => node?.getBoundingClientRect?.())
+        .filter((rect) => rect && rect.width > 0 && rect.height > 0);
+      const leftAvatarEdge = avatarRects.length
+        ? Math.min(...avatarRects.map((rect) => rect.left - appRect.left))
+        : (appRect.width * 0.5) - 132;
+      const rightAvatarEdge = avatarRects.length
+        ? Math.max(...avatarRects.map((rect) => rect.right - appRect.left))
+        : (appRect.width * 0.5) + 132;
+      const edgeInset = 10;
+      const sideGapPx = Math.max(84, Math.round(appRect.width * 0.07));
+      let leftX = Math.max(edgeInset, leftAvatarEdge - sideGapPx);
+      let rightX = Math.min(appRect.width - edgeInset, rightAvatarEdge + sideGapPx);
+      const minSeparation = Math.max(220, Math.round(appRect.width * 0.28));
+      if ((rightX - leftX) < minSeparation) {
+        const center = (leftX + rightX) * 0.5;
+        leftX = Math.max(edgeInset, center - (minSeparation * 0.5));
+        rightX = Math.min(appRect.width - edgeInset, center + (minSeparation * 0.5));
+      }
+      const sideText = (String(cinematicMode.sideText || CONFIG.uiText?.challengeBurstText || 'LIAR')
+        .replace(/[!！?？]+$/g, '')
+        .trim() || 'LIAR');
+      const ensureColumn = (side) => {
+        let node = app.querySelector(`.cin-tankan.${side}`);
+        if (!node) {
+          node = document.createElement('div');
+          node.className = `cin-tankan ${side}`;
+          node.setAttribute('aria-hidden', 'true');
+          app.appendChild(node);
+        }
+        return node;
+      };
+      const leftColumn = ensureColumn('left');
+      const rightColumn = ensureColumn('right');
+      leftColumn.textContent = sideText;
+      rightColumn.textContent = sideText;
+      leftColumn.style.left = `${Math.round(leftX)}px`;
+      leftColumn.style.right = 'auto';
+      leftColumn.style.transform = 'translateY(-50%)';
+      rightColumn.style.left = `${Math.round(rightX)}px`;
+      rightColumn.style.right = 'auto';
+      rightColumn.style.transform = 'translateY(-50%) scaleX(-1)';
+    }
     function clearClaimClusterBettingLayer(app = document.getElementById('app')) {
       if (!app) return;
       const bettingLayer = app.querySelector('.claimClusterBettingLayer');
@@ -6992,6 +7045,7 @@ import { createTutorial } from './tutorial.js';
     function mountClusterHeadlineCinematic(app, { cinematicMode, cinematicPhase, bettingActorHuman, humanCallAmount }) {
       const textAnchor = app?.querySelector('.claimClusterTextAnchor');
       if (!textAnchor || !cinematicMode) return;
+      mountChallengeTankanColumns(app, cinematicMode);
       if (cinematicPhase === 'betting') {
         clearHeadlineCinematics(app);
         const bettingLayer = app.querySelector('.claimClusterBettingLayer');
@@ -7074,6 +7128,9 @@ import { createTutorial } from './tutorial.js';
         textAnchor.style.pointerEvents = 'auto';
         textAnchor.innerHTML = `<div class="sectionTitle cinematic-pane-title cin-headline ${headlineClass}">${escapeHtml(cinematicMode.headline || 'Challenge result')}</div><div class="tiny cinematic-vs-line" style="margin-top:6px;">${escapeHtml((challenger?.isHuman ? 'You' : challenger?.name || '?'))} vs ${escapeHtml((challenged?.isHuman ? 'You' : challenged?.name || '?'))}</div><div class="cin-result-copy cin-result ${resultToneClass}">${escapeHtml(subtitle)}</div><div class="challengeBar" style="margin-top:8px;"><button id="cinContinueBtn">Continue →</button></div>`;
       }
+      if (cinematicPhase !== 'betting' && cinematicPhase !== 'reveal' && cinematicPhase !== 'fold') {
+        clearChallengeTankanColumns(app);
+      }
     }
     function claimClusterAvatarAnchorForPlayer(playerId, root = document.getElementById('app')) {
       if (!root) return null;
@@ -7090,6 +7147,7 @@ import { createTutorial } from './tutorial.js';
           clearAvatarCinematics(app);
           clearHandCinematics(app);
           clearHeadlineCinematics(app);
+          clearChallengeTankanColumns(app);
           clearClaimClusterBettingLayer(app);
           clusterCinematicStageRuntime.phaseKey = null;
           clusterCinematicStageRuntime.revealSpawnKey = null;
@@ -7103,6 +7161,7 @@ import { createTutorial } from './tutorial.js';
         clearAvatarCinematics(app);
         clearHandCinematics(app);
         clearHeadlineCinematics(app);
+        clearChallengeTankanColumns(app);
         clearClaimClusterBettingLayer(app);
         clusterCinematicStageRuntime.phaseKey = phaseKey;
         clusterCinematicStageRuntime.revealSpawnKey = null;

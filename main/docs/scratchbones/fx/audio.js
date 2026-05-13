@@ -17,6 +17,7 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
       let playlistExhausted = false;
       let autoplayBlockedLogged = false;
       let playlistRequested = false;
+      let bgmTrackToken = 0;
 
       function markAudioUnlocked() {
         if (audioUnlocked) return;
@@ -94,6 +95,7 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
       function playTrackNow(url, { loop = false, onTrackError = null } = {}) {
         const fadeMs = Math.max(40, Number(cfg.musicFadeMs) || 280);
         const targetVolume = clamp(cfg.bgmVolume ?? 0.45, 0, 1);
+        const trackToken = ++bgmTrackToken;
         const old = bgmAudio;
         const next = buildAudio(url, 0);
         if (!next) return;
@@ -101,18 +103,25 @@ export function createScratchbonesAudio(SCRATCHBONES_GAME, { debugLog } = {}) {
         logAudio('debug', 'set-track', { url, loop, fadeMs, targetVolume, challengeBgmActive, audioUnlocked });
         next.loop = !!loop;
         next.addEventListener('error', () => {
+          if (bgmTrackToken !== trackToken || bgmAudio !== next) return;
           console.debug('[scratchbones audio] track error', { url, loop, challengeBgmActive });
           logAudio('warn', 'track-error', { url, loop, challengeBgmActive });
           onTrackError?.();
         }, { once: true });
         attemptAutoplay(next, {
           onBlocked: () => {
+            if (bgmTrackToken !== trackToken || bgmAudio !== next) return;
             pendingBgmTrack = { url, loop, onTrackError };
             logAudio('warn', 'bgm-autoplay-blocked', { url, loop, pendingSfxCount: pendingSfx.length });
             attachUnlockListeners();
           },
         }).then((started) => {
           if (!started) return;
+          if (bgmTrackToken !== trackToken || bgmAudio !== next) {
+            next.pause();
+            next.src = '';
+            return;
+          }
           next.muted = false;
           logAudio('debug', 'bgm-play-started', { url, loop, fadeMs, targetVolume });
           fadeTo(next, targetVolume, fadeMs);
