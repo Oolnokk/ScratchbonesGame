@@ -480,7 +480,7 @@
   function buildPreviewProfile(appearance) {
     const cosmetics = _lobbyPortraitCosmetics;
     if (!cosmetics || !window.getPortraitFighters || !window.randomProfileSeeded) return null;
-    const { optionCache, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions,
+    const { optionCache, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, upperFaceOptions, facialHairOptions,
             hatOptions, hoodOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender,
             allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter,
             conditionalCosmeticsByFighter } = cosmetics;
@@ -501,7 +501,7 @@
     const forcedSlots = new Set(Object.keys(forced));
 
     const profile = window.randomProfileSeeded(rng, [fighter], hairFrontOptions, hairBackOptions,
-      hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender,
+      hairSideOptions, hairSideLOptions, eyesOptions, upperFaceOptions, facialHairOptions, bodyColorRangesByGender,
       allowedCosmeticsByFighter, hatOptions, hoodOptions, cosmeticWeightsByFighter, torsoPortraitOptions,
       armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
     if (!profile) return null;
@@ -514,6 +514,7 @@
       if (savedCosmetics.hairSide   !== undefined && !forcedSlots.has('hairSide'))   profile.hairSide   = lookup(savedCosmetics.hairSide);
       if (savedCosmetics.hairSideL  !== undefined && !forcedSlots.has('hairSideL'))  profile.hairSideL  = lookup(savedCosmetics.hairSideL);
       if (savedCosmetics.eyes       !== undefined && !forcedSlots.has('eyes'))       profile.eyes       = lookup(savedCosmetics.eyes);
+      if (savedCosmetics.upperFace  !== undefined && !forcedSlots.has('upperFace'))  profile.upperFace  = lookup(savedCosmetics.upperFace);
       if (savedCosmetics.facialHair !== undefined && !forcedSlots.has('facialHair')) profile.facialHair = lookup(savedCosmetics.facialHair);
     }
     if (bodyColors) profile.bodyColors = { ...(profile.bodyColors || {}), ...bodyColors };
@@ -564,7 +565,15 @@
       if (!hasCollaredClothing && collarLockedFacialHairIds.includes(profile.facialHair?.id)) {
         profile.facialHair = optionCache?.get('none') || { id: 'none', label: 'No Facial Hair', tintSlot: null, layers: [] };
       }
-      // Apply clothing dyes (keys are tintSlot names: HAT, TORSO, CLOTH, ...)
+      const defaultTintColors = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.defaultTintColors || {};
+      for (const option of [profile.upperFace]) {
+        const defaults = option?.id ? defaultTintColors[option.id] : null;
+        if (!defaults) continue;
+        for (const [tintKey, color] of Object.entries(defaults)) {
+          profile.bodyColors = { ...(profile.bodyColors || {}), [tintKey]: { ...color } };
+        }
+      }
+      // Apply clothing/accessory dyes (keys are tintSlot names: HAT, UPPER_FACE, TORSO, CLOTH, ...)
       const dyeIds = appliedDyesFromAppearance ?? (acc.getAppliedDyes ? acc.getAppliedDyes() : {});
       const catalog = acc.getDyeCatalog ? acc.getDyeCatalog() : [];
       for (const [tintKey, dyeId] of Object.entries(dyeIds)) {
@@ -814,10 +823,54 @@
     const DYE_SWATCH_BASE = window.SCRATCHBONES_CONFIG?.game?.dyes?.swatchBase;
 
     const ownedDyes = dyes.filter(d => acc && acc.isDyeOwned(d.id));
-    const appearance = acc ? acc.getAppearance() : { speciesId: 'mao-ao', gender: 'male' };
+    const appearance = acc ? acc.getAppearance() : { speciesId: 'mao-ao', gender: 'male', cosmetics: {} };
+    const appearanceSlotDefs = window.SCRATCHBONES_CONFIG?.game?.collections?.appearanceSlots || [];
+    const genderData = SPECIES_DATA[appearance.speciesId]?.[appearance.gender] || null;
+    const appearanceSlots = appearanceSlotDefs
+      .filter(slot => !Array.isArray(slot.species) || slot.species.includes(appearance.speciesId))
+      .map(slot => ({ ...slot, options: (genderData?.slots || []).find(def => def.slot === slot.slot)?.options || [] }))
+      .filter(slot => slot.options.length);
     const entitlementKey = (item) => [item.category || '', item.label || '', item.material || ''].join('::');
 
     let slotsHtml = '';
+    for (const slot of appearanceSlots) {
+      const equippedId = appearance.cosmetics?.[slot.slot] || slot.options[0]?.id || '';
+      const opts = slot.options.map(item =>
+        `<option value="${esc(item.id || '')}"${(item.id || '') === equippedId ? ' selected' : ''}>${esc(item.label)}</option>`
+      ).join('');
+      const isDyeOpen = _activeDyeSlot === slot.key;
+      slotsHtml += `
+        <div class="sb-slot-row">
+          <span class="sb-slot-label">${esc(slot.label)}</span>
+          <select class="sb-cosmetic-select sb-slot-select" data-appearance-slot="${esc(slot.slot)}">${opts}</select>
+          <button class="sb-btn-ghost sb-dye-toggle${isDyeOpen ? ' active' : ''}" data-toggle-dye="${esc(slot.key)}">Dye ▾</button>
+        </div>`;
+      if (isDyeOpen) {
+        const tintKeys = slot.tintKeys || [];
+        const dyesForSlot = ownedDyes.filter(d => (d.group || 'cloth') === (slot.dyeGroup || 'cloth'));
+        const dyeRowHtml = (d) => {
+          const color = d.color || { h: 0, s: 0, v: 0 };
+          const style = swatchStyle(DYE_SWATCH_BASE, color.h, color.s, color.v);
+          return `
+            <div class="sb-dye-row">
+              <span class="sb-dye-dot" style="${style}"></span>
+              <span class="sb-dye-name">${esc(d.label)}</span>
+              ${tintKeys.map((key, index) => `<button class="sb-apply-btn${appliedDyes[key] === d.id ? ' applied' : ''}" data-apply-dye="${esc(d.id)}" data-tint-key="${esc(key)}">${['A','B','C'][index] || index + 1}</button>`).join('')}
+            </div>`;
+        };
+        const sortDyes = (list) => [...list].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        const dyeRows = sortDyes(dyesForSlot).map(dyeRowHtml).join('') || '<div class="sb-muted" style="font-size:0.8em;">No dyes owned.</div>';
+        const clearBtns = tintKeys.filter(k => appliedDyes[k]).map((k, i) =>
+          `<button class="sb-btn-ghost sb-apply-btn" data-clear-channel="${esc(k)}">Clear ${['A','B','C'][i] || i + 1}</button>`
+        ).join('');
+        slotsHtml += `
+          <div class="sb-dye-panel">
+            <div class="sb-muted" style="font-size:0.74em;margin-bottom:5px;">Color this upper-face item in Collections.</div>
+            ${dyeRows}
+            ${clearBtns ? `<div class="sb-dye-clears">${clearBtns}</div>` : ''}
+          </div>`;
+      }
+    }
     for (const slot of CLOTHING_SLOTS) {
       const equippedId = acc ? acc.getEquippedForCategory(slot.category) : null;
       const ownedByCategory = fullCatalog.filter(item => item.category === slot.category && acc && acc.isUnlocked(item.id));
@@ -1384,6 +1437,17 @@
     });
 
     // ── Collections ────────────────────────────────────────────
+
+    el.querySelectorAll('[data-appearance-slot]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const acc = window.ScratchbonesAccount;
+        if (!acc) return;
+        const appearance = acc.getAppearance();
+        appearance.cosmetics = { ...(appearance.cosmetics || {}), [sel.dataset.appearanceSlot]: sel.value || null };
+        acc.setAppearance(appearance);
+        render();
+      });
+    });
 
     el.querySelectorAll('[data-slot-cat]').forEach(sel => {
       sel.addEventListener('change', () => {
