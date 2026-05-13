@@ -783,7 +783,7 @@ const DEFAULT_TUTORIAL_CONFIG = {
     },
     'trick-bones': {
       title: 'Trick Bone Cards',
-      text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: when your claim passes without challenge, every non-Smuggle claimed card leaves the table and goes into another player\'s hand; human Smuggle users choose the target seat.\nTrap Bone: if your challenged Trap claim is truthful and the challenge fails, transfer up to the claim size from your hand to the challenger; human defenders choose cards with the Trap selection.\nPunish Bone: during challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.',
+      text: 'Glowing cards are Trick Bones — special cards with unique powers.\n\nSmuggle Bone: when your claim passes without challenge, every non-Smuggle claimed card leaves the table and goes into another player\'s hand; human Smuggle users choose the target seat.\nTrap Bone: if your challenged Trap claim is truthful and the challenge fails, transfer up to the claim size from your hand to the challenger; human defenders choose cards with the Trap selection.\nPunish Bone: wild. During challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.',
     },
     claim: {
       title: 'The Claim Display',
@@ -1073,7 +1073,7 @@ const DEFAULT_TRICK_GLYPH_SRC = {
 const DEFAULT_TRICK_BONE_DEFINITIONS = {
   smuggle: { id: 'smuggle', label: 'Smuggle Bone', description: 'When your Smuggle claim passes without challenge, its non-Smuggle claimed cards leave the table and go into another player\'s hand; human Smuggle users choose the target seat.', wild: false },
   trap: { id: 'trap', label: 'Trap Bone', description: 'If your challenged Trap claim is truthful and the challenge fails, transfer up to the claim size from your hand to the challenger; human defenders choose cards with state.trapSelection.', wild: true },
-  punish: { id: 'punish', label: 'Punish Bone', description: 'During challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.', wild: false },
+  punish: { id: 'punish', label: 'Punish Bone', description: 'Wild. During challenge betting, the challenger may arm Punish before opening, raising, or calling. Arming consumes one Punish card; if the challenge succeeds, the challenger gives claim-size cards to the challenged player.', wild: true },
 };
 
 function repeatIdsFromCounts(counts = {}) {
@@ -1190,7 +1190,7 @@ function normalizeTrickBoneDefinitions(rawDefinitions = {}) {
       id,
       label: String(rawDefinition?.label || id),
       description: String(rawDefinition?.description || ''),
-      wild: rawDefinition?.wild === true,
+      wild: id === 'punish' ? true : rawDefinition?.wild === true,
     };
   }
   return definitions;

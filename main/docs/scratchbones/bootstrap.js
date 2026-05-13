@@ -3126,7 +3126,7 @@ import { createTutorial } from './tutorial.js';
       const smuggle = player.hand.find(c => c.trickType === 'smuggle');
       if (!smuggle) return [];
       const maxClaimCount = Math.max(1, aiDecisionNumber('play', 'opportunitySmuggleMaxClaimCount', 4));
-      const movable = player.hand.filter(c => c.id !== smuggle.id);
+      const movable = player.hand.filter(c => c.id !== smuggle.id && c.trickType !== 'smuggle');
       const offRankMovable = movable.filter(c => !c.wild && c.rank !== declaredRank);
       const otherMovable = movable.filter(c => !offRankMovable.some(offRank => offRank.id === c.id));
       const movedCards = [...offRankMovable, ...otherMovable].slice(0, Math.max(0, maxClaimCount - 1));
