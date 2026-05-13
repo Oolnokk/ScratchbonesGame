@@ -1042,15 +1042,20 @@
     .seatTags { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
     .seatHandPreview {
       display: flex;
-      flex-wrap: wrap;
-      gap: 2px;
+      flex-wrap: nowrap;
+      gap: 0;
       margin-top: 5px;
+      overflow: visible;
     }
     .seatHandCard {
       width: 14px;
       aspect-ratio: 312 / 440;
       flex: 0 0 auto;
+      margin-left: -4px;
       overflow: visible;
+    }
+    .seatHandCard:first-child {
+      margin-left: 0;
     }
     .seatHandCard img {
       width: 100%;
