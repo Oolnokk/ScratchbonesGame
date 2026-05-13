@@ -3779,9 +3779,11 @@ import { createTutorial } from './tutorial.js';
     }
     function renderTrickCountRows(entries, itemClassName, { context = 'seat' } = {}) {
       const metrics = trickSummaryMetrics(context);
-      const rowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px auto ${metrics.glyphSizePx}px auto minmax(1.5em,auto);align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};`;
+      const amountColumnSize = context === 'seat' ? 'minmax(1.2em,auto)' : 'minmax(1.5em,auto)';
+      const rowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px auto ${metrics.glyphSizePx}px auto ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};max-width:100%;min-width:0;`;
       const arrowStyle = `color:${metrics.color};font-weight:700;`;
-      const amountStyle = `color:${metrics.color};font-weight:800;text-align:left;font-size:250%;line-height:1;`;
+      const amountFontSize = context === 'seat' ? '160%' : '250%';
+      const amountStyle = `color:${metrics.color};font-family:'Khymeryyanroman4','Khymeryyanroman',Inter,system-ui,sans-serif;font-weight:800;text-align:left;font-size:${amountFontSize};line-height:1;`;
       return entries.map(([trickType, count]) => `
         <span class="${escapeHtml(itemClassName)}" title="${escapeHtml(trickBoneDisplayLabel(trickType))}: ${count}" style="${escapeHtml(rowStyle)}">
           ${renderTrickBoneSymbolContainer(trickType, { context })}
@@ -3795,8 +3797,11 @@ import { createTutorial } from './tutorial.js';
     function renderTrickSummaryShell({ className, rowsClassName, rows, ariaLabel, context = 'seat', dataAttribute = '' }) {
       const metrics = trickSummaryMetrics(context);
       const marginTopPx = context === 'deck' ? 0 : metrics.marginTopPx;
-      const shellStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;margin-top:${marginTopPx}px;max-width:${metrics.maxWidthPx}px;letter-spacing:${metrics.letterSpacingEm}em;font-size:${metrics.fontSizeRem}rem;color:${metrics.color};${context === 'deck' ? 'align-self:center;' : ''}`;
-      const rowsStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;`;
+      const maxWidthStyle = context === 'deck'
+        ? `${metrics.maxWidthPx}px`
+        : `min(100%,${metrics.maxWidthPx}px)`;
+      const shellStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;margin-top:${marginTopPx}px;max-width:${maxWidthStyle};letter-spacing:${metrics.letterSpacingEm}em;font-size:${metrics.fontSizeRem}rem;color:${metrics.color};${context === 'deck' ? 'align-self:center;' : 'width:100%;min-width:0;'}overflow:hidden;`;
+      const rowsStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;min-width:0;`;
       return `<div class="${escapeHtml(className)}" ${dataAttribute} aria-label="${escapeHtml(ariaLabel)}" style="${escapeHtml(shellStyle)}"><div class="${escapeHtml(rowsClassName)} tiny" style="${escapeHtml(rowsStyle)}">${rows}</div></div>`;
     }
     function renderTrickDeckInfo(composition = deckCompositionSnapshot()) {
