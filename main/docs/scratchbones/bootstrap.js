@@ -158,12 +158,18 @@ import { createTutorial } from './tutorial.js';
           height: calc(var(--layout-human-seat-avatar-size) * var(--layout-seat-container-scale)) !important;
         }
         #aiSidebar .seatHandPreview {
-          gap: calc(var(--layout-seat-hand-preview-gap) * var(--layout-seat-container-scale));
+          display: flex;
+          flex-wrap: nowrap;
+          gap: 0;
           margin-top: calc(var(--layout-seat-hand-preview-margin-top) * var(--layout-seat-container-scale));
-          overflow: hidden;
+          overflow: visible;
         }
         #aiSidebar .seatHandCard {
           width: calc(var(--layout-seat-hand-preview-card-width) * var(--layout-seat-container-scale));
+          margin-left: calc(var(--layout-seat-hand-preview-gap) * var(--layout-seat-container-scale) * -2);
+        }
+        #aiSidebar .seatHandCard:first-child {
+          margin-left: 0;
         }
       `;
       document.head.appendChild(style);
