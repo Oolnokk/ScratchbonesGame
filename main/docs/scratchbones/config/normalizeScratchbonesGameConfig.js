@@ -532,6 +532,13 @@ const DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG = {
     cloth: 'cloth',
   },
   clothHoodColorSourceSlots: ['armCosmetic', 'torsoCosmetic'],
+  npcRequiredClothingPaletteKeys: ['B', 'C'],
+  clothingFallbackTintSlotsBySlot: {
+    hat: 'HAT',
+    hood: 'HOOD',
+    torsoCosmetic: 'CLOTH',
+    armCosmetic: 'CLOTH',
+  },
 };
 
 function normalizeStringArray(value, fallback) {
@@ -1416,6 +1423,8 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
           clothingOptionPoolsBySlot: normalizeStringMap(rawRandomization.clothingOptionPoolsBySlot, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.clothingOptionPoolsBySlot),
           materialTags: normalizeStringMap(rawRandomization.materialTags, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.materialTags),
           clothHoodColorSourceSlots: normalizeStringArray(rawRandomization.clothHoodColorSourceSlots, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.clothHoodColorSourceSlots),
+          npcRequiredClothingPaletteKeys: normalizeStringArray(rawRandomization.npcRequiredClothingPaletteKeys, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.npcRequiredClothingPaletteKeys),
+          clothingFallbackTintSlotsBySlot: normalizeStringMap(rawRandomization.clothingFallbackTintSlotsBySlot, DEFAULT_PORTRAIT_RANDOMIZATION_CONFIG.clothingFallbackTintSlotsBySlot),
         };
       })(),
     },

@@ -915,7 +915,14 @@ window.SCRATCHBONES_CONFIG = {
         "materialTags": {
           "cloth": "cloth"
         },
-        "clothHoodColorSourceSlots": ["armCosmetic", "torsoCosmetic"]
+        "clothHoodColorSourceSlots": ["armCosmetic", "torsoCosmetic"],
+        "npcRequiredClothingPaletteKeys": ["B", "C"],
+        "clothingFallbackTintSlotsBySlot": {
+          "hat": "HAT",
+          "hood": "HOOD",
+          "torsoCosmetic": "CLOTH",
+          "armCosmetic": "CLOTH"
+        }
       },
       "blink": {
         "enabled": true,

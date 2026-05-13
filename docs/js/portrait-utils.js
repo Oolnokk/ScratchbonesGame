@@ -1401,6 +1401,81 @@ function isClothPortraitOption(option, clothMaterialTag) {
   return !option.materialTag && (option.slot === 'hood' || option.slot === 'torso' || option.slot === 'overwear');
 }
 
+
+function requiredNpcClothingPaletteKeys() {
+  return Array.isArray(portraitRandomizationConfig().npcRequiredClothingPaletteKeys)
+    ? portraitRandomizationConfig().npcRequiredClothingPaletteKeys
+        .map(key => String(key || '').trim())
+        .filter(key => key && key !== 'A')
+    : [];
+}
+
+function clothingFallbackTintSlotsBySlot() {
+  const fallbackSlots = portraitRandomizationConfig().clothingFallbackTintSlotsBySlot;
+  return fallbackSlots && typeof fallbackSlots === 'object' ? fallbackSlots : {};
+}
+
+function cloneColor(color) {
+  return color && typeof color === 'object' ? { ...color } : null;
+}
+
+function colorForMissingClothingPaletteSlot({ baseColor, sourceRange, paletteRange, rng }) {
+  const range = paletteRange || sourceRange;
+  if (range && typeof rng === 'function') return randomColorFromRangeSeeded(range, rng);
+  return cloneColor(baseColor) || { h: 0, s: 0, v: 0 };
+}
+
+function ensurePortraitClothingPaletteColors(profile, rng, options = {}) {
+  if (!profile) return profile;
+  const randomizationConfig = portraitRandomizationConfig();
+  const clothingSlots = Array.isArray(randomizationConfig.clothingSlots) ? randomizationConfig.clothingSlots : [];
+  const requiredKeys = requiredNpcClothingPaletteKeys();
+  if (!clothingSlots.length || !requiredKeys.length) return profile;
+
+  const bodyColors = { ...(profile.bodyColors || {}) };
+  const fallbackTintSlots = clothingFallbackTintSlotsBySlot();
+  const clothingRule = options.clothingRule || null;
+  const ruleRange = clothingRule?.range || null;
+  const paletteRanges = clothingRule?.paletteRanges && typeof clothingRule.paletteRanges === 'object'
+    ? clothingRule.paletteRanges
+    : null;
+  const clothingRangeForPalette = (paletteKey) => paletteRanges?.[paletteKey] || ruleRange;
+
+  for (const slot of clothingSlots) {
+    const option = profile[slot];
+    if (!option || option.id === 'none') continue;
+    const layers = resolveOptionLayers(option, profile.fighter);
+    if (!layers.length) continue;
+
+    const baseTintSlot = option.tintSlot || fallbackTintSlots[slot] || null;
+    if (!baseTintSlot) continue;
+
+    const sourceRange = ruleRange || materialColorRangeFor(option) || option.colorRange || null;
+    if (!bodyColors[baseTintSlot]) {
+      bodyColors[baseTintSlot] = colorForMissingClothingPaletteSlot({
+        baseColor: bodyColors.CLOTH || bodyColors.HOOD || bodyColors.HAT || bodyColors.A,
+        sourceRange,
+        paletteRange: clothingRangeForPalette('A'),
+        rng,
+      });
+    }
+
+    for (const paletteKey of requiredKeys) {
+      const tintKey = `${baseTintSlot}_${paletteKey}`;
+      if (bodyColors[tintKey]) continue;
+      bodyColors[tintKey] = colorForMissingClothingPaletteSlot({
+        baseColor: bodyColors[baseTintSlot],
+        sourceRange,
+        paletteRange: clothingRangeForPalette(paletteKey),
+        rng,
+      });
+    }
+  }
+
+  profile.bodyColors = bodyColors;
+  return profile;
+}
+
 function applyBodyColorRulesSeeded(bodyColors, rules, rng) {
   if (!bodyColors || !rules || typeof rules !== 'object') return bodyColors;
   const result = {
@@ -1744,8 +1819,13 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
       ? bodyColors.CLOTH
       : randomColorFromRangeSeeded(hatSourceRange, rng);
   }
-  return { fighter, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, hat, torsoCosmetic, armCosmetic, bodyColors };
+  return ensurePortraitClothingPaletteColors(
+    { fighter, hairFront, hairBack, hairSide, hairSideL, hood, eyes, facialHair, hat, torsoCosmetic, armCosmetic, bodyColors },
+    rng,
+    { clothingRule }
+  );
 }
+
 
 window.setPortraitConfig = setPortraitConfig;
 window.getPortraitFighters = () => FIGHTERS;
@@ -1757,4 +1837,5 @@ window.renderPortraitProfile = renderProfile;
 // (bootstrap.js, scratchbones-lobby.js).
 window.renderProfile = renderProfile;
 window.randomPortraitProfileSeeded = randomProfileSeeded;
+window.ensurePortraitClothingPaletteColors = ensurePortraitClothingPaletteColors;
 window.drawPortraitLayerWarped = drawPortraitLayerWarped;
