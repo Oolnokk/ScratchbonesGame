@@ -6940,6 +6940,7 @@ import { createTutorial } from './tutorial.js';
       const DEFAULT_AVATAR_HALF_WIDTH_PX = 132;
       const DEFAULT_AVATAR_CENTER_Y_PX = 100;
       const TANKAN_EDGE_INSET_PX = 10;
+      // Keep side text tight to each avatar edge per claim-cluster cinematic placement.
       const MIN_TANKAN_GAP_PX = 16;
       const TANKAN_GAP_WIDTH_RATIO = 0.015;
       const appRect = app.getBoundingClientRect();
@@ -7214,9 +7215,11 @@ import { createTutorial } from './tutorial.js';
         getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration') || '',
       ).trim().toLowerCase();
       let burstDurationSeconds;
-      if (burstDurationCss.endsWith('ms')) burstDurationSeconds = Number(burstDurationCss.slice(0, -2)) / 1000;
-      else if (burstDurationCss.endsWith('s')) burstDurationSeconds = Number(burstDurationCss.slice(0, -1));
-      else burstDurationSeconds = Number(burstDurationCss);
+      const burstDurationMatch = burstDurationCss.match(/^(-?\d*\.?\d+)\s*(ms|s)?$/);
+      if (burstDurationMatch) {
+        const numericValue = Number(burstDurationMatch[1]);
+        burstDurationSeconds = burstDurationMatch[2] === 'ms' ? (numericValue / 1000) : numericValue;
+      }
       if (!Number.isFinite(burstDurationSeconds) || burstDurationSeconds <= 0) burstDurationSeconds = 2.1;
       const burstDurationMs = Math.max(1000, Math.round(burstDurationSeconds * 1400));
       setTimeout(() => {
