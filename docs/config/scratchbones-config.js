@@ -165,7 +165,7 @@ window.SCRATCHBONES_CONFIG = {
       "defaultLoadout": ["smuggle", "trap", "punish", "smuggle", "trap", "punish"],
       "loadoutSize": 6,
       "summaryDisplay": {
-        "glyphSizePx": 28,
+        "glyphSizePx": 14,
         "multiplyGlyphScale": 0.75,
         "gapPx": 6,
         "rowGapPx": 4,
@@ -173,12 +173,12 @@ window.SCRATCHBONES_CONFIG = {
         "maxWidthPx": 220,
         "fontSizeRem": 0.68,
         "letterSpacingEm": 0.05,
-        "seatColor": "var(--text)",
+        "seatColor": "#fff",
         "deckColor": "#fff",
-        "arrowText": "->",
-        "glyphFilter": "drop-shadow(0 1px 2px rgba(0,0,0,0.55))",
+        "arrowText": "\u00A0",
+        "glyphFilter": "brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))",
         "deckGlyphFilter": "brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))",
-        "multiplyGlyphFilter": "invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))"
+        "multiplyGlyphFilter": "brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))"
       },
       "definitions": {
         "smuggle": {
