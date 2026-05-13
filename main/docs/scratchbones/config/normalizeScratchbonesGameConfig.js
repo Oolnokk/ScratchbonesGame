@@ -1610,5 +1610,9 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
 
 export function getScratchbonesGameConfig({ rootConfig, reportError, debugEnabled = true }) {
   validateScratchbonesGameConfig(rootConfig, { reportError, debugEnabled });
-  return normalizeScratchbonesGameConfig(rootConfig?.game || {});
+  const normalizedGameConfig = normalizeScratchbonesGameConfig(rootConfig?.game || {});
+  if (rootConfig && typeof rootConfig === 'object') {
+    rootConfig.game = normalizedGameConfig;
+  }
+  return normalizedGameConfig;
 }
