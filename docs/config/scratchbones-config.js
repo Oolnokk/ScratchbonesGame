@@ -1602,7 +1602,14 @@ window.SCRATCHBONES_CONFIG = {
           "liarBurstOffsetXPx": -232,
           "betActionBurstClampInsetPx": 24,
           "revealDurationMs": 4200,
-          "foldDurationMs": 2600
+          "foldDurationMs": 2600,
+          "tankanColumns": {
+            "defaultAvatarHalfWidthPx": 132,
+            "defaultAvatarCenterYPx": 100,
+            "edgeInsetPx": 10,
+            "minGapPx": 16,
+            "gapWidthRatio": 0.015
+          }
         }
       },
       "regions": {

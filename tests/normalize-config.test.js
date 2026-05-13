@@ -170,3 +170,69 @@ describe('normalizeScratchbonesGameConfig trick bones', () => {
     assert.equal(config.trickBones.summaryDisplay.amountFontFamily, 'CustomCountFont, sans-serif');
   });
 });
+
+describe('normalizeScratchbonesGameConfig table cinematic tankan columns', () => {
+  it('provides safe tankan column defaults', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({});
+
+    assert.deepEqual(config.layout.tableView.cinematic.tankanColumns, {
+      defaultAvatarHalfWidthPx: 132,
+      defaultAvatarCenterYPx: 100,
+      edgeInsetPx: 10,
+      minGapPx: 16,
+      gapWidthRatio: 0.015,
+    });
+  });
+
+  it('normalizes custom tankan column geometry and rejects unsafe numeric values', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      layout: {
+        tableView: {
+          cinematic: {
+            tankanColumns: {
+              defaultAvatarHalfWidthPx: '148',
+              defaultAvatarCenterYPx: 112,
+              edgeInsetPx: 12.5,
+              minGapPx: '22',
+              gapWidthRatio: 0.02,
+            },
+          },
+        },
+      },
+    });
+
+    assert.deepEqual(config.layout.tableView.cinematic.tankanColumns, {
+      defaultAvatarHalfWidthPx: 148,
+      defaultAvatarCenterYPx: 112,
+      edgeInsetPx: 12.5,
+      minGapPx: 22,
+      gapWidthRatio: 0.02,
+    });
+
+    const safeConfig = normalizeScratchbonesGameConfig({
+      layout: {
+        tableView: {
+          cinematic: {
+            tankanColumns: {
+              defaultAvatarHalfWidthPx: -20,
+              defaultAvatarCenterYPx: Number.NaN,
+              edgeInsetPx: -1,
+              minGapPx: -8,
+              gapWidthRatio: -0.5,
+            },
+          },
+        },
+      },
+    });
+
+    assert.deepEqual(safeConfig.layout.tableView.cinematic.tankanColumns, {
+      defaultAvatarHalfWidthPx: 0,
+      defaultAvatarCenterYPx: 100,
+      edgeInsetPx: 0,
+      minGapPx: 0,
+      gapWidthRatio: 0,
+    });
+  });
+});

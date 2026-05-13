@@ -6973,12 +6973,17 @@ import { createTutorial } from './tutorial.js';
         clearChallengeTankanColumns(app);
         return;
       }
-      const DEFAULT_AVATAR_HALF_WIDTH_PX = 132;
-      const DEFAULT_AVATAR_CENTER_Y_PX = 100;
-      const TANKAN_EDGE_INSET_PX = 10;
+      const tankanColumnsConfig = SCRATCHBONES_GAME.layout?.tableView?.cinematic?.tankanColumns || {};
+      const nonNegativeNumber = (value) => {
+        const numeric = Number(value);
+        return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0;
+      };
+      const defaultAvatarHalfWidthPx = nonNegativeNumber(tankanColumnsConfig.defaultAvatarHalfWidthPx);
+      const defaultAvatarCenterYPx = nonNegativeNumber(tankanColumnsConfig.defaultAvatarCenterYPx);
+      const edgeInsetPx = nonNegativeNumber(tankanColumnsConfig.edgeInsetPx);
       // Keep side text tight to each avatar edge per claim-cluster cinematic placement.
-      const MIN_TANKAN_GAP_PX = 16;
-      const TANKAN_GAP_WIDTH_RATIO = 0.015;
+      const minGapPx = nonNegativeNumber(tankanColumnsConfig.minGapPx);
+      const gapWidthRatio = nonNegativeNumber(tankanColumnsConfig.gapWidthRatio);
       const appRect = app.getBoundingClientRect();
       if (!(appRect.width > 0)) return;
       const actorAnchor = app.querySelector('.actorAvatarFloat .claimAvatarShell') || app.querySelector('.actorAvatarFloat');
@@ -6989,19 +6994,19 @@ import { createTutorial } from './tutorial.js';
       const reactorVisible = reactorRect && reactorRect.width > 0 && reactorRect.height > 0;
       const leftAvatarEdge = actorVisible
         ? (actorRect.left - appRect.left)
-        : ((appRect.width * 0.5) - DEFAULT_AVATAR_HALF_WIDTH_PX);
+        : ((appRect.width * 0.5) - defaultAvatarHalfWidthPx);
       const rightAvatarEdge = reactorVisible
         ? (reactorRect.right - appRect.left)
-        : ((appRect.width * 0.5) + DEFAULT_AVATAR_HALF_WIDTH_PX);
+        : ((appRect.width * 0.5) + defaultAvatarHalfWidthPx);
       const actorCenterY = actorVisible
         ? ((actorRect.top - appRect.top) + (actorRect.height * 0.5))
-        : ((appRect.height * 0.5) - DEFAULT_AVATAR_CENTER_Y_PX);
+        : ((appRect.height * 0.5) - defaultAvatarCenterYPx);
       const reactorCenterY = reactorVisible
         ? ((reactorRect.top - appRect.top) + (reactorRect.height * 0.5))
-        : ((appRect.height * 0.5) + DEFAULT_AVATAR_CENTER_Y_PX);
-      const sideGapPx = Math.max(MIN_TANKAN_GAP_PX, Math.round(appRect.width * TANKAN_GAP_WIDTH_RATIO));
-      let leftX = Math.max(TANKAN_EDGE_INSET_PX, leftAvatarEdge - sideGapPx);
-      let rightX = Math.min(appRect.width - TANKAN_EDGE_INSET_PX, rightAvatarEdge + sideGapPx);
+        : ((appRect.height * 0.5) + defaultAvatarCenterYPx);
+      const sideGapPx = Math.max(minGapPx, Math.round(appRect.width * gapWidthRatio));
+      let leftX = Math.max(edgeInsetPx, leftAvatarEdge - sideGapPx);
+      let rightX = Math.min(appRect.width - edgeInsetPx, rightAvatarEdge + sideGapPx);
       const ensureColumn = (side) => {
         let node = app.querySelector(`.cin-tankan.${side}`);
         if (!node) {

@@ -29,6 +29,14 @@ const DEFAULT_PUNISH_BONE_SPIN_CONFIG = {
   shadowBlurPx: 12,
 };
 
+const DEFAULT_TANKAN_COLUMNS_CONFIG = {
+  defaultAvatarHalfWidthPx: 132,
+  defaultAvatarCenterYPx: 100,
+  edgeInsetPx: 10,
+  minGapPx: 16,
+  gapWidthRatio: 0.015,
+};
+
 const DEFAULT_CSS_ROOT_VARS = {
   '--bg': '#15110f',
   '--bg2': '#221917',
@@ -701,6 +709,17 @@ function normalizePunishBoneSpinConfig(value) {
     blurPx: normalizeFiniteNumber(source.blurPx, DEFAULT_PUNISH_BONE_SPIN_CONFIG.blurPx, { min: 0 }),
     scaleXMin: normalizeFiniteNumber(source.scaleXMin, DEFAULT_PUNISH_BONE_SPIN_CONFIG.scaleXMin, { min: 0.05, max: 1 }),
     shadowBlurPx: normalizeFiniteNumber(source.shadowBlurPx, DEFAULT_PUNISH_BONE_SPIN_CONFIG.shadowBlurPx, { min: 0 }),
+  };
+}
+
+function normalizeTankanColumnsConfig(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    defaultAvatarHalfWidthPx: normalizeFiniteNumber(source.defaultAvatarHalfWidthPx, DEFAULT_TANKAN_COLUMNS_CONFIG.defaultAvatarHalfWidthPx, { min: 0 }),
+    defaultAvatarCenterYPx: normalizeFiniteNumber(source.defaultAvatarCenterYPx, DEFAULT_TANKAN_COLUMNS_CONFIG.defaultAvatarCenterYPx, { min: 0 }),
+    edgeInsetPx: normalizeFiniteNumber(source.edgeInsetPx, DEFAULT_TANKAN_COLUMNS_CONFIG.edgeInsetPx, { min: 0 }),
+    minGapPx: normalizeFiniteNumber(source.minGapPx, DEFAULT_TANKAN_COLUMNS_CONFIG.minGapPx, { min: 0 }),
+    gapWidthRatio: normalizeFiniteNumber(source.gapWidthRatio, DEFAULT_TANKAN_COLUMNS_CONFIG.gapWidthRatio, { min: 0 }),
   };
 }
 
@@ -1524,6 +1543,13 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
             transformMismatchPolicy,
           };
         })(),
+      },
+      tableView: {
+        ...(rawGameConfig.layout?.tableView || {}),
+        cinematic: {
+          ...(rawGameConfig.layout?.tableView?.cinematic || {}),
+          tankanColumns: normalizeTankanColumnsConfig(rawGameConfig.layout?.tableView?.cinematic?.tankanColumns),
+        },
       },
       cinematic: {
         enableLegacyBoxedBranch: rawGameConfig.layout?.cinematic?.enableLegacyBoxedBranch === true,
