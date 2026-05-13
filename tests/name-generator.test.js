@@ -363,11 +363,22 @@ describe('generateIdentityFromSeed — engh_sho culture', () => {
     }
   });
 
-  it('first name is always drawn from the word list', () => {
+  const GENDER_REPLACEMENTS = {
+    male: ['gold-resin', 'purple-stone', 'sharp-point', 'green-gem', 'clear-stone', 'green-jewel', 'fine-gem', 'milk-gem', 'red-gem', 'blue-gem'],
+    female: ['small-nail', 'new-leaf', 'spotted-stone', 'grey-stone'],
+  };
+
+  it('first name is always drawn from the word list or the configured gendered replacements', () => {
+    const maleAllowed = new Set([...WORD_LIST, ...GENDER_REPLACEMENTS.male]);
+    const femaleAllowed = new Set([...WORD_LIST, ...GENDER_REPLACEMENTS.female]);
     for (let i = 0; i < 40; i++) {
-      const name = ng.generateIdentityFromSeed(`seed-${i}`, 'male', 'engh_sho');
-      const firstName = name.split(' ')[0].toLowerCase();
-      assert.ok(WORD_LIST.includes(firstName), `"${firstName}" is not in the word list (full name: "${name}")`);
+      const maleName = ng.generateIdentityFromSeed(`seed-${i}`, 'male', 'engh_sho');
+      const maleFirstName = maleName.split(' ')[0].toLowerCase();
+      assert.ok(maleAllowed.has(maleFirstName), `"${maleFirstName}" is not in the male word list (full name: "${maleName}")`);
+
+      const femaleName = ng.generateIdentityFromSeed(`seed-${i}`, 'female', 'engh_sho');
+      const femaleFirstName = femaleName.split(' ')[0].toLowerCase();
+      assert.ok(femaleAllowed.has(femaleFirstName), `"${femaleFirstName}" is not in the female word list (full name: "${femaleName}")`);
     }
   });
 
@@ -389,10 +400,12 @@ describe('generateIdentityFromSeed — engh_sho culture', () => {
     assert.ok(surnames.size >= 10, `Expected at least 10 distinct surnames from 20 seeds, got ${surnames.size}`);
   });
 
-  it('gender does not affect the name (Engh-sho names are genderless)', () => {
-    const male   = ng.generateIdentityFromSeed('abc', 'male',   'engh_sho');
-    const female = ng.generateIdentityFromSeed('abc', 'female', 'engh_sho');
-    assert.equal(male, female);
+  it('uses gendered replacements for strongly gender-connoted real names', () => {
+    assert.equal(ng.generateIdentityFromSeed('x-150', 'male', 'engh_sho'), 'Red-gem Nikpuk');
+    assert.equal(ng.generateIdentityFromSeed('brad-23', 'female', 'engh_sho'), 'Small-nail Muktankut');
+    assert.equal(ng.generateIdentityFromSeed('bell-233', 'male', 'engh_sho'), 'Bell Munmupat');
+    assert.equal(ng.generateIdentityFromSeed('reed-105', 'female', 'engh_sho'), 'Reed Nupmak');
+    assert.equal(ng.generateIdentityFromSeed('thorn-0', 'female', 'engh_sho'), 'Thorn Ankapnank');
   });
 
   it('known output for seed "test-seed-001"', () => {

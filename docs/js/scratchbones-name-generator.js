@@ -400,8 +400,13 @@
     throw new Error('Could not generate a Slagothim name within the current phonology rules.');
   }
 
-  function buildEnghShoGivenName(rng, culture) {
-    return pickFromRng(rng, culture.enghShoRules.firstNameWordList);
+  function buildEnghShoGivenName(rng, culture, gender) {
+    const rules = culture.enghShoRules || {};
+    const name = pickFromRng(rng, rules.firstNameWordList);
+    const genderRules = rules.firstNameGenderRules || {};
+    const replacementKey = gender === 'female' ? 'femaleReplacements' : 'maleReplacements';
+    const replacements = genderRules[replacementKey] || {};
+    return replacements[name] || name;
   }
 
   function buildEnghShoSurname(rng, culture) {
@@ -433,7 +438,7 @@
     const numericSeed = hashStringToSeed(seedString);
     const rng = mulberry32(numericSeed);
     if (resolvedCulture.enghShoRules) {
-      const firstName = buildEnghShoGivenName(rng, resolvedCulture);
+      const firstName = buildEnghShoGivenName(rng, resolvedCulture, gender);
       const surname = buildEnghShoSurname(rng, resolvedCulture);
       return [applyCasing(firstName, resolvedCulture.casing), applyCasing(surname, resolvedCulture.casing)].filter(Boolean).join(' ');
     }
