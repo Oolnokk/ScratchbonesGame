@@ -3800,7 +3800,8 @@ import { createTutorial } from './tutorial.js';
       const maxWidthStyle = context === 'deck'
         ? `${metrics.maxWidthPx}px`
         : `min(100%,${metrics.maxWidthPx}px)`;
-      const shellStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;margin-top:${marginTopPx}px;max-width:${maxWidthStyle};letter-spacing:${metrics.letterSpacingEm}em;font-size:${metrics.fontSizeRem}rem;color:${metrics.color};${context === 'deck' ? 'align-self:center;' : 'width:100%;min-width:0;'}overflow:hidden;`;
+      const contextLayoutStyle = context === 'deck' ? 'align-self:center;' : 'width:100%;min-width:0;';
+      const shellStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;margin-top:${marginTopPx}px;max-width:${maxWidthStyle};letter-spacing:${metrics.letterSpacingEm}em;font-size:${metrics.fontSizeRem}rem;color:${metrics.color};${contextLayoutStyle}overflow:hidden;`;
       const rowsStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;min-width:0;`;
       return `<div class="${escapeHtml(className)}" ${dataAttribute} aria-label="${escapeHtml(ariaLabel)}" style="${escapeHtml(shellStyle)}"><div class="${escapeHtml(rowsClassName)} tiny" style="${escapeHtml(rowsStyle)}">${rows}</div></div>`;
     }
