@@ -134,3 +134,18 @@ describe('getScratchbonesGameConfig window config write-back', () => {
     });
   });
 });
+
+describe('normalizeScratchbonesGameConfig trick bones', () => {
+  it('keeps Punish Bones wild even when raw config marks them non-wild', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      trickBones: {
+        definitions: {
+          punish: { wild: false },
+        },
+      },
+    });
+
+    assert.equal(config.trickBones.definitions.punish.wild, true);
+  });
+});
