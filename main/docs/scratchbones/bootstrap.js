@@ -199,6 +199,34 @@ import { createTutorial } from './tutorial.js';
       document.head.appendChild(style);
     }
     installChallengeTankanLayoutOverrides();
+    function installTankanColumnVisualStyleOverrides() {
+      if (typeof document === 'undefined' || document.getElementById('scratchbones-tankan-column-visual-style-overrides')) return;
+      const style = document.createElement('style');
+      style.id = 'scratchbones-tankan-column-visual-style-overrides';
+      style.textContent = `
+        @keyframes cinTankanRise {
+          from {
+            opacity: var(--layout-cinematic-tankan-initial-opacity);
+            transform: translateY(calc(-50% + var(--layout-cinematic-tankan-rise-offset)));
+          }
+          to {
+            opacity: var(--layout-cinematic-tankan-opacity);
+            transform: translateY(-50%);
+          }
+        }
+        #app .cin-tankan {
+          color: var(--layout-cinematic-tankan-color);
+          font-size: var(--layout-cinematic-tankan-font-size);
+          letter-spacing: var(--layout-cinematic-tankan-letter-spacing);
+          text-shadow: var(--layout-cinematic-tankan-text-shadow);
+          opacity: var(--layout-cinematic-tankan-opacity);
+          animation: var(--layout-cinematic-tankan-animation);
+          z-index: var(--layout-cinematic-tankan-z-index);
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    installTankanColumnVisualStyleOverrides();
     function installTrickBoneSummaryLayoutOverrides() {
       if (typeof document === 'undefined' || document.getElementById('scratchbones-trick-bone-summary-layout-overrides')) return;
       const style = document.createElement('style');
@@ -4408,7 +4436,17 @@ import { createTutorial } from './tutorial.js';
       const liarBurstDurationSec = clampNumber(Number(cinematicLayout.liarBurstDurationSec) || 3.2, 0.6, 8);
       const liarBurstEndYPct = clampNumber(Number(cinematicLayout.liarBurstEndYPct) || -180, -320, -110);
       const liarBurstOffsetXPx = Number.isFinite(Number(cinematicLayout.liarBurstOffsetXPx)) ? Number(cinematicLayout.liarBurstOffsetXPx) : -232;
-      const tankanColumnEdgeInsetPx = clampNumber(numberOrDefault(cinematicLayout.tankanColumns?.edgeInsetPx, 10), 0, 120);
+      const tankanColumnsLayout = cinematicLayout.tankanColumns || {};
+      const tankanColumnEdgeInsetPx = clampNumber(Number(tankanColumnsLayout.edgeInsetPx), 0, 120);
+      const tankanColumnFontSize = String(tankanColumnsLayout.fontSize);
+      const tankanColumnLetterSpacing = String(tankanColumnsLayout.letterSpacing);
+      const tankanColumnColor = String(tankanColumnsLayout.color);
+      const tankanColumnTextShadow = String(tankanColumnsLayout.textShadow);
+      const tankanColumnInitialOpacity = clampNumber(Number(tankanColumnsLayout.initialOpacity), 0, 1);
+      const tankanColumnOpacity = clampNumber(Number(tankanColumnsLayout.opacity), 0, 1);
+      const tankanColumnAnimation = String(tankanColumnsLayout.animation);
+      const tankanColumnRiseOffset = String(tankanColumnsLayout.riseOffset);
+      const tankanColumnZIndex = Math.max(0, Math.round(Number(tankanColumnsLayout.zIndex)));
       const bettingTitleOffsetY = cssLengthOrDefault(bettingLayout.titleOffsetY, '-80%');
       const bettingChoiceOffsetY = cssLengthOrDefault(bettingLayout.choiceOffsetY, '115%');
       const bettingLeftSlotOffsetX = cssLengthOrDefault(bettingLayout.leftSlotOffsetX, '260px');
@@ -4529,6 +4567,15 @@ import { createTutorial } from './tutorial.js';
       setCssVar('--layout-liar-burst-end-y', `${liarBurstEndYPct.toFixed(2)}%`);
       setCssVar('--layout-liar-burst-offset-x', `${liarBurstOffsetXPx.toFixed(2)}px`);
       setCssVar('--layout-tankan-edge-inset', `${tankanColumnEdgeInsetPx.toFixed(2)}px`);
+      setCssVar('--layout-cinematic-tankan-font-size', tankanColumnFontSize);
+      setCssVar('--layout-cinematic-tankan-letter-spacing', tankanColumnLetterSpacing);
+      setCssVar('--layout-cinematic-tankan-color', tankanColumnColor);
+      setCssVar('--layout-cinematic-tankan-text-shadow', tankanColumnTextShadow);
+      setCssVar('--layout-cinematic-tankan-initial-opacity', tankanColumnInitialOpacity.toFixed(3));
+      setCssVar('--layout-cinematic-tankan-opacity', tankanColumnOpacity.toFixed(3));
+      setCssVar('--layout-cinematic-tankan-animation', tankanColumnAnimation);
+      setCssVar('--layout-cinematic-tankan-rise-offset', tankanColumnRiseOffset);
+      setCssVar('--layout-cinematic-tankan-z-index', String(tankanColumnZIndex));
       setCssVar('--layout-ui-tabletop-url', tabletopImageSrc ? `url("${tabletopImageSrc}")` : 'none');
       setCssVar('--layout-flame-x', `${(flameXPct * 100).toFixed(2)}%`);
       setCssVar('--layout-flame-y', `${(flameYPct * 100).toFixed(2)}%`);
@@ -7004,6 +7051,10 @@ import { createTutorial } from './tutorial.js';
         return;
       }
       const tankanConfig = SCRATCHBONES_GAME.layout?.tableView?.cinematic?.tankanColumns || {};
+      if (tankanConfig.enabled === false) {
+        clearChallengeTankanColumns(app);
+        return;
+      }
       const configuredCinematicAvatarPx = Number(SCRATCHBONES_GAME.layout?.sizing?.cinematicAvatarPx);
       const defaultAvatarHalfWidthPx = Number.isFinite(Number(tankanConfig.fallbackAvatarHalfWidthPx))
         ? Number(tankanConfig.fallbackAvatarHalfWidthPx)

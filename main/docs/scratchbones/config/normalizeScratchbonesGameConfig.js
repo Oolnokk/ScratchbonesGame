@@ -29,6 +29,25 @@ const DEFAULT_PUNISH_BONE_SPIN_CONFIG = {
   shadowBlurPx: 12,
 };
 
+const DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS = {
+  enabled: true,
+  fallbackAvatarHalfWidthPx: 132,
+  fallbackAvatarCenterOffsetYPx: 100,
+  edgeInsetPx: 10,
+  minGapPx: 16,
+  gapWidthRatio: 0.015,
+  fontSize: 'clamp(1.4rem, 3vw, 3.2rem)',
+  letterSpacing: '0.08em',
+  color: 'var(--accent-2)',
+  textShadow: '0 2px 8px rgba(0,0,0,0.72)',
+  initialOpacity: 0,
+  opacity: 0.92,
+  animationEnabled: true,
+  animation: 'cinTankanRise 260ms ease-out both',
+  riseOffset: '12px',
+  zIndex: 10012,
+};
+
 
 const DEFAULT_TRICK_BONE_SUMMARY_DISPLAY = {
   glyphSizePx: 14,
@@ -158,6 +177,15 @@ const DEFAULT_CSS_ROOT_VARS = {
   '--layout-punish-button-card-height': '48px',
   '--layout-cinematic-punish-button-card-width': '96px',
   '--layout-cinematic-punish-button-card-height': '136px',
+  '--layout-cinematic-tankan-font-size': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.fontSize,
+  '--layout-cinematic-tankan-letter-spacing': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.letterSpacing,
+  '--layout-cinematic-tankan-color': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.color,
+  '--layout-cinematic-tankan-text-shadow': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.textShadow,
+  '--layout-cinematic-tankan-initial-opacity': String(DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.initialOpacity),
+  '--layout-cinematic-tankan-opacity': String(DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.opacity),
+  '--layout-cinematic-tankan-animation': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.animation,
+  '--layout-cinematic-tankan-rise-offset': DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.riseOffset,
+  '--layout-cinematic-tankan-z-index': String(DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.zIndex),
 };
 
 
@@ -855,6 +883,27 @@ function numberOrDefault(value, fallback) {
   return Number(value) || fallback;
 }
 
+function normalizePositiveCssLengthOrPercentage(value, fallback) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return fallback;
+  const match = raw.match(/^(\d+(?:\.\d+)?)(px|%|rem|em|vw|vh)$/i);
+  if (!match) return fallback;
+  return Number(match[1]) > 0 ? `${match[1]}${match[2].toLowerCase()}` : fallback;
+}
+
+function normalizeCssLength(value, fallback) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return fallback;
+  if (/^clamp\(.+\)$/i.test(raw)) return raw;
+  if (/^-?\d+(?:\.\d+)?(?:px|%|rem|em|vw|vh)$/i.test(raw)) return raw;
+  return fallback;
+}
+
+function normalizeCssTextValue(value, fallback) {
+  const raw = String(value ?? '').trim();
+  return raw || fallback;
+}
+
 function normalizeTrickBoneSummaryDisplay(rawSummaryDisplay = {}) {
   const raw = rawSummaryDisplay && typeof rawSummaryDisplay === 'object' && !Array.isArray(rawSummaryDisplay) ? rawSummaryDisplay : {};
   return {
@@ -866,11 +915,11 @@ function normalizeTrickBoneSummaryDisplay(rawSummaryDisplay = {}) {
     maxWidthPx: Math.max(1, numberOrDefault(raw.maxWidthPx, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.maxWidthPx)),
     fontSizeRem: Math.max(0.1, numberOrDefault(raw.fontSizeRem, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.fontSizeRem)),
     letterSpacingEm: Math.max(0, numberOrDefault(raw.letterSpacingEm, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.letterSpacingEm)),
-    seatAmountFontSize: String(raw.seatAmountFontSize || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.seatAmountFontSize),
-    deckAmountFontSize: String(raw.deckAmountFontSize || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.deckAmountFontSize),
+    seatAmountFontSize: normalizePositiveCssLengthOrPercentage(raw.seatAmountFontSize, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.seatAmountFontSize),
+    deckAmountFontSize: normalizePositiveCssLengthOrPercentage(raw.deckAmountFontSize, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.deckAmountFontSize),
     seatAmountColumnMinEm: Math.max(0.1, numberOrDefault(raw.seatAmountColumnMinEm, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.seatAmountColumnMinEm)),
     deckAmountColumnMinEm: Math.max(0.1, numberOrDefault(raw.deckAmountColumnMinEm, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.deckAmountColumnMinEm)),
-    amountFontFamily: String(raw.amountFontFamily || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.amountFontFamily),
+    amountFontFamily: normalizeCssTextValue(raw.amountFontFamily, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.amountFontFamily),
     seatColor: String(raw.seatColor || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.seatColor),
     deckColor: String(raw.deckColor || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.deckColor),
     arrowText: String(raw.arrowText || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.arrowText),
@@ -890,6 +939,46 @@ function trickBoneSummaryDisplayCssRootVars(summaryDisplay) {
     '--layout-trick-info-max-width': `${summaryDisplay.maxWidthPx}px`,
     '--layout-trick-info-seat-amount-column-min-em': `${summaryDisplay.seatAmountColumnMinEm}em`,
     '--layout-trick-info-deck-amount-column-min-em': `${summaryDisplay.deckAmountColumnMinEm}em`,
+  };
+}
+
+function normalizeTableCinematicTankanColumnsConfig(rawTankanColumns = {}) {
+  const raw = rawTankanColumns && typeof rawTankanColumns === 'object' && !Array.isArray(rawTankanColumns) ? rawTankanColumns : {};
+  const fallbackCenterOffset = raw.fallbackAvatarCenterOffsetYPx ?? raw.fallbackAvatarCenterYOffsetPx ?? raw.defaultAvatarCenterYPx;
+  const fallbackHalfWidth = raw.fallbackAvatarHalfWidthPx ?? raw.defaultAvatarHalfWidthPx;
+  const animationEnabled = raw.animationEnabled !== false;
+  return {
+    enabled: raw.enabled !== false,
+    fallbackAvatarHalfWidthPx: Math.max(0, finiteNumberOrDefault(fallbackHalfWidth, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.fallbackAvatarHalfWidthPx)),
+    fallbackAvatarCenterOffsetYPx: Math.max(0, finiteNumberOrDefault(fallbackCenterOffset, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.fallbackAvatarCenterOffsetYPx)),
+    edgeInsetPx: Math.max(0, finiteNumberOrDefault(raw.edgeInsetPx, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.edgeInsetPx)),
+    minGapPx: Math.max(0, finiteNumberOrDefault(raw.minGapPx, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.minGapPx)),
+    gapWidthRatio: Math.max(0, finiteNumberOrDefault(raw.gapWidthRatio, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.gapWidthRatio)),
+    fontSize: normalizeCssLength(raw.fontSize, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.fontSize),
+    letterSpacing: normalizeCssLength(raw.letterSpacing, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.letterSpacing),
+    color: normalizeCssTextValue(raw.color, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.color),
+    textShadow: normalizeCssTextValue(raw.textShadow, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.textShadow),
+    initialOpacity: Math.min(1, Math.max(0, finiteNumberOrDefault(raw.initialOpacity, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.initialOpacity))),
+    opacity: Math.min(1, Math.max(0, finiteNumberOrDefault(raw.opacity, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.opacity))),
+    animationEnabled,
+    animation: animationEnabled ? normalizeCssTextValue(raw.animation, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.animation) : 'none',
+    riseOffset: normalizeCssLength(raw.riseOffset, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.riseOffset),
+    zIndex: Math.max(0, Math.round(finiteNumberOrDefault(raw.zIndex, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.zIndex))),
+  };
+}
+
+function tankanColumnsCssRootVars(tankanColumns) {
+  return {
+    '--layout-tankan-edge-inset': `${tankanColumns.edgeInsetPx}px`,
+    '--layout-cinematic-tankan-font-size': tankanColumns.fontSize,
+    '--layout-cinematic-tankan-letter-spacing': tankanColumns.letterSpacing,
+    '--layout-cinematic-tankan-color': tankanColumns.color,
+    '--layout-cinematic-tankan-text-shadow': tankanColumns.textShadow,
+    '--layout-cinematic-tankan-initial-opacity': String(tankanColumns.initialOpacity),
+    '--layout-cinematic-tankan-opacity': String(tankanColumns.opacity),
+    '--layout-cinematic-tankan-animation': tankanColumns.animation,
+    '--layout-cinematic-tankan-rise-offset': tankanColumns.riseOffset,
+    '--layout-cinematic-tankan-z-index': String(tankanColumns.zIndex),
   };
 }
 
@@ -1336,6 +1425,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
     allowShort: true,
   });
   const trickBoneSummaryDisplay = normalizeTrickBoneSummaryDisplay(rawGameConfig.trickBones?.summaryDisplay);
+  const tankanColumns = normalizeTableCinematicTankanColumnsConfig(rawGameConfig.layout?.tableView?.cinematic?.tankanColumns);
   return {
     debug: {
       enabled: rawGameConfig.debug?.enabled !== false,
@@ -1567,6 +1657,13 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       cinematic: {
         enableLegacyBoxedBranch: rawGameConfig.layout?.cinematic?.enableLegacyBoxedBranch === true,
       },
+      tableView: {
+        ...(rawGameConfig.layout?.tableView || {}),
+        cinematic: {
+          ...(rawGameConfig.layout?.tableView?.cinematic || {}),
+          tankanColumns,
+        },
+      },
       punishBoneSpin: normalizePunishBoneSpinConfig(rawGameConfig.layout?.punishBoneSpin),
       authored: {
         enabled: rawGameConfig.layout?.authored?.enabled !== false,
@@ -1684,6 +1781,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
         ...DEFAULT_CSS_ROOT_VARS,
         ...(rawGameConfig.cssRootVars || {}),
         ...trickBoneSummaryDisplayCssRootVars(trickBoneSummaryDisplay),
+        ...tankanColumnsCssRootVars(tankanColumns),
         '--punish-bone-spin-duration': `${punishBoneSpin.spinDurationMs}ms`,
         '--punish-bone-spin-reduced-motion-duration': `${punishBoneSpin.reducedMotionSpinDurationMs}ms`,
         '--punish-bone-spin-start-rotation': '0turn',

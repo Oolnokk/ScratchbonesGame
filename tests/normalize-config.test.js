@@ -189,19 +189,94 @@ describe('normalizeScratchbonesGameConfig trick bones', () => {
     const config = normalizeScratchbonesGameConfig({
       trickBones: {
         summaryDisplay: {
-          seatAmountFontSize: '140%',
-          deckAmountFontSize: '220%',
+          seatAmountFontSize: ' 1.2rem ',
+          deckAmountFontSize: '14px',
           seatAmountColumnMinEm: 0,
           deckAmountColumnMinEm: 2.4,
-          amountFontFamily: 'CustomCountFont, sans-serif',
+          amountFontFamily: ' CustomCountFont, sans-serif ',
+        },
+      },
+    });
+    const fallbackConfig = normalizeScratchbonesGameConfig({
+      trickBones: {
+        summaryDisplay: {
+          seatAmountFontSize: '-1rem',
+          deckAmountFontSize: '0%',
+          amountFontFamily: '   ',
         },
       },
     });
 
-    assert.equal(config.trickBones.summaryDisplay.seatAmountFontSize, '140%');
-    assert.equal(config.trickBones.summaryDisplay.deckAmountFontSize, '220%');
+    assert.equal(config.trickBones.summaryDisplay.seatAmountFontSize, '1.2rem');
+    assert.equal(config.trickBones.summaryDisplay.deckAmountFontSize, '14px');
     assert.equal(config.trickBones.summaryDisplay.seatAmountColumnMinEm, 1.2);
     assert.equal(config.trickBones.summaryDisplay.deckAmountColumnMinEm, 2.4);
     assert.equal(config.trickBones.summaryDisplay.amountFontFamily, 'CustomCountFont, sans-serif');
+    assert.equal(fallbackConfig.trickBones.summaryDisplay.seatAmountFontSize, '160%');
+    assert.equal(fallbackConfig.trickBones.summaryDisplay.deckAmountFontSize, '250%');
+    assert.equal(fallbackConfig.trickBones.summaryDisplay.amountFontFamily, "'Khymeryyanroman4', Inter, system-ui, sans-serif");
+  });
+});
+
+describe('normalizeScratchbonesGameConfig cinematic tankan columns', () => {
+  it('normalizes tankan geometry, visual CSS vars, disabled animation, and legacy aliases', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      layout: {
+        tableView: {
+          cinematic: {
+            tankanColumns: {
+              enabled: false,
+              defaultAvatarHalfWidthPx: 144,
+              fallbackAvatarCenterYOffsetPx: 88,
+              edgeInsetPx: 12,
+              minGapPx: 20,
+              gapWidthRatio: 0.025,
+              fontSize: ' 2rem ',
+              letterSpacing: '0.12em',
+              color: 'var(--text)',
+              textShadow: 'none',
+              initialOpacity: -1,
+              opacity: 2,
+              animationEnabled: false,
+              animation: 'ignored 1s linear',
+              riseOffset: '18px',
+              zIndex: 12001.6,
+            },
+          },
+        },
+      },
+      cssRootVars: {
+        '--layout-cinematic-tankan-font-size': '99px',
+      },
+    });
+
+    const tankanColumns = config.layout.tableView.cinematic.tankanColumns;
+    assert.equal(tankanColumns.enabled, false);
+    assert.equal(tankanColumns.fallbackAvatarHalfWidthPx, 144);
+    assert.equal(tankanColumns.fallbackAvatarCenterOffsetYPx, 88);
+    assert.equal(tankanColumns.edgeInsetPx, 12);
+    assert.equal(tankanColumns.minGapPx, 20);
+    assert.equal(tankanColumns.gapWidthRatio, 0.025);
+    assert.equal(tankanColumns.fontSize, '2rem');
+    assert.equal(tankanColumns.letterSpacing, '0.12em');
+    assert.equal(tankanColumns.color, 'var(--text)');
+    assert.equal(tankanColumns.textShadow, 'none');
+    assert.equal(tankanColumns.initialOpacity, 0);
+    assert.equal(tankanColumns.opacity, 1);
+    assert.equal(tankanColumns.animationEnabled, false);
+    assert.equal(tankanColumns.animation, 'none');
+    assert.equal(tankanColumns.riseOffset, '18px');
+    assert.equal(tankanColumns.zIndex, 12002);
+    assert.equal(config.cssRootVars['--layout-tankan-edge-inset'], '12px');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-font-size'], '2rem');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-letter-spacing'], '0.12em');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-color'], 'var(--text)');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-text-shadow'], 'none');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-initial-opacity'], '0');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-opacity'], '1');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-animation'], 'none');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-rise-offset'], '18px');
+    assert.equal(config.cssRootVars['--layout-cinematic-tankan-z-index'], '12002');
   });
 });
