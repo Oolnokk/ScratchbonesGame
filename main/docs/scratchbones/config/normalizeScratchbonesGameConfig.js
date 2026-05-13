@@ -546,8 +546,12 @@ function normalizeFiniteNumber(value, fallback, { min = -Infinity, max = Infinit
 }
 
 
+function normalizeAiDifficultyRankKey(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 function normalizeAiDifficultyRankName(value, fallback = DEFAULT_AI_DIFFICULTY_RANK, rankProfiles = DEFAULT_AI_DIFFICULTY_PROFILES) {
-  const normalized = String(value || '').trim().toLowerCase();
+  const normalized = normalizeAiDifficultyRankKey(value);
   return normalized && rankProfiles[normalized] ? normalized : fallback;
 }
 
@@ -622,10 +626,22 @@ function normalizeAiConfig(rawAi = {}) {
   const rawRanks = source.difficultyRanks && typeof source.difficultyRanks === 'object' && !Array.isArray(source.difficultyRanks)
     ? source.difficultyRanks
     : {};
+  const rawRankEntriesByKey = {};
+  for (const [rawRank, rawProfile] of Object.entries(rawRanks)) {
+    const normalizedRank = normalizeAiDifficultyRankKey(rawRank);
+    if (normalizedRank) rawRankEntriesByKey[normalizedRank] = rawProfile;
+  }
   const difficultyRanks = {};
   for (const rank of Object.keys(DEFAULT_AI_DIFFICULTY_PROFILES)) {
     const fallbackProfile = rank === DEFAULT_AI_DIFFICULTY_RANK ? migratedNormalProfile : DEFAULT_AI_DIFFICULTY_PROFILES[rank];
-    difficultyRanks[rank] = normalizeAiDifficultyProfile(rawRanks[rank], fallbackProfile);
+    difficultyRanks[rank] = normalizeAiDifficultyProfile(rawRankEntriesByKey[rank], fallbackProfile);
+  }
+  for (const [rank, rawProfile] of Object.entries(rawRankEntriesByKey)) {
+    if (difficultyRanks[rank]) continue;
+    const profileSource = rawProfile && typeof rawProfile === 'object' && !Array.isArray(rawProfile) ? rawProfile : {};
+    const requestedFallbackRank = normalizeAiDifficultyRankName(profileSource.extends, DEFAULT_AI_DIFFICULTY_RANK, difficultyRanks);
+    const fallbackProfile = difficultyRanks[requestedFallbackRank] || difficultyRanks[DEFAULT_AI_DIFFICULTY_RANK] || migratedNormalProfile;
+    difficultyRanks[rank] = normalizeAiDifficultyProfile(profileSource, fallbackProfile);
   }
   const defaultDifficultyRank = normalizeAiDifficultyRankName(source.defaultDifficultyRank, DEFAULT_AI_DIFFICULTY_RANK, difficultyRanks);
   const seatDifficultyRanks = {};

@@ -1182,9 +1182,11 @@ window.SCRATCHBONES_CONFIG = {
        * Normalized field names are game.ai.defaultDifficultyRank,
        * game.ai.difficultyRanks, game.ai.seatDifficultyRanks, and
        * game.ai.renownDisplay. The
-       * normalizer currently supports the rank IDs "easy", "normal", and
-       * "hard"; unknown rank IDs fall back to defaultDifficultyRank, and an
-       * unknown or missing defaultDifficultyRank falls back to "normal".
+       * normalizer ships with the rank IDs "easy", "normal", and "hard"
+       * and also preserves custom entries in difficultyRanks, such as the
+       * sample "boss" profile below. Unknown referenced rank IDs fall back to
+       * defaultDifficultyRank, and an unknown or missing defaultDifficultyRank
+       * falls back to "normal".
        *
        * defaultDifficultyRank applies to every non-human seat unless that
        * player's difficultyRank is already set or a seatDifficultyRanks entry
@@ -1212,9 +1214,10 @@ window.SCRATCHBONES_CONFIG = {
        *
        * Minimal override example:
        *   "defaultDifficultyRank": "hard",
-       *   "seatDifficultyRanks": { "2": "easy" },
+       *   "seatDifficultyRanks": { "2": "easy", "3": "boss" },
        *   "difficultyRanks": {
-       *     "hard": { "challengeThresholdModifier": -0.04 }
+       *     "hard": { "challengeThresholdModifier": -0.04 },
+       *     "boss": { "extends": "hard", "challengeThresholdModifier": -0.08 }
        *   }
        */
       "challengeThreshold": 0.52,
@@ -1236,6 +1239,21 @@ window.SCRATCHBONES_CONFIG = {
           "challengeThreshold": 0.44,
           "challengeRandomNudgeMax": 0.08,
           "bettingConfidenceSuspicionWeight": 0.68
+        },
+        "boss": {
+          "extends": "hard",
+          "challengeThresholdModifier": -0.08,
+          "challengeRandomNudgeMax": 0.035,
+          "challengeKnownCardWeight": 0.38,
+          "challengeReadMemoryWeight": 1.45,
+          "challengeHumanTargetBias": 0.14,
+          "bettingConfidenceSuspicionWeight": 0.82,
+          "bettingConfidenceRandomNudgeMax": 0.015,
+          "bettingFoldFloorAdjustment": 0.04,
+          "bettingRaiseDriveAdjustment": -0.035,
+          "bettingOpponentFoldPressureWeight": 1.35,
+          "bettingRaiseScoreGate": 0.14,
+          "bettingRaiseMistakeChance": 0
         }
       },
       "renownDisplay": {
@@ -1257,6 +1275,11 @@ window.SCRATCHBONES_CONFIG = {
             "label": "Renown III",
             "title": "Notorious",
             "ariaLabel": "AI difficulty: Renown III, Notorious"
+          },
+          "boss": {
+            "label": "Renown IV",
+            "title": "Bone Boss",
+            "ariaLabel": "AI difficulty: Renown IV, Bone Boss"
           }
         }
       },

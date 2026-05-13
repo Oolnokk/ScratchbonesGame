@@ -65,11 +65,23 @@ The default trick-bone unlocks, six-slot default loadout, per-trick metadata, an
 
 ## AI difficulty ranks
 
-Scratchbones AI difficulty is configured under `game.ai` in `docs/config/scratchbones-config.js` and normalized by `main/docs/scratchbones/config/normalizeScratchbonesGameConfig.js`. The normalized field names are `defaultDifficultyRank`, `difficultyRanks`, and `seatDifficultyRanks`.
+Scratchbones AI difficulty is configured under `game.ai` in `docs/config/scratchbones-config.js` and normalized by `main/docs/scratchbones/config/normalizeScratchbonesGameConfig.js`. The normalized field names are `defaultDifficultyRank`, `difficultyRanks`, `seatDifficultyRanks`, and `renownDisplay`.
 
-Supported rank IDs are `easy`, `normal`, and `hard`. If `defaultDifficultyRank` is missing or unknown, the normalizer falls back to `normal`; if a per-seat rank is unknown, that seat falls back to the normalized default rank. Per-seat overrides can target absolute seat IDs such as `"1"`, `"2"`, and `"3"`, or NPC-order aliases such as `"0"`, `"npc:0"`, `"npc0"`, `"ai:0"`, and `"ai0"`.
+The built-in rank IDs are `easy`, `normal`, and `hard`, and the config can also define custom rank IDs such as `boss`. If `defaultDifficultyRank` is missing or unknown, the normalizer falls back to `normal`; if a per-seat rank is unknown, that seat falls back to the normalized default rank. Per-seat overrides can target absolute seat IDs such as `"1"`, `"2"`, and `"3"`, or NPC-order aliases such as `"0"`, `"npc:0"`, `"npc0"`, `"ai:0"`, and `"ai0"`.
 
-Rank profiles change turn choice, challenge choice, and betting behavior. `easy` uses the naive playbook, `normal` uses the heuristic playbook, and `hard` uses scored candidate selection. Challenge profile fields set the suspicion threshold and card/read/human/random bias. Betting profile fields adjust confidence, fold floors, raise drive, fold pressure, raise gates, and mistake chance. Delays are controlled separately by `game.timers.aiDecisionDelays` plus `game.ai.decision.delays`, while rank profile random nudge fields affect challenge and betting uncertainty.
+AI decision flow is intentionally layered rather than omniscient:
+
+1. **Turn choice** selects a playbook from the resolved rank. `easy` uses a naive habit loop, `normal` uses the heuristic playbook, and `hard` or any custom higher rank uses scored candidate selection.
+2. **Challenge choice** computes suspicion from visible rank counts, remembered reads, personality, human-target bias, and a rank-specific random nudge, then compares it with the rank's resolved challenge threshold.
+3. **Betting choice** turns challenge suspicion, bankroll pressure, courage, remembered reads, perceived opponent fold pressure, and rank-specific raise/fold tuning into fold/call/raise intent.
+4. **Timing** stays separate from skill: actual turn/challenge/betting wait times come from `game.timers.aiDecisionDelays` plus `game.ai.decision.delays`, while rank random nudge fields control uncertainty.
+
+Boss-capable gaps to watch:
+
+- Custom ranks must survive normalization; otherwise `seatDifficultyRanks: { "3": "boss" }` silently falls back to the default rank before gameplay sees it.
+- A custom rank can set `extends: "hard"` to inherit every hard-profile field and override only the boss deltas.
+- `renownDisplay.levels` should include each custom rank so the UI has an authored player-facing label instead of a generic fallback.
+- Extremely low challenge thresholds and zero betting mistakes can feel unfair quickly; tune `challengeRandomNudgeMax`, `bettingConfidenceRandomNudgeMax`, and `bettingRaiseMistakeChance` deliberately to keep bosses readable.
 
 Minimal override example:
 
@@ -77,9 +89,15 @@ Minimal override example:
 game: {
   ai: {
     defaultDifficultyRank: 'hard',
-    seatDifficultyRanks: { '2': 'easy' },
+    seatDifficultyRanks: { '2': 'easy', '3': 'boss' },
     difficultyRanks: {
-      hard: { challengeThresholdModifier: -0.04 }
+      hard: { challengeThresholdModifier: -0.04 },
+      boss: { extends: 'hard', challengeThresholdModifier: -0.08 }
+    },
+    renownDisplay: {
+      levels: {
+        boss: { label: 'Renown IV', title: 'Bone Boss' }
+      }
     }
   }
 }
