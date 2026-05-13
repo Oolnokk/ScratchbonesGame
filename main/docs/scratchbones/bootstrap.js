@@ -7196,14 +7196,18 @@ import { createTutorial } from './tutorial.js';
       const anchor = claimClusterAvatarAnchorForPlayer(playerId, app);
       if (!anchor) return;
       if (command !== 'call' && command !== 'raise-tier' && command !== 'fold') return;
-      const label = command === 'call' ? 'Call!' : command === 'raise-tier' ? 'Raise!' : 'Fold!';
+      const actionAnnouncement = command === 'call'
+        ? { label: 'Call!', cssClass: 'burst-call' }
+        : command === 'raise-tier'
+        ? { label: 'Raise!', cssClass: 'burst-raise' }
+        : { label: 'Fold!', cssClass: 'burst-fold' };
+      const { label, cssClass } = actionAnnouncement;
       mountChallengeTankanColumns(app, label);
       const overlay = ensureAvatarOverlay(anchor);
       if (!overlay) return;
       const burstShell = document.createElement('div');
-      const cls = command === 'call' ? 'burst-call' : command === 'raise-tier' ? 'burst-raise' : 'burst-fold';
       burstShell.className = 'fx-burst-shell';
-      burstShell.innerHTML = `<div class="cin-action-burst ${cls}">${escapeHtml(label)}</div>`;
+      burstShell.innerHTML = `<div class="cin-action-burst ${cssClass}">${escapeHtml(label)}</div>`;
       overlay.appendChild(burstShell);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
       const burstDurationSeconds = Number(
