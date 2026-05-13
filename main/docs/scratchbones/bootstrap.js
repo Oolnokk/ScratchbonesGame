@@ -120,6 +120,11 @@ import { createTutorial } from './tutorial.js';
           padding: calc(var(--layout-seat-padding) * var(--layout-seat-human-padding-scale) * var(--layout-seat-container-scale));
           gap: calc(var(--layout-seat-gap) * var(--layout-seat-human-gap-scale) * var(--layout-seat-container-scale));
         }
+        .seatInfo {
+          min-width: 0;
+          min-height: 0;
+          overflow: hidden;
+        }
         #aiSidebar .seatInfo,
         .humanSeatZone .seatInfo {
           min-height: 0;
@@ -217,7 +222,9 @@ import { createTutorial } from './tutorial.js';
           flex: 0 0 var(--layout-trick-info-glyph-size);
         }
         .seatTrickLoadoutInfoItem {
-          grid-template-columns: var(--layout-trick-info-glyph-size) auto var(--layout-trick-info-glyph-size) auto minmax(var(--layout-trick-info-seat-amount-column-min-em), auto);
+          grid-template-columns: var(--layout-trick-info-glyph-size) var(--layout-trick-info-glyph-size) minmax(var(--layout-trick-info-seat-amount-column-min-em), auto);
+          max-width: 100%;
+          overflow: hidden;
         }
         .trickSymbolImg,
         .trickMultiplyGlyphImg {
@@ -3790,18 +3797,26 @@ import { createTutorial } from './tutorial.js';
       const metrics = trickSummaryMetrics(context);
       const amountColumnMinEm = context === 'seat' ? metrics.seatAmountColumnMinEm : metrics.deckAmountColumnMinEm;
       const amountColumnSize = `minmax(${amountColumnMinEm}em,auto)`;
-      const rowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px auto ${metrics.glyphSizePx}px auto ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};max-width:100%;min-width:0;`;
+      const seatRowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px ${metrics.glyphSizePx}px ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};width:max-content;max-width:100%;min-width:0;overflow:hidden;`;
+      const deckRowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px auto ${metrics.glyphSizePx}px auto ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};max-width:100%;min-width:0;`;
+      const rowStyle = context === 'seat' ? seatRowStyle : deckRowStyle;
       const arrowStyle = `color:${metrics.color};font-weight:700;`;
       const amountStyle = `color:${metrics.color};font-family:${metrics.amountFontFamily};font-weight:800;text-align:left;font-size:${metrics.amountFontSize};line-height:1;`;
-      return entries.map(([trickType, count]) => `
-        <span class="${escapeHtml(itemClassName)}" title="${escapeHtml(trickBoneDisplayLabel(trickType))}: ${count}" style="${escapeHtml(rowStyle)}">
+      return entries.map(([trickType, count]) => {
+        const label = trickBoneDisplayLabel(trickType);
+        const deckArrows = context === 'deck'
+          ? `<span class="trickInfoArrow" aria-hidden="true" style="${escapeHtml(arrowStyle)}">${escapeHtml(metrics.arrowText)}</span>`
+          : '';
+        return `
+        <span class="${escapeHtml(itemClassName)}" title="${escapeHtml(label)}: ${count}" aria-label="${escapeHtml(label)} × ${count}" style="${escapeHtml(rowStyle)}">
           ${renderTrickBoneSymbolContainer(trickType, { context })}
-          <span class="trickInfoArrow" aria-hidden="true" style="${escapeHtml(arrowStyle)}">${escapeHtml(metrics.arrowText)}</span>
+          ${deckArrows}
           ${renderTrickMultiplyGlyphContainer({ context })}
-          <span class="trickInfoArrow" aria-hidden="true" style="${escapeHtml(arrowStyle)}">${escapeHtml(metrics.arrowText)}</span>
-          <span class="trickInfoAmount" aria-label="${escapeHtml(trickBoneDisplayLabel(trickType))} amount ${count}" style="${escapeHtml(amountStyle)}">${count}</span>
+          ${deckArrows}
+          <span class="trickInfoAmount" aria-hidden="true" style="${escapeHtml(amountStyle)}">${count}</span>
         </span>
-      `).join('');
+      `;
+      }).join('');
     }
     function renderTrickSummaryShell({ className, rowsClassName, rows, ariaLabel, context = 'seat', dataAttribute = '' }) {
       const metrics = trickSummaryMetrics(context);
@@ -3811,7 +3826,7 @@ import { createTutorial } from './tutorial.js';
         : `min(100%,${metrics.maxWidthPx}px)`;
       const contextLayoutStyle = context === 'deck' ? 'align-self:center;' : 'width:100%;min-width:0;';
       const shellStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;margin-top:${marginTopPx}px;max-width:${maxWidthStyle};letter-spacing:${metrics.letterSpacingEm}em;font-size:${metrics.fontSizeRem}rem;color:${metrics.color};${contextLayoutStyle}overflow:hidden;`;
-      const rowsStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;min-width:0;`;
+      const rowsStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;min-width:0;max-width:100%;overflow:hidden;`;
       return `<div class="${escapeHtml(className)}" ${dataAttribute} aria-label="${escapeHtml(ariaLabel)}" style="${escapeHtml(shellStyle)}"><div class="${escapeHtml(rowsClassName)} tiny" style="${escapeHtml(rowsStyle)}">${rows}</div></div>`;
     }
     function renderTrickDeckInfo(composition = deckCompositionSnapshot()) {
