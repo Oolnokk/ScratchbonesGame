@@ -184,10 +184,10 @@ import { createTutorial } from './tutorial.js';
         .seatTrickLoadoutInfo {
           display: flex;
           flex-direction: column;
-          gap: 4px;
-          margin-top: 6px;
-          max-width: 220px;
-          letter-spacing: 0.05em;
+          gap: var(--layout-trick-info-item-gap);
+          margin-top: var(--layout-trick-info-margin-top);
+          max-width: var(--layout-trick-info-max-width);
+          letter-spacing: var(--layout-trick-info-letter-spacing);
         }
         .trickDeckInfo {
           align-self: center;
@@ -197,24 +197,27 @@ import { createTutorial } from './tutorial.js';
         .seatTrickLoadoutInfoRows {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: var(--layout-trick-info-item-gap);
         }
         .trickDeckInfoItem,
         .seatTrickLoadoutInfoItem {
           display: grid;
-          grid-template-columns: 28px auto 28px auto minmax(1.5em, auto);
+          grid-template-columns: var(--layout-trick-info-glyph-size) auto var(--layout-trick-info-glyph-size) auto minmax(var(--layout-trick-info-deck-amount-column-min-em), auto);
           align-items: center;
-          column-gap: 6px;
+          column-gap: var(--layout-trick-info-gap);
           white-space: nowrap;
         }
         .trickSymbolContainer,
         .trickMultiplyGlyphContainer {
-          width: 28px;
-          height: 28px;
+          width: var(--layout-trick-info-glyph-size);
+          height: var(--layout-trick-info-glyph-size);
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          flex: 0 0 28px;
+          flex: 0 0 var(--layout-trick-info-glyph-size);
+        }
+        .seatTrickLoadoutInfoItem {
+          grid-template-columns: var(--layout-trick-info-glyph-size) auto var(--layout-trick-info-glyph-size) auto minmax(var(--layout-trick-info-seat-amount-column-min-em), auto);
         }
         .trickSymbolImg,
         .trickMultiplyGlyphImg {
@@ -3731,6 +3734,12 @@ import { createTutorial } from './tutorial.js';
       const maxWidthPx = Math.max(1, Number(TRICK_BONE_SUMMARY_DISPLAY.maxWidthPx) || 220);
       const fontSizeRem = Math.max(0.1, Number(TRICK_BONE_SUMMARY_DISPLAY.fontSizeRem) || 0.68);
       const letterSpacingEm = Math.max(0, Number(TRICK_BONE_SUMMARY_DISPLAY.letterSpacingEm) || 0);
+      const seatAmountColumnMinEm = Math.max(0.1, Number(TRICK_BONE_SUMMARY_DISPLAY.seatAmountColumnMinEm));
+      const deckAmountColumnMinEm = Math.max(0.1, Number(TRICK_BONE_SUMMARY_DISPLAY.deckAmountColumnMinEm));
+      const amountFontSize = context === 'seat'
+        ? String(TRICK_BONE_SUMMARY_DISPLAY.seatAmountFontSize)
+        : String(TRICK_BONE_SUMMARY_DISPLAY.deckAmountFontSize);
+      const amountFontFamily = String(TRICK_BONE_SUMMARY_DISPLAY.amountFontFamily);
       const isDeck = context === 'deck';
       const color = isDeck
         ? String(TRICK_BONE_SUMMARY_DISPLAY.deckColor || '#fff')
@@ -3740,7 +3749,7 @@ import { createTutorial } from './tutorial.js';
         : String(TRICK_BONE_SUMMARY_DISPLAY.glyphFilter || 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))');
       const multiplyGlyphFilter = String(TRICK_BONE_SUMMARY_DISPLAY.multiplyGlyphFilter || 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))');
       const arrowText = String(TRICK_BONE_SUMMARY_DISPLAY.arrowText || '\u00A0');
-      return { glyphSizePx, multiplyGlyphScale, gapPx, rowGapPx, marginTopPx, maxWidthPx, fontSizeRem, letterSpacingEm, color, glyphFilter, multiplyGlyphFilter, arrowText };
+      return { glyphSizePx, multiplyGlyphScale, gapPx, rowGapPx, marginTopPx, maxWidthPx, fontSizeRem, letterSpacingEm, seatAmountColumnMinEm, deckAmountColumnMinEm, amountFontSize, amountFontFamily, color, glyphFilter, multiplyGlyphFilter, arrowText };
     }
     function renderTrickBoneSymbolContainer(trickType, { className = '', context = 'seat' } = {}) {
       const key = String(trickType || '').trim();
@@ -3779,11 +3788,11 @@ import { createTutorial } from './tutorial.js';
     }
     function renderTrickCountRows(entries, itemClassName, { context = 'seat' } = {}) {
       const metrics = trickSummaryMetrics(context);
-      const amountColumnSize = context === 'seat' ? 'minmax(1.2em,auto)' : 'minmax(1.5em,auto)';
+      const amountColumnMinEm = context === 'seat' ? metrics.seatAmountColumnMinEm : metrics.deckAmountColumnMinEm;
+      const amountColumnSize = `minmax(${amountColumnMinEm}em,auto)`;
       const rowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px auto ${metrics.glyphSizePx}px auto ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};max-width:100%;min-width:0;`;
       const arrowStyle = `color:${metrics.color};font-weight:700;`;
-      const amountFontSize = context === 'seat' ? '160%' : '250%';
-      const amountStyle = `color:${metrics.color};font-family:'Khymeryyanroman4',Inter,system-ui,sans-serif;font-weight:800;text-align:left;font-size:${amountFontSize};line-height:1;`;
+      const amountStyle = `color:${metrics.color};font-family:${metrics.amountFontFamily};font-weight:800;text-align:left;font-size:${metrics.amountFontSize};line-height:1;`;
       return entries.map(([trickType, count]) => `
         <span class="${escapeHtml(itemClassName)}" title="${escapeHtml(trickBoneDisplayLabel(trickType))}: ${count}" style="${escapeHtml(rowStyle)}">
           ${renderTrickBoneSymbolContainer(trickType, { context })}

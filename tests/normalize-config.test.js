@@ -148,4 +148,25 @@ describe('normalizeScratchbonesGameConfig trick bones', () => {
 
     assert.equal(config.trickBones.definitions.punish.wild, true);
   });
+
+  it('normalizes configurable trick summary count typography', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      trickBones: {
+        summaryDisplay: {
+          seatAmountFontSize: '140%',
+          deckAmountFontSize: '220%',
+          seatAmountColumnMinEm: 0,
+          deckAmountColumnMinEm: 2.4,
+          amountFontFamily: 'CustomCountFont, sans-serif',
+        },
+      },
+    });
+
+    assert.equal(config.trickBones.summaryDisplay.seatAmountFontSize, '140%');
+    assert.equal(config.trickBones.summaryDisplay.deckAmountFontSize, '220%');
+    assert.equal(config.trickBones.summaryDisplay.seatAmountColumnMinEm, 1.2);
+    assert.equal(config.trickBones.summaryDisplay.deckAmountColumnMinEm, 2.4);
+    assert.equal(config.trickBones.summaryDisplay.amountFontFamily, 'CustomCountFont, sans-serif');
+  });
 });
