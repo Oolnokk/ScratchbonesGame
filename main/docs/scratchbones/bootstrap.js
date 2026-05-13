@@ -82,6 +82,93 @@ import { createTutorial } from './tutorial.js';
       document.head.appendChild(style);
     }
     installHandPanelLayoutOverrides();
+    function installSeatResponsiveLayoutOverrides() {
+      if (typeof document === 'undefined' || document.getElementById('scratchbones-seat-responsive-layout-overrides')) return;
+      const style = document.createElement('style');
+      style.id = 'scratchbones-seat-responsive-layout-overrides';
+      style.textContent = `
+        #aiSidebar,
+        .humanSeatZone {
+          --layout-seat-container-scale: 1;
+        }
+        #aiSidebar {
+          overflow: hidden;
+          gap: calc(var(--layout-seat-sidebar-gap) * var(--layout-seat-container-scale));
+          font-size: calc(1rem * var(--layout-seat-container-scale));
+        }
+        #aiSidebar > .sectionTitle {
+          flex: 0 0 auto;
+          min-height: 0;
+          padding: calc(var(--layout-seat-padding) * var(--layout-seat-title-padding-top-scale) * var(--layout-seat-container-scale)) calc(var(--layout-seat-padding) * var(--layout-seat-title-padding-x-scale) * var(--layout-seat-container-scale)) calc(var(--layout-seat-padding) * var(--layout-seat-title-padding-bottom-scale) * var(--layout-seat-container-scale));
+          font-size: calc(var(--layout-seat-title-font-rem) * 1rem * var(--layout-seat-container-scale));
+          line-height: var(--layout-seat-line-height);
+        }
+        #aiSidebar .aiSeat {
+          flex: 1 1 0;
+          min-height: 0;
+          overflow: hidden;
+          padding: calc(var(--layout-seat-padding) * var(--layout-seat-container-scale));
+          gap: calc(var(--layout-seat-gap) * var(--layout-seat-container-scale));
+        }
+        .humanSeatZone {
+          overflow: hidden;
+        }
+        .humanSeatZone .humanSeatCard {
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          padding: calc(var(--layout-seat-padding) * var(--layout-seat-human-padding-scale) * var(--layout-seat-container-scale));
+          gap: calc(var(--layout-seat-gap) * var(--layout-seat-human-gap-scale) * var(--layout-seat-container-scale));
+        }
+        #aiSidebar .seatInfo,
+        .humanSeatZone .seatInfo {
+          min-height: 0;
+          overflow: hidden;
+        }
+        #aiSidebar .seatName,
+        .humanSeatZone .seatName {
+          font-size: calc(var(--layout-seat-name-font-rem) * 1rem * var(--layout-seat-container-scale));
+          line-height: var(--layout-seat-line-height);
+          letter-spacing: calc(var(--layout-seat-letter-spacing-em) * 1em);
+        }
+        #aiSidebar .seatMeta,
+        .humanSeatZone .seatMeta {
+          font-size: calc(var(--layout-seat-meta-font-rem) * 1rem * var(--layout-seat-container-scale));
+          line-height: var(--layout-seat-line-height);
+          margin-top: calc(var(--layout-seat-meta-margin-top) * var(--layout-seat-container-scale));
+        }
+        #aiSidebar .seatStatus,
+        .humanSeatZone .seatStatus {
+          font-size: calc(var(--layout-seat-status-font-rem) * 1rem * var(--layout-seat-container-scale));
+          line-height: var(--layout-seat-line-height);
+          margin-top: calc(var(--layout-seat-status-margin-top) * var(--layout-seat-container-scale));
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+        #aiSidebar .seatAvatarBox {
+          width: calc(var(--layout-seat-avatar-size) * var(--layout-seat-container-scale)) !important;
+          height: calc(var(--layout-seat-avatar-size) * var(--layout-seat-container-scale)) !important;
+          min-width: calc(var(--layout-seat-avatar-size) * var(--layout-seat-container-scale));
+          max-width: var(--layout-seat-avatar-max-width);
+        }
+        .humanSeatZone .seatAvatarBox {
+          width: calc(var(--layout-human-seat-avatar-size) * var(--layout-seat-container-scale)) !important;
+          height: calc(var(--layout-human-seat-avatar-size) * var(--layout-seat-container-scale)) !important;
+        }
+        #aiSidebar .seatHandPreview {
+          gap: calc(var(--layout-seat-hand-preview-gap) * var(--layout-seat-container-scale));
+          margin-top: calc(var(--layout-seat-hand-preview-margin-top) * var(--layout-seat-container-scale));
+          overflow: hidden;
+        }
+        #aiSidebar .seatHandCard {
+          width: calc(var(--layout-seat-hand-preview-card-width) * var(--layout-seat-container-scale));
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    installSeatResponsiveLayoutOverrides();
     const RENDERED_SCREEN_SPACE_PARITY = SCRATCHBONES_GAME.layout?.diagnostics?.renderedScreenSpaceParity || {};
     const AUTHORED_BOX_KEY_BY_PROJ_ID = {
       'topbar': 'topbar',
@@ -3879,6 +3966,9 @@ import { createTutorial } from './tutorial.js';
       const layoutRegions = getLayoutRegionsConfig();
       const claimCluster = getClaimClusterConfig();
       const layoutSizing = layout.sizing || {};
+      const seatLayout = layout.seats || {};
+      const seatTypography = seatLayout.typography || {};
+      const seatSpacing = seatLayout.spacing || {};
       const layoutCards = layout.cards || {};
       const bettingLayout = layout.betting || {};
       const viewportLayout = layout.viewport || {};
@@ -4000,6 +4090,26 @@ import { createTutorial } from './tutorial.js';
       const cardShadowSpreadPx = clampNumber(numberOrDefault(cardShadowLighting.spreadPx, -2), -24, 24);
       const cardShadowAlpha = clampNumber(numberOrDefault(cardShadowLighting.alpha, 0.34), 0, 0.7);
       const cardShadowContactAlpha = clampNumber(numberOrDefault(cardShadowLighting.contactAlpha, 0.2), 0, 0.65);
+      const seatNameFontRem = clampNumber(numberOrDefault(seatTypography.nameFontRem, 0.78), 0.1, 3);
+      const seatMetaFontRem = clampNumber(numberOrDefault(seatTypography.metaFontRem, 0.68), 0.1, 3);
+      const seatStatusFontRem = clampNumber(numberOrDefault(seatTypography.statusFontRem, 0.68), 0.1, 3);
+      const seatTitleFontRem = clampNumber(numberOrDefault(seatTypography.titleFontRem, 0.95), 0.1, 3);
+      const seatLetterSpacingEm = clampNumber(numberOrDefault(seatTypography.letterSpacingEm, 0.10), 0, 1);
+      const seatLineHeight = clampNumber(numberOrDefault(seatTypography.lineHeight, 1.25), 0.5, 3);
+      const seatSidebarGapPx = clampNumber(numberOrDefault(seatSpacing.sidebarGapPx, 8), 0, 40);
+      const seatGapPx = clampNumber(numberOrDefault(seatSpacing.seatGapPx, 8), 0, 40);
+      const seatPaddingPx = clampNumber(numberOrDefault(seatSpacing.seatPaddingPx, 9), 0, 40);
+      const seatMetaMarginTopPx = clampNumber(numberOrDefault(seatSpacing.seatMetaMarginTopPx, 4), 0, 24);
+      const seatStatusMarginTopPx = clampNumber(numberOrDefault(seatSpacing.seatStatusMarginTopPx, 6), 0, 24);
+      const seatHandPreviewGapPx = clampNumber(numberOrDefault(seatSpacing.handPreviewGapPx, 2), 0, 16);
+      const seatHandPreviewMarginTopPx = clampNumber(numberOrDefault(seatSpacing.handPreviewMarginTopPx, 5), 0, 24);
+      const seatHandPreviewCardWidthPx = clampNumber(numberOrDefault(seatSpacing.handPreviewCardWidthPx, 14), 1, 64);
+      const seatTitlePaddingTopScale = clampNumber(numberOrDefault(seatSpacing.titlePaddingTopScale, 0.67), 0, 4);
+      const seatTitlePaddingXScale = clampNumber(numberOrDefault(seatSpacing.titlePaddingXScale, 1.11), 0, 4);
+      const seatTitlePaddingBottomScale = clampNumber(numberOrDefault(seatSpacing.titlePaddingBottomScale, 0.22), 0, 4);
+      const seatHumanPaddingScale = clampNumber(numberOrDefault(seatSpacing.humanPaddingScale, 1.33), 0, 4);
+      const seatHumanGapScale = clampNumber(numberOrDefault(seatSpacing.humanGapScale, 1.25), 0, 4);
+      const seatAvatarMaxWidthPct = clampNumber(numberOrDefault(seatSpacing.avatarMaxWidthPct, 52), 1, 100);
       const handCardMinWidthPx = clampNumber(Number(layoutSizing.handCardMinWidthPx) || 74, 48, 180);
       const handCardMaxWidthPx = clampNumber(Number(layoutSizing.handCardMaxWidthPx) || 104, handCardMinWidthPx, 220);
       const handCardMinHeightPx = clampNumber(Number(layoutSizing.handCardMinHeightPx) || 146, 88, 280);
@@ -4108,6 +4218,26 @@ import { createTutorial } from './tutorial.js';
       setCssVar('--layout-seat-avatar-size', `${Math.round(seatAvatarPx)}px`);
       setCssVar('--layout-human-seat-avatar-size', `${Math.round(humanSeatAvatarPx)}px`);
       setCssVar('--layout-cinematic-avatar-size', `${Math.round(cinematicAvatarPx)}px`);
+      setCssVar('--layout-seat-name-font-rem', seatNameFontRem.toFixed(3));
+      setCssVar('--layout-seat-meta-font-rem', seatMetaFontRem.toFixed(3));
+      setCssVar('--layout-seat-status-font-rem', seatStatusFontRem.toFixed(3));
+      setCssVar('--layout-seat-title-font-rem', seatTitleFontRem.toFixed(3));
+      setCssVar('--layout-seat-letter-spacing-em', seatLetterSpacingEm.toFixed(3));
+      setCssVar('--layout-seat-line-height', seatLineHeight.toFixed(3));
+      setCssVar('--layout-seat-sidebar-gap', `${seatSidebarGapPx.toFixed(2)}px`);
+      setCssVar('--layout-seat-gap', `${seatGapPx.toFixed(2)}px`);
+      setCssVar('--layout-seat-padding', `${seatPaddingPx.toFixed(2)}px`);
+      setCssVar('--layout-seat-meta-margin-top', `${seatMetaMarginTopPx.toFixed(2)}px`);
+      setCssVar('--layout-seat-status-margin-top', `${seatStatusMarginTopPx.toFixed(2)}px`);
+      setCssVar('--layout-seat-hand-preview-gap', `${seatHandPreviewGapPx.toFixed(2)}px`);
+      setCssVar('--layout-seat-hand-preview-margin-top', `${seatHandPreviewMarginTopPx.toFixed(2)}px`);
+      setCssVar('--layout-seat-hand-preview-card-width', `${seatHandPreviewCardWidthPx.toFixed(2)}px`);
+      setCssVar('--layout-seat-title-padding-top-scale', seatTitlePaddingTopScale.toFixed(3));
+      setCssVar('--layout-seat-title-padding-x-scale', seatTitlePaddingXScale.toFixed(3));
+      setCssVar('--layout-seat-title-padding-bottom-scale', seatTitlePaddingBottomScale.toFixed(3));
+      setCssVar('--layout-seat-human-padding-scale', seatHumanPaddingScale.toFixed(3));
+      setCssVar('--layout-seat-human-gap-scale', seatHumanGapScale.toFixed(3));
+      setCssVar('--layout-seat-avatar-max-width', `${seatAvatarMaxWidthPct.toFixed(2)}%`);
       setCssVar('--layout-hand-card-min-width', `${Math.round(scaledCardMinWidthPx)}px`);
       setCssVar('--layout-hand-card-max-width', `${Math.round(scaledCardMaxWidthPx)}px`);
       setCssVar('--layout-hand-card-min-height', `${Math.round(scaledCardMinHeightPx)}px`);
@@ -4239,6 +4369,39 @@ import { createTutorial } from './tutorial.js';
         declareRankSelect.style.boxSizing = 'border-box';
       }
     }
+    function syncSeatContainerScales(app) {
+      if (!app) return;
+      const scaleConfig = SCRATCHBONES_GAME.layout?.seats?.responsiveScale || {};
+      if (scaleConfig.enabled === false) return;
+      const minScale = clampNumber(Number(scaleConfig.minScale) || 0.56, 0.35, 1);
+      const maxScale = clampNumber(Number(scaleConfig.maxScale) || 1, minScale, 1.5);
+      const setScale = (node, scale) => {
+        if (!node) return;
+        node.style.setProperty('--layout-seat-container-scale', clampNumber(scale, minScale, maxScale).toFixed(4));
+      };
+      const sidebar = app.querySelector('#aiSidebar');
+      if (sidebar) {
+        const sectionTitle = sidebar.querySelector(':scope > .sectionTitle');
+        const seatCount = Math.max(1, sidebar.querySelectorAll(':scope > .aiSeat').length || Number(scaleConfig.sidebarReferenceSeatCount) || 1);
+        const referenceWidth = Math.max(1, Number(scaleConfig.sidebarReferenceWidthPx) || 1);
+        const referenceHeight = Math.max(1, Number(scaleConfig.sidebarReferenceHeightPx) || 1);
+        const referenceSeatCount = Math.max(1, Number(scaleConfig.sidebarReferenceSeatCount) || seatCount);
+        const availableHeight = Math.max(1, sidebar.clientHeight - (sectionTitle?.offsetHeight || 0));
+        const referenceSeatHeight = referenceHeight / referenceSeatCount;
+        const heightScale = (availableHeight / seatCount) / referenceSeatHeight;
+        const widthScale = sidebar.clientWidth / referenceWidth;
+        setScale(sidebar, Math.min(heightScale, widthScale, maxScale));
+      }
+      const humanSeatZone = app.querySelector('.humanSeatZone');
+      if (humanSeatZone) {
+        const referenceWidth = Math.max(1, Number(scaleConfig.humanReferenceWidthPx) || 1);
+        const referenceHeight = Math.max(1, Number(scaleConfig.humanReferenceHeightPx) || 1);
+        const widthScale = humanSeatZone.clientWidth / referenceWidth;
+        const heightScale = humanSeatZone.clientHeight / referenceHeight;
+        setScale(humanSeatZone, Math.min(widthScale, heightScale, maxScale));
+      }
+    }
+
     function updateTableViewHeight(app, tableLayoutPolicy) {
       if (!app || !tableLayoutPolicy) return;
       const topbar = app.querySelector('.topbar');
@@ -5392,6 +5555,7 @@ import { createTutorial } from './tutorial.js';
       syncStationaryCardScreenSpace(app);
       syncClaimClusterCardSizeFromHand(app);
       enforceFitContainerBounds(app);
+      syncSeatContainerScales(app);
       renderWobblyOutlines(app);
       if (state.pendingCinematicBetAction) {
         const actionFx = state.pendingCinematicBetAction;
@@ -7709,6 +7873,7 @@ import { createTutorial } from './tutorial.js';
       updateTableCardAutoScale(app);
       syncStationaryCardScreenSpace(app);
       syncClaimClusterCardSizeFromHand(app);
+      syncSeatContainerScales(app);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
     }
     function scheduleResponsiveFitPass() {

@@ -1435,6 +1435,42 @@ window.SCRATCHBONES_CONFIG = {
         "challengePanePaddingYpx": 8,
         "challengePanePaddingXpx": 10
       },
+      "seats": {
+        "responsiveScale": {
+          "enabled": true,
+          "minScale": 0.56,
+          "maxScale": 1,
+          "sidebarReferenceWidthPx": 251,
+          "sidebarReferenceHeightPx": 681,
+          "sidebarReferenceSeatCount": 3,
+          "humanReferenceWidthPx": 373,
+          "humanReferenceHeightPx": 187
+        },
+        "typography": {
+          "nameFontRem": 0.78,
+          "metaFontRem": 0.68,
+          "statusFontRem": 0.68,
+          "titleFontRem": 0.95,
+          "letterSpacingEm": 0.10,
+          "lineHeight": 1.25
+        },
+        "spacing": {
+          "sidebarGapPx": 8,
+          "seatGapPx": 8,
+          "seatPaddingPx": 9,
+          "seatMetaMarginTopPx": 4,
+          "seatStatusMarginTopPx": 6,
+          "handPreviewGapPx": 2,
+          "handPreviewMarginTopPx": 5,
+          "handPreviewCardWidthPx": 14,
+          "titlePaddingTopScale": 0.67,
+          "titlePaddingXScale": 1.11,
+          "titlePaddingBottomScale": 0.22,
+          "humanPaddingScale": 1.33,
+          "humanGapScale": 1.25,
+          "avatarMaxWidthPct": 52
+        }
+      },
       "hand": {
         "desiredHeightFrac": 0.2,
         "desiredWidthFrac": 0.5,
@@ -1924,6 +1960,7 @@ window.SCRATCHBONES_CONFIG = {
         "placementCoordinateSpace": "app",
         "roundToPixels": false,
         "portalScaleStrategy": "portal-transform",
+        "updateOnScroll": true,
         "screenSpaceUseFixed": true,
         "screenSpaceRoundToPixels": false,
         "promoteByRootSelectors": [
