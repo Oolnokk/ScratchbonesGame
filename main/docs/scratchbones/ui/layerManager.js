@@ -137,6 +137,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const hostZIndex = Number(managerConfig.hostZIndex);
   const defaultPreserveSpace = managerConfig.defaultPreserveSpace !== false;
   const normalizePromotedElementBox = managerConfig.normalizePromotedElementBox === true;
+  const updateOnScroll = managerConfig.updateOnScroll !== false;
   const placementMode = managerConfig.placementMode;
   const placementCoordinateSpace = managerConfig.placementCoordinateSpace;
   const roundToPixels = managerConfig.roundToPixels === true;
@@ -205,6 +206,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     promoted: [],
     resizeObserver: null,
     windowResizeHandler: null,
+    documentScrollHandler: null,
+    scrollRaf: 0,
   };
   const log = (level, event, payload = {}) => {
     if (typeof debugLog !== 'function') return;
@@ -372,6 +375,24 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     applyPortalPlacement(entry.portal, buildPortalPlacement(capture));
   }
 
+  function updateAllPortalRects() {
+    for (const entry of state.promoted) updatePortalRect(entry);
+  }
+
+  function scheduleScrollPortalUpdate() {
+    if (!updateOnScroll || state.scrollRaf) return;
+    state.scrollRaf = window.requestAnimationFrame(() => {
+      state.scrollRaf = 0;
+      updateAllPortalRects();
+    });
+  }
+
+  function ensureScrollTracking() {
+    if (!updateOnScroll || state.documentScrollHandler) return;
+    state.documentScrollHandler = scheduleScrollPortalUpdate;
+    document.addEventListener('scroll', state.documentScrollHandler, { capture: true, passive: true });
+  }
+
   function capturePortalPlacementFrame(entry) {
     const anchorElement = getPortalAnchorElement(entry);
     if (!anchorElement) return null;
@@ -528,6 +549,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     if (!enabled || !app || !runtimeAssignmentList.length) return;
     ensureHost(app);
     if (!state.host) return;
+    ensureScrollTracking();
     for (const root of state.roots.values()) applyTypographyBaselineToRoot(root, app);
     clearPromoted();
 
@@ -595,6 +617,14 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     if (state.windowResizeHandler) {
       window.removeEventListener('resize', state.windowResizeHandler);
       state.windowResizeHandler = null;
+    }
+    if (state.documentScrollHandler) {
+      document.removeEventListener('scroll', state.documentScrollHandler, { capture: true });
+      state.documentScrollHandler = null;
+    }
+    if (state.scrollRaf) {
+      window.cancelAnimationFrame(state.scrollRaf);
+      state.scrollRaf = 0;
     }
     if (state.host) {
       state.host.remove();
