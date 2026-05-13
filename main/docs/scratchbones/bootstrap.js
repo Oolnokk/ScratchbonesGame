@@ -7210,9 +7210,14 @@ import { createTutorial } from './tutorial.js';
       burstShell.innerHTML = `<div class="cin-action-burst ${cssClass}">${escapeHtml(label)}</div>`;
       overlay.appendChild(burstShell);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
-      const burstDurationSeconds = Number(
-        getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration').replace('s', ''),
-      ) || 2.1;
+      const burstDurationCss = String(
+        getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration') || '',
+      ).trim().toLowerCase();
+      let burstDurationSeconds;
+      if (burstDurationCss.endsWith('ms')) burstDurationSeconds = Number(burstDurationCss.slice(0, -2)) / 1000;
+      else if (burstDurationCss.endsWith('s')) burstDurationSeconds = Number(burstDurationCss.slice(0, -1));
+      else burstDurationSeconds = Number(burstDurationCss);
+      if (!Number.isFinite(burstDurationSeconds) || burstDurationSeconds <= 0) burstDurationSeconds = 2.1;
       const burstDurationMs = Math.max(1000, Math.round(burstDurationSeconds * 1400));
       setTimeout(() => {
         burstShell.remove();
