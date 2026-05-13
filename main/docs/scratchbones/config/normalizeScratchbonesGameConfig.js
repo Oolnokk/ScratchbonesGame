@@ -78,6 +78,7 @@ const DEFAULT_CSS_ROOT_VARS = {
   '--layout-seat-avatar-size': '132px',
   '--layout-human-seat-avatar-size': '204px',
   '--layout-cinematic-avatar-size': '132px',
+  '--layout-tankan-edge-inset': '10px',
   '--layout-hand-card-min-width': '74px',
   '--layout-hand-card-max-width': '104px',
   '--layout-hand-card-min-height': '146px',
