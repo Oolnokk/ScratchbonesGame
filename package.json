@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "description": "Scratchbones bluff card game",
   "scripts": {
-    "test": "node --test tests/server-utils.test.js tests/name-generator.test.js tests/account.test.js"
+    "test": "node --test tests/server-utils.test.js tests/name-generator.test.js tests/account.test.js tests/normalize-config.test.js"
   }
 }
