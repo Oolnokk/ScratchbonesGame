@@ -7668,7 +7668,8 @@ import { createTutorial } from './tutorial.js';
         const dx = Math.round(Number(offset?.dx) || 0);
         const dy = Math.round(Number(offset?.dy) || 0);
         const translated = `translate(${dx}px, ${dy}px)`;
-        el.style.transform = baseTransform ? `${baseTransform} ${translated}` : translated;
+        const effectiveBase = (baseTransform && baseTransform !== 'none') ? baseTransform : '';
+        el.style.transform = effectiveBase ? `${effectiveBase} ${translated}` : translated;
       }
       for (const [projId, subSize] of Object.entries(sizes)) {
         const el = app.querySelector(`[data-proj-id="${projId}"]`);
