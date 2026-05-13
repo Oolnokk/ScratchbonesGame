@@ -8194,6 +8194,9 @@ import { createTutorial } from './tutorial.js';
       const ox = vv.offsetLeft || 0;
       const oy = vv.offsetTop || 0;
       root.style.transform = (ox || oy) ? `translate(${ox}px, ${oy}px)` : '';
+      if (shouldRenderLayerManagedUi()) {
+        SCRATCHBONES_LAYER_MANAGER.realign?.(document.getElementById('app'));
+      }
     }
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {

@@ -607,6 +607,12 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     log('debug', 'sync-complete', { promotedCount: state.promoted.length });
   }
 
+  function realign(app = document.getElementById('app')) {
+    if (!enabled || !state.host || !state.promoted.length) return;
+    if (app && state.app !== app) state.app = app;
+    updateAllPortalRects();
+  }
+
   function clear() {
     if (!enabled) return;
     clearPromoted();
@@ -649,6 +655,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   return {
     enabled,
     sync,
+    realign,
     clear,
     setAssignmentOptions,
   };
