@@ -1313,7 +1313,22 @@ function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
  * Random color from a bodyColorRange stop table, driven by a provided rng().
  */
 function randomColorFromRangeSeeded(range, rng) {
-  if (!range || !range.stops || range.stops.length < 2) return { h: 0, s: 0, v: 0 };
+  if (!range) return { h: 0, s: 0, v: 0 };
+  if (Array.isArray(range.choices) && range.choices.length) {
+    const choices = range.choices
+      .map((choice) => ({ range: choice?.range || choice, weight: Math.max(0, Number(choice?.weight ?? 1) || 0) }))
+      .filter((choice) => choice.range && choice.weight > 0);
+    const totalWeight = choices.reduce((sum, choice) => sum + choice.weight, 0);
+    if (totalWeight > 0) {
+      let roll = rng() * totalWeight;
+      for (const choice of choices) {
+        roll -= choice.weight;
+        if (roll <= 0) return randomColorFromRangeSeeded(choice.range, rng);
+      }
+      return randomColorFromRangeSeeded(choices[choices.length - 1].range, rng);
+    }
+  }
+  if (!range.stops || range.stops.length < 2) return { h: 0, s: 0, v: 0 };
   const h = range.minH + rng() * (range.maxH - range.minH);
   const stops = range.stops;
   let i = 0;
@@ -1663,7 +1678,11 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
   const hasHoodPiece = Boolean(hoodLayers.length);
   const syncAcrossPieces = clothingRule?.syncAcrossPieces === true;
   const ruleRange = clothingRule?.range || null;
-  const useSharedClothingRuleRange = syncAcrossPieces && Boolean(ruleRange);
+  const paletteRanges = clothingRule?.paletteRanges && typeof clothingRule.paletteRanges === 'object'
+    ? clothingRule.paletteRanges
+    : null;
+  const clothingRangeForPalette = (paletteKey) => paletteRanges?.[paletteKey] || ruleRange;
+  const useSharedClothingRuleRange = syncAcrossPieces && Boolean(ruleRange || paletteRanges);
   const clothMaterialTag = configuredMaterialTag('cloth', 'cloth');
   const clothHoodColorSourceSlots = Array.isArray(randomizationConfig.clothHoodColorSourceSlots)
     ? randomizationConfig.clothHoodColorSourceSlots
@@ -1684,31 +1703,40 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
   const hatMaterialRange = materialColorRangeFor(hat);
   const hatSourceRange = hatMaterialRange
     || (hatUsesClothMaterial ? (ruleRange || hat?.colorRange || null) : (hat?.colorRange || null));
-  const hasPaletteB = (layers) => (layers || []).some(layer => layer?.paletteColorKey === 'B');
+  const usedPaletteKeys = (layers) => new Set((layers || [])
+    .map(layer => layer?.paletteColorKey)
+    .filter(key => typeof key === 'string' && key && key !== 'A'));
 
   if ((hasClothPiece || (useSharedClothingRuleRange && hasHoodPiece)) && clothSourceRange) {
-    bodyColors.CLOTH = randomColorFromRangeSeeded(clothSourceRange, rng);
-    if (useSharedClothingRuleRange || hasPaletteB([...torsoLayers, ...armLayers])) {
-      bodyColors.CLOTH_B = randomColorFromRangeSeeded(clothSourceRange, rng);
+    bodyColors.CLOTH = randomColorFromRangeSeeded(clothingRangeForPalette('A') || clothSourceRange, rng);
+    const clothPaletteKeys = usedPaletteKeys([...torsoLayers, ...armLayers]);
+    if (useSharedClothingRuleRange) {
+      for (const paletteKey of Object.keys(paletteRanges || {})) {
+        if (paletteKey === 'A') continue;
+        bodyColors[`CLOTH_${paletteKey}`] = randomColorFromRangeSeeded(clothingRangeForPalette(paletteKey) || clothSourceRange, rng);
+      }
+    }
+    for (const paletteKey of clothPaletteKeys) {
+      bodyColors[`CLOTH_${paletteKey}`] = randomColorFromRangeSeeded(clothingRangeForPalette(paletteKey) || clothSourceRange, rng);
     }
   }
   if (hasHoodPiece && hoodSourceRange) {
     if (useSharedClothingRuleRange && bodyColors.CLOTH) {
       bodyColors.HOOD = bodyColors.CLOTH;
-      if (hasPaletteB(hoodLayers)) {
-        bodyColors.HOOD_B = bodyColors.CLOTH_B || bodyColors.CLOTH;
+      for (const paletteKey of usedPaletteKeys(hoodLayers)) {
+        bodyColors[`HOOD_${paletteKey}`] = bodyColors[`CLOTH_${paletteKey}`] || bodyColors.CLOTH;
       }
     } else {
-      bodyColors.HOOD = randomColorFromRangeSeeded(hoodSourceRange, rng);
-      if (hasPaletteB(hoodLayers)) {
-        bodyColors.HOOD_B = randomColorFromRangeSeeded(hoodSourceRange, rng);
+      bodyColors.HOOD = randomColorFromRangeSeeded(clothingRangeForPalette('A') || hoodSourceRange, rng);
+      for (const paletteKey of usedPaletteKeys(hoodLayers)) {
+        bodyColors[`HOOD_${paletteKey}`] = randomColorFromRangeSeeded(clothingRangeForPalette(paletteKey) || hoodSourceRange, rng);
       }
     }
   }
   if (!useSharedClothingRuleRange && hasHoodPiece && hoodUsesClothMaterial && clothHoodColorSource && bodyColors.CLOTH) {
     bodyColors.HOOD = bodyColors.CLOTH;
-    if (hasPaletteB(hoodLayers)) {
-      bodyColors.HOOD_B = bodyColors.CLOTH_B || bodyColors.CLOTH;
+    for (const paletteKey of usedPaletteKeys(hoodLayers)) {
+      bodyColors[`HOOD_${paletteKey}`] = bodyColors[`CLOTH_${paletteKey}`] || bodyColors.CLOTH;
     }
   }
   if (hatSourceRange) {

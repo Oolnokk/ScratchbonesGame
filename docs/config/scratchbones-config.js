@@ -316,6 +316,29 @@ window.SCRATCHBONES_CONFIG = {
               "tack", "tag", "tally", "terminal", "tessera", "thimble", "thorn", "tip", "toggle",
               "token", "tooth", "tube", "twig", "wedge", "weight", "whetstone", "whorl", "wire"
             ],
+            "firstNameGenderRules": {
+              "maleReplacements": {
+                "amber": "gold-resin",
+                "amethyst": "purple-stone",
+                "barb": "sharp-point",
+                "bell": "ringing-cup",
+                "beryl": "green-gem",
+                "crystal": "clear-stone",
+                "emerald": "green-jewel",
+                "jewel": "fine-gem",
+                "opal": "milk-gem",
+                "ruby": "red-gem",
+                "sapphire": "blue-gem"
+              },
+              "femaleReplacements": {
+                "brad": "small-nail",
+                "bud": "new-leaf",
+                "jasper": "spotted-stone",
+                "reed": "river-stalk",
+                "stan": "grey-stone",
+                "thorn": "sharp-spur"
+              }
+            },
             "surname": {
               "syllables": { "min": 2, "max": 3 },
               "onsetConsonants": ["n", "m", "k", "t", "p", "l", "w", "y"],
