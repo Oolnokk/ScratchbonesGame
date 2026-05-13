@@ -886,6 +886,7 @@ function numberOrDefault(value, fallback) {
 function normalizePositiveCssLengthOrPercentage(value, fallback) {
   const raw = String(value ?? '').trim();
   if (!raw) return fallback;
+  if (/^clamp\(.+\)$/i.test(raw)) return raw;
   const match = raw.match(/^(\d+(?:\.\d+)?)(px|%|rem|em|vw|vh)$/i);
   if (!match) return fallback;
   return Number(match[1]) > 0 ? `${match[1]}${match[2].toLowerCase()}` : fallback;
@@ -896,6 +897,14 @@ function normalizeCssLength(value, fallback) {
   if (!raw) return fallback;
   if (/^clamp\(.+\)$/i.test(raw)) return raw;
   if (/^-?\d+(?:\.\d+)?(?:px|%|rem|em|vw|vh)$/i.test(raw)) return raw;
+  return fallback;
+}
+
+function normalizeCssLengthOnly(value, fallback) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return fallback;
+  if (/^clamp\(.+\)$/i.test(raw)) return raw;
+  if (/^-?\d+(?:\.\d+)?(?:px|rem|em|vw|vh)$/i.test(raw)) return raw;
   return fallback;
 }
 
@@ -951,11 +960,11 @@ function normalizeTableCinematicTankanColumnsConfig(rawTankanColumns = {}) {
     enabled: raw.enabled !== false,
     fallbackAvatarHalfWidthPx: Math.max(0, finiteNumberOrDefault(fallbackHalfWidth, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.fallbackAvatarHalfWidthPx)),
     fallbackAvatarCenterOffsetYPx: Math.max(0, finiteNumberOrDefault(fallbackCenterOffset, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.fallbackAvatarCenterOffsetYPx)),
-    edgeInsetPx: Math.max(0, finiteNumberOrDefault(raw.edgeInsetPx, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.edgeInsetPx)),
+    edgeInsetPx: Math.min(120, Math.max(0, finiteNumberOrDefault(raw.edgeInsetPx, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.edgeInsetPx))),
     minGapPx: Math.max(0, finiteNumberOrDefault(raw.minGapPx, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.minGapPx)),
     gapWidthRatio: Math.max(0, finiteNumberOrDefault(raw.gapWidthRatio, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.gapWidthRatio)),
-    fontSize: normalizeCssLength(raw.fontSize, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.fontSize),
-    letterSpacing: normalizeCssLength(raw.letterSpacing, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.letterSpacing),
+    fontSize: normalizePositiveCssLengthOrPercentage(raw.fontSize, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.fontSize),
+    letterSpacing: normalizeCssLengthOnly(raw.letterSpacing, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.letterSpacing),
     color: normalizeCssTextValue(raw.color, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.color),
     textShadow: normalizeCssTextValue(raw.textShadow, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.textShadow),
     initialOpacity: Math.min(1, Math.max(0, finiteNumberOrDefault(raw.initialOpacity, DEFAULT_TABLE_CINEMATIC_TANKAN_COLUMNS.initialOpacity))),
