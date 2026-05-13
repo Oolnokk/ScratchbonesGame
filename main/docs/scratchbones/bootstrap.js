@@ -2929,8 +2929,78 @@ import { createTutorial } from './tutorial.js';
       if (!chosen.length && player.hand.length) chosen.push(player.hand[0]);
       return chosen.slice(0, Math.max(1, desiredCount));
     }
+    function buildTruthfulPlayWithTrapForRank(player, rank, desiredCount) {
+      const trapWilds = wildCards(player).filter(c => c.trickType === 'trap');
+      if (!trapWilds.length) return [];
+      const natural = cardsOfRank(player, rank).slice();
+      const otherWilds = wildCards(player).filter(c => c.trickType !== 'trap');
+      const chosen = [];
+      while (natural.length && chosen.length < Math.max(0, desiredCount - 1)) chosen.push(natural.shift());
+      chosen.push(trapWilds.shift());
+      while (natural.length && chosen.length < desiredCount) chosen.push(natural.shift());
+      while (otherWilds.length && chosen.length < desiredCount) chosen.push(otherWilds.shift());
+      while (trapWilds.length && chosen.length < desiredCount) chosen.push(trapWilds.shift());
+      return chosen.length === desiredCount ? chosen : [];
+    }
+    function buildSmuggleOpportunityPlay(player, declaredRank) {
+      const smuggle = player.hand.find(c => c.trickType === 'smuggle');
+      if (!smuggle) return [];
+      const maxClaimCount = Math.max(1, aiDecisionNumber('play', 'opportunitySmuggleMaxClaimCount', 4));
+      const movable = player.hand.filter(c => c.id !== smuggle.id);
+      const offRankMovable = movable.filter(c => !c.wild && c.rank !== declaredRank);
+      const otherMovable = movable.filter(c => !offRankMovable.some(offRank => offRank.id === c.id));
+      const movedCards = [...offRankMovable, ...otherMovable].slice(0, Math.max(0, maxClaimCount - 1));
+      return movedCards.length ? [smuggle, ...movedCards] : [smuggle];
+    }
+    function chooseAiOpportunityPlay(player) {
+      const targetRank = state.declaredRank;
+      if (targetRank !== null && player.hand.length === 1 && AI_DECISION?.play?.opportunityForceLastCard !== false) {
+        return { type: 'play', declaredRank: targetRank, cardIds: [player.hand[0].id] };
+      }
+      const opportunityTruthCount = aiDecisionNumber('play', 'opportunityTruthCount', 5);
+      const opportunityTruthMaxCount = aiDecisionNumber('play', 'opportunityTruthMaxCount', 6);
+      if (targetRank === null) {
+        const openingPlan = bestTruthfulOpeningRank(player);
+        if (openingPlan.totalTruthfulCount >= opportunityTruthCount) {
+          const desiredCount = Math.min(openingPlan.totalTruthfulCount, Math.max(opportunityTruthCount, Math.min(opportunityTruthMaxCount, openingPlan.totalTruthfulCount)));
+          const cards = buildTruthfulPlayForRank(player, openingPlan.rank, desiredCount, { saveWilds: false });
+          if (cards.length) return { type: 'play', declaredRank: openingPlan.rank, cardIds: cards.map(c => c.id) };
+        }
+        return null;
+      }
+      const maxTruthful = cardsOfRank(player, targetRank).length + wildCards(player).length;
+      const clearHandAfterThreshold = aiDecisionNumber('play', 'opportunityTruthClearHandAfterThreshold', 1);
+      if (maxTruthful >= opportunityTruthCount || (maxTruthful > 0 && player.hand.length - maxTruthful <= clearHandAfterThreshold)) {
+        const desiredCount = Math.min(maxTruthful, Math.max(1, Math.min(opportunityTruthMaxCount, maxTruthful)));
+        const cards = buildTruthfulPlayForRank(player, targetRank, desiredCount, { saveWilds: false });
+        if (cards.length) return { type: 'play', declaredRank: targetRank, cardIds: cards.map(c => c.id) };
+      }
+      const trapMinCount = aiDecisionNumber('play', 'opportunityTrapMinCount', 2);
+      if (wildCards(player).some(c => c.trickType === 'trap') && maxTruthful >= trapMinCount) {
+        const desiredCount = Math.min(maxTruthful, Math.max(trapMinCount, Math.min(opportunityTruthMaxCount, maxTruthful)));
+        const cards = buildTruthfulPlayWithTrapForRank(player, targetRank, desiredCount);
+        if (cards.length) return { type: 'play', declaredRank: targetRank, cardIds: cards.map(c => c.id) };
+      }
+      const smuggleCards = buildSmuggleOpportunityPlay(player, targetRank);
+      const smuggleMovedCount = Math.max(0, smuggleCards.length - 1);
+      const smuggleMinMovedCards = aiDecisionNumber('play', 'opportunitySmuggleMinMovedCards', 2);
+      const smuggleLowHandAfter = aiDecisionNumber('play', 'opportunitySmuggleLowHandAfterThreshold', 2);
+      if (smuggleCards.length && (smuggleMovedCount >= smuggleMinMovedCards || (smuggleMovedCount > 0 && player.hand.length - smuggleCards.length <= smuggleLowHandAfter))) {
+        return { type: 'play', declaredRank: targetRank, cardIds: smuggleCards.map(c => c.id) };
+      }
+      if (maxTruthful === 0 && AI_DECISION?.play?.opportunityForcePlayableTrickBone !== false) {
+        const trickCard = player.hand.find(c => c.trickType);
+        if (trickCard) return { type: 'play', declaredRank: targetRank, cardIds: [trickCard.id] };
+      }
+      if (maxTruthful === 0 && AI_DECISION?.play?.opportunityForceNoTruthBluff !== false) {
+        return { type: 'play', declaredRank: targetRank, cardIds: buildBluffPlay(player, targetRank, 1).map(c => c.id) };
+      }
+      return null;
+    }
     function chooseAiPlay(player) {
       if (!player?.hand?.length) return { type: 'concede' };
+      const opportunityPlay = chooseAiOpportunityPlay(player);
+      if (opportunityPlay) return opportunityPlay;
       const profile = getAiDifficultyProfile(player);
       const rank = String(profile.rank || 'normal').toLowerCase();
       // Difficulty changes the AI's decision depth, not just its randomness:
