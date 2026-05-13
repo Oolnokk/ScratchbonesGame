@@ -1945,14 +1945,16 @@ import { createTutorial } from './tutorial.js';
         rankCounts,
       };
     }
-    function aiRankPossibilityOutlook(observerIndex, play) {
+    function aiRankPossibilityOutlook(observerIndex, play, { claimCardsAlreadyRemovedFromHand = true } = {}) {
       const snapshot = aiCardCountingSnapshot(observerIndex, { excludePlay: play });
       const observer = state.players[observerIndex];
       const declaredRank = play.declaredRank;
       const rankInfo = snapshot.rankCounts.get(declaredRank) || { possibleOutsideObserver: COPIES_PER_RANK, unavailable: 0 };
       const declarer = state.players[play.playerIndex];
       const claimCount = play.cards?.length || 0;
-      const declarerHandBeforeClaim = (declarer?.hand?.length || 0) + claimCount;
+      const declarerHandBeforeClaim = (declarer?.hand?.length || 0) + (claimCardsAlreadyRemovedFromHand
+        ? claimCount
+        : 0);
       const observerHandCount = observer?.hand?.length || 0;
       const unknownPoolOutsideObserver = Math.max(1, totalScratchbonesDeckCards() - observerHandCount - snapshot.cardsInPlay);
       const possibleTruthCardsOutsideObserver = rankInfo.possibleOutsideObserver + snapshot.possibleWildsOutsideObserver;
@@ -2079,13 +2081,13 @@ import { createTutorial } from './tutorial.js';
         read.quickJudgmentBias * snapWeight
       );
     }
-    function challengeSuspicionScore(challengerIndex, play, { includeRandom = true } = {}) {
+    function challengeSuspicionScore(challengerIndex, play, { includeRandom = true, claimCardsAlreadyRemovedFromHand = true } = {}) {
       const challenger = state.players[challengerIndex];
       const pers = challenger.personality;
       const aiProfile = getAiDifficultyProfile(challenger);
       const knownRankCount = countKnownRank(play.declaredRank);
       const impossibleOverage = impossibleRankOverage(knownRankCount, play.cards.length);
-      const rankOutlook = aiRankPossibilityOutlook(challengerIndex, play);
+      const rankOutlook = aiRankPossibilityOutlook(challengerIndex, play, { claimCardsAlreadyRemovedFromHand });
       const read = ensureReadProfile(challengerIndex, play.playerIndex);
       let suspicion = 0;
       suspicion += impossibleOverage * aiProfile.challengeKnownCardWeight;
@@ -3372,7 +3374,11 @@ import { createTutorial } from './tutorial.js';
       if (!challengers.length) return 0;
       let totalRisk = 0;
       for (const challenger of challengers) {
-        const suspicion = challengeSuspicionScore(challenger.id, candidatePlay, { includeRandom: false });
+        // Candidate cards are still in the AI hand and the synthetic play is not in the pile yet.
+        const suspicion = challengeSuspicionScore(challenger.id, candidatePlay, {
+          includeRandom: false,
+          claimCardsAlreadyRemovedFromHand: false,
+        });
         const threshold = getAiDifficultyProfile(challenger).resolvedChallengeThreshold;
         const thresholdPressure = clamp01(aiDecisionNumber('play', 'riskThresholdPressureBase', 0.5) + (suspicion - threshold) * aiDecisionNumber('play', 'riskThresholdPressureWeight', 1.8));
         const readPressure = clamp01(aiDecisionNumber('play', 'riskReadPressureBase', 0.5) + suspicionFromReadProfile(ensureReadProfile(challenger.id, player.id), challenger.personality) * aiDecisionNumber('play', 'riskReadPressureWeight', 1.6));
