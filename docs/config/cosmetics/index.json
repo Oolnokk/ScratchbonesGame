@@ -43,6 +43,10 @@
       "path": "./clothes/overwear/rugged_poncho.json"
     },
     {
+      "id": "fine_poncho",
+      "path": "./clothes/overwear/fine_poncho.json"
+    },
+    {
       "id": "anuri_hood",
       "path": "./anuri_hood.json"
     },
@@ -333,6 +337,30 @@
     {
       "id": "appearance::Engh-sho_F::engh_hairdefault-front",
       "path": "./appearance/engh-sho/hairdefault-front.json"
+    },
+    {
+      "id": "appearance::Rakakoan_M::rakakoan_woven_eyepatch",
+      "path": "./appearance/kenkari/rakakoan_woven_eyepatch.json"
+    },
+    {
+      "id": "appearance::Rakakoan_M::rakakoan_ragged_eyepatch",
+      "path": "./appearance/kenkari/rakakoan_ragged_eyepatch.json"
+    },
+    {
+      "id": "appearance::Rakakoan_M::rakakoan_wrapped_eyepatch",
+      "path": "./appearance/kenkari/rakakoan_wrapped_eyepatch.json"
+    },
+    {
+      "id": "appearance::Rakakoan_F::rakakoan_woven_eyepatch",
+      "path": "./appearance/kenkari/rakakoan_woven_eyepatch.json"
+    },
+    {
+      "id": "appearance::Rakakoan_F::rakakoan_ragged_eyepatch",
+      "path": "./appearance/kenkari/rakakoan_ragged_eyepatch.json"
+    },
+    {
+      "id": "appearance::Rakakoan_F::rakakoan_wrapped_eyepatch",
+      "path": "./appearance/kenkari/rakakoan_wrapped_eyepatch.json"
     }
   ]
 }

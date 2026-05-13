@@ -405,6 +405,7 @@ window.SCRATCHBONES_CONFIG = {
         { "id": "bandolier1",       "label": "Bandolier",         "price": 40, "category": "torso",    "description": "A rugged leather bandolier.", "material": "leather" },
         { "id": "tankan_bodywrap",  "label": "Tankan Body Wrap",  "price": 60, "category": "overwear", "description": "A wrapped ceremonial bodywrap." },
         { "id": "rugged_poncho", "label": "Rugged Poncho", "price": 70, "category": "overwear", "description": "A reinforced poncho layered with a rugged body wrap.", "material": "cloth" },
+        { "id": "fine_poncho", "label": "Fine Poncho", "price": 80, "category": "overwear", "description": "A finely trimmed cloth poncho.", "material": "cloth" },
         { "id": "fine_hood",        "label": "Fine Hood",         "price": 60, "category": "hood",     "description": "A finely crafted hood with trim." }
       ]
     },
@@ -2933,3 +2934,124 @@ window.SCRATCHBONES_CONFIG.game.layout.authored = window.SCRATCHBONES_CONFIG.gam
 window.SCRATCHBONES_CONFIG.game.layout.fitter = window.SCRATCHBONES_CONFIG.game.layout.fitter || {};
 
 // Most recent config-boundary cleanup: this file is now the authoritative Scratchbones-only config source.
+
+// Rakako'an use Kenkari bodies with an exclusive upper-face eyepatch selection.
+(() => {
+  const game = window.SCRATCHBONES_CONFIG.game;
+  const appearanceEditor = game.appearanceEditor = game.appearanceEditor || {};
+  const species = appearanceEditor.species = appearanceEditor.species || {};
+  const rakakoanEyepatches = [
+    { id: 'appearance::Rakakoan_M::rakakoan_woven_eyepatch', label: 'Woven Eyepatch' },
+    { id: 'appearance::Rakakoan_M::rakakoan_ragged_eyepatch', label: 'Ragged Eyepatch' },
+    { id: 'appearance::Rakakoan_M::rakakoan_wrapped_eyepatch', label: 'Wrapped Eyepatch' }
+  ];
+  const rakakoanEyepatchesFemale = rakakoanEyepatches.map(option => ({
+    ...option,
+    id: option.id.replace('Rakakoan_M', 'Rakakoan_F')
+  }));
+  species.rakakoan = {
+    label: "Rakako'an",
+    genders: ['male', 'female'],
+    swatchBase: '#7dc89a',
+    male: {
+      defaultCosmetics: { upperFace: 'appearance::Rakakoan_M::rakakoan_woven_eyepatch' },
+      slots: [
+        { slot: 'upperFace', label: 'Rakako\'an Eyepatch', options: rakakoanEyepatches },
+        { slot: 'hairFront', label: 'Front Hair', options: [
+          { id: null, label: 'None' },
+          { id: 'appearance::Kenkari_M::kenk_forwardtuft_long', label: 'Forward Tuft (Long)' },
+          { id: 'appearance::Kenkari_M::kenk_fowardtuft', label: 'Forward Tuft' }
+        ]},
+        { slot: 'hairBack', label: 'Back Hair', options: [
+          { id: null, label: 'None' },
+          { id: 'appearance::Kenkari_M::kenk_splayedknot_high_m', label: 'Splayed Knot (High)' },
+          { id: 'appearance::Kenkari_M::kenk_splayedknot_low_m', label: 'Splayed Knot (Low)' }
+        ]},
+        { slot: 'hairSide', label: 'Side Hair (R)', options: [
+          { id: null, label: 'None' },
+          { id: 'appearance::Kenkari_M::kenk_braid-R_m', label: 'Braid (Right)' },
+          { id: 'appearance::Kenkari_M::kenk_braidcluster-R_m', label: 'Braid Cluster (Right)' }
+        ]},
+        { slot: 'hairSideL', label: 'Side Hair (L)', options: [
+          { id: null, label: 'None' },
+          { id: 'appearance::Kenkari_M::kenk_braid-L_m', label: 'Braid (Left)' }
+        ]},
+        { slot: 'facialHair', label: 'Facial Hair', options: [
+          { id: null, label: 'None' },
+          { id: 'appearance::Kenkari_M::kenk_wildbeard', label: 'Wild Beard' }
+        ]}
+      ],
+      colorOptions: [
+        { label: 'Jade', h: -20, s: 0.80, v: 0.00 },
+        { label: 'Lime', h: -80, s: 0.90, v: 0.00 },
+        { label: 'Teal', h: 40, s: 1.00, v: 0.10 },
+        { label: 'Amethyst', h: 120, s: 0.90, v: 0.00 },
+        { label: 'Fuchsia', h: 160, s: 0.80, v: -0.10 },
+        { label: 'Ember', h: -120, s: 0.80, v: -0.10 },
+        { label: 'Chartreuse', h: -40, s: 0.70, v: 0.10 },
+        { label: 'Azure', h: 60, s: 0.90, v: 0.10 },
+        { label: 'Red', h: -143, s: 1.00, v: 0.00 },
+        { label: 'Orange', h: -113, s: 1.00, v: 0.10 },
+        { label: 'Yellow', h: -83, s: 1.20, v: 0.25 },
+        { label: 'Green', h: -23, s: 1.00, v: 0.05 },
+        { label: 'Blue', h: 77, s: 1.00, v: 0.00 },
+        { label: 'Brown', h: -113, s: 0.10, v: -0.38 }
+      ]
+    },
+    female: {
+      defaultCosmetics: { upperFace: 'appearance::Rakakoan_F::rakakoan_woven_eyepatch' },
+      slots: [
+        { slot: 'upperFace', label: 'Rakako\'an Eyepatch', options: rakakoanEyepatchesFemale },
+        { slot: 'hairBack', label: 'Back Hair', options: [
+          { id: null, label: 'None' },
+          { id: 'appearance::Kenkari_F::kenk_longponytail_f', label: 'Long Ponytail' },
+          { id: 'appearance::Kenkari_F::kenk_splayedknot_high_f', label: 'Splayed Knot (High)' },
+          { id: 'appearance::Kenkari_F::kenk_splayedknot_low_f', label: 'Splayed Knot (Low)' }
+        ]},
+        { slot: 'hairSide', label: 'Side Hair (R)', options: [
+          { id: null, label: 'None' },
+          { id: 'appearance::Kenkari_F::kenk_braid-R_f', label: 'Braid (Right)' },
+          { id: 'appearance::Kenkari_F::kenk_braidcluster-R_f', label: 'Braid Cluster (Right)' }
+        ]},
+        { slot: 'hairSideL', label: 'Side Hair (L)', options: [
+          { id: null, label: 'None' },
+          { id: 'appearance::Kenkari_F::kenk_braid-L_f', label: 'Braid (Left)' }
+        ]}
+      ],
+      colorOptions: [
+        { label: 'Ember', h: -115, s: 0.20, v: 0.05 },
+        { label: 'Copper', h: -105, s: 0.25, v: 0.10 },
+        { label: 'Gold', h: -92, s: 0.40, v: 0.15 },
+        { label: 'Honey', h: -80, s: 0.45, v: 0.20 },
+        { label: 'Yellow', h: -75, s: 0.50, v: 0.20 },
+        { label: 'Saffron', h: -65, s: 0.52, v: 0.15 },
+        { label: 'Chartreuse', h: -53, s: 0.58, v: 0.05 },
+        { label: 'Lime', h: -42, s: 0.62, v: 0.00 },
+        { label: 'Spring', h: -32, s: 0.68, v: 0.05 },
+        { label: 'Umber', h: -100, s: -0.30, v: -0.40 },
+        { label: 'Ochre', h: -80, s: -0.20, v: -0.25 },
+        { label: 'Straw', h: -65, s: -0.10, v: -0.15 }
+      ]
+    }
+  };
+  game.portrait = game.portrait || {};
+  game.portrait.cosmetics = game.portrait.cosmetics || {};
+  game.portrait.cosmetics.defaultTintColors = {
+    ...(game.portrait.cosmetics.defaultTintColors || {}),
+    rakakoan_woven_eyepatch: { UPPER_FACE: { h: -106, s: -0.25, v: -0.62 } },
+    rakakoan_ragged_eyepatch: { UPPER_FACE: { h: -170.5, s: -1, v: -0.308 } },
+    rakakoan_wrapped_eyepatch: { UPPER_FACE: { h: -178, s: -1, v: 0.221 } }
+  };
+  game.collections = game.collections || {};
+  game.collections.appearanceSlots = [
+    ...(game.collections.appearanceSlots || []),
+    {
+      key: 'upperFace',
+      slot: 'upperFace',
+      label: 'Upper Face',
+      species: ['rakakoan'],
+      tintKeys: ['UPPER_FACE'],
+      dyeGroup: 'cloth'
+    }
+  ];
+})();

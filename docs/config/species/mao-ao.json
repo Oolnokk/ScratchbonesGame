@@ -37,7 +37,8 @@
       "tankan_tunic",
       "bandolier1",
       "tankan_bodywrap",
-      "rugged_poncho"
+      "rugged_poncho",
+      "fine_poncho"
     ],
     "cosmeticWeights": {
       "hat": {
@@ -325,7 +326,8 @@
       "tankan_tunic",
       "bandolier1",
       "tankan_bodywrap",
-      "rugged_poncho"
+      "rugged_poncho",
+      "fine_poncho"
     ],
     "cosmeticWeights": {
       "hat": {

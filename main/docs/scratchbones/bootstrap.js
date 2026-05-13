@@ -4437,6 +4437,7 @@ import { createTutorial } from './tutorial.js';
       const liarBurstDurationSec = clampNumber(Number(cinematicLayout.liarBurstDurationSec) || 3.2, 0.6, 8);
       const liarBurstEndYPct = clampNumber(Number(cinematicLayout.liarBurstEndYPct) || -180, -320, -110);
       const liarBurstOffsetXPx = Number.isFinite(Number(cinematicLayout.liarBurstOffsetXPx)) ? Number(cinematicLayout.liarBurstOffsetXPx) : -232;
+      const tankanColumnsLayout = cinematicLayout.tankanColumns || {};
       const tankanColumnEdgeInsetPx = clampNumber(Number(tankanColumnsLayout.edgeInsetPx), 0, 120);
       const tankanColumnFontSize = String(tankanColumnsLayout.fontSize);
       const tankanColumnLetterSpacing = String(tankanColumnsLayout.letterSpacing);
@@ -6149,7 +6150,7 @@ import { createTutorial } from './tutorial.js';
     }
     function generatePlayerProfile(player) {
       if (!_portraitCosmetics) return null;
-      const { optionCache, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions, hatOptions, hoodOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter, conditionalCosmeticsByFighter } = _portraitCosmetics;
+      const { optionCache, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, upperFaceOptions, facialHairOptions, hatOptions, hoodOptions, torsoPortraitOptions, armPortraitOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, cosmeticWeightsByFighter, forcedCosmeticsByFighter, conditionalCosmeticsByFighter } = _portraitCosmetics;
       const seedStr = player.seed || `player-${player.id}`;
       const rng = mulberry32(hashStringToSeed(seedStr));
       const fighterGender = f => f.gender ?? (f.id === 'M' ? 'male' : f.id === 'F' ? 'female' : null);
@@ -6164,7 +6165,7 @@ import { createTutorial } from './tutorial.js';
         ) || FIGHTERS[0];
         const fighterPool = [fighter];
         // Generate base profile for this fighter (provides hat, torso, arm cosmetics randomly)
-        const profile = randomProfileSeeded(rng, fighterPool, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, hoodOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
+        const profile = randomProfileSeeded(rng, fighterPool, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, upperFaceOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, hoodOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
         if (!profile) return null;
         // Override with saved cosmetics, but never override forced slots
         const lookupOption = id => id ? (optionCache?.get(id) ?? null) : null;
@@ -6176,6 +6177,7 @@ import { createTutorial } from './tutorial.js';
           if (cosmetics.hairSide  !== undefined && !forcedSlots.has('hairSide'))  profile.hairSide  = lookupOption(cosmetics.hairSide);
           if (cosmetics.hairSideL !== undefined && !forcedSlots.has('hairSideL')) profile.hairSideL = lookupOption(cosmetics.hairSideL);
           if (cosmetics.eyes      !== undefined && !forcedSlots.has('eyes'))      profile.eyes      = lookupOption(cosmetics.eyes);
+          if (cosmetics.upperFace !== undefined && !forcedSlots.has('upperFace')) profile.upperFace = lookupOption(cosmetics.upperFace);
           if (cosmetics.facialHair!== undefined && !forcedSlots.has('facialHair'))profile.facialHair= lookupOption(cosmetics.facialHair);
         }
         if (bodyColors) {
@@ -6187,7 +6189,7 @@ import { createTutorial } from './tutorial.js';
       const fighterPool = player.gender === 'male'   ? FIGHTERS.filter(f => fighterGender(f) === 'male')
                         : player.gender === 'female' ? FIGHTERS.filter(f => fighterGender(f) === 'female')
                         : FIGHTERS;
-      const profile = randomProfileSeeded(rng, fighterPool.length ? fighterPool : FIGHTERS, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, hoodOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
+      const profile = randomProfileSeeded(rng, fighterPool.length ? fighterPool : FIGHTERS, hairFrontOptions, hairBackOptions, hairSideOptions, hairSideLOptions, eyesOptions, upperFaceOptions, facialHairOptions, bodyColorRangesByGender, allowedCosmeticsByFighter, hatOptions, hoodOptions, cosmeticWeightsByFighter, torsoPortraitOptions, armPortraitOptions, forcedCosmeticsByFighter, conditionalCosmeticsByFighter);
       return ensureMinimumNpcClothingArticles(player, profile, rng);
     }
     function applyEquippedCosmeticsToHumanPlayers() {
@@ -6242,7 +6244,15 @@ import { createTutorial } from './tutorial.js';
         if (!hasCollaredClothing && collarLockedFacialHairIds.includes(player.profile.facialHair?.id)) {
           player.profile.facialHair = oc?.get('none') || { id: 'none', label: 'No Facial Hair', tintSlot: null, layers: [] };
         }
-        // Apply clothing dyes from per-player appearance when available, else local account
+        const defaultTintColors = window.SCRATCHBONES_CONFIG?.game?.portrait?.cosmetics?.defaultTintColors || {};
+        for (const option of [player.profile.upperFace]) {
+          const defaults = option?.id ? defaultTintColors[option.id] : null;
+          if (!defaults) continue;
+          for (const [tintKey, color] of Object.entries(defaults)) {
+            player.profile.bodyColors = { ...(player.profile.bodyColors || {}), [tintKey]: { ...color } };
+          }
+        }
+        // Apply clothing/accessory dyes from per-player appearance when available, else local account
         const dyeIds = player.appearance?.appliedDyes !== undefined
           ? (player.appearance.appliedDyes || {})
           : (hasAppearance ? {} : (acc.getAppliedDyes ? acc.getAppliedDyes() : {}));

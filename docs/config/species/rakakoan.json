@@ -1,6 +1,6 @@
 {
-  "speciesId": "kenkari",
-  "label": "Kenkari",
+  "speciesId": "rakakoan",
+  "label": "Rakako'an",
   "male": {
     "headSprite": "fightersprites/kenkari-m/head.png",
     "headUrLayers": [
@@ -16,6 +16,9 @@
       "sy": 1
     },
     "allowedCosmetics": [
+      "appearance::Rakakoan_M::rakakoan_woven_eyepatch",
+      "appearance::Rakakoan_M::rakakoan_ragged_eyepatch",
+      "appearance::Rakakoan_M::rakakoan_wrapped_eyepatch",
       "appearance::Kenkari_M::kenk_eyedisks",
       "appearance::Kenkari_M::kenk_forwardtuft_long",
       "appearance::Kenkari_M::kenk_fowardtuft",
@@ -33,8 +36,7 @@
       "tankan_tunic",
       "bandolier1",
       "tankan_bodywrap",
-      "rugged_poncho",
-      "fine_poncho"
+      "rugged_poncho"
     ],
     "forcedCosmetics": {
       "eyes": "kenk_eyedisks"
@@ -82,6 +84,11 @@
       "hairSideL": {
         "none": 60,
         "kenk_braid-L_m": 40
+      },
+      "upperFace": {
+        "rakakoan_woven_eyepatch": 34,
+        "rakakoan_ragged_eyepatch": 33,
+        "rakakoan_wrapped_eyepatch": 33
       }
     },
     "bodyColorRanges": {
@@ -293,6 +300,9 @@
       "sy": 1
     },
     "allowedCosmetics": [
+      "appearance::Rakakoan_F::rakakoan_woven_eyepatch",
+      "appearance::Rakakoan_F::rakakoan_ragged_eyepatch",
+      "appearance::Rakakoan_F::rakakoan_wrapped_eyepatch",
       "appearance::Kenkari_F::kenk_longponytail_f",
       "appearance::Kenkari_F::kenk_splayedknot_high_f",
       "appearance::Kenkari_F::kenk_splayedknot_low_f",
@@ -307,8 +317,7 @@
       "tankan_tunic",
       "bandolier1",
       "tankan_bodywrap",
-      "rugged_poncho",
-      "fine_poncho"
+      "rugged_poncho"
     ],
     "forcedCosmetics": {
       "eyes": "none"
@@ -354,6 +363,11 @@
       "facialHair": {
         "none": 100,
         "kenk_shirtbeard_f": 0
+      },
+      "upperFace": {
+        "rakakoan_woven_eyepatch": 34,
+        "rakakoan_ragged_eyepatch": 33,
+        "rakakoan_wrapped_eyepatch": 33
       }
     },
     "bodyColorRanges": {
