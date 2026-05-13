@@ -29,6 +29,29 @@ const DEFAULT_PUNISH_BONE_SPIN_CONFIG = {
   shadowBlurPx: 12,
 };
 
+
+const DEFAULT_TRICK_BONE_SUMMARY_DISPLAY = {
+  glyphSizePx: 14,
+  multiplyGlyphScale: 0.75,
+  gapPx: 6,
+  rowGapPx: 4,
+  marginTopPx: 6,
+  maxWidthPx: 220,
+  fontSizeRem: 0.68,
+  letterSpacingEm: 0.05,
+  seatAmountFontSize: '160%',
+  deckAmountFontSize: '250%',
+  seatAmountColumnMinEm: 1.2,
+  deckAmountColumnMinEm: 1.5,
+  amountFontFamily: "'Khymeryyanroman4', Inter, system-ui, sans-serif",
+  seatColor: '#fff',
+  deckColor: '#fff',
+  arrowText: '\u00A0',
+  glyphFilter: 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))',
+  deckGlyphFilter: 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))',
+  multiplyGlyphFilter: 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))',
+};
+
 const DEFAULT_CSS_ROOT_VARS = {
   '--bg': '#15110f',
   '--bg2': '#221917',
@@ -129,14 +152,6 @@ const DEFAULT_CSS_ROOT_VARS = {
   '--layout-card-shadow-spread': '-2px',
   '--layout-card-shadow-alpha': '0.34',
   '--layout-card-contact-alpha': '0.2',
-  '--layout-trick-info-glyph-size': '28px',
-  '--layout-trick-info-gap': '6px',
-  '--layout-trick-info-item-gap': '4px',
-  '--layout-trick-info-margin-top': '6px',
-  '--layout-trick-info-letter-spacing': '0.05em',
-  '--layout-trick-info-max-width': '220px',
-  '--layout-trick-info-seat-amount-column-min-em': '1.2em',
-  '--layout-trick-info-deck-amount-column-min-em': '1.5em',
   '--layout-trick-symbol-filter': 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))',
   '--layout-punish-button-card-width': '34px',
   '--layout-punish-button-card-height': '48px',
@@ -835,6 +850,48 @@ function finiteNumberOrDefault(value, fallback) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+function numberOrDefault(value, fallback) {
+  return Number(value) || fallback;
+}
+
+function normalizeTrickBoneSummaryDisplay(rawSummaryDisplay = {}) {
+  const raw = rawSummaryDisplay && typeof rawSummaryDisplay === 'object' && !Array.isArray(rawSummaryDisplay) ? rawSummaryDisplay : {};
+  return {
+    glyphSizePx: Math.max(8, numberOrDefault(raw.glyphSizePx, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.glyphSizePx)),
+    multiplyGlyphScale: Math.max(0.1, Math.min(1, numberOrDefault(raw.multiplyGlyphScale, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.multiplyGlyphScale))),
+    gapPx: Math.max(0, numberOrDefault(raw.gapPx, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.gapPx)),
+    rowGapPx: Math.max(0, numberOrDefault(raw.rowGapPx, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.rowGapPx)),
+    marginTopPx: Math.max(0, numberOrDefault(raw.marginTopPx, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.marginTopPx)),
+    maxWidthPx: Math.max(1, numberOrDefault(raw.maxWidthPx, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.maxWidthPx)),
+    fontSizeRem: Math.max(0.1, numberOrDefault(raw.fontSizeRem, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.fontSizeRem)),
+    letterSpacingEm: Math.max(0, numberOrDefault(raw.letterSpacingEm, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.letterSpacingEm)),
+    seatAmountFontSize: String(raw.seatAmountFontSize || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.seatAmountFontSize),
+    deckAmountFontSize: String(raw.deckAmountFontSize || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.deckAmountFontSize),
+    seatAmountColumnMinEm: Math.max(0.1, numberOrDefault(raw.seatAmountColumnMinEm, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.seatAmountColumnMinEm)),
+    deckAmountColumnMinEm: Math.max(0.1, numberOrDefault(raw.deckAmountColumnMinEm, DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.deckAmountColumnMinEm)),
+    amountFontFamily: String(raw.amountFontFamily || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.amountFontFamily),
+    seatColor: String(raw.seatColor || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.seatColor),
+    deckColor: String(raw.deckColor || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.deckColor),
+    arrowText: String(raw.arrowText || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.arrowText),
+    glyphFilter: String(raw.glyphFilter || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.glyphFilter),
+    deckGlyphFilter: String(raw.deckGlyphFilter || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.deckGlyphFilter),
+    multiplyGlyphFilter: String(raw.multiplyGlyphFilter || DEFAULT_TRICK_BONE_SUMMARY_DISPLAY.multiplyGlyphFilter),
+  };
+}
+
+function trickBoneSummaryDisplayCssRootVars(summaryDisplay) {
+  return {
+    '--layout-trick-info-glyph-size': `${summaryDisplay.glyphSizePx}px`,
+    '--layout-trick-info-gap': `${summaryDisplay.gapPx}px`,
+    '--layout-trick-info-item-gap': `${summaryDisplay.rowGapPx}px`,
+    '--layout-trick-info-margin-top': `${summaryDisplay.marginTopPx}px`,
+    '--layout-trick-info-letter-spacing': `${summaryDisplay.letterSpacingEm}em`,
+    '--layout-trick-info-max-width': `${summaryDisplay.maxWidthPx}px`,
+    '--layout-trick-info-seat-amount-column-min-em': `${summaryDisplay.seatAmountColumnMinEm}em`,
+    '--layout-trick-info-deck-amount-column-min-em': `${summaryDisplay.deckAmountColumnMinEm}em`,
+  };
+}
+
 function normalizeOneOf(value, fallback, allowedValues, aliases = {}) {
   const normalized = String(value || '').trim().toLowerCase();
   const aliased = aliases[normalized] || normalized;
@@ -1277,6 +1334,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
     fallback: trickBoneDefinitionIds,
     allowShort: true,
   });
+  const trickBoneSummaryDisplay = normalizeTrickBoneSummaryDisplay(rawGameConfig.trickBones?.summaryDisplay);
   return {
     debug: {
       enabled: rawGameConfig.debug?.enabled !== false,
@@ -1310,27 +1368,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       defaultUnlocked: defaultUnlockedTrickBones,
       defaultLoadout: defaultTrickLoadout,
       loadoutSize: trickBoneLoadoutSize,
-      summaryDisplay: {
-        glyphSizePx: Math.max(8, Number(rawGameConfig.trickBones?.summaryDisplay?.glyphSizePx) || 14),
-        multiplyGlyphScale: Math.max(0.1, Math.min(1, Number(rawGameConfig.trickBones?.summaryDisplay?.multiplyGlyphScale) || 0.75)),
-        gapPx: Math.max(0, Number(rawGameConfig.trickBones?.summaryDisplay?.gapPx) || 6),
-        rowGapPx: Math.max(0, Number(rawGameConfig.trickBones?.summaryDisplay?.rowGapPx) || 4),
-        marginTopPx: Math.max(0, Number(rawGameConfig.trickBones?.summaryDisplay?.marginTopPx) || 6),
-        maxWidthPx: Math.max(1, Number(rawGameConfig.trickBones?.summaryDisplay?.maxWidthPx) || 220),
-        fontSizeRem: Math.max(0.1, Number(rawGameConfig.trickBones?.summaryDisplay?.fontSizeRem) || 0.68),
-        letterSpacingEm: Math.max(0, Number(rawGameConfig.trickBones?.summaryDisplay?.letterSpacingEm) || 0.05),
-        seatAmountFontSize: String(rawGameConfig.trickBones?.summaryDisplay?.seatAmountFontSize || '160%'),
-        deckAmountFontSize: String(rawGameConfig.trickBones?.summaryDisplay?.deckAmountFontSize || '250%'),
-        seatAmountColumnMinEm: Math.max(0.1, Number(rawGameConfig.trickBones?.summaryDisplay?.seatAmountColumnMinEm) || 1.2),
-        deckAmountColumnMinEm: Math.max(0.1, Number(rawGameConfig.trickBones?.summaryDisplay?.deckAmountColumnMinEm) || 1.5),
-        amountFontFamily: String(rawGameConfig.trickBones?.summaryDisplay?.amountFontFamily || "'Khymeryyanroman4', Inter, system-ui, sans-serif"),
-        seatColor: String(rawGameConfig.trickBones?.summaryDisplay?.seatColor || '#fff'),
-        deckColor: String(rawGameConfig.trickBones?.summaryDisplay?.deckColor || '#fff'),
-        arrowText: String(rawGameConfig.trickBones?.summaryDisplay?.arrowText || '\u00A0'),
-        glyphFilter: String(rawGameConfig.trickBones?.summaryDisplay?.glyphFilter || 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))'),
-        deckGlyphFilter: String(rawGameConfig.trickBones?.summaryDisplay?.deckGlyphFilter || 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))'),
-        multiplyGlyphFilter: String(rawGameConfig.trickBones?.summaryDisplay?.multiplyGlyphFilter || 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.55))'),
-      },
+      summaryDisplay: trickBoneSummaryDisplay,
       definitions: trickBoneDefinitions,
       definitionIds: trickBoneDefinitionIds,
       npcArchetypes: normalizeNpcTrickArchetypes(rawGameConfig.trickBones?.npcArchetypes, trickBoneDefinitions),
@@ -1644,6 +1682,7 @@ export function normalizeScratchbonesGameConfig(rawGameConfig = {}) {
       return {
         ...DEFAULT_CSS_ROOT_VARS,
         ...(rawGameConfig.cssRootVars || {}),
+        ...trickBoneSummaryDisplayCssRootVars(trickBoneSummaryDisplay),
         '--punish-bone-spin-duration': `${punishBoneSpin.spinDurationMs}ms`,
         '--punish-bone-spin-reduced-motion-duration': `${punishBoneSpin.reducedMotionSpinDurationMs}ms`,
         '--punish-bone-spin-start-rotation': '0turn',

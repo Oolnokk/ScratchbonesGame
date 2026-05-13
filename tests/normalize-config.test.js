@@ -149,6 +149,41 @@ describe('normalizeScratchbonesGameConfig trick bones', () => {
     assert.equal(config.trickBones.definitions.punish.wild, true);
   });
 
+  it('derives trick summary layout CSS vars from normalized summary display values', async () => {
+    const { normalizeScratchbonesGameConfig } = await loadNormalizer();
+    const config = normalizeScratchbonesGameConfig({
+      trickBones: {
+        summaryDisplay: {
+          glyphSizePx: 18,
+          gapPx: 7,
+          rowGapPx: 5,
+          marginTopPx: 9,
+          maxWidthPx: 240,
+          letterSpacingEm: 0.08,
+          seatAmountColumnMinEm: 1.4,
+          deckAmountColumnMinEm: 2.1,
+        },
+      },
+      cssRootVars: {
+        '--layout-trick-info-glyph-size': '99px',
+        '--layout-trick-info-gap': '99px',
+        '--layout-trick-info-item-gap': '99px',
+        '--layout-trick-info-margin-top': '99px',
+        '--layout-trick-info-max-width': '99px',
+      },
+    });
+
+    assert.equal(config.trickBones.summaryDisplay.glyphSizePx, 18);
+    assert.equal(config.cssRootVars['--layout-trick-info-glyph-size'], '18px');
+    assert.equal(config.cssRootVars['--layout-trick-info-gap'], '7px');
+    assert.equal(config.cssRootVars['--layout-trick-info-item-gap'], '5px');
+    assert.equal(config.cssRootVars['--layout-trick-info-margin-top'], '9px');
+    assert.equal(config.cssRootVars['--layout-trick-info-max-width'], '240px');
+    assert.equal(config.cssRootVars['--layout-trick-info-letter-spacing'], '0.08em');
+    assert.equal(config.cssRootVars['--layout-trick-info-seat-amount-column-min-em'], '1.4em');
+    assert.equal(config.cssRootVars['--layout-trick-info-deck-amount-column-min-em'], '2.1em');
+  });
+
   it('normalizes configurable trick summary count typography', async () => {
     const { normalizeScratchbonesGameConfig } = await loadNormalizer();
     const config = normalizeScratchbonesGameConfig({
