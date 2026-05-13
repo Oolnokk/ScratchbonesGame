@@ -32,7 +32,8 @@
       "appearance::hat::leather_headband",
       "fine_hood",
       "tankan_tunic",
-      "bandolier1"
+      "bandolier1",
+      "fine_poncho"
     ],
     "conditionalCosmetics": [
       {
@@ -84,7 +85,8 @@
         "wildbeard": 35
       },
       "overwear": {
-        "none": 0
+        "none": 0,
+        "fine_poncho": 35
       }
     },
     "bodyColorRanges": {
@@ -611,7 +613,8 @@
       "tankan_tunic",
       "bandolier1",
       "tankan_bodywrap",
-      "rugged_poncho"
+      "rugged_poncho",
+      "fine_poncho"
     ],
     "conditionalCosmetics": [
       {
@@ -661,6 +664,7 @@
       "overwear": {
         "none": 0,
         "rugged_poncho": 35,
+        "fine_poncho": 35,
         "tankan_bodywrap": 20
       }
     },
