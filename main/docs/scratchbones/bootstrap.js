@@ -3783,7 +3783,7 @@ import { createTutorial } from './tutorial.js';
       const rowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px auto ${metrics.glyphSizePx}px auto ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};max-width:100%;min-width:0;`;
       const arrowStyle = `color:${metrics.color};font-weight:700;`;
       const amountFontSize = context === 'seat' ? '160%' : '250%';
-      const amountStyle = `color:${metrics.color};font-family:'Khymeryyanroman4','Khymeryyanroman',Inter,system-ui,sans-serif;font-weight:800;text-align:left;font-size:${amountFontSize};line-height:1;`;
+      const amountStyle = `color:${metrics.color};font-family:'Khymeryyanroman4',Inter,system-ui,sans-serif;font-weight:800;text-align:left;font-size:${amountFontSize};line-height:1;`;
       return entries.map(([trickType, count]) => `
         <span class="${escapeHtml(itemClassName)}" title="${escapeHtml(trickBoneDisplayLabel(trickType))}: ${count}" style="${escapeHtml(rowStyle)}">
           ${renderTrickBoneSymbolContainer(trickType, { context })}
