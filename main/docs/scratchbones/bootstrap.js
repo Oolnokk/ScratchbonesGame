@@ -7206,10 +7206,14 @@ import { createTutorial } from './tutorial.js';
       burstShell.innerHTML = `<div class="cin-action-burst ${cls}">${escapeHtml(label)}</div>`;
       overlay.appendChild(burstShell);
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
+      const burstDurationSeconds = Number(
+        getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration').replace('s', ''),
+      ) || 2.1;
+      const burstDurationMs = Math.max(1000, Math.round(burstDurationSeconds * 1400));
       setTimeout(() => {
         burstShell.remove();
         clearChallengeTankanColumns(app);
-      }, Math.max(1000, Math.round((Number(getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration').replace('s', '')) || 2.1) * 1400)));
+      }, burstDurationMs);
     }
 // Phase 2a: Reveal (no fold)
     function showRevealCinematic(challengerIndex, challengedIndex, play, success, onClose) {
