@@ -364,8 +364,8 @@ describe('generateIdentityFromSeed — engh_sho culture', () => {
   });
 
   const GENDER_REPLACEMENTS = {
-    male: ['gold-resin', 'purple-stone', 'sharp-point', 'ringing-cup', 'green-gem', 'clear-stone', 'green-jewel', 'fine-gem', 'milk-gem', 'red-gem', 'blue-gem'],
-    female: ['small-nail', 'new-leaf', 'spotted-stone', 'river-stalk', 'grey-stone', 'sharp-spur'],
+    male: ['gold-resin', 'purple-stone', 'sharp-point', 'green-gem', 'clear-stone', 'green-jewel', 'fine-gem', 'milk-gem', 'red-gem', 'blue-gem'],
+    female: ['small-nail', 'new-leaf', 'spotted-stone', 'grey-stone'],
   };
 
   it('first name is always drawn from the word list or the configured gendered replacements', () => {
@@ -403,6 +403,9 @@ describe('generateIdentityFromSeed — engh_sho culture', () => {
   it('uses gendered replacements for strongly gender-connoted real names', () => {
     assert.equal(ng.generateIdentityFromSeed('x-150', 'male', 'engh_sho'), 'Red-gem Nikpuk');
     assert.equal(ng.generateIdentityFromSeed('brad-23', 'female', 'engh_sho'), 'Small-nail Muktankut');
+    assert.equal(ng.generateIdentityFromSeed('bell-233', 'male', 'engh_sho'), 'Bell Munmupat');
+    assert.equal(ng.generateIdentityFromSeed('reed-105', 'female', 'engh_sho'), 'Reed Nupmak');
+    assert.equal(ng.generateIdentityFromSeed('thorn-0', 'female', 'engh_sho'), 'Thorn Ankapnank');
   });
 
   it('known output for seed "test-seed-001"', () => {

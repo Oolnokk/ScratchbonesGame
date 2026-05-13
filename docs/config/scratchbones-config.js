@@ -321,7 +321,6 @@ window.SCRATCHBONES_CONFIG = {
                 "amber": "gold-resin",
                 "amethyst": "purple-stone",
                 "barb": "sharp-point",
-                "bell": "ringing-cup",
                 "beryl": "green-gem",
                 "crystal": "clear-stone",
                 "emerald": "green-jewel",
@@ -334,9 +333,7 @@ window.SCRATCHBONES_CONFIG = {
                 "brad": "small-nail",
                 "bud": "new-leaf",
                 "jasper": "spotted-stone",
-                "reed": "river-stalk",
-                "stan": "grey-stone",
-                "thorn": "sharp-spur"
+                "stan": "grey-stone"
               }
             },
             "surname": {
