@@ -169,11 +169,13 @@ import { createTutorial } from './tutorial.js';
           min-height: 0 !important;
           aspect-ratio: 1 / 1;
         }
+        #aiSidebar .aiSeatRightCol {
+          gap: calc(var(--layout-seat-hand-preview-margin-top) * var(--layout-seat-container-scale));
+        }
         #aiSidebar .seatHandPreview {
           display: flex;
           flex-wrap: nowrap;
           gap: 0;
-          margin-top: calc(var(--layout-seat-hand-preview-margin-top) * var(--layout-seat-container-scale));
           overflow: visible;
         }
         #aiSidebar .seatHandCard {
@@ -5657,10 +5659,12 @@ import { createTutorial } from './tutorial.js';
                 ${renderSeatTrickLoadoutInfo(p)}
                 <div class="seatStatus">${p.lastAction}</div>
               </div>
-              <div class="seatAvatarBox" data-proj-id="avatar-${p.id}" style="width:var(--layout-seat-avatar-size,132px);height:var(--layout-seat-avatar-size,132px);aspect-ratio:1/1;">
-                <canvas class="seatPortrait" data-seat-id="${p.id}" width="200" height="200"></canvas>
+              <div class="aiSeatRightCol" data-proj-id="right-col-${p.id}">
+                <div class="seatAvatarBox" data-proj-id="avatar-${p.id}" style="width:var(--layout-seat-avatar-size,132px);height:var(--layout-seat-avatar-size,132px);aspect-ratio:1/1;">
+                  <canvas class="seatPortrait" data-seat-id="${p.id}" width="200" height="200"></canvas>
+                </div>
+                ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
               </div>
-              ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
             </div>
           `).join('')}
         </div>
