@@ -30,7 +30,9 @@
               "layerRole": "base",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/finehood-base_m.png",
-                "colors": ["A"]
+                "colors": [
+                  "A"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -50,7 +52,9 @@
               "layerRole": "trim",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/finehood-trim_m.png",
-                "colors": ["B"]
+                "colors": [
+                  "B"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -78,7 +82,9 @@
               "layerRole": "base",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/finehood-base_f.png",
-                "colors": ["A"]
+                "colors": [
+                  "A"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -98,7 +104,9 @@
               "layerRole": "trim",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/finehood-trim_f.png",
-                "colors": ["B"]
+                "colors": [
+                  "B"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -126,7 +134,9 @@
               "layerRole": "base",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/tl_finehood-base.png",
-                "colors": ["A"]
+                "colors": [
+                  "A"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -146,7 +156,9 @@
               "layerRole": "trim",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/tl_finehood-trim.png",
-                "colors": ["B"]
+                "colors": [
+                  "B"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -174,7 +186,9 @@
               "layerRole": "base",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/kenk_finehood-base_m.png",
-                "colors": ["A"]
+                "colors": [
+                  "A"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -194,7 +208,9 @@
               "layerRole": "trim",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/kenk_finehood-trim_m.png",
-                "colors": ["B"]
+                "colors": [
+                  "B"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -222,7 +238,9 @@
               "layerRole": "base",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/kenk_finehood-base_f.png",
-                "colors": ["A"]
+                "colors": [
+                  "A"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -242,7 +260,9 @@
               "layerRole": "trim",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/kenk_finehood-trim_f.png",
-                "colors": ["B"]
+                "colors": [
+                  "B"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -270,7 +290,9 @@
               "layerRole": "base",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/engh_finehood_base_m.png",
-                "colors": ["A"]
+                "colors": [
+                  "A"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -290,7 +312,9 @@
               "layerRole": "trim",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/engh_finehood_trim_m.png",
-                "colors": ["B"]
+                "colors": [
+                  "B"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -318,7 +342,9 @@
               "layerRole": "base",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/engh_finehood_base_f.png",
-                "colors": ["A"]
+                "colors": [
+                  "A"
+                ]
               },
               "spriteStyle": {
                 "base": {
@@ -338,7 +364,113 @@
               "layerRole": "trim",
               "image": {
                 "url": "./assets/cosmetics/clothes/hood/engh_finehood_trim_f.png",
-                "colors": ["B"]
+                "colors": [
+                  "B"
+                ]
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "head": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rakakoan_male": {
+      "parts": {
+        "head": {
+          "layers": {
+            "front": {
+              "layerRole": "base",
+              "image": {
+                "url": "./assets/cosmetics/clothes/hood/kenk_finehood-base_m.png",
+                "colors": [
+                  "A"
+                ]
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "head": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            },
+            "front_trim": {
+              "layerRole": "trim",
+              "image": {
+                "url": "./assets/cosmetics/clothes/hood/kenk_finehood-trim_m.png",
+                "colors": [
+                  "B"
+                ]
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "head": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rakakoan_female": {
+      "parts": {
+        "head": {
+          "layers": {
+            "front": {
+              "layerRole": "base",
+              "image": {
+                "url": "./assets/cosmetics/clothes/hood/kenk_finehood-base_f.png",
+                "colors": [
+                  "A"
+                ]
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "head": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            },
+            "front_trim": {
+              "layerRole": "trim",
+              "image": {
+                "url": "./assets/cosmetics/clothes/hood/kenk_finehood-trim_f.png",
+                "colors": [
+                  "B"
+                ]
               },
               "spriteStyle": {
                 "base": {
