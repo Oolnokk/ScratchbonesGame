@@ -547,6 +547,7 @@ const _MOUTH_SPECIES_MAP = {
   'engh_sho': { sprite: 'engh',     gendered: true,  masked: false },
   'tletingan':{ sprite: 'tletingan',gendered: true,   masked: false },
   'kenkari':  { sprite: 'kenkari',  gendered: false,  masked: true  },
+  'rakakoan': { sprite: 'kenkari',  gendered: false,  masked: true  },
 };
 
 /**
@@ -1047,11 +1048,20 @@ function portraitVariantKeysForFighter(fighter) {
   const speciesId = String(fighter?.speciesId || '').trim();
   const gender = String(fighter?.gender || '').trim();
   if (!speciesId || !gender) return [];
-  return [...new Set([
+  const keys = [
     `${speciesId}_${gender}`,
     `${speciesId.replace(/_/g, '-')}_${gender}`,
     `${speciesId.replace(/-/g, '_')}_${gender}`,
-  ])];
+  ];
+  const parentSpeciesId = window.SCRATCHBONES_CONFIG?.game?.appearanceEditor?.species?.[speciesId]?.parentSpecies;
+  if (parentSpeciesId) {
+    keys.push(
+      `${parentSpeciesId}_${gender}`,
+      `${parentSpeciesId.replace(/_/g, '-')}_${gender}`,
+      `${parentSpeciesId.replace(/-/g, '_')}_${gender}`,
+    );
+  }
+  return [...new Set(keys)];
 }
 
 function resolveOptionLayers(option, fighter) {

@@ -221,6 +221,7 @@ window.SCRATCHBONES_CONFIG = {
           "mao_ao": "mao_ao",
           "mao-ao": "mao_ao",
           "kenkari": "kenkari",
+          "rakakoan": "kenkari",
           "tletingan": "slagothim",
           "engh_sho": "engh_sho",
           "engh-sho": "engh_sho"
@@ -2951,6 +2952,7 @@ window.SCRATCHBONES_CONFIG.game.layout.fitter = window.SCRATCHBONES_CONFIG.game.
   }));
   species.rakakoan = {
     label: "Rakako'an",
+    parentSpecies: 'kenkari',
     genders: ['male', 'female'],
     swatchBase: '#7dc89a',
     male: {
