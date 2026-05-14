@@ -7439,6 +7439,7 @@ import { createTutorial } from './tutorial.js';
       });
     }
     // ── UI projection mapping mode ────────────────────────────────────────
+    const MAP_UI_SELECTOR = '#projMapBtn,#projVarBtn,#projVarPanel,#projExportBtn,#projSubBtn,#projEditBtn,#projLayerPreviewBtn,#editorStatus';
     const projectionUiState = {
       active: false,
       editMode: false,
@@ -7450,6 +7451,8 @@ import { createTutorial } from './tutorial.js';
       debugOutlineElements: new Set(),
       debugOutlineFrame: 0,
       ui: null,
+      mapChainElements: [],
+      mapChainIndex: 0,
     };
     function isEditableGameplayShortcutTarget(target) {
       if (!(target instanceof Element)) return false;
@@ -7542,6 +7545,7 @@ import { createTutorial } from './tutorial.js';
       document.body.querySelectorAll('*').forEach((element) => {
         if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) return;
         if (['SCRIPT', 'STYLE', 'LINK', 'META'].includes(element.tagName)) return;
+        if (element.closest(MAP_UI_SELECTOR)) return;
         nextElements.add(element);
         element.setAttribute('data-proj-debug-outline', String(getProjectionDebugDepth(element)));
         element.setAttribute('data-proj-debug-name', getProjectionDebugElementName(element));
@@ -8233,10 +8237,37 @@ import { createTutorial } from './tutorial.js';
       });
       document.addEventListener('pointerup', finishAuthoredPointer);
       document.addEventListener('pointercancel', finishAuthoredPointer);
+      document.addEventListener('wheel', (event) => {
+        if (!projectionUiState.active || projectionUiState.editMode) return;
+        if (!projectionUiState.mapChainElements.length) return;
+        event.preventDefault();
+        const delta = event.deltaY > 0 ? 1 : -1;
+        const newIndex = Math.max(0, Math.min(projectionUiState.mapChainElements.length - 1, projectionUiState.mapChainIndex + delta));
+        if (newIndex === projectionUiState.mapChainIndex) return;
+        projectionUiState.mapChainIndex = newIndex;
+        const el = projectionUiState.mapChainElements[newIndex];
+        const debugName = getProjectionDebugElementName(el);
+        if (debugName) {
+          copyTextToClipboard(debugName);
+          const total = projectionUiState.mapChainElements.length;
+          updateEditorStatus(`[${newIndex + 1}/${total}] Copied: ${debugName}`);
+        }
+      }, { passive: false });
       document.addEventListener('click', (event) => {
         if (!projectionUiState.active) return;
         if (event.target.closest('#projMapBtn,#projVarBtn,#projVarPanel,#projExportBtn,#projSubBtn,#projEditBtn,#projLayerPreviewBtn')) return;
         if (!projectionUiState.editMode) {
+          const target = event.target instanceof Element ? event.target : null;
+          if (target) {
+            const chain = [];
+            let el = target;
+            while (el && el !== document.documentElement) {
+              if (!el.closest(MAP_UI_SELECTOR)) chain.push(el);
+              el = el.parentElement;
+            }
+            projectionUiState.mapChainElements = chain;
+            projectionUiState.mapChainIndex = 0;
+          }
           const debugName = getProjectionDebugElementName(event.target);
           if (debugName) {
             copyTextToClipboard(debugName);
