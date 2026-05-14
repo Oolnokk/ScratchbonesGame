@@ -5373,7 +5373,6 @@ import { createTutorial } from './tutorial.js';
     }
 
     function render() {
-      SCRATCHBONES_LAYER_MANAGER.clear();
       seatAvatarAnim.capturePreRender();
       cardAnimator.capturePreRender();
       // Flush pending deal reveals: capturePreRender has already skipped these cards
@@ -5989,6 +5988,7 @@ import { createTutorial } from './tutorial.js';
         }
       }
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
+      else SCRATCHBONES_LAYER_MANAGER.clear();
       cardAnimator.animatePostRender();
       seatAvatarAnim.animatePostRender();
       if (state.tutorialPaused) activeTutorial?.refresh?.();
