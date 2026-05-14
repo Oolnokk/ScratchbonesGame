@@ -476,9 +476,9 @@
           if (!el || el.hidden) return;
           const r = el.getBoundingClientRect();
           if (r.width < 1 || r.height < 1) return;
-          const style = getComputedStyle(el);
           const rect = { x: r.left - ar.left, y: r.top - ar.top, w: r.width, h: r.height };
           if (st?.immune) {
+            const style = getComputedStyle(el);
             const borderRadius = getBorderRadiusMeta(style);
             const type = classifyImmuneElement(el, role);
             const textHash = type === 'text' ? fastHash((el.innerText || el.textContent || '').trim()) : '';
