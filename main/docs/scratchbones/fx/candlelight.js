@@ -57,6 +57,8 @@
     let startRetryTimerId = 0;
     let resizeObserver = null;
     let appMutationObserver = null;
+    let lerpClonesObserver = null;
+    let cachedLerpClones = [];
     let runLoopEnabled = false;
 
     // ── Canvas: occluder shadows (mix-blend-mode: multiply) ──────────────────
@@ -476,9 +478,9 @@
           if (!el || el.hidden) return;
           const r = el.getBoundingClientRect();
           if (r.width < 1 || r.height < 1) return;
-          const style = getComputedStyle(el);
           const rect = { x: r.left - ar.left, y: r.top - ar.top, w: r.width, h: r.height };
           if (st?.immune) {
+            const style = getComputedStyle(el);
             const borderRadius = getBorderRadiusMeta(style);
             const type = classifyImmuneElement(el, role);
             const textHash = type === 'text' ? fastHash((el.innerText || el.textContent || '').trim()) : '';
@@ -867,7 +869,7 @@
         // Clones on document.body get a CSS filter that approximates their position
         // in the candlelight (dark + warm near source, dim + cool far from it).
         const ar = appRef.getBoundingClientRect();
-        document.querySelectorAll('[data-candle-lerp-clone]').forEach(el => {
+        cachedLerpClones.forEach(el => {
           const r  = el.getBoundingClientRect();
           const cx = r.left + r.width  * 0.5 - ar.left;
           const cy = r.top  + r.height * 0.5 - ar.top;
@@ -900,6 +902,11 @@
         appMutationObserver.disconnect();
         appMutationObserver = null;
       }
+      if (lerpClonesObserver) {
+        lerpClonesObserver.disconnect();
+        lerpClonesObserver = null;
+      }
+      cachedLerpClones = [];
       appRef = null;
       appViewportGeometry = null;
     }
@@ -946,6 +953,14 @@
       if (appMutationObserver) appMutationObserver.disconnect();
       appMutationObserver = new MutationObserver(() => ensureInApp(app));
       appMutationObserver.observe(app, { childList: true });
+
+      // Cache lerp clones so draw() doesn't querySelectorAll every frame
+      if (lerpClonesObserver) lerpClonesObserver.disconnect();
+      lerpClonesObserver = new MutationObserver(() => {
+        cachedLerpClones = Array.from(document.querySelectorAll('[data-candle-lerp-clone]'));
+      });
+      lerpClonesObserver.observe(document.body, { childList: true });
+      cachedLerpClones = Array.from(document.querySelectorAll('[data-candle-lerp-clone]'));
 
       requestDrawFrame();
     }
