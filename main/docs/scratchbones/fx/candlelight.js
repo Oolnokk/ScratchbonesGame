@@ -57,8 +57,6 @@
     let startRetryTimerId = 0;
     let resizeObserver = null;
     let appMutationObserver = null;
-    let lerpClonesObserver = null;
-    let cachedLerpClones = [];
     let runLoopEnabled = false;
 
     // ── Canvas: occluder shadows (mix-blend-mode: multiply) ──────────────────
@@ -869,7 +867,7 @@
         // Clones on document.body get a CSS filter that approximates their position
         // in the candlelight (dark + warm near source, dim + cool far from it).
         const ar = appRef.getBoundingClientRect();
-        cachedLerpClones.forEach(el => {
+        document.querySelectorAll('[data-candle-lerp-clone]').forEach(el => {
           const r  = el.getBoundingClientRect();
           const cx = r.left + r.width  * 0.5 - ar.left;
           const cy = r.top  + r.height * 0.5 - ar.top;
@@ -902,11 +900,6 @@
         appMutationObserver.disconnect();
         appMutationObserver = null;
       }
-      if (lerpClonesObserver) {
-        lerpClonesObserver.disconnect();
-        lerpClonesObserver = null;
-      }
-      cachedLerpClones = [];
       appRef = null;
       appViewportGeometry = null;
     }
@@ -953,14 +946,6 @@
       if (appMutationObserver) appMutationObserver.disconnect();
       appMutationObserver = new MutationObserver(() => ensureInApp(app));
       appMutationObserver.observe(app, { childList: true });
-
-      // Cache lerp clones so draw() doesn't querySelectorAll every frame
-      if (lerpClonesObserver) lerpClonesObserver.disconnect();
-      lerpClonesObserver = new MutationObserver(() => {
-        cachedLerpClones = Array.from(document.querySelectorAll('[data-candle-lerp-clone]'));
-      });
-      lerpClonesObserver.observe(document.body, { childList: true });
-      cachedLerpClones = Array.from(document.querySelectorAll('[data-candle-lerp-clone]'));
 
       requestDrawFrame();
     }
