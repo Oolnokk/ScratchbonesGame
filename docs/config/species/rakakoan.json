@@ -36,7 +36,8 @@
       "tankan_tunic",
       "bandolier1",
       "tankan_bodywrap",
-      "rugged_poncho"
+      "rugged_poncho",
+      "fine_poncho"
     ],
     "forcedCosmetics": {
       "eyes": "kenk_eyedisks"
@@ -317,7 +318,8 @@
       "tankan_tunic",
       "bandolier1",
       "tankan_bodywrap",
-      "rugged_poncho"
+      "rugged_poncho",
+      "fine_poncho"
     ],
     "forcedCosmetics": {
       "eyes": "none"
