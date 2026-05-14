@@ -3859,7 +3859,7 @@ import { createTutorial } from './tutorial.js';
       const metrics = trickSummaryMetrics(context);
       const amountColumnMinEm = context === 'seat' ? metrics.seatAmountColumnMinEm : metrics.deckAmountColumnMinEm;
       const amountColumnSize = `minmax(${amountColumnMinEm}em,auto)`;
-      const seatRowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px ${metrics.glyphSizePx}px ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};width:max-content;max-width:100%;min-width:0;overflow:hidden;`;
+      const seatRowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px ${metrics.glyphSizePx}px ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};width:max-content;max-width:100%;min-width:0;overflow:hidden;height:${metrics.glyphSizePx}px;`;
       const deckRowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px auto ${metrics.glyphSizePx}px auto ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};max-width:100%;min-width:0;`;
       const rowStyle = context === 'seat' ? seatRowStyle : deckRowStyle;
       const arrowStyle = `color:${metrics.color};font-weight:700;`;
