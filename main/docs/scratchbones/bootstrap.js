@@ -5662,14 +5662,16 @@ import { createTutorial } from './tutorial.js';
           <div class="humanSeatCard ${player.eliminated ? 'eliminated' : ''}" data-proj-id="human-seat">
             <div class="seatInfo" data-proj-id="info-human" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
               <div class="seatName">${seatLabel(player)}</div>
-              <div class="seatMeta">Cards ${player.hand.length} · Clears ${player.clears}</div>
               ${renderSeatChipBadge(player)}
               ${renderSeatCoinRow(player)}
               ${renderSeatTrickLoadoutInfo(player)}
               <div class="seatStatus">${player.lastAction}</div>
             </div>
-            <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
-              <canvas class="seatPortrait" data-seat-id="${hs}" width="200" height="200"></canvas>
+            <div class="humanSeatRightCol" data-proj-id="right-col-human">
+              <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
+                <canvas class="seatPortrait" data-seat-id="${hs}" width="200" height="200"></canvas>
+              </div>
+              <div class="seatMeta">Cards ${player.hand.length} · Clears ${player.clears}</div>
             </div>
           </div>
         </div>
