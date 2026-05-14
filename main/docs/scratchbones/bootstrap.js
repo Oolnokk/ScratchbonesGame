@@ -171,12 +171,14 @@ import { createTutorial } from './tutorial.js';
         }
         #aiSidebar .aiSeatRightCol {
           gap: calc(var(--layout-seat-hand-preview-margin-top) * var(--layout-seat-container-scale));
+          width: calc(var(--layout-seat-avatar-size) * var(--layout-seat-container-scale));
         }
         #aiSidebar .seatHandPreview {
           display: flex;
           flex-wrap: nowrap;
           gap: 0;
-          overflow: visible;
+          width: 100%;
+          overflow: hidden;
         }
         #aiSidebar .seatHandCard {
           width: calc(var(--layout-seat-hand-preview-card-width) * var(--layout-seat-container-scale));
