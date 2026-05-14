@@ -8227,6 +8227,14 @@ import { createTutorial } from './tutorial.js';
       document.addEventListener('click', (event) => {
         if (!projectionUiState.active) return;
         if (event.target.closest('#projMapBtn,#projVarBtn,#projVarPanel,#projExportBtn,#projSubBtn,#projEditBtn,#projLayerPreviewBtn')) return;
+        if (!projectionUiState.editMode) {
+          const debugName = getProjectionDebugElementName(event.target);
+          if (debugName) {
+            copyTextToClipboard(debugName);
+            updateEditorStatus(`Copied: ${debugName}`);
+          }
+          return;
+        }
         // Sub-layer mode: select sub overlays
         if (authoredEditorState.subLayerMode) {
           const subOverlay = event.target.closest('.authoredSubOverlay');
