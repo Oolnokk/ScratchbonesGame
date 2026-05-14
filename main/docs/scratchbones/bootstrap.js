@@ -4437,7 +4437,6 @@ import { createTutorial } from './tutorial.js';
       const liarBurstDurationSec = clampNumber(Number(cinematicLayout.liarBurstDurationSec) || 3.2, 0.6, 8);
       const liarBurstEndYPct = clampNumber(Number(cinematicLayout.liarBurstEndYPct) || -180, -320, -110);
       const liarBurstOffsetXPx = Number.isFinite(Number(cinematicLayout.liarBurstOffsetXPx)) ? Number(cinematicLayout.liarBurstOffsetXPx) : -232;
-      const tankanColumnsLayout = cinematicLayout.tankanColumns || {};
       const tankanColumnEdgeInsetPx = clampNumber(Number(tankanColumnsLayout.edgeInsetPx), 0, 120);
       const tankanColumnFontSize = String(tankanColumnsLayout.fontSize);
       const tankanColumnLetterSpacing = String(tankanColumnsLayout.letterSpacing);
