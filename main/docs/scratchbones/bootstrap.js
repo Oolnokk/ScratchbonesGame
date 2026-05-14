@@ -251,6 +251,8 @@ import { createTutorial } from './tutorial.js';
           margin-top: var(--layout-trick-info-margin-top);
           max-width: var(--layout-trick-info-max-width);
           letter-spacing: var(--layout-trick-info-letter-spacing);
+          min-height: 0;
+          overflow: hidden;
         }
         .trickDeckInfo {
           align-self: center;
