@@ -731,10 +731,34 @@
     const base = specData ? specData.swatchBase : '#a09070';
     const colorOpts = genderData ? genderData.colorOptions : [];
 
-    // Species picker
-    const speciesBtns = Object.entries(SPECIES_DATA).map(([sid, sd]) =>
-      `<button class="sb-sel-btn${speciesId === sid ? ' selected' : ''}" data-species="${sid}">${esc(sd.label)}</button>`
-    ).join('');
+    // Build parent->children map for sub-species
+    const subSpeciesMap = {};
+    for (const [sid, sd] of Object.entries(SPECIES_DATA)) {
+      if (sd.parentSpecies) {
+        if (!subSpeciesMap[sd.parentSpecies]) subSpeciesMap[sd.parentSpecies] = [];
+        subSpeciesMap[sd.parentSpecies].push(sid);
+      }
+    }
+    const effectiveParentId = SPECIES_DATA[speciesId]?.parentSpecies || speciesId;
+
+    // Species picker (exclude sub-species from top-level buttons)
+    const speciesBtns = Object.entries(SPECIES_DATA)
+      .filter(([sid, sd]) => !sd.parentSpecies)
+      .map(([sid, sd]) =>
+        `<button class="sb-sel-btn${effectiveParentId === sid ? ' selected' : ''}" data-species="${sid}">${esc(sd.label)}</button>`
+      ).join('');
+
+    // Sub-species toggle (shown below species picker when the parent has variants)
+    const subSpeciesIds = subSpeciesMap[effectiveParentId] || [];
+    const subSpeciesHtml = subSpeciesIds.length
+      ? `<div class="sb-label" style="margin-top:4px;">Variant</div><div class="sb-sel-group">${
+          subSpeciesIds.map(childId => {
+            const childData = SPECIES_DATA[childId];
+            const isActive = speciesId === childId;
+            return `<button class="sb-sel-btn sb-subspecies-btn${isActive ? ' selected' : ''}" data-subspecies="${childId}" data-parent-species="${effectiveParentId}">${esc(childData?.label || childId)}</button>`;
+          }).join('')
+        }</div>`
+      : '';
 
     // Gender picker
     const availGenders = specData ? specData.genders : ['male'];
@@ -790,6 +814,7 @@
             </div>
             <div class="sb-label" style="margin-top:8px;">Species</div>
             <div class="sb-sel-group">${speciesBtns}</div>
+            ${subSpeciesHtml}
             <div class="sb-label" style="margin-top:8px;">Gender</div>
             <div class="sb-sel-group">${genderBtns}</div>
             <div class="sb-label" style="margin-top:8px;">Cosmetics</div>
@@ -1369,6 +1394,26 @@
           _editAppearance.bodyColors.B = { h: opts[0].h, s: opts[0].s, v: opts[0].v };
           _editAppearance.bodyColors.C = deriveCFromA(opts[0]);
         }
+        render();
+      });
+    });
+
+    el.querySelectorAll('[data-subspecies]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!_editAppearance) return;
+        const childId = btn.dataset.subspecies;
+        const parentId = btn.dataset.parentSpecies;
+        const wasActive = _editAppearance.speciesId === childId;
+        const newSpeciesId = wasActive ? parentId : childId;
+        const newGenderData = SPECIES_DATA[newSpeciesId]?.[_editAppearance.gender];
+        const validSlots = new Set((newGenderData?.slots || []).map(s => s.slot));
+        const oldCosmetics = { ..._editAppearance.cosmetics };
+        const newCosmetics = defaultCosmeticsFor(newSpeciesId, _editAppearance.gender);
+        for (const [slot, val] of Object.entries(oldCosmetics)) {
+          if (validSlots.has(slot)) newCosmetics[slot] = val;
+        }
+        _editAppearance.speciesId = newSpeciesId;
+        _editAppearance.cosmetics = newCosmetics;
         render();
       });
     });
