@@ -261,6 +261,8 @@ import { createTutorial } from './tutorial.js';
           display: flex;
           flex-direction: column;
           gap: var(--layout-trick-info-item-gap);
+          min-width: 0;
+          overflow: hidden;
         }
         .trickDeckInfoItem,
         .seatTrickLoadoutInfoItem {
