@@ -6093,11 +6093,20 @@ import { createTutorial } from './tutorial.js';
       const speciesId = String(fighter?.speciesId || '').trim();
       const gender = String(fighter?.gender || '').trim();
       if (!speciesId || !gender) return [];
-      return [...new Set([
+      const keys = [
         `${speciesId}_${gender}`,
         `${speciesId.replace(/_/g, '-')}_${gender}`,
         `${speciesId.replace(/-/g, '_')}_${gender}`,
-      ])];
+      ];
+      const parentSpeciesId = window.SCRATCHBONES_CONFIG?.game?.appearanceEditor?.species?.[speciesId]?.parentSpecies;
+      if (parentSpeciesId) {
+        keys.push(
+          `${parentSpeciesId}_${gender}`,
+          `${parentSpeciesId.replace(/_/g, '-')}_${gender}`,
+          `${parentSpeciesId.replace(/-/g, '_')}_${gender}`,
+        );
+      }
+      return [...new Set(keys)];
     }
     function resolvePortraitOptionLayersForFighter(option, fighter) {
       if (!option) return [];
