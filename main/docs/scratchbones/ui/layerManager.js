@@ -98,7 +98,7 @@ function snapshotManagedElementStyle(element) {
 function hasInlineTransform(element) {
   if (!element) return false;
   const inlineValue = element.style.transform;
-  return typeof inlineValue === 'string' && inlineValue.trim().length > 0;
+  return typeof inlineValue === 'string' && inlineValue.trim().length > 0 && inlineValue.trim() !== 'none';
 }
 
 function readSizingToken(inlineValue, computedValue, fallbackPx) {
