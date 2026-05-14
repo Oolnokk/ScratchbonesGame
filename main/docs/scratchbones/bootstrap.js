@@ -162,12 +162,23 @@ import { createTutorial } from './tutorial.js';
           width: calc(var(--layout-human-seat-avatar-size) * var(--layout-seat-container-scale)) !important;
           height: calc(var(--layout-human-seat-avatar-size) * var(--layout-seat-container-scale)) !important;
         }
+        .humanSeatZone .humanSeatCard .seatAvatarBox {
+          width: 100% !important;
+          height: auto !important;
+          flex: 1 1 0 !important;
+          min-height: 0 !important;
+          aspect-ratio: 1 / 1;
+        }
+        #aiSidebar .aiSeatRightCol {
+          gap: calc(var(--layout-seat-hand-preview-margin-top) * var(--layout-seat-container-scale));
+          width: calc(var(--layout-seat-avatar-size) * var(--layout-seat-container-scale));
+        }
         #aiSidebar .seatHandPreview {
           display: flex;
           flex-wrap: nowrap;
           gap: 0;
-          margin-top: calc(var(--layout-seat-hand-preview-margin-top) * var(--layout-seat-container-scale));
-          overflow: visible;
+          width: 100%;
+          overflow: hidden;
         }
         #aiSidebar .seatHandCard {
           width: calc(var(--layout-seat-hand-preview-card-width) * var(--layout-seat-container-scale));
@@ -240,6 +251,8 @@ import { createTutorial } from './tutorial.js';
           margin-top: var(--layout-trick-info-margin-top);
           max-width: var(--layout-trick-info-max-width);
           letter-spacing: var(--layout-trick-info-letter-spacing);
+          min-height: 0;
+          overflow: hidden;
         }
         .trickDeckInfo {
           align-self: center;
@@ -250,6 +263,8 @@ import { createTutorial } from './tutorial.js';
           display: flex;
           flex-direction: column;
           gap: var(--layout-trick-info-item-gap);
+          min-width: 0;
+          overflow: hidden;
         }
         .trickDeckInfoItem,
         .seatTrickLoadoutInfoItem {
@@ -3844,7 +3859,7 @@ import { createTutorial } from './tutorial.js';
       const metrics = trickSummaryMetrics(context);
       const amountColumnMinEm = context === 'seat' ? metrics.seatAmountColumnMinEm : metrics.deckAmountColumnMinEm;
       const amountColumnSize = `minmax(${amountColumnMinEm}em,auto)`;
-      const seatRowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px ${metrics.glyphSizePx}px ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};width:max-content;max-width:100%;min-width:0;overflow:hidden;`;
+      const seatRowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px ${metrics.glyphSizePx}px ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};width:max-content;max-width:100%;min-width:0;overflow:hidden;height:${metrics.glyphSizePx}px;`;
       const deckRowStyle = `display:grid;grid-template-columns:${metrics.glyphSizePx}px auto ${metrics.glyphSizePx}px auto ${amountColumnSize};align-items:center;column-gap:${metrics.gapPx}px;white-space:nowrap;color:${metrics.color};max-width:100%;min-width:0;`;
       const rowStyle = context === 'seat' ? seatRowStyle : deckRowStyle;
       const arrowStyle = `color:${metrics.color};font-weight:700;`;
@@ -3865,16 +3880,27 @@ import { createTutorial } from './tutorial.js';
       `;
       }).join('');
     }
-    function renderTrickSummaryShell({ className, rowsClassName, rows, ariaLabel, context = 'seat', dataAttribute = '' }) {
+    function renderTrickSummaryShell({ className, rowsClassName, rows, ariaLabel, context = 'seat', dataAttribute = '', rowCount = 0 }) {
       const metrics = trickSummaryMetrics(context);
       const marginTopPx = context === 'deck' ? 0 : metrics.marginTopPx;
       const maxWidthStyle = context === 'deck'
         ? `${metrics.maxWidthPx}px`
         : `min(100%,${metrics.maxWidthPx}px)`;
       const contextLayoutStyle = context === 'deck' ? 'align-self:center;' : 'width:100%;min-width:0;';
-      const shellStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;margin-top:${marginTopPx}px;max-width:${maxWidthStyle};letter-spacing:${metrics.letterSpacingEm}em;font-size:${metrics.fontSizeRem}rem;color:${metrics.color};${contextLayoutStyle}overflow:hidden;`;
+      const MAX_UNSCALED_ROWS = 2;
+      const needsScale = context === 'seat' && rowCount > MAX_UNSCALED_ROWS;
+      const contentScale = needsScale ? MAX_UNSCALED_ROWS / rowCount : 1;
+      const naturalRowsH = rowCount > 0
+        ? metrics.glyphSizePx * rowCount + metrics.rowGapPx * Math.max(0, rowCount - 1)
+        : 0;
+      const shellHeightStyle = needsScale ? `height:${(naturalRowsH * contentScale).toFixed(2)}px;` : '';
+      const shellStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;margin-top:${marginTopPx}px;max-width:${maxWidthStyle};letter-spacing:${metrics.letterSpacingEm}em;font-size:${metrics.fontSizeRem}rem;color:${metrics.color};${contextLayoutStyle}overflow:hidden;${shellHeightStyle}`;
       const rowsStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;min-width:0;max-width:100%;overflow:hidden;`;
-      return `<div class="${escapeHtml(className)}" ${dataAttribute} aria-label="${escapeHtml(ariaLabel)}" style="${escapeHtml(shellStyle)}"><div class="${escapeHtml(rowsClassName)} tiny" style="${escapeHtml(rowsStyle)}">${rows}</div></div>`;
+      const rowsEl = `<div class="${escapeHtml(rowsClassName)} tiny" style="${escapeHtml(rowsStyle)}">${rows}</div>`;
+      const innerContent = needsScale
+        ? `<div style="${escapeHtml(`transform:scale(${contentScale.toFixed(4)});transform-origin:top left;width:${(100/contentScale).toFixed(2)}%;display:block;`)}">${rowsEl}</div>`
+        : rowsEl;
+      return `<div class="${escapeHtml(className)}" ${dataAttribute} aria-label="${escapeHtml(ariaLabel)}" style="${escapeHtml(shellStyle)}">${innerContent}</div>`;
     }
     function renderTrickDeckInfo(composition = deckCompositionSnapshot()) {
       const entries = sortedTrickCountEntries(composition?.trickCounts);
@@ -3887,7 +3913,7 @@ import { createTutorial } from './tutorial.js';
       const entries = sortedTrickCountEntries(trickCountsFromLoadouts([player?.playerLoadout || []]));
       if (!entries.length) return '';
       const rows = renderTrickCountRows(entries, 'seatTrickLoadoutInfoItem', { context: 'seat' });
-      return renderTrickSummaryShell({ className: 'seatTrickLoadoutInfo', rowsClassName: 'seatTrickLoadoutInfoRows', rows, ariaLabel: `${seatLabel(player)} trick bone loadout`, context: 'seat', dataAttribute: `data-seat-trick-loadout-info="${Number(player?.id ?? -1)}"` });
+      return renderTrickSummaryShell({ className: 'seatTrickLoadoutInfo', rowsClassName: 'seatTrickLoadoutInfoRows', rows, ariaLabel: `${seatLabel(player)} trick bone loadout`, context: 'seat', dataAttribute: `data-seat-trick-loadout-info="${Number(player?.id ?? -1)}"`, rowCount: entries.length });
     }
     function formatChallengePrompt(lastPlay) {
       return SCRATCHBONES_GAME.uiText.challengePromptTemplate
@@ -5650,10 +5676,12 @@ import { createTutorial } from './tutorial.js';
                 ${renderSeatTrickLoadoutInfo(p)}
                 <div class="seatStatus">${p.lastAction}</div>
               </div>
-              <div class="seatAvatarBox" data-proj-id="avatar-${p.id}" style="width:var(--layout-seat-avatar-size,132px);height:var(--layout-seat-avatar-size,132px);aspect-ratio:1/1;">
-                <canvas class="seatPortrait" data-seat-id="${p.id}" width="200" height="200"></canvas>
+              <div class="aiSeatRightCol" data-proj-id="right-col-${p.id}">
+                <div class="seatAvatarBox" data-proj-id="avatar-${p.id}" style="width:var(--layout-seat-avatar-size,132px);height:var(--layout-seat-avatar-size,132px);aspect-ratio:1/1;">
+                  <canvas class="seatPortrait" data-seat-id="${p.id}" width="200" height="200"></canvas>
+                </div>
+                ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
               </div>
-              ${!p.eliminated && p.hand.length > 0 ? `<div class="seatHandPreview" data-seat-id="${p.id}">${p.hand.map((card, i) => { const art = resolveScratchbone2DAsset(card, { flipped: true }); const hiddenDealCard = state.dealLandingHiddenCardIds.has(card.id); return `<div class="seatHandCard" data-seat-hand-id="${p.id}-${i}" data-card-id="${card.id}"${hiddenDealCard ? ' style="visibility:hidden;"' : ''}><img src="${art.src}" data-fallback-src="${art.fallbackSrc}" alt="Hidden card"></div>`; }).join('')}</div>` : ''}
             </div>
           `).join('')}
         </div>
@@ -5662,14 +5690,16 @@ import { createTutorial } from './tutorial.js';
           <div class="humanSeatCard ${player.eliminated ? 'eliminated' : ''}" data-proj-id="human-seat">
             <div class="seatInfo" data-proj-id="info-human" style="padding:var(--layout-seat-info-padding-y,8px) var(--layout-seat-info-padding-x,10px);">
               <div class="seatName">${seatLabel(player)}</div>
-              <div class="seatMeta">Cards ${player.hand.length} · Clears ${player.clears}</div>
               ${renderSeatChipBadge(player)}
               ${renderSeatCoinRow(player)}
               ${renderSeatTrickLoadoutInfo(player)}
               <div class="seatStatus">${player.lastAction}</div>
             </div>
-            <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
-              <canvas class="seatPortrait" data-seat-id="${hs}" width="200" height="200"></canvas>
+            <div class="humanSeatRightCol" data-proj-id="right-col-human">
+              <div class="seatAvatarBox" data-proj-id="avatar-human" style="width:var(--layout-human-seat-avatar-size,204px);height:var(--layout-human-seat-avatar-size,204px);aspect-ratio:1/1;">
+                <canvas class="seatPortrait" data-seat-id="${hs}" width="200" height="200"></canvas>
+              </div>
+              <div class="seatMeta">Cards ${player.hand.length} · Clears ${player.clears}</div>
             </div>
           </div>
         </div>
@@ -7439,6 +7469,7 @@ import { createTutorial } from './tutorial.js';
       });
     }
     // ── UI projection mapping mode ────────────────────────────────────────
+    const MAP_UI_SELECTOR = '#projMapBtn,#projVarBtn,#projVarPanel,#projExportBtn,#projSubBtn,#projEditBtn,#projLayerPreviewBtn,#editorStatus';
     const projectionUiState = {
       active: false,
       editMode: false,
@@ -7450,6 +7481,8 @@ import { createTutorial } from './tutorial.js';
       debugOutlineElements: new Set(),
       debugOutlineFrame: 0,
       ui: null,
+      mapChainElements: [],
+      mapChainIndex: 0,
     };
     function isEditableGameplayShortcutTarget(target) {
       if (!(target instanceof Element)) return false;
@@ -7542,6 +7575,7 @@ import { createTutorial } from './tutorial.js';
       document.body.querySelectorAll('*').forEach((element) => {
         if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) return;
         if (['SCRIPT', 'STYLE', 'LINK', 'META'].includes(element.tagName)) return;
+        if (element.closest(MAP_UI_SELECTOR)) return;
         nextElements.add(element);
         element.setAttribute('data-proj-debug-outline', String(getProjectionDebugDepth(element)));
         element.setAttribute('data-proj-debug-name', getProjectionDebugElementName(element));
@@ -8233,9 +8267,44 @@ import { createTutorial } from './tutorial.js';
       });
       document.addEventListener('pointerup', finishAuthoredPointer);
       document.addEventListener('pointercancel', finishAuthoredPointer);
+      document.addEventListener('wheel', (event) => {
+        if (!projectionUiState.active || projectionUiState.editMode) return;
+        if (!projectionUiState.mapChainElements.length) return;
+        event.preventDefault();
+        const delta = event.deltaY > 0 ? 1 : -1;
+        const newIndex = Math.max(0, Math.min(projectionUiState.mapChainElements.length - 1, projectionUiState.mapChainIndex + delta));
+        if (newIndex === projectionUiState.mapChainIndex) return;
+        projectionUiState.mapChainIndex = newIndex;
+        const el = projectionUiState.mapChainElements[newIndex];
+        const debugName = getProjectionDebugElementName(el);
+        if (debugName) {
+          copyTextToClipboard(debugName);
+          const total = projectionUiState.mapChainElements.length;
+          updateEditorStatus(`[${newIndex + 1}/${total}] Copied: ${debugName}`);
+        }
+      }, { passive: false });
       document.addEventListener('click', (event) => {
         if (!projectionUiState.active) return;
         if (event.target.closest('#projMapBtn,#projVarBtn,#projVarPanel,#projExportBtn,#projSubBtn,#projEditBtn,#projLayerPreviewBtn')) return;
+        if (!projectionUiState.editMode) {
+          const target = event.target instanceof Element ? event.target : null;
+          if (target) {
+            const chain = [];
+            let el = target;
+            while (el && el !== document.documentElement) {
+              if (!el.closest(MAP_UI_SELECTOR)) chain.push(el);
+              el = el.parentElement;
+            }
+            projectionUiState.mapChainElements = chain;
+            projectionUiState.mapChainIndex = 0;
+          }
+          const debugName = getProjectionDebugElementName(event.target);
+          if (debugName) {
+            copyTextToClipboard(debugName);
+            updateEditorStatus(`Copied: ${debugName}`);
+          }
+          return;
+        }
         // Sub-layer mode: select sub overlays
         if (authoredEditorState.subLayerMode) {
           const subOverlay = event.target.closest('.authoredSubOverlay');

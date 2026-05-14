@@ -993,14 +993,24 @@
       opacity: 0.88;
     }
     .seatInfo {
-      flex: 0 1 auto;
-      width: 48%;
+      flex: 1 1 0;
+      width: auto;
       min-width: 0;
       display: flex;
       flex-direction: column;
     }
+    .aiSeatRightCol {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0;
+      min-width: 0;
+      overflow: visible;
+    }
     .seatAvatarBox {
-      flex: 1 0 auto;
+      flex: 0 0 auto;
       min-width: calc(var(--layout-seat-avatar-size) * var(--layout-sidebar-content-scale));
       max-width: 52%;
       height: auto;
@@ -1015,19 +1025,35 @@
       min-width: 0;
       position: relative;
       display: flex;
-      align-items: center;
+      align-items: stretch;
       justify-content: space-between;
       gap: 10px;
-      overflow: visible;
+      overflow: hidden;
       z-index: 3;
     }
+    .humanSeatCard .seatInfo {
+      flex: 1 1 0;
+      width: auto;
+      min-width: 0;
+      min-height: 0;
+    }
+    .humanSeatRightCol {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 6px;
+      flex: 0 0 auto;
+      min-height: 0;
+      overflow: hidden;
+    }
     .humanSeatCard .seatAvatarBox {
-      width: var(--layout-human-seat-avatar-size);
-      height: var(--layout-human-seat-avatar-size);
       border-radius: 12px;
       border: 1px solid rgba(242,208,143,0.32);
-      margin-left: auto;
-      flex: 0 0 auto;
+      flex: 1 1 0;
+      min-height: 0;
+      width: 100%;
+      aspect-ratio: 1 / 1;
     }
     .humanSeatChipBadge {
       position: absolute;
