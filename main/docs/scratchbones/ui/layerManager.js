@@ -193,6 +193,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     })
     .filter(Boolean);
   const assignmentList = buildAssignmentList();
+  let cachedSyncAssignmentList = assignmentList;
+  let assignmentListDirty = false;
   const discoveredLayerNames = Array.from(new Set(assignmentList.map((entry) => entry.layer)));
   const layerNames = [
     ...configuredLayerOrder.filter((layerName) => discoveredLayerNames.includes(layerName)),
@@ -554,8 +556,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   }
 
   function sync(app = document.getElementById('app')) {
-    const runtimeAssignmentList = buildAssignmentList();
-    if (!enabled || !app || !runtimeAssignmentList.length) return;
+    if (assignmentListDirty) {
+      cachedSyncAssignmentList = buildAssignmentList();
+      assignmentListDirty = false;
+    }
+    if (!enabled || !app || !cachedSyncAssignmentList.length) return;
     ensureHost(app);
     if (!state.host) return;
     ensureScrollTracking();
@@ -563,7 +568,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     clearPromoted();
 
     const nodeAssignments = new Map();
-    runtimeAssignmentList.forEach((assignment, assignmentIndex) => {
+    cachedSyncAssignmentList.forEach((assignment, assignmentIndex) => {
       assignment.selectors.forEach((selector, selectorIndex) => {
         app.querySelectorAll(selector).forEach((node) => {
           if (!(node instanceof Element)) return;
@@ -581,17 +586,13 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
         node,
         assignment: data.assignment,
         priority: data.priority,
-        depth: (() => {
-          let depth = 0;
-          let current = node.parentElement;
-          while (current) {
-            depth += 1;
-            current = current.parentElement;
-          }
-          return depth;
-        })(),
       }))
-      .sort((a, b) => (a.depth - b.depth) || (a.priority - b.priority));
+      .sort((a, b) => {
+        const pos = a.node.compareDocumentPosition(b.node);
+        if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+        if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+        return a.priority - b.priority;
+      });
 
     const isPromotionRoot = (element) =>
       !!element && promoteByRootSelectors.some((selector) => {
@@ -658,6 +659,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       const value = Number(options.promotedOpacity);
       if (Number.isFinite(value)) target.promotedOpacity = Math.min(1, Math.max(0, value));
     }
+    assignmentListDirty = true;
     return true;
   }
 
