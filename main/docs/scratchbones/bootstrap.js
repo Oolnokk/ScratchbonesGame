@@ -162,6 +162,13 @@ import { createTutorial } from './tutorial.js';
           width: calc(var(--layout-human-seat-avatar-size) * var(--layout-seat-container-scale)) !important;
           height: calc(var(--layout-human-seat-avatar-size) * var(--layout-seat-container-scale)) !important;
         }
+        .humanSeatZone .humanSeatCard .seatAvatarBox {
+          width: 100% !important;
+          height: auto !important;
+          flex: 1 1 0 !important;
+          min-height: 0 !important;
+          aspect-ratio: 1 / 1;
+        }
         #aiSidebar .seatHandPreview {
           display: flex;
           flex-wrap: nowrap;
