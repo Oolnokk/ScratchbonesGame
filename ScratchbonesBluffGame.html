@@ -6,6 +6,23 @@
   <title>SCRATCHBONES!</title>
   <!-- Debug log interceptor moved to module bootstrap. -->
     <script src="docs/config/scratchbones-config.js"></script>
+  <script>
+    // Apply CSS custom properties immediately so the dark background renders on
+    // first paint rather than showing white while the ES module bootstrap defers.
+    (function () {
+      try {
+        var vars = window.SCRATCHBONES_CONFIG && window.SCRATCHBONES_CONFIG.game && window.SCRATCHBONES_CONFIG.game.cssRootVars;
+        if (vars && typeof vars === 'object') {
+          var s = document.documentElement.style;
+          var keys = Object.keys(vars);
+          for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            if (k.indexOf('--') === 0 && vars[k] != null) s.setProperty(k, String(vars[k]));
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
   <script src="docs/js/portrait-utils.js"></script>
   <script src="docs/js/portrait-breathing.js"></script>
   <script src="docs/js/scratchbones-name-generator.js"></script>
