@@ -3880,16 +3880,27 @@ import { createTutorial } from './tutorial.js';
       `;
       }).join('');
     }
-    function renderTrickSummaryShell({ className, rowsClassName, rows, ariaLabel, context = 'seat', dataAttribute = '' }) {
+    function renderTrickSummaryShell({ className, rowsClassName, rows, ariaLabel, context = 'seat', dataAttribute = '', rowCount = 0 }) {
       const metrics = trickSummaryMetrics(context);
       const marginTopPx = context === 'deck' ? 0 : metrics.marginTopPx;
       const maxWidthStyle = context === 'deck'
         ? `${metrics.maxWidthPx}px`
         : `min(100%,${metrics.maxWidthPx}px)`;
       const contextLayoutStyle = context === 'deck' ? 'align-self:center;' : 'width:100%;min-width:0;';
-      const shellStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;margin-top:${marginTopPx}px;max-width:${maxWidthStyle};letter-spacing:${metrics.letterSpacingEm}em;font-size:${metrics.fontSizeRem}rem;color:${metrics.color};${contextLayoutStyle}overflow:hidden;`;
+      const MAX_UNSCALED_ROWS = 2;
+      const needsScale = context === 'seat' && rowCount > MAX_UNSCALED_ROWS;
+      const contentScale = needsScale ? MAX_UNSCALED_ROWS / rowCount : 1;
+      const naturalRowsH = rowCount > 0
+        ? metrics.glyphSizePx * rowCount + metrics.rowGapPx * Math.max(0, rowCount - 1)
+        : 0;
+      const shellHeightStyle = needsScale ? `height:${(naturalRowsH * contentScale).toFixed(2)}px;` : '';
+      const shellStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;margin-top:${marginTopPx}px;max-width:${maxWidthStyle};letter-spacing:${metrics.letterSpacingEm}em;font-size:${metrics.fontSizeRem}rem;color:${metrics.color};${contextLayoutStyle}overflow:hidden;${shellHeightStyle}`;
       const rowsStyle = `display:flex;flex-direction:column;gap:${metrics.rowGapPx}px;min-width:0;max-width:100%;overflow:hidden;`;
-      return `<div class="${escapeHtml(className)}" ${dataAttribute} aria-label="${escapeHtml(ariaLabel)}" style="${escapeHtml(shellStyle)}"><div class="${escapeHtml(rowsClassName)} tiny" style="${escapeHtml(rowsStyle)}">${rows}</div></div>`;
+      const rowsEl = `<div class="${escapeHtml(rowsClassName)} tiny" style="${escapeHtml(rowsStyle)}">${rows}</div>`;
+      const innerContent = needsScale
+        ? `<div style="${escapeHtml(`transform:scale(${contentScale.toFixed(4)});transform-origin:top left;width:${(100/contentScale).toFixed(2)}%;display:block;`)}">${rowsEl}</div>`
+        : rowsEl;
+      return `<div class="${escapeHtml(className)}" ${dataAttribute} aria-label="${escapeHtml(ariaLabel)}" style="${escapeHtml(shellStyle)}">${innerContent}</div>`;
     }
     function renderTrickDeckInfo(composition = deckCompositionSnapshot()) {
       const entries = sortedTrickCountEntries(composition?.trickCounts);
@@ -3902,7 +3913,7 @@ import { createTutorial } from './tutorial.js';
       const entries = sortedTrickCountEntries(trickCountsFromLoadouts([player?.playerLoadout || []]));
       if (!entries.length) return '';
       const rows = renderTrickCountRows(entries, 'seatTrickLoadoutInfoItem', { context: 'seat' });
-      return renderTrickSummaryShell({ className: 'seatTrickLoadoutInfo', rowsClassName: 'seatTrickLoadoutInfoRows', rows, ariaLabel: `${seatLabel(player)} trick bone loadout`, context: 'seat', dataAttribute: `data-seat-trick-loadout-info="${Number(player?.id ?? -1)}"` });
+      return renderTrickSummaryShell({ className: 'seatTrickLoadoutInfo', rowsClassName: 'seatTrickLoadoutInfoRows', rows, ariaLabel: `${seatLabel(player)} trick bone loadout`, context: 'seat', dataAttribute: `data-seat-trick-loadout-info="${Number(player?.id ?? -1)}"`, rowCount: entries.length });
     }
     function formatChallengePrompt(lastPlay) {
       return SCRATCHBONES_GAME.uiText.challengePromptTemplate
