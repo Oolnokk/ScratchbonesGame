@@ -8247,7 +8247,9 @@ import { createTutorial } from './tutorial.js';
       document.addEventListener('pointerdown', (event) => {
         if (bindAuthoredDragAndResize(event)) return;
         if (!projectionUiState.active) return;
-        const debugName = getProjectionDebugElementName(event.target);
+        const topEl = document.elementsFromPoint(event.clientX, event.clientY)
+          .find((el) => !el.closest(MAP_UI_SELECTOR));
+        const debugName = topEl ? getProjectionDebugElementName(topEl) : '';
         if (debugName) updateEditorStatus(`Map touched ${debugName}`);
       });
       document.addEventListener('pointermove', (event) => {
@@ -8257,7 +8259,9 @@ import { createTutorial } from './tutorial.js';
         }
         if (!projectionUiState.active) return;
         scheduleProjectionDebugOutlines();
-        const debugName = getProjectionDebugElementName(event.target);
+        const topEl = document.elementsFromPoint(event.clientX, event.clientY)
+          .find((el) => !el.closest(MAP_UI_SELECTOR));
+        const debugName = topEl ? getProjectionDebugElementName(topEl) : '';
         if (debugName) {
           tip.textContent = debugName;
           tip.style.display = 'block';
@@ -8287,18 +8291,12 @@ import { createTutorial } from './tutorial.js';
         if (!projectionUiState.active) return;
         if (event.target.closest('#projMapBtn,#projVarBtn,#projVarPanel,#projExportBtn,#projSubBtn,#projEditBtn,#projLayerPreviewBtn')) return;
         if (!projectionUiState.editMode) {
-          const target = event.target instanceof Element ? event.target : null;
-          if (target) {
-            const chain = [];
-            let el = target;
-            while (el && el !== document.documentElement) {
-              if (!el.closest(MAP_UI_SELECTOR)) chain.push(el);
-              el = el.parentElement;
-            }
-            projectionUiState.mapChainElements = chain;
-            projectionUiState.mapChainIndex = 0;
-          }
-          const debugName = getProjectionDebugElementName(event.target);
+          const allAtPoint = document.elementsFromPoint(event.clientX, event.clientY)
+            .filter((el) => !el.closest(MAP_UI_SELECTOR));
+          projectionUiState.mapChainElements = allAtPoint;
+          projectionUiState.mapChainIndex = 0;
+          const target = allAtPoint[0] ?? null;
+          const debugName = target ? getProjectionDebugElementName(target) : '';
           if (debugName) {
             copyTextToClipboard(debugName);
             updateEditorStatus(`Copied: ${debugName}`);
