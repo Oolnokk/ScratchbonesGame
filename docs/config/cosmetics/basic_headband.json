@@ -134,6 +134,58 @@
           }
         }
       }
+    },
+    "rakakoan_male": {
+      "parts": {
+        "head": {
+          "layers": {
+            "front": {
+              "image": {
+                "url": "./assets/cosmetics/clothes/hat/kenk_headband_m.png"
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "head": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rakakoan_female": {
+      "parts": {
+        "head": {
+          "layers": {
+            "front": {
+              "image": {
+                "url": "./assets/cosmetics/clothes/hat/kenk_headband_f.png"
+              },
+              "spriteStyle": {
+                "base": {
+                  "xform": {
+                    "head": {
+                      "ax": -0.2,
+                      "ay": 0,
+                      "scaleX": 2.55,
+                      "scaleY": 2.55,
+                      "rotDeg": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
