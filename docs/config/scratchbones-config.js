@@ -845,7 +845,7 @@ window.SCRATCHBONES_CONFIG = {
         "spreadXPx": 105,
         "spreadYPx": 35,
         "offsetXPx": 100,
-        "offsetYPx": 2,
+        "offsetYPx": -48,
         "totalLabel": {
           "rightPx": 8,
           "bottomPx": 4,

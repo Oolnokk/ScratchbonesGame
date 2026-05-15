@@ -1084,8 +1084,9 @@ import { createTutorial } from './tutorial.js';
       const totalLineHeight = Math.max(0.5, Number(totalLabel.lineHeight) || 1);
       const totalColor = String(totalLabel.color || '#ffffff');
       const totalFontFamily = String(CONFIG.assets.claimClusterFontFamily || '"KhymeryyanRomanLetters+Numbers", serif').trim();
-      const totalHtml = `<div class="tablePoolTotal" data-claim-pool-total style="position:absolute;right:${totalRightPx}px;bottom:${totalBottomPx}px;font-family:${escapeHtml(totalFontFamily)};font-size:${totalFontSizePx}px;line-height:${totalLineHeight};color:${escapeHtml(totalColor)};text-shadow:0 2px 4px rgba(0,0,0,.85);z-index:${pileMaxIcons + 2};">${Math.max(0, Number(chipCount) || 0)}</div>`;
-      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" data-pot-pile-anchor style="position:absolute;left:calc(${(anchorXPct * 100).toFixed(3)}% + ${offsetXPx.toFixed(1)}px);top:calc(${(anchorYPct * 100).toFixed(3)}% + ${offsetYPx.toFixed(1)}px);transform:translateX(-50%);width:${pileWidthPx}px;height:${pileHeightPx}px;pointer-events:none;z-index:1;"><div class="tablePoolCoins" style="position:relative;width:100%;height:100%;">${pileHtml}${overflowHtml}${totalHtml}</div></div>`;
+      const coinsLayerHtml = `<div class="tablePoolCoinsLayer" style="position:relative;width:${pileWidthPx}px;height:${pileHeightPx}px;">${pileHtml}${overflowHtml}</div>`;
+      const countLayerHtml = `<div class="tablePoolCountLayer" data-claim-pool-total style="text-align:center;font-family:${escapeHtml(totalFontFamily)};font-size:${totalFontSizePx}px;line-height:${totalLineHeight};color:${escapeHtml(totalColor)};text-shadow:0 2px 4px rgba(0,0,0,.85);margin-top:2px;">${Math.max(0, Number(chipCount) || 0)}</div>`;
+      return `<div class="tablePoolPile" data-proj-id="claim-pool-pile" data-pot-pile-anchor style="position:absolute;left:calc(${(anchorXPct * 100).toFixed(3)}% + ${offsetXPx.toFixed(1)}px);top:calc(${(anchorYPct * 100).toFixed(3)}% + ${offsetYPx.toFixed(1)}px);transform:translateX(-50%);pointer-events:none;z-index:1;display:flex;flex-direction:column;align-items:center;">${coinsLayerHtml}${countLayerHtml}</div>`;
     }
     const { gameState: state, uiDebugState } = createInitialState(SCRATCHBONES_GAME);
     state.humanSeat = 0; // index of the currently active human player (hot-seat support)
