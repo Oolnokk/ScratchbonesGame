@@ -40,11 +40,17 @@
       font-weight: normal;
       font-style: normal;
     }
+    @font-face {
+      font-family: 'KhymeryyanRomanLetters+Numbers';
+      src: url('./docs/assets/hud/KhymeryyanRomanLetters+Numbers.otf.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
     :root {
       --safe: env(safe-area-inset-bottom, 0px);
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { margin: 0; background: transparent; color: var(--text); font-family: 'Khymeryyanroman4', Inter, system-ui, sans-serif; letter-spacing: 0.14em; line-height: 1.45; height: 100%; text-shadow: -1px -1px 0 rgba(0,0,0,0.55), 1px -1px 0 rgba(0,0,0,0.55), -1px 1px 0 rgba(0,0,0,0.55), 1px 1px 0 rgba(0,0,0,0.55); }
+    html, body { margin: 0; background: transparent; color: var(--text); font-family: 'KhymeryyanRomanLetters+Numbers', 'Khymeryyanroman4', Inter, system-ui, sans-serif; letter-spacing: 0.14em; line-height: 1.45; height: 100%; text-shadow: -1px -1px 0 rgba(0,0,0,0.55), 1px -1px 0 rgba(0,0,0,0.55), -1px 1px 0 rgba(0,0,0,0.55), 1px 1px 0 rgba(0,0,0,0.55); }
     body {
       overscroll-behavior: none;
       overflow: hidden;
@@ -657,28 +663,28 @@
       animation: emojiKissBurst 1.65s ease-out both;
     }
     .emojiFx-love .emojiFxGlyph {
-      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 98, 188, 0.92)) drop-shadow(0 0 18px rgba(255, 96, 194, 0.65));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 98, 188, 0.92)) drop-shadow(0 0 18px rgba(255, 96, 194, 0.65)) drop-shadow(0 0 36px rgba(255,180,60,0.55)) drop-shadow(0 0 64px rgba(200,100,0,0.35));
       opacity: 0.92;
     }
     .emojiFx-alarmed {
       animation: emojiBurstUp 0.62s both;
     }
     .emojiFx-alarmed .emojiFxGlyph {
-      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 60, 60, 0.95)) drop-shadow(0 0 18px rgba(220, 30, 30, 0.65));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 60, 60, 0.95)) drop-shadow(0 0 18px rgba(220, 30, 30, 0.65)) drop-shadow(0 0 36px rgba(255,180,60,0.55)) drop-shadow(0 0 64px rgba(200,100,0,0.35));
       opacity: 0.95;
     }
     .emojiFx-curious {
       animation: emojiBurstUp 0.62s both;
     }
     .emojiFx-curious .emojiFxGlyph {
-      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 16px rgba(200, 220, 255, 0.55));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 16px rgba(200, 220, 255, 0.55)) drop-shadow(0 0 36px rgba(255,180,60,0.55)) drop-shadow(0 0 64px rgba(200,100,0,0.35));
       opacity: 0.92;
     }
     .emojiFx-disgust {
       animation: emojiDisgustDrop 1.55s both;
     }
     .emojiFx-disgust .emojiFxGlyph {
-      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 7px rgba(125, 219, 113, 0.95)) drop-shadow(0 0 16px rgba(79, 153, 62, 0.72));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 7px rgba(125, 219, 113, 0.95)) drop-shadow(0 0 16px rgba(79, 153, 62, 0.72)) drop-shadow(0 0 36px rgba(255,180,60,0.55)) drop-shadow(0 0 64px rgba(200,100,0,0.35));
     }
     .emojiFx-shock {
       width: 0;
@@ -706,7 +712,7 @@
       mask-repeat: no-repeat;
       -webkit-mask-position: center;
       mask-position: center;
-      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 10px rgba(255, 80, 55, 0.9)) drop-shadow(0 0 28px rgba(255, 120, 40, 0.7)) drop-shadow(0 0 48px rgba(220, 60, 20, 0.45));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 10px rgba(255, 80, 55, 0.9)) drop-shadow(0 0 28px rgba(255, 120, 40, 0.7)) drop-shadow(0 0 48px rgba(220, 60, 20, 0.45)) drop-shadow(0 0 64px rgba(255,180,60,0.4));
     }
     @keyframes shockParticle {
       0% {
@@ -2034,42 +2040,36 @@
       pointer-events: none;
       white-space: nowrap;
     }
-    /* ── Tankanscript vertical side columns ── */
-    .cin-tankan {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
+    /* ── Tankanscript burst pillars ── */
+    .cin-tankan-pillar {
+      position: fixed;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       font-family: 'TankanScript', serif;
-      font-size: 7.5rem;
-      line-height: 1;
-      writing-mode: vertical-rl;
-      pointer-events: none;
-      z-index: 5;
-      letter-spacing: 0.12em;
-      color: rgba(255, 130, 40, 0.55);
+      font-size: 2.8rem;
+      line-height: 1.1;
+      color: rgba(255, 130, 40, 0.9);
       text-shadow:
         0 0 8px  rgba(255, 50, 0, 0.9),
         0 0 22px rgba(200, 20, 0, 0.55),
         0 0 50px rgba(140, 10, 0, 0.4);
-      opacity: 0;
-      animation: cinTankanIn 0.65s ease-out 0.05s forwards, tankanFlicker 2.4s ease-in-out 0.8s infinite;
+      pointer-events: none;
+      z-index: 10050;
+      animation: tankanPillarBurst var(--layout-cinematic-burst-duration, 2.1s) both;
     }
-    .cin-tankan.left  { left:  max(8px, calc(50% - 350px)); }
-    .cin-tankan.right { right: max(8px, calc(50% - 350px)); transform: translateY(-50%); }
-    @keyframes cinTankanIn {
-      from { opacity: 0; }
-      to   { opacity: 1; }
-    }
-    @keyframes tankanFlicker {
-      0%, 100% {
-        filter: brightness(1);
-        text-shadow: 0 0 8px rgba(255,50,0,0.9), 0 0 22px rgba(200,20,0,0.55), 0 0 50px rgba(140,10,0,0.4);
-      }
-      38% {
-        filter: brightness(1.45);
-        text-shadow: 0 0 14px rgba(255,90,0,1), 0 0 34px rgba(220,40,0,0.75), 0 0 70px rgba(170,15,0,0.55);
-      }
-      65% { filter: brightness(0.8); }
+    .cin-tankan-pillar .tankan-char { display: block; text-align: center; }
+    .cin-tankan-pillar.burst-call  { color: #88ccff; text-shadow: 0 0 14px rgba(100,180,255,0.9), 0 0 32px rgba(60,140,255,0.5); }
+    .cin-tankan-pillar.burst-raise { color: #f2d08f; text-shadow: 0 0 14px rgba(242,160,40,0.95), 0 0 32px rgba(200,110,10,0.6); }
+    .cin-tankan-pillar.burst-fold  { color: #ff9090; text-shadow: 0 0 14px rgba(255,70,70,0.95),  0 0 32px rgba(200,30,30,0.6); }
+    @keyframes tankanPillarBurst {
+      0%   { transform: translate(-50%, -50%) scale(0.3);  opacity: 0;
+             animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+      19%  { transform: translate(-50%, -50%) scale(1.5);  opacity: 1;
+             animation-timing-function: linear; }
+      67%  { transform: translate(-50%, -50%) scale(1.5);  opacity: 1;
+             animation-timing-function: ease-in; }
+      100% { transform: translate(-50%, -130%) scale(2.2); opacity: 0; }
     }
     .cin-continue {
       padding: 11px 34px;
