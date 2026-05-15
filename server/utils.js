@@ -22,7 +22,7 @@ function normalizeKhymeryyanPayload(payload) {
     name: name || null,
     appearance: payload.appearance && typeof payload.appearance === 'object' ? payload.appearance : null,
     equippedCosmetics: Array.isArray(payload.equippedCosmetics) ? payload.equippedCosmetics.map(String).slice(0, 24) : [],
-    appliedDyes: payload.appliedDyes && typeof payload.appliedDyes === 'object' ? payload.appliedDyes : {},
+    appliedDyes: payload.appliedDyes && typeof payload.appliedDyes === 'object' && !Array.isArray(payload.appliedDyes) ? payload.appliedDyes : {},
     trickBoneLoadout: normalizePlayerLoadout(payload.trickBoneLoadout || payload.playerLoadout),
   };
 }

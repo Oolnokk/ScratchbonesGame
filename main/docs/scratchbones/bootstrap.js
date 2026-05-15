@@ -11,8 +11,8 @@ import { createWobblyOutlineRenderer } from './ui/wobblyOutline.js';
 import { createTutorial } from './tutorial.js';
 
     initDebugPanelInterceptor();
-    const DEBUG_ENABLED = true;
     const scratchbonesRootConfig = window.SCRATCHBONES_CONFIG || {};
+    const DEBUG_ENABLED = scratchbonesRootConfig.game?.debug?.enabled !== false;
     function reportScratchbonesConfigError(message) {
       const fullMessage = `[scratchbones config] ${message}`;
       console.error(fullMessage);
