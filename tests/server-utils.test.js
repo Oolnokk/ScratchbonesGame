@@ -127,6 +127,8 @@ describe('normalizeKhymeryyanPayload', () => {
   it('sets appliedDyes to {} for non-object', () => {
     assert.deepEqual(normalizeKhymeryyanPayload({ appliedDyes: 'bad' }).appliedDyes, {});
     assert.deepEqual(normalizeKhymeryyanPayload({ appliedDyes: null }).appliedDyes, {});
+    assert.deepEqual(normalizeKhymeryyanPayload({ appliedDyes: [] }).appliedDyes, {});
+    assert.deepEqual(normalizeKhymeryyanPayload({ appliedDyes: 42 }).appliedDyes, {});
   });
 
   it('normalizes trickBoneLoadout from trickBoneLoadout field', () => {
@@ -321,5 +323,36 @@ describe('filterStateForSeat', () => {
     assert.deepEqual(state.players[1].hand, [{ rank: 3 }]);
     // Original pile card still visible
     assert.deepEqual(state.pile[0].cards, [{ rank: 1 }]);
+  });
+
+  it('handles players missing a hand field without throwing', () => {
+    const state = {
+      players: [{ id: 0 }, { id: 1 }],
+      pile: [],
+      challengeWindow: null,
+    };
+    const result = filterStateForSeat(state, 0);
+    assert.deepEqual(result.players[0].hand, undefined);
+    assert.deepEqual(result.players[1].hand, []);
+  });
+
+  it('handles pile entries missing a cards field without throwing', () => {
+    const state = {
+      players: [{ id: 0, hand: [] }],
+      pile: [{ rank: 3 }],
+      challengeWindow: null,
+    };
+    const result = filterStateForSeat(state, 0);
+    assert.deepEqual(result.pile[0].cards, []);
+  });
+
+  it('handles challengeWindow missing lastPlay cards field without throwing', () => {
+    const state = {
+      players: [],
+      pile: [],
+      challengeWindow: { challenger: 1, lastPlay: { rank: 5 } },
+    };
+    const result = filterStateForSeat(state, 0);
+    assert.deepEqual(result.challengeWindow.lastPlay.cards, []);
   });
 });

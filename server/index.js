@@ -8,6 +8,8 @@ const PORT = process.env.PORT || 8080;
 const MAX_MESSAGE_BYTES = 64 * 1024;
 const JOIN_FAIL_WINDOW_MS = 15_000;
 const MAX_JOIN_FAILS_PER_WINDOW = 8;
+const HEARTBEAT_INTERVAL_MS = 30_000;
+const ROOM_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
 const wss = new WebSocket.Server({ port: PORT, maxPayload: MAX_MESSAGE_BYTES });
 
 // rooms: Map<code, { host, hostSeatId, hostName, hostKhymeryyan, hostAppearance, hostLoadout, clients: Map<seatId, {ws, name, khymeryyan, appearance, playerLoadout}>, lastState }>
@@ -16,10 +18,25 @@ const rooms = new Map();
 function makeCode() {
   let code;
   do {
-    code = crypto.randomBytes(2).toString('hex').toUpperCase();
+    code = crypto.randomBytes(3).toString('hex').toUpperCase();
   } while (rooms.has(code));
   return code;
 }
+
+function evictStaleRooms() {
+  const cutoff = Date.now() - ROOM_MAX_AGE_MS;
+  for (const [code, room] of rooms) {
+    if (room.createdAt < cutoff) {
+      for (const { ws: clientWs } of room.clients.values()) {
+        send(clientWs, { type: 'disconnected', reason: 'room-expired' });
+      }
+      send(room.host, { type: 'disconnected', reason: 'room-expired' });
+      rooms.delete(code);
+    }
+  }
+}
+
+setInterval(evictStaleRooms, 60_000);
 
 function send(ws, obj) {
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -33,6 +50,14 @@ wss.on('connection', ws => {
   let seatId = null;
   let joinFailWindowStartMs = 0;
   let joinFailCount = 0;
+
+  let isAlive = true;
+  ws.on('pong', () => { isAlive = true; });
+  const heartbeatTimer = setInterval(() => {
+    if (!isAlive) { ws.terminate(); return; }
+    isAlive = false;
+    ws.ping();
+  }, HEARTBEAT_INTERVAL_MS);
 
   function registerJoinFailure(reason) {
     const now = Date.now();
@@ -75,6 +100,7 @@ wss.on('connection', ws => {
         clients: new Map(),
         lastState: null,
         totalSeats: Math.max(2, Math.min(4, Number(msg.totalSeats) || 2)),
+        createdAt: Date.now(),
       });
       send(ws, { type: 'room-created', code: roomCode });
       return;
@@ -154,6 +180,7 @@ wss.on('connection', ws => {
   });
 
   ws.on('close', () => {
+    clearInterval(heartbeatTimer);
     if (!roomCode) return;
     const room = rooms.get(roomCode);
     if (!room) return;
