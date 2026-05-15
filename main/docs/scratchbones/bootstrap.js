@@ -7062,6 +7062,23 @@ import { createTutorial } from './tutorial.js';
     function clearChallengeTankanColumns(_app) {
       document.querySelectorAll('.cin-tankan-pillar').forEach((node) => node.remove());
     }
+    function _spawnTankanPillarAt(anchor, text, cssClass, pillarSide, sideGapPx) {
+      const rect = anchor?.getBoundingClientRect?.();
+      if (!rect || rect.width <= 0) return;
+      const pillar = document.createElement('div');
+      pillar.className = `cin-tankan-pillar cin-tankan-pillar-${pillarSide}${cssClass ? ` ${cssClass}` : ''}`;
+      pillar.setAttribute('aria-hidden', 'true');
+      const x = pillarSide === 'actor' ? rect.left - sideGapPx : rect.right + sideGapPx;
+      pillar.style.left = `${x.toFixed(1)}px`;
+      pillar.style.top = `${(rect.top + rect.height * 0.5).toFixed(1)}px`;
+      for (const ch of text) {
+        const charDiv = document.createElement('div');
+        charDiv.className = 'tankan-char';
+        charDiv.textContent = ch;
+        pillar.appendChild(charDiv);
+      }
+      document.body.appendChild(pillar);
+    }
     function mountChallengeTankanColumns(app, sideText, cssClass, side) {
       if (!app) return;
       const text = String(sideText || '').replace(/[!！?？]+$/g, '').trim();
@@ -7072,31 +7089,13 @@ import { createTutorial } from './tutorial.js';
       clearChallengeTankanColumns(app);
 
       const sideGapPx = Math.max(8, Number(tankanConfig.minGapPx) || 28);
-
-      const makePillar = (x, y, pillarSide) => {
-        const pillar = document.createElement('div');
-        pillar.className = `cin-tankan-pillar cin-tankan-pillar-${pillarSide}${cssClass ? ` ${cssClass}` : ''}`;
-        pillar.setAttribute('aria-hidden', 'true');
-        pillar.style.left = `${x.toFixed(1)}px`;
-        pillar.style.top = `${y.toFixed(1)}px`;
-        for (const ch of text) {
-          const charDiv = document.createElement('div');
-          charDiv.className = 'tankan-char';
-          charDiv.textContent = ch;
-          pillar.appendChild(charDiv);
-        }
-        document.body.appendChild(pillar);
-      };
-
       if (side !== 'reactor') {
         const anchor = app.querySelector('.actorAvatarFloat .claimAvatarShell') || app.querySelector('.actorAvatarFloat');
-        const rect = anchor?.getBoundingClientRect?.();
-        if (rect && rect.width > 0) makePillar(rect.left - sideGapPx, rect.top + rect.height * 0.5, 'actor');
+        _spawnTankanPillarAt(anchor, text, cssClass, 'actor', sideGapPx);
       }
       if (side !== 'actor') {
         const anchor = app.querySelector('.reactorAvatarFloat .claimAvatarShell') || app.querySelector('.reactorAvatarFloat');
-        const rect = anchor?.getBoundingClientRect?.();
-        if (rect && rect.width > 0) makePillar(rect.right + sideGapPx, rect.top + rect.height * 0.5, 'reactor');
+        _spawnTankanPillarAt(anchor, text, cssClass, 'reactor', sideGapPx);
       }
     }
     function clearClaimClusterBettingLayer(app = document.getElementById('app')) {
@@ -7316,10 +7315,25 @@ import { createTutorial } from './tutorial.js';
       const pillarSide = playerId === state.cinematicMode.actorId ? 'actor' : 'reactor';
       const isNpc = playerId !== state.humanSeat;
       const tankanDelayMs = isNpc ? 550 : 0;
+      const spawnPillars = () => {
+        const tankanConfig = SCRATCHBONES_GAME.layout?.tableView?.cinematic?.tankanColumns || {};
+        if (tankanConfig.enabled === false) { clearChallengeTankanColumns(app); return; }
+        const sideGapPx = Math.max(8, Number(tankanConfig.minGapPx) || 28);
+        clearChallengeTankanColumns(app);
+        const mainAnchorSel = pillarSide === 'actor'
+          ? '.actorAvatarFloat .claimAvatarShell, .actorAvatarFloat'
+          : '.reactorAvatarFloat .claimAvatarShell, .reactorAvatarFloat';
+        const mainAnchor = app.querySelector(mainAnchorSel.split(',')[0]) || app.querySelector(mainAnchorSel.split(',')[1].trim());
+        _spawnTankanPillarAt(mainAnchor, label, cssClass, pillarSide, sideGapPx);
+        if (command === 'raise-tier' && pillarSide !== 'reactor') {
+          const betAnchor = app.querySelector('.reactorAvatarFloat .claimAvatarShell') || app.querySelector('.reactorAvatarFloat');
+          _spawnTankanPillarAt(betAnchor, 'Bet', 'burst-bet', 'reactor', sideGapPx);
+        }
+      };
       if (tankanDelayMs > 0) {
-        setTimeout(() => mountChallengeTankanColumns(app, label, cssClass, pillarSide), tankanDelayMs);
+        setTimeout(spawnPillars, tankanDelayMs);
       } else {
-        mountChallengeTankanColumns(app, label, cssClass, pillarSide);
+        spawnPillars();
       }
       const overlay = ensureAvatarOverlay(anchor);
       if (!overlay) return;

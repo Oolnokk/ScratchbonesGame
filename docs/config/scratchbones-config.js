@@ -177,7 +177,7 @@ window.SCRATCHBONES_CONFIG = {
         "deckAmountFontSize": "250%",
         "seatAmountColumnMinEm": 1.2,
         "deckAmountColumnMinEm": 1.5,
-        "amountFontFamily": "'Khymeryyanroman4', Inter, system-ui, sans-serif",
+        "amountFontFamily": "'KhymeryyanRomanLetters+Numbers', Inter, system-ui, sans-serif",
         "seatColor": "#fff",
         "deckColor": "#fff",
         "arrowText": "\u00A0",

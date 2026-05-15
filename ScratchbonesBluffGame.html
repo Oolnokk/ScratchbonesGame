@@ -45,6 +45,7 @@
       src: url('./docs/assets/hud/KhymeryyanRomanLetters+Numbers.otf.ttf') format('truetype');
       font-weight: normal;
       font-style: normal;
+      size-adjust: 150%;
     }
     :root {
       --safe: env(safe-area-inset-bottom, 0px);
@@ -663,28 +664,64 @@
       animation: emojiKissBurst 1.65s ease-out both;
     }
     .emojiFx-love .emojiFxGlyph {
-      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 98, 188, 0.92)) drop-shadow(0 0 18px rgba(255, 96, 194, 0.65)) drop-shadow(0 0 36px rgba(255,180,60,0.55)) drop-shadow(0 0 64px rgba(200,100,0,0.35));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 98, 188, 0.92)) drop-shadow(0 0 18px rgba(255, 96, 194, 0.65));
       opacity: 0.92;
+    }
+    .emojiFx-love::after {
+      content: '';
+      position: absolute;
+      inset: -80%;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(255,120,220,0.75) 0%, rgba(220,60,160,0.45) 30%, transparent 60%);
+      mix-blend-mode: screen;
+      pointer-events: none;
     }
     .emojiFx-alarmed {
       animation: emojiBurstUp 0.62s both;
     }
     .emojiFx-alarmed .emojiFxGlyph {
-      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 60, 60, 0.95)) drop-shadow(0 0 18px rgba(220, 30, 30, 0.65)) drop-shadow(0 0 36px rgba(255,180,60,0.55)) drop-shadow(0 0 64px rgba(200,100,0,0.35));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 60, 60, 0.95)) drop-shadow(0 0 18px rgba(220, 30, 30, 0.65));
       opacity: 0.95;
+    }
+    .emojiFx-alarmed::after {
+      content: '';
+      position: absolute;
+      inset: -80%;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(255,100,60,0.8) 0%, rgba(220,40,20,0.5) 30%, transparent 60%);
+      mix-blend-mode: screen;
+      pointer-events: none;
     }
     .emojiFx-curious {
       animation: emojiBurstUp 0.62s both;
     }
     .emojiFx-curious .emojiFxGlyph {
-      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 16px rgba(200, 220, 255, 0.55)) drop-shadow(0 0 36px rgba(255,180,60,0.55)) drop-shadow(0 0 64px rgba(200,100,0,0.35));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 16px rgba(200, 220, 255, 0.55));
       opacity: 0.92;
+    }
+    .emojiFx-curious::after {
+      content: '';
+      position: absolute;
+      inset: -80%;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(200,220,255,0.75) 0%, rgba(140,180,255,0.45) 30%, transparent 60%);
+      mix-blend-mode: screen;
+      pointer-events: none;
     }
     .emojiFx-disgust {
       animation: emojiDisgustDrop 1.55s both;
     }
     .emojiFx-disgust .emojiFxGlyph {
-      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 7px rgba(125, 219, 113, 0.95)) drop-shadow(0 0 16px rgba(79, 153, 62, 0.72)) drop-shadow(0 0 36px rgba(255,180,60,0.55)) drop-shadow(0 0 64px rgba(200,100,0,0.35));
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)) drop-shadow(0 0 7px rgba(125, 219, 113, 0.95)) drop-shadow(0 0 16px rgba(79, 153, 62, 0.72));
+    }
+    .emojiFx-disgust::after {
+      content: '';
+      position: absolute;
+      inset: -80%;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(120,230,100,0.75) 0%, rgba(60,170,50,0.45) 30%, transparent 60%);
+      mix-blend-mode: screen;
+      pointer-events: none;
     }
     .emojiFx-shock {
       width: 0;
@@ -1991,9 +2028,10 @@
       letter-spacing: 0.04em;
       animation: cinBurst var(--layout-cinematic-burst-duration) both;
     }
-    .cin-action-burst.burst-call  { color: #88ccff; text-shadow: 0 0 14px rgba(100,180,255,0.9), 0 0 32px rgba(60,140,255,0.5); }
-    .cin-action-burst.burst-raise { color: #f2d08f; text-shadow: 0 0 14px rgba(242,160,40,0.95), 0 0 32px rgba(200,110,10,0.6); }
-    .cin-action-burst.burst-fold  { color: #ff9090; text-shadow: 0 0 14px rgba(255,70,70,0.95),  0 0 32px rgba(200,30,30,0.6); }
+    .cin-action-burst.burst-call  { color: #66e89a; text-shadow: 0 0 14px rgba(80,220,120,0.95),  0 0 32px rgba(20,180,70,0.65); }
+    .cin-action-burst.burst-raise { color: #e84040; text-shadow: 0 0 14px rgba(240,50,50,0.98),   0 0 34px rgba(200,20,20,0.7); }
+    .cin-action-burst.burst-fold  { color: #ff9090; text-shadow: 0 0 14px rgba(255,70,70,0.95),   0 0 32px rgba(200,30,30,0.6); }
+    .cin-action-burst.burst-bet   { color: #f2a040; text-shadow: 0 0 14px rgba(255,140,30,0.98),  0 0 34px rgba(210,90,0,0.65); }
     .cin-action-burst.burst-win   { color: #7cf0a0; text-shadow: 0 0 14px rgba(80,230,120,0.95), 0 0 34px rgba(20,190,70,0.6); }
     .cin-action-burst.burst-out   { color: #ff7040; text-shadow: 0 0 14px rgba(255,80,30,0.98),  0 0 34px rgba(200,40,0,0.7); }
     .cin-action-burst.burst-ante  { color: #ffd97a; text-shadow: 0 0 14px rgba(255,190,60,0.95), 0 0 34px rgba(200,120,0,0.6); }
@@ -2048,7 +2086,8 @@
       align-items: center;
       font-family: 'TankanScript', serif;
       font-size: 2.8rem;
-      line-height: 1.1;
+      line-height: 1;
+      row-gap: 14px;
       color: rgba(255, 130, 40, 0.9);
       text-shadow:
         0 0 8px  rgba(255, 50, 0, 0.9),
@@ -2059,8 +2098,9 @@
       animation: tankanPillarBurst var(--layout-cinematic-burst-duration, 2.1s) both;
     }
     .cin-tankan-pillar .tankan-char { display: block; text-align: center; }
-    .cin-tankan-pillar.burst-call  { color: #88ccff; text-shadow: 0 0 14px rgba(100,180,255,0.9), 0 0 32px rgba(60,140,255,0.5); }
-    .cin-tankan-pillar.burst-raise { color: #f2d08f; text-shadow: 0 0 14px rgba(242,160,40,0.95), 0 0 32px rgba(200,110,10,0.6); }
+    .cin-tankan-pillar.burst-call  { color: #66e89a; text-shadow: 0 0 14px rgba(80,220,120,0.95), 0 0 32px rgba(20,180,70,0.65); }
+    .cin-tankan-pillar.burst-raise { color: #e84040; text-shadow: 0 0 14px rgba(240,50,50,0.98),  0 0 34px rgba(200,20,20,0.7); }
+    .cin-tankan-pillar.burst-bet   { color: #f2a040; text-shadow: 0 0 14px rgba(255,140,30,0.98), 0 0 34px rgba(210,90,0,0.65); }
     .cin-tankan-pillar.burst-fold  { color: #ff9090; text-shadow: 0 0 14px rgba(255,70,70,0.95),  0 0 32px rgba(200,30,30,0.6); }
     @keyframes tankanPillarBurst {
       0%   { transform: translate(-50%, -50%) scale(0.3);  opacity: 0;
