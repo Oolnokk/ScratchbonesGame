@@ -210,6 +210,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     windowResizeHandler: null,
     documentScrollHandler: null,
     scrollRaf: 0,
+    syncRafId: 0,
+    syncPendingApp: null,
   };
   const log = (level, event, payload = {}) => {
     if (typeof debugLog !== 'function') return;
@@ -555,7 +557,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     return true;
   }
 
-  function sync(app = document.getElementById('app')) {
+  function _runSyncNow(app) {
     if (assignmentListDirty) {
       cachedSyncAssignmentList = buildAssignmentList();
       assignmentListDirty = false;
@@ -617,6 +619,19 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     log('debug', 'sync-complete', { promotedCount: state.promoted.length });
   }
 
+  function sync(app = document.getElementById('app')) {
+    if (!enabled || !app) return;
+    // Debounce via RAF: many rapid sync() calls per render burst collapse into one DOM rebuild.
+    state.syncPendingApp = app;
+    if (state.syncRafId) return;
+    state.syncRafId = requestAnimationFrame(() => {
+      state.syncRafId = 0;
+      const pendingApp = state.syncPendingApp || document.getElementById('app');
+      state.syncPendingApp = null;
+      _runSyncNow(pendingApp);
+    });
+  }
+
   function realign(app = document.getElementById('app')) {
     if (!enabled || !state.host || !state.promoted.length) return;
     if (app && state.app !== app) state.app = app;
@@ -625,6 +640,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
   function clear() {
     if (!enabled) return;
+    if (state.syncRafId) {
+      cancelAnimationFrame(state.syncRafId);
+      state.syncRafId = 0;
+      state.syncPendingApp = null;
+    }
     clearPromoted();
     if (state.resizeObserver) {
       state.resizeObserver.disconnect();
