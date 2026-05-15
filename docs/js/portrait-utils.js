@@ -273,7 +273,11 @@ function loadImg(relPath) {
 
   // Once the image resolves, upgrade the cache entry from Promise → Image so
   // subsequent calls get a synchronous hit and renderProfile can skip await.
-  promise.then(img => IMG_CACHE.set(relPath, img), () => { /* leave failed promise as-is */ });
+  // Also eagerly decode so drawImage() never stalls on first paint.
+  promise.then(img => {
+    IMG_CACHE.set(relPath, img);
+    if (img?.decode) img.decode().catch(() => {});
+  }, () => { /* leave failed promise as-is */ });
 
   IMG_CACHE.set(relPath, promise);
   return promise;
@@ -1864,10 +1868,26 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
 
 async function preloadAllPortraitSprites(cosmeticsData) {
   const relPaths = new Set();
+  const EXPRESSIONS = ['neutral', 'smile', 'frown', 'laugh'];
+  const seenFighters = new Set();
   for (const fighter of FIGHTERS) {
     if (fighter.headUrl) relPaths.add(fighter.headUrl);
     for (const layer of fighter.bodyLayers || []) { if (layer.url) relPaths.add(layer.url); }
-    for (const layer of fighter.urLayers || []) { if (layer.url) relPaths.add(layer.url); }
+    for (const layer of fighter.urLayers || []) {
+      if (layer.url) {
+        relPaths.add(layer.url);
+        relPaths.add(layer.url.replace(/\.png$/i, '_blink.png'));
+      }
+    }
+    // Mouth expression sprites are dynamically computed, not in optionCache
+    const fKey = `${fighter.speciesId}_${fighter.gender}`;
+    if (!seenFighters.has(fKey)) {
+      seenFighters.add(fKey);
+      for (const expr of EXPRESSIONS) {
+        const url = _getMouthSpriteUrl(expr, fighter.speciesId, fighter.gender);
+        if (url) relPaths.add(url);
+      }
+    }
   }
   if (cosmeticsData?.optionCache) {
     for (const opt of cosmeticsData.optionCache.values()) {

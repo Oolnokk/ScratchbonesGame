@@ -3967,11 +3967,14 @@ import { createTutorial } from './tutorial.js';
     function preloadCardAsset(src) {
       return new Promise((resolve) => {
         const img = new Image();
-        const finish = () => resolve();
+        const finish = () => {
+          if (img.decode) img.decode().catch(() => {}).finally(resolve);
+          else resolve();
+        };
         img.onload = finish;
-        img.onerror = finish;
+        img.onerror = resolve;
         img.src = src;
-        if (img.complete) resolve();
+        if (img.complete) finish();
       });
     }
     async function preloadScratchboneCardArt() {
