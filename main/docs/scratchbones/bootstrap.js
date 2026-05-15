@@ -1836,6 +1836,10 @@ import { createTutorial } from './tutorial.js';
       if (state.gameOver || state.currentTurn !== state.humanSeat || state.challengeWindow || state.betting) return;
       if (state.selectedCardIds.has(cardId)) state.selectedCardIds.delete(cardId);
       else state.selectedCardIds.add(cardId);
+      // Immediately reflect the selection on the card element before the full render+sync cycle.
+      // The card may be in the layer-manager portal (outside #app), so search document-wide.
+      const isNowSelected = state.selectedCardIds.has(cardId);
+      document.querySelectorAll(`[data-card-id="${cardId}"]`).forEach(el => el.classList.toggle('selected', isNowSelected));
       render();
     }
     function humanPlay() {
@@ -3964,22 +3968,33 @@ import { createTutorial } from './tutorial.js';
       });
       return [...srcs];
     }
-    function preloadCardAsset(src) {
+    function _reportLoadProgress(loaded, total) {
+      window.dispatchEvent(new CustomEvent('scratchbones:load-progress', { detail: { loaded, total } }));
+    }
+    function preloadCardAsset(src, onSettled) {
       return new Promise((resolve) => {
         const img = new Image();
-        const finish = () => resolve();
+        const finish = () => {
+          onSettled?.();
+          if (img.decode) img.decode().catch(() => {}).finally(resolve);
+          else resolve();
+        };
         img.onload = finish;
-        img.onerror = finish;
+        img.onerror = () => { onSettled?.(); resolve(); };
         img.src = src;
-        if (img.complete) resolve();
+        if (img.complete) finish();
       });
     }
     async function preloadScratchboneCardArt() {
       if (SCRATCHBONES_GAME.assets?.preloadCards === false) return;
       if (cardAssetPreloadPromise) return cardAssetPreloadPromise;
       const assetSrcs = collectScratchboneCardArtSources();
-      cardAssetPreloadPromise = Promise.all(assetSrcs.map(preloadCardAsset))
-        .catch(() => undefined);
+      let loaded = 0;
+      const total = assetSrcs.length;
+      cardAssetPreloadPromise = Promise.all(assetSrcs.map(src => preloadCardAsset(src, () => {
+        loaded++;
+        _reportLoadProgress(loaded, total);
+      }))).catch(() => undefined);
       await cardAssetPreloadPromise;
     }
     function wireScratchboneImageFallbacks(root = document) {
@@ -5159,6 +5174,7 @@ import { createTutorial } from './tutorial.js';
                   'object-fit:contain', 'pointer-events:none',
                   'transform-origin:center center',
                   `transform:translate(${dx}px,${dy}px) scale(0.14)`,
+                  'will-change:transform',
                   'transition:none',
                 ].join(';');
                 document.body.appendChild(clone);
@@ -5205,6 +5221,7 @@ import { createTutorial } from './tutorial.js';
                   'object-fit:contain', 'pointer-events:none',
                   'transform-origin:center center',
                   `transform:translate(${dx}px,${dy}px) scale(0.08)`,
+                  'will-change:transform',
                   'transition:none',
                 ].join(';');
                 document.body.appendChild(clone);
@@ -5281,6 +5298,7 @@ import { createTutorial } from './tutorial.js';
               'object-fit:contain', 'pointer-events:none',
               'transform-origin:center center',
               `transform:translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`,
+              'will-change:transform',
               'transition:none',
             ].join(';');
             document.body.appendChild(clone);
@@ -6102,19 +6120,21 @@ import { createTutorial } from './tutorial.js';
     }
     // ── Portrait generation ────────────────────────────────
     let _portraitCosmetics = null;
+    let _portraitPreloadPromise = null;
     if (window.setPortraitAssetBase && window.loadPortraitCosmetics) {
       const scratchbonesPortraitConfig = window.SCRATCHBONES_CONFIG?.game?.assets?.portrait || null;
       if (scratchbonesPortraitConfig && window.setPortraitConfig) {
         setPortraitConfig(scratchbonesPortraitConfig);
       }
       setPortraitAssetBase(scratchbonesPortraitConfig?.assetBase || './docs/assets/');
-      loadPortraitCosmetics(scratchbonesPortraitConfig?.configBase || './docs/config/').then(cosmetics => {
+      _portraitPreloadPromise = loadPortraitCosmetics(scratchbonesPortraitConfig?.configBase || './docs/config/').then(cosmetics => {
         _portraitCosmetics = cosmetics;
         if (state.players.length) {
           for (const p of state.players) p.profile = generatePlayerProfile(p);
           applyAiNamesByPortraitCulture();
           renderSeatPortraits();
         }
+        return window.preloadAllPortraitSprites?.(cosmetics);
       }).catch(e => console.warn('[game] portrait cosmetics failed to load', e));
     } else {
       console.warn('[game] portrait utils unavailable; falling back to initials.');
@@ -6335,8 +6355,16 @@ import { createTutorial } from './tutorial.js';
         if (!p.profile) continue;
         const seatIdStr = String(p.id);
         const canvases = root.querySelectorAll(`canvas[data-seat-id="${p.id}"]`);
+        if (!canvases.length) continue;
+        // Render portrait once to the first canvas, then blit to any duplicates.
+        // Multiple canvases for the same seat appear during betting/cinematic phases.
+        const primary = canvases[0];
+        if (window.renderProfile) window.renderProfile(primary, p.profile, { seatId: seatIdStr });
         for (const canvas of canvases) {
-          if (window.renderProfile) window.renderProfile(canvas, p.profile, { seatId: seatIdStr });
+          if (canvas !== primary) {
+            const dupCtx = canvas.getContext('2d');
+            if (dupCtx) { dupCtx.clearRect(0, 0, canvas.width, canvas.height); dupCtx.drawImage(primary, 0, 0); }
+          }
           // Disgust-emote flip: temporarily mirror the portrait opposite to its CSS-intended
           // state, then revert. actorAvatarFloat = intended un-flipped (transform:none);
           // all other contexts = intended flipped (transform:scaleX(-1)).
@@ -6351,8 +6379,8 @@ import { createTutorial } from './tutorial.js';
     }
     // Continuous portrait animation loop — needed so blinks appear at the correct
     // duration (≈140 ms) even when game state is idle between renders.
-    // Runs at ~30 fps (every 33 ms) for smooth mesh-deformation breathing animation
-    // while still being fast enough to capture a 140 ms blink window reliably.
+    // Runs at ~20 fps (every 50 ms): breathing animation remains smooth, blink windows
+    // are still captured reliably, and canvas rasterization cost is cut by ~33%.
     let _portraitLoopActive = false;
     let _lastPortraitMs = 0;
     // Text of the most recently client-sent chat message; cleared when
@@ -6370,7 +6398,7 @@ import { createTutorial } from './tutorial.js';
       if (_portraitLoopActive) return;
       _portraitLoopActive = true;
       _lastPortraitMs = 0;
-      const PORTRAIT_FRAME_MS = 33;
+      const PORTRAIT_FRAME_MS = 50;
       function tick(nowMs) {
         if (!_portraitLoopActive) return;
         requestAnimationFrame(tick);
@@ -8660,7 +8688,15 @@ import { createTutorial } from './tutorial.js';
     window.scratchbonesStartGame = startGameWithNetwork;
     window.scratchbonesStartTutorial = startTutorialGame;
     window.scratchbonesStartClient = startClient;
+    const _cardPreloadPromise = preloadScratchboneCardArt();
     window.dispatchEvent(new CustomEvent('scratchbones:ready'));
+    // Portrait sprites preload in the background — they have the lobby config
+    // window to finish, so we don't block the loading screen on them.
+    // Cards block the screen because they're needed the instant play is clicked.
+    Promise.race([
+      _cardPreloadPromise.catch(() => {}),
+      new Promise(r => setTimeout(r, 8_000)),
+    ]).then(() => window.dispatchEvent(new CustomEvent('scratchbones:assets-loaded')));
     // Auto-start only when the lobby system is absent (dev/standalone mode).
     if (!window.ScratchbonesLobby) {
       void startGameWithNetwork().catch((error) => { console.error('[game] startGame failed', error); });

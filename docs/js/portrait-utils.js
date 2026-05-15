@@ -132,6 +132,18 @@ let FIGHTERS = (_portraitConfig.fighters || _PORTRAIT_DEFAULTS.fighters).map(nor
 let BODYCOLOR_LIMITS = _portraitConfig.bodyColorLimits || _PORTRAIT_DEFAULTS.bodyColorLimits;
 let LAST_RANDOMIZATION_RULES_BY_FIGHTER = {};
 
+// Persistent offscreen canvas reused for ur-head masking — avoids allocating a
+// new canvas element on every renderProfile call (was creating ~240/second).
+let _urMaskOffCanvas = null;
+let _urMaskOffCtx = null;
+function _getUrMaskCanvas(w, h) {
+  if (!_urMaskOffCanvas || _urMaskOffCanvas.width !== w || _urMaskOffCanvas.height !== h) {
+    _urMaskOffCanvas = Object.assign(document.createElement('canvas'), { width: w, height: h });
+    _urMaskOffCtx = _urMaskOffCanvas.getContext('2d');
+  }
+  return { canvas: _urMaskOffCanvas, ctx: _urMaskOffCtx };
+}
+
 function _normalizeSpeciesKey(speciesId) {
   return String(speciesId || '').trim().toLowerCase().replace(/_/g, '-');
 }
@@ -886,8 +898,8 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
   // mouth shape (destination-out) before compositing the result onto the main canvas.
   // All other species draw ur-head directly.
   if (_isMaskSpecies && urLayerSource.length) {
-    const urOff = Object.assign(document.createElement('canvas'), { width: PORTRAIT_CW, height: PORTRAIT_CH });
-    const urCtx = urOff.getContext('2d');
+    const { canvas: urOff, ctx: urCtx } = _getUrMaskCanvas(PORTRAIT_CW, PORTRAIT_CH);
+    urCtx.clearRect(0, 0, PORTRAIT_CW, PORTRAIT_CH);
     const urXform = getPortraitXformPreset('B');
     for (const mid of urLayerSource) {
       const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
@@ -1862,8 +1874,43 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
 }
 
 
+async function preloadAllPortraitSprites(cosmeticsData) {
+  const relPaths = new Set();
+  const EXPRESSIONS = ['neutral', 'smile', 'frown', 'laugh'];
+  const seenFighters = new Set();
+  for (const fighter of FIGHTERS) {
+    if (fighter.headUrl) relPaths.add(fighter.headUrl);
+    for (const layer of fighter.bodyLayers || []) { if (layer.url) relPaths.add(layer.url); }
+    for (const layer of fighter.urLayers || []) {
+      if (layer.url) {
+        relPaths.add(layer.url);
+        relPaths.add(layer.url.replace(/\.png$/i, '_blink.png'));
+      }
+    }
+    // Mouth expression sprites are dynamically computed, not in optionCache
+    const fKey = `${fighter.speciesId}_${fighter.gender}`;
+    if (!seenFighters.has(fKey)) {
+      seenFighters.add(fKey);
+      for (const expr of EXPRESSIONS) {
+        const url = _getMouthSpriteUrl(expr, fighter.speciesId, fighter.gender);
+        if (url) relPaths.add(url);
+      }
+    }
+  }
+  if (cosmeticsData?.optionCache) {
+    for (const opt of cosmeticsData.optionCache.values()) {
+      for (const layer of opt.layers || []) { if (layer.url) relPaths.add(layer.url); }
+      for (const layers of Object.values(opt.variantLayers || {})) {
+        for (const layer of layers || []) { if (layer.url) relPaths.add(layer.url); }
+      }
+    }
+  }
+  await Promise.all([...relPaths].map(url => loadImg(url).catch(() => null)));
+}
+
 window.setPortraitConfig = setPortraitConfig;
 window.getPortraitFighters = () => FIGHTERS;
+window.preloadAllPortraitSprites = preloadAllPortraitSprites;
 window.getPortraitXformPreset = getPortraitXformPreset;
 
 window.loadPortraitCosmetics = loadPortraitCosmetics;

@@ -739,10 +739,14 @@
       // workShadow holds unblurred steps; caller blits with clip + blur
     }
 
+    const CANDLE_FRAME_MS = 1000 / 30;
+    let _lastCandleMs = 0;
     function requestDrawFrame() {
       if (!runLoopEnabled || document.hidden || drawRafId) return;
       drawRafId = requestAnimationFrame((ms) => {
         drawRafId = 0;
+        if (ms - _lastCandleMs < CANDLE_FRAME_MS) { requestDrawFrame(); return; }
+        _lastCandleMs = ms;
         draw(ms / 1000);
       });
     }
@@ -863,19 +867,9 @@
         thevmenuGlowCtx.clearRect(0, 0, w, h);
         thevmenuGlowCtx.drawImage(glowCanvas, 0, 0);
 
-        // ── Lerp clone lighting ─────────────────────────────────────────────────
-        // Clones on document.body get a CSS filter that approximates their position
-        // in the candlelight (dark + warm near source, dim + cool far from it).
-        const ar = appRef.getBoundingClientRect();
-        document.querySelectorAll('[data-candle-lerp-clone]').forEach(el => {
-          const r  = el.getBoundingClientRect();
-          const cx = r.left + r.width  * 0.5 - ar.left;
-          const cy = r.top  + r.height * 0.5 - ar.top;
-          const falloff = Math.max(0, 1 - Math.hypot(cx - primaryLight.lx, cy - primaryLight.ly) / primaryLight.radius);
-          el.style.filter =
-            `brightness(${(0.28 + falloff * 0.72 * primaryLight.pulse).toFixed(3)})` +
-            ` sepia(${(falloff * 0.5).toFixed(3)})`;
-        });
+        // Lerp clone lighting is intentionally skipped: applying el.style.filter
+        // every frame forces a style recalc that invalidates will-change:transform
+        // compositing, causing dropped frames during card animations.
         maybePruneSilhouetteCache();
       } finally {
         requestDrawFrame();
