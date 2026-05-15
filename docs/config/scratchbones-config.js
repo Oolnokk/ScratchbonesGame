@@ -839,17 +839,17 @@ window.SCRATCHBONES_CONFIG = {
       },
       "poolDisplay": {
         "maxIcons": 28,
-        "widthPx": 275,
-        "heightPx": 120,
-        "coinSizePx": 63,
-        "spreadXPx": 105,
-        "spreadYPx": 35,
+        "widthPx": 248,
+        "heightPx": 108,
+        "coinSizePx": 57,
+        "spreadXPx": 95,
+        "spreadYPx": 32,
         "offsetXPx": 100,
         "offsetYPx": -48,
         "totalLabel": {
           "rightPx": 8,
           "bottomPx": 4,
-          "fontSizePx": 48,
+          "fontSizePx": 43,
           "lineHeight": 1,
           "color": "#ffffff"
         }
