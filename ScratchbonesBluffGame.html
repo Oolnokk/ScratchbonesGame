@@ -1009,11 +1009,11 @@
       flex: 0 0 auto;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
       justify-content: flex-start;
       gap: 0;
       min-width: 0;
-      overflow: visible;
+      overflow: hidden;
     }
     .seatAvatarBox {
       flex: 0 0 auto;
@@ -1022,6 +1022,17 @@
       height: auto;
       overflow: visible;
       border-radius: 8px;
+      position: relative;
+    }
+    .seatEliminatedOverlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      filter: invert(0.18) sepia(1) saturate(6) hue-rotate(330deg) brightness(0.85);
+      z-index: 2;
     }
     .humanSeatCard {
       background: linear-gradient(170deg, rgba(67,49,43,0.95), rgba(50,37,33,0.98));
@@ -1091,20 +1102,18 @@
     .seatTags { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
     .seatHandPreview {
       display: flex;
-      flex-wrap: nowrap;
-      gap: 0;
-      margin-top: 5px;
-      overflow: visible;
+      flex-wrap: wrap;
+      gap: 2px;
+      margin-top: 4px;
+      width: 100%;
+      overflow: hidden;
+      align-content: flex-start;
     }
     .seatHandCard {
       width: 14px;
       aspect-ratio: 312 / 440;
       flex: 0 0 auto;
-      margin-left: -4px;
       overflow: visible;
-    }
-    .seatHandCard:first-child {
-      margin-left: 0;
     }
     .seatHandCard img {
       width: 100%;
