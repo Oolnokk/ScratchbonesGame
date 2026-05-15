@@ -7062,7 +7062,7 @@ import { createTutorial } from './tutorial.js';
     function clearChallengeTankanColumns(_app) {
       document.querySelectorAll('.cin-tankan-pillar').forEach((node) => node.remove());
     }
-    function mountChallengeTankanColumns(app, sideText, cssClass) {
+    function mountChallengeTankanColumns(app, sideText, cssClass, side) {
       if (!app) return;
       const text = String(sideText || '').replace(/[!！?？]+$/g, '').trim();
       if (!text) { clearChallengeTankanColumns(app); return; }
@@ -7072,14 +7072,10 @@ import { createTutorial } from './tutorial.js';
       clearChallengeTankanColumns(app);
 
       const sideGapPx = Math.max(8, Number(tankanConfig.minGapPx) || 28);
-      const actorAnchor = app.querySelector('.actorAvatarFloat .claimAvatarShell') || app.querySelector('.actorAvatarFloat');
-      const reactorAnchor = app.querySelector('.reactorAvatarFloat .claimAvatarShell') || app.querySelector('.reactorAvatarFloat');
-      const actorRect = actorAnchor?.getBoundingClientRect?.();
-      const reactorRect = reactorAnchor?.getBoundingClientRect?.();
 
-      const makePillar = (x, y, side) => {
+      const makePillar = (x, y, pillarSide) => {
         const pillar = document.createElement('div');
-        pillar.className = `cin-tankan-pillar cin-tankan-pillar-${side}${cssClass ? ` ${cssClass}` : ''}`;
+        pillar.className = `cin-tankan-pillar cin-tankan-pillar-${pillarSide}${cssClass ? ` ${cssClass}` : ''}`;
         pillar.setAttribute('aria-hidden', 'true');
         pillar.style.left = `${x.toFixed(1)}px`;
         pillar.style.top = `${y.toFixed(1)}px`;
@@ -7092,11 +7088,15 @@ import { createTutorial } from './tutorial.js';
         document.body.appendChild(pillar);
       };
 
-      if (actorRect && actorRect.width > 0) {
-        makePillar(actorRect.left - sideGapPx, actorRect.top + actorRect.height * 0.5, 'actor');
+      if (side !== 'reactor') {
+        const anchor = app.querySelector('.actorAvatarFloat .claimAvatarShell') || app.querySelector('.actorAvatarFloat');
+        const rect = anchor?.getBoundingClientRect?.();
+        if (rect && rect.width > 0) makePillar(rect.left - sideGapPx, rect.top + rect.height * 0.5, 'actor');
       }
-      if (reactorRect && reactorRect.width > 0) {
-        makePillar(reactorRect.right + sideGapPx, reactorRect.top + reactorRect.height * 0.5, 'reactor');
+      if (side !== 'actor') {
+        const anchor = app.querySelector('.reactorAvatarFloat .claimAvatarShell') || app.querySelector('.reactorAvatarFloat');
+        const rect = anchor?.getBoundingClientRect?.();
+        if (rect && rect.width > 0) makePillar(rect.right + sideGapPx, rect.top + rect.height * 0.5, 'reactor');
       }
     }
     function clearClaimClusterBettingLayer(app = document.getElementById('app')) {
@@ -7313,7 +7313,14 @@ import { createTutorial } from './tutorial.js';
         ? { label: 'Raise!', cssClass: 'burst-raise' }
         : { label: 'Fold!', cssClass: 'burst-fold' };
       const { label, cssClass } = actionAnnouncement;
-      mountChallengeTankanColumns(app, label, cssClass);
+      const pillarSide = playerId === state.cinematicMode.actorId ? 'actor' : 'reactor';
+      const isNpc = playerId !== state.humanSeat;
+      const tankanDelayMs = isNpc ? 550 : 0;
+      if (tankanDelayMs > 0) {
+        setTimeout(() => mountChallengeTankanColumns(app, label, cssClass, pillarSide), tankanDelayMs);
+      } else {
+        mountChallengeTankanColumns(app, label, cssClass, pillarSide);
+      }
       const overlay = ensureAvatarOverlay(anchor);
       if (!overlay) return;
       const burstShell = document.createElement('div');
