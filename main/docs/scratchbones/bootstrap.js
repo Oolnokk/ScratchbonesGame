@@ -1836,6 +1836,10 @@ import { createTutorial } from './tutorial.js';
       if (state.gameOver || state.currentTurn !== state.humanSeat || state.challengeWindow || state.betting) return;
       if (state.selectedCardIds.has(cardId)) state.selectedCardIds.delete(cardId);
       else state.selectedCardIds.add(cardId);
+      // Immediately reflect the selection on the card element before the full render+sync cycle.
+      // The card may be in the layer-manager portal (outside #app), so search document-wide.
+      const isNowSelected = state.selectedCardIds.has(cardId);
+      document.querySelectorAll(`[data-card-id="${cardId}"]`).forEach(el => el.classList.toggle('selected', isNowSelected));
       render();
     }
     function humanPlay() {

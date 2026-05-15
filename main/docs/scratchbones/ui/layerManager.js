@@ -210,8 +210,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     windowResizeHandler: null,
     documentScrollHandler: null,
     scrollRaf: 0,
-    syncPending: false,
-    syncGeneration: 0,
+    syncRafId: 0,
     syncPendingApp: null,
   };
   const log = (level, event, payload = {}) => {
@@ -622,15 +621,13 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
   function sync(app = document.getElementById('app')) {
     if (!enabled || !app) return;
-    // Batch rapid sync() calls within the same task via microtask — runs before paint so
-    // there is no visible lag, but 30 synchronous render() calls still collapse to one rebuild.
+    // Collapse rapid sync() calls (e.g. 30 per deal burst) into one RAF callback.
+    // Card selection feedback is handled immediately in toggleSelect before render() fires,
+    // so the one-frame RAF delay is not perceptible for user interactions.
     state.syncPendingApp = app;
-    if (state.syncPending) return;
-    state.syncPending = true;
-    const gen = ++state.syncGeneration;
-    queueMicrotask(() => {
-      state.syncPending = false;
-      if (state.syncGeneration !== gen) return; // cancelled by clear()
+    if (state.syncRafId) return;
+    state.syncRafId = requestAnimationFrame(() => {
+      state.syncRafId = 0;
       const pendingApp = state.syncPendingApp || document.getElementById('app');
       state.syncPendingApp = null;
       _runSyncNow(pendingApp);
@@ -645,9 +642,9 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
 
   function clear() {
     if (!enabled) return;
-    if (state.syncPending) {
-      state.syncGeneration++; // invalidates the pending microtask
-      state.syncPending = false;
+    if (state.syncRafId) {
+      cancelAnimationFrame(state.syncRafId);
+      state.syncRafId = 0;
       state.syncPendingApp = null;
     }
     clearPromoted();
