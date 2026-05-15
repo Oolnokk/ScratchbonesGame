@@ -273,11 +273,7 @@ function loadImg(relPath) {
 
   // Once the image resolves, upgrade the cache entry from Promise → Image so
   // subsequent calls get a synchronous hit and renderProfile can skip await.
-  // Also eagerly decode so drawImage() never stalls on first paint.
-  promise.then(img => {
-    IMG_CACHE.set(relPath, img);
-    if (img?.decode) img.decode().catch(() => {});
-  }, () => { /* leave failed promise as-is */ });
+  promise.then(img => IMG_CACHE.set(relPath, img), () => { /* leave failed promise as-is */ });
 
   IMG_CACHE.set(relPath, promise);
   return promise;

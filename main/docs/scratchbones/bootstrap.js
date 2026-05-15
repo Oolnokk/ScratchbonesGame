@@ -3964,15 +3964,19 @@ import { createTutorial } from './tutorial.js';
       });
       return [...srcs];
     }
-    function preloadCardAsset(src) {
+    function _reportLoadProgress(loaded, total) {
+      window.dispatchEvent(new CustomEvent('scratchbones:load-progress', { detail: { loaded, total } }));
+    }
+    function preloadCardAsset(src, onSettled) {
       return new Promise((resolve) => {
         const img = new Image();
         const finish = () => {
+          onSettled?.();
           if (img.decode) img.decode().catch(() => {}).finally(resolve);
           else resolve();
         };
         img.onload = finish;
-        img.onerror = resolve;
+        img.onerror = () => { onSettled?.(); resolve(); };
         img.src = src;
         if (img.complete) finish();
       });
@@ -3981,8 +3985,12 @@ import { createTutorial } from './tutorial.js';
       if (SCRATCHBONES_GAME.assets?.preloadCards === false) return;
       if (cardAssetPreloadPromise) return cardAssetPreloadPromise;
       const assetSrcs = collectScratchboneCardArtSources();
-      cardAssetPreloadPromise = Promise.all(assetSrcs.map(preloadCardAsset))
-        .catch(() => undefined);
+      let loaded = 0;
+      const total = assetSrcs.length;
+      cardAssetPreloadPromise = Promise.all(assetSrcs.map(src => preloadCardAsset(src, () => {
+        loaded++;
+        _reportLoadProgress(loaded, total);
+      }))).catch(() => undefined);
       await cardAssetPreloadPromise;
     }
     function wireScratchboneImageFallbacks(root = document) {
@@ -8667,9 +8675,12 @@ import { createTutorial } from './tutorial.js';
     window.scratchbonesStartClient = startClient;
     const _cardPreloadPromise = preloadScratchboneCardArt();
     window.dispatchEvent(new CustomEvent('scratchbones:ready'));
+    // Portrait sprites preload in the background — they have the lobby config
+    // window to finish, so we don't block the loading screen on them.
+    // Cards block the screen because they're needed the instant play is clicked.
     Promise.race([
-      Promise.all([_cardPreloadPromise, _portraitPreloadPromise ?? Promise.resolve()]).catch(() => {}),
-      new Promise(r => setTimeout(r, 12_000)),
+      _cardPreloadPromise.catch(() => {}),
+      new Promise(r => setTimeout(r, 8_000)),
     ]).then(() => window.dispatchEvent(new CustomEvent('scratchbones:assets-loaded')));
     // Auto-start only when the lobby system is absent (dev/standalone mode).
     if (!window.ScratchbonesLobby) {
