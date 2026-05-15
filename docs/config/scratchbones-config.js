@@ -1660,7 +1660,7 @@ window.SCRATCHBONES_CONFIG = {
         },
         "elements": {
           "claimRankBox": {
-            "xPct": 0.489583,
+            "xPct": 0.5,
             "yPct": 0.115385,
             "wPct": 0.0625,
             "hPct": 0.230769

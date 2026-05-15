@@ -452,7 +452,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
         placeholder.style.top = computed.top;
         placeholder.style.right = computed.right;
         placeholder.style.bottom = computed.bottom;
-        placeholder.style.transform = '';
+        placeholder.style.transform = 'none';
         placeholder.style.transformOrigin = '';
         placeholder.style.pointerEvents = 'none';
       } else {
