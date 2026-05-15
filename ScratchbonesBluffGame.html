@@ -2566,6 +2566,48 @@
        Hide the burst in the portal copy — only the original inside .claimCluster shows it. */
     .ui-layer-portal .fx-burst-shell { display: none !important; }
 
+    /* ── Initial loading screen ─────────────────────────────── */
+    #sb-loading {
+      position: fixed; inset: 0; z-index: 950;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle at top, #30211d 0%, #1a1210 42%, #0f0c0b 100%);
+      font-family: 'Khymeryyanroman4', Inter, system-ui, sans-serif;
+      letter-spacing: 0.14em; color: rgba(255,255,255,0.9);
+      transition: opacity 0.45s ease;
+    }
+    #sb-loading.sb-loading-fade {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .sb-loading-inner {
+      display: flex; flex-direction: column; align-items: center; gap: 28px;
+    }
+    .sb-loading-title {
+      font-family: 'TankanScript', 'Khymeryyanroman4', sans-serif;
+      font-size: clamp(2rem, 8vw, 3.6rem);
+      color: #f2d08f;
+      text-shadow: 0 0 48px rgba(200,153,82,0.45), -1px -1px 0 rgba(0,0,0,0.6), 1px 1px 0 rgba(0,0,0,0.6);
+    }
+    .sb-loading-card {
+      width: 72px; height: auto;
+      animation: sb-card-spin 1.8s cubic-bezier(0.4,0,0.6,1) infinite;
+      filter: drop-shadow(0 0 12px rgba(200,153,82,0.35));
+      opacity: 0.85;
+    }
+    @keyframes sb-card-spin {
+      0%   { transform: rotateY(0deg); }
+      50%  { transform: rotateY(180deg); }
+      100% { transform: rotateY(360deg); }
+    }
+    .sb-loading-dots {
+      font-size: 0.8em; color: rgba(242,208,143,0.45); letter-spacing: 0.3em;
+      animation: sb-dots-fade 1.4s ease-in-out infinite alternate;
+    }
+    @keyframes sb-dots-fade {
+      from { opacity: 0.3; }
+      to   { opacity: 0.8; }
+    }
+
     /* ── Lobby overlay ──────────────────────────────────────── */
     #sb-lobby {
       position: fixed; inset: 0; z-index: 900;
@@ -3081,6 +3123,26 @@
   </style>
 </head>
 <body>
+  <!-- Initial loading screen — visible from first paint, removed once bootstrap is ready -->
+  <div id="sb-loading">
+    <div class="sb-loading-inner">
+      <div class="sb-loading-title">SCRATCHBONES!</div>
+      <img class="sb-loading-card" src="./docs/assets/hud/2DScratchBoneFlipped.png" alt="" aria-hidden="true">
+      <div class="sb-loading-dots">Loading</div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      function dismissLoadingScreen() {
+        var el = document.getElementById('sb-loading');
+        if (!el || el.dataset.dismissed) return;
+        el.dataset.dismissed = '1';
+        el.classList.add('sb-loading-fade');
+        el.addEventListener('transitionend', function () { el.remove(); }, { once: true });
+      }
+      window.addEventListener('scratchbones:ready', dismissLoadingScreen, { once: true });
+    })();
+  </script>
   <!-- Lobby overlay — shown before and between games -->
   <div id="sb-lobby" style="display:none;"></div>
   <!-- Hot-seat cover — shown when passing device between human players -->

@@ -8660,6 +8660,7 @@ import { createTutorial } from './tutorial.js';
     window.scratchbonesStartGame = startGameWithNetwork;
     window.scratchbonesStartTutorial = startTutorialGame;
     window.scratchbonesStartClient = startClient;
+    void preloadScratchboneCardArt();
     window.dispatchEvent(new CustomEvent('scratchbones:ready'));
     // Auto-start only when the lobby system is absent (dev/standalone mode).
     if (!window.ScratchbonesLobby) {
