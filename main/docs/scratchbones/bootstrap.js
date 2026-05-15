@@ -6355,8 +6355,16 @@ import { createTutorial } from './tutorial.js';
         if (!p.profile) continue;
         const seatIdStr = String(p.id);
         const canvases = root.querySelectorAll(`canvas[data-seat-id="${p.id}"]`);
+        if (!canvases.length) continue;
+        // Render portrait once to the first canvas, then blit to any duplicates.
+        // Multiple canvases for the same seat appear during betting/cinematic phases.
+        const primary = canvases[0];
+        if (window.renderProfile) window.renderProfile(primary, p.profile, { seatId: seatIdStr });
         for (const canvas of canvases) {
-          if (window.renderProfile) window.renderProfile(canvas, p.profile, { seatId: seatIdStr });
+          if (canvas !== primary) {
+            const dupCtx = canvas.getContext('2d');
+            if (dupCtx) { dupCtx.clearRect(0, 0, canvas.width, canvas.height); dupCtx.drawImage(primary, 0, 0); }
+          }
           // Disgust-emote flip: temporarily mirror the portrait opposite to its CSS-intended
           // state, then revert. actorAvatarFloat = intended un-flipped (transform:none);
           // all other contexts = intended flipped (transform:scaleX(-1)).
@@ -6371,8 +6379,8 @@ import { createTutorial } from './tutorial.js';
     }
     // Continuous portrait animation loop — needed so blinks appear at the correct
     // duration (≈140 ms) even when game state is idle between renders.
-    // Runs at ~30 fps (every 33 ms) for smooth mesh-deformation breathing animation
-    // while still being fast enough to capture a 140 ms blink window reliably.
+    // Runs at ~20 fps (every 50 ms): breathing animation remains smooth, blink windows
+    // are still captured reliably, and canvas rasterization cost is cut by ~33%.
     let _portraitLoopActive = false;
     let _lastPortraitMs = 0;
     // Text of the most recently client-sent chat message; cleared when
@@ -6390,7 +6398,7 @@ import { createTutorial } from './tutorial.js';
       if (_portraitLoopActive) return;
       _portraitLoopActive = true;
       _lastPortraitMs = 0;
-      const PORTRAIT_FRAME_MS = 33;
+      const PORTRAIT_FRAME_MS = 50;
       function tick(nowMs) {
         if (!_portraitLoopActive) return;
         requestAnimationFrame(tick);

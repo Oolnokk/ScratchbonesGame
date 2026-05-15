@@ -132,6 +132,18 @@ let FIGHTERS = (_portraitConfig.fighters || _PORTRAIT_DEFAULTS.fighters).map(nor
 let BODYCOLOR_LIMITS = _portraitConfig.bodyColorLimits || _PORTRAIT_DEFAULTS.bodyColorLimits;
 let LAST_RANDOMIZATION_RULES_BY_FIGHTER = {};
 
+// Persistent offscreen canvas reused for ur-head masking — avoids allocating a
+// new canvas element on every renderProfile call (was creating ~240/second).
+let _urMaskOffCanvas = null;
+let _urMaskOffCtx = null;
+function _getUrMaskCanvas(w, h) {
+  if (!_urMaskOffCanvas || _urMaskOffCanvas.width !== w || _urMaskOffCanvas.height !== h) {
+    _urMaskOffCanvas = Object.assign(document.createElement('canvas'), { width: w, height: h });
+    _urMaskOffCtx = _urMaskOffCanvas.getContext('2d');
+  }
+  return { canvas: _urMaskOffCanvas, ctx: _urMaskOffCtx };
+}
+
 function _normalizeSpeciesKey(speciesId) {
   return String(speciesId || '').trim().toLowerCase().replace(/_/g, '-');
 }
@@ -886,8 +898,8 @@ async function renderProfile(canvas, profile, renderOptions = {}) {
   // mouth shape (destination-out) before compositing the result onto the main canvas.
   // All other species draw ur-head directly.
   if (_isMaskSpecies && urLayerSource.length) {
-    const urOff = Object.assign(document.createElement('canvas'), { width: PORTRAIT_CW, height: PORTRAIT_CH });
-    const urCtx = urOff.getContext('2d');
+    const { canvas: urOff, ctx: urCtx } = _getUrMaskCanvas(PORTRAIT_CW, PORTRAIT_CH);
+    urCtx.clearRect(0, 0, PORTRAIT_CW, PORTRAIT_CH);
     const urXform = getPortraitXformPreset('B');
     for (const mid of urLayerSource) {
       const activeUrl = isBlinkFrame ? (blinkOverlayUrlsByBase.get(mid.url) || mid.url) : mid.url;
