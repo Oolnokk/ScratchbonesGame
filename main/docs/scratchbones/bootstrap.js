@@ -5861,14 +5861,6 @@ import { createTutorial } from './tutorial.js';
         app.querySelectorAll('[data-stake-tier-action="raise"]').forEach((btn) => {
           btn.addEventListener('click', () => {
             const tierId = btn.getAttribute('data-stake-tier-id');
-            // Immediately show "Bet!" on reactor (challenger) side at click time.
-            const tankanConfig = SCRATCHBONES_GAME.layout?.tableView?.cinematic?.tankanColumns || {};
-            if (tankanConfig.enabled !== false && state.cinematicMode) {
-              const sideGapPx = Math.max(8, Number(tankanConfig.minGapPx) || 28);
-              clearChallengeTankanColumns(app);
-              const betAnchor = app.querySelector('.reactorAvatarFloat .claimAvatarShell') || app.querySelector('.reactorAvatarFloat');
-              _spawnTankanPillarAt(betAnchor, 'Bet', 'burst-bet', 'reactor', sideGapPx);
-            }
             if (_isClient) _net.sendAction({ type: 'bet-raise-tier', tierId });
             else humanRaiseTierSelected(tierId);
           });
@@ -7334,9 +7326,12 @@ import { createTutorial } from './tutorial.js';
           : '.reactorAvatarFloat .claimAvatarShell, .reactorAvatarFloat';
         const mainAnchor = app.querySelector(mainAnchorSel.split(',')[0]) || app.querySelector(mainAnchorSel.split(',')[1].trim());
         _spawnTankanPillarAt(mainAnchor, label, cssClass, pillarSide, sideGapPx);
-        if (command === 'raise-tier') {
-          const betAnchor = app.querySelector('.reactorAvatarFloat .claimAvatarShell') || app.querySelector('.reactorAvatarFloat');
-          _spawnTankanPillarAt(betAnchor, 'Bet', 'burst-bet', 'reactor', sideGapPx);
+        if (command === 'raise-tier' && pillarSide !== 'reactor') {
+          setTimeout(() => {
+            if (!state.cinematicMode) return;
+            const betAnchor = app.querySelector('.reactorAvatarFloat .claimAvatarShell') || app.querySelector('.reactorAvatarFloat');
+            _spawnTankanPillarAt(betAnchor, 'Bet', 'burst-bet', 'reactor', sideGapPx);
+          }, 350);
         }
       };
       if (tankanDelayMs > 0) {
