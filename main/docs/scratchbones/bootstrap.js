@@ -5170,6 +5170,7 @@ import { createTutorial } from './tutorial.js';
                   'object-fit:contain', 'pointer-events:none',
                   'transform-origin:center center',
                   `transform:translate(${dx}px,${dy}px) scale(0.14)`,
+                  'will-change:transform',
                   'transition:none',
                 ].join(';');
                 document.body.appendChild(clone);
@@ -5216,6 +5217,7 @@ import { createTutorial } from './tutorial.js';
                   'object-fit:contain', 'pointer-events:none',
                   'transform-origin:center center',
                   `transform:translate(${dx}px,${dy}px) scale(0.08)`,
+                  'will-change:transform',
                   'transition:none',
                 ].join(';');
                 document.body.appendChild(clone);
@@ -5292,6 +5294,7 @@ import { createTutorial } from './tutorial.js';
               'object-fit:contain', 'pointer-events:none',
               'transform-origin:center center',
               `transform:translate(${dx}px,${dy}px) scale(${scaleX},${scaleY})`,
+              'will-change:transform',
               'transition:none',
             ].join(';');
             document.body.appendChild(clone);

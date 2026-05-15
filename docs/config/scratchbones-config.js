@@ -1490,7 +1490,7 @@ window.SCRATCHBONES_CONFIG = {
         "handWrapPaddingXpx": 12,
         "handWrapGapPx": 6,
         "handRailGapPx": 8,
-        "handSelectedLiftPx": 96,
+        "handSelectedLiftPx": 12,
         "handCardArtVisualCenterOffsetPx": 4,
         "handCardContainerWidthOffsetPx": 4,
         "handCardLabelInsetLeftPx": 2,
