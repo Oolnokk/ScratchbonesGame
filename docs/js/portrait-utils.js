@@ -1862,8 +1862,27 @@ function randomProfileSeeded(rng, fighters, hairFrontOptions, hairBackOptions, h
 }
 
 
+async function preloadAllPortraitSprites(cosmeticsData) {
+  const relPaths = new Set();
+  for (const fighter of FIGHTERS) {
+    if (fighter.headUrl) relPaths.add(fighter.headUrl);
+    for (const layer of fighter.bodyLayers || []) { if (layer.url) relPaths.add(layer.url); }
+    for (const layer of fighter.urLayers || []) { if (layer.url) relPaths.add(layer.url); }
+  }
+  if (cosmeticsData?.optionCache) {
+    for (const opt of cosmeticsData.optionCache.values()) {
+      for (const layer of opt.layers || []) { if (layer.url) relPaths.add(layer.url); }
+      for (const layers of Object.values(opt.variantLayers || {})) {
+        for (const layer of layers || []) { if (layer.url) relPaths.add(layer.url); }
+      }
+    }
+  }
+  await Promise.all([...relPaths].map(url => loadImg(url).catch(() => null)));
+}
+
 window.setPortraitConfig = setPortraitConfig;
 window.getPortraitFighters = () => FIGHTERS;
+window.preloadAllPortraitSprites = preloadAllPortraitSprites;
 window.getPortraitXformPreset = getPortraitXformPreset;
 
 window.loadPortraitCosmetics = loadPortraitCosmetics;

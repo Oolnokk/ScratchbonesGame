@@ -3140,7 +3140,7 @@
         el.classList.add('sb-loading-fade');
         el.addEventListener('transitionend', function () { el.remove(); }, { once: true });
       }
-      window.addEventListener('scratchbones:ready', dismissLoadingScreen, { once: true });
+      window.addEventListener('scratchbones:assets-loaded', dismissLoadingScreen, { once: true });
     })();
   </script>
   <!-- Lobby overlay — shown before and between games -->

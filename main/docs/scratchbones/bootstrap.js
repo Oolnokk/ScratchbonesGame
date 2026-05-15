@@ -6102,19 +6102,21 @@ import { createTutorial } from './tutorial.js';
     }
     // ── Portrait generation ────────────────────────────────
     let _portraitCosmetics = null;
+    let _portraitPreloadPromise = null;
     if (window.setPortraitAssetBase && window.loadPortraitCosmetics) {
       const scratchbonesPortraitConfig = window.SCRATCHBONES_CONFIG?.game?.assets?.portrait || null;
       if (scratchbonesPortraitConfig && window.setPortraitConfig) {
         setPortraitConfig(scratchbonesPortraitConfig);
       }
       setPortraitAssetBase(scratchbonesPortraitConfig?.assetBase || './docs/assets/');
-      loadPortraitCosmetics(scratchbonesPortraitConfig?.configBase || './docs/config/').then(cosmetics => {
+      _portraitPreloadPromise = loadPortraitCosmetics(scratchbonesPortraitConfig?.configBase || './docs/config/').then(cosmetics => {
         _portraitCosmetics = cosmetics;
         if (state.players.length) {
           for (const p of state.players) p.profile = generatePlayerProfile(p);
           applyAiNamesByPortraitCulture();
           renderSeatPortraits();
         }
+        return window.preloadAllPortraitSprites?.(cosmetics);
       }).catch(e => console.warn('[game] portrait cosmetics failed to load', e));
     } else {
       console.warn('[game] portrait utils unavailable; falling back to initials.');
@@ -8660,8 +8662,12 @@ import { createTutorial } from './tutorial.js';
     window.scratchbonesStartGame = startGameWithNetwork;
     window.scratchbonesStartTutorial = startTutorialGame;
     window.scratchbonesStartClient = startClient;
-    void preloadScratchboneCardArt();
+    const _cardPreloadPromise = preloadScratchboneCardArt();
     window.dispatchEvent(new CustomEvent('scratchbones:ready'));
+    Promise.race([
+      Promise.all([_cardPreloadPromise, _portraitPreloadPromise ?? Promise.resolve()]).catch(() => {}),
+      new Promise(r => setTimeout(r, 12_000)),
+    ]).then(() => window.dispatchEvent(new CustomEvent('scratchbones:assets-loaded')));
     // Auto-start only when the lobby system is absent (dev/standalone mode).
     if (!window.ScratchbonesLobby) {
       void startGameWithNetwork().catch((error) => { console.error('[game] startGame failed', error); });
