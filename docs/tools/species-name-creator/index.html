@@ -432,6 +432,10 @@ function maoBlocksFromIdea(text,slot,variant=0){
     if(/^[aeiouy]$/.test(token)){
       const v=nearestVowel(token,['a','e','i','o','u','ai','ao'][vowelIndex%7]);
       if(pending.length){
+        if(variant%2===0&&blocks.length>0){
+          const maoCodas=new Set(SPECIES.mao.codas.filter(Boolean));
+          while(pending.length>1&&maoCodas.has(pending[0]))blocks[blocks.length-1].text+=pending.shift();
+        }
         while(pending.length>1){addBlock(mapMaoOnset(pending.shift(),variant+blocks.length),epentheticVowel(vowelIndex++,variant,['a','e','i','o','u']));}
         addBlock(mapMaoOnset(pending.shift(),variant+blocks.length),v);
       } else {
