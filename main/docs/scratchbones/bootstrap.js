@@ -4432,6 +4432,7 @@ import { createTutorial } from './tutorial.js';
       const liarBurstDurationSec = clampNumber(Number(cinematicLayout.liarBurstDurationSec) || 3.2, 0.6, 8);
       const liarBurstEndYPct = clampNumber(Number(cinematicLayout.liarBurstEndYPct) || -180, -320, -110);
       const liarBurstOffsetXPx = Number.isFinite(Number(cinematicLayout.liarBurstOffsetXPx)) ? Number(cinematicLayout.liarBurstOffsetXPx) : -232;
+      const betActionBurstOffsetXPx = Number.isFinite(Number(cinematicLayout.betActionBurstOffsetXPx)) ? Number(cinematicLayout.betActionBurstOffsetXPx) : 180;
       const tankanColumnEdgeInsetPx = clampNumber(Number(tankanColumnsLayout.edgeInsetPx), 0, 120);
       const tankanColumnFontSize = String(tankanColumnsLayout.fontSize);
       const tankanColumnLetterSpacing = String(tankanColumnsLayout.letterSpacing);
@@ -4561,6 +4562,7 @@ import { createTutorial } from './tutorial.js';
       setCssVar('--layout-liar-burst-duration', `${liarBurstDurationSec.toFixed(3)}s`);
       setCssVar('--layout-liar-burst-end-y', `${liarBurstEndYPct.toFixed(2)}%`);
       setCssVar('--layout-liar-burst-offset-x', `${liarBurstOffsetXPx.toFixed(2)}px`);
+      setCssVar('--layout-burst-center-offset-x', `${betActionBurstOffsetXPx.toFixed(2)}px`);
       setCssVar('--layout-tankan-edge-inset', `${tankanColumnEdgeInsetPx.toFixed(2)}px`);
       setCssVar('--layout-cinematic-tankan-font-size', tankanColumnFontSize);
       setCssVar('--layout-cinematic-tankan-letter-spacing', tankanColumnLetterSpacing);
@@ -7371,8 +7373,6 @@ import { createTutorial } from './tutorial.js';
         : { label: 'Fold!', cssClass: 'burst-fold' };
       const { label, cssClass } = actionAnnouncement;
       const pillarSide = playerId === state.cinematicMode.actorId ? 'actor' : 'reactor';
-      const isNpc = playerId !== state.humanSeat;
-      const tankanDelayMs = isNpc ? 550 : 0;
       const spawnPillars = () => {
         const tankanConfig = SCRATCHBONES_GAME.layout?.tableView?.cinematic?.tankanColumns || {};
         if (tankanConfig.enabled === false) { clearChallengeTankanColumns(app); return; }
@@ -7391,17 +7391,13 @@ import { createTutorial } from './tutorial.js';
           }, 350);
         }
       };
-      if (tankanDelayMs > 0) {
-        setTimeout(spawnPillars, tankanDelayMs);
-      } else {
-        spawnPillars();
-      }
       const overlay = ensureAvatarOverlay(anchor);
       if (!overlay) return;
       const burstShell = document.createElement('div');
       burstShell.className = 'fx-burst-shell';
-      burstShell.innerHTML = `<div class="cin-action-burst ${cssClass}">${escapeHtml(label)}</div>`;
+      burstShell.innerHTML = `<div class="cin-action-burst ${cssClass} burst-side-${pillarSide}">${escapeHtml(label)}</div>`;
       overlay.appendChild(burstShell);
+      spawnPillars();
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
       const burstDurationCss = String(
         getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration') || '',
