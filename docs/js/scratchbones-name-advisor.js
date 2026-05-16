@@ -384,8 +384,8 @@
     // table 0 = closest phonological match (primary suggestion)
     const tables = [
       { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['h'],c:['k'],q:['k'],x:['k'],b:['p'],d:['t'],g:['k'],l:['r'],s:['k'],z:['t'],j:['h'],f:['p'],v:['p'],w:['h'],y:['h'] },
-      { ch:['h'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['k'],q:['k'],x:['h'],b:['p'],d:['t'],g:['k'],l:['n'],s:['h'],z:['h'],j:['k'],f:['h'],v:['p'],w:['m'],y:['n'] },
-      { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['g','k'],q:['k'],x:['k'],b:['p'],d:['r','t'],g:['g','k'],l:['r'],s:['t'],z:['k'],j:['g','k'],f:['p'],v:['p'],w:['k'],y:['h'] },
+      { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['k'],q:['k'],x:['h'],b:['p'],d:['t'],g:['k'],l:['n'],s:['k'],z:['h'],j:['k'],f:['h'],v:['p'],w:['m'],y:['n'] },
+      { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['g','k'],q:['k'],x:['k'],b:['p'],d:['r','t'],g:['g','k'],l:['r'],s:['k'],z:['k'],j:['g','k'],f:['p'],v:['p'],w:['k'],y:['h'] },
     ];
     return mapByTable(token, allowed, tables[v % tables.length], { default: ['h','k','n','m'] }) || ['h','k','n','m'][v % 4];
   }
