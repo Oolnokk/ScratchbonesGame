@@ -429,7 +429,9 @@
     v = v || 0;
     const allowed = getSpecies().kenkari.onsets.filter(Boolean);
     const allowedVowels = ['a', 'i', 'u', 'o', 'e'];
-    const tokens = expandTokens(tokenizeIdeaSounds(text), new Set(allowed));
+    // keep source digraphs (ch, th, gh, ng, ph) intact so mapKenkariConsonant can map them as units
+    const expandSet = new Set([...allowed, 'ch', 'th', 'gh', 'ng', 'ph']);
+    const tokens = expandTokens(tokenizeIdeaSounds(text), expandSet);
     const ideaVows = ideaVowels(text);
     const blocks = [];
     let pending = [];
