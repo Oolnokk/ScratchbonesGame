@@ -282,7 +282,8 @@
   let _editAIdx = 0;            // index into current species/gender colorOptions for A
   let _editBIdx = 0;            // index into current species/gender colorOptions for B
   let _editName = '';           // name field being edited in appearance editor
-  let _nameSuggestions = [];    // cached name suggestions for the advisor chips
+  let _nameSuggestions = [];    // cached name suggestions for the advisor chips (legacy, unused)
+  let _loreState = null;        // { sp, births, married } for embedded lore name creator
 
   // Online state
   let _onlinePlayerCount = 2;
@@ -451,24 +452,102 @@
     return cosmetics;
   }
 
-  // ── Name advisor ──────────────────────────────────────────
+  // ── Lore name creator (embedded) ──────────────────────────
 
-  function _genNameSuggestions(speciesId, gender, count) {
-    const gen = window.SCRATCHBONES_NAME_GENERATOR;
-    if (!gen) return [];
-    const cultureId = speciesId.replace(/-/g, '_');
-    const out = new Set();
-    for (let i = 0; i < count * 4 && out.size < count; i++) {
-      try { out.add(gen.generateIdentityFromSeed(Math.random().toString(36).slice(2), gender, cultureId)); }
-      catch {}
-    }
-    return [...out];
+  function _advisorSp(speciesId) {
+    return window.SCRATCHBONES_NAME_ADVISOR?.lobbySpeciesToAdvisorKey(speciesId, SPECIES_DATA) || 'mao';
   }
 
-  function refreshNameSuggestions() {
-    const ap = _editAppearance;
-    if (!ap) { _nameSuggestions = []; return; }
-    _nameSuggestions = _genNameSuggestions(ap.speciesId || 'mao-ao', ap.gender || 'male', 5);
+  function _loreCtx() {
+    if (!_loreState) return { gender: 'male', married: false, births: {} };
+    return { gender: _editAppearance?.gender || 'male', married: !!_loreState.married, births: _loreState.births || {} };
+  }
+
+  function _initLoreState(speciesId, gender) {
+    const sp = _advisorSp(speciesId);
+    if (_loreState && _loreState.sp === sp) return;
+    _loreState = { sp, births: {}, married: false };
+  }
+
+  function refreshNameSuggestions() { /* no-op, kept for compat */ }
+
+  function _buildLorePreviewHtml(sp, births, ctx) {
+    const adv = window.SCRATCHBONES_NAME_ADVISOR;
+    if (!adv) return '';
+    const { first, conn, second } = adv.birthNameParts(sp, births, ctx);
+    const faint = s => `<span class="nd-faint">${adv.esc(s)}</span>`;
+    const connHtml = conn ? `<span class="nd-conn">${adv.esc(conn)}</span>` : '';
+    const parts = [];
+    parts.push(first ? adv.esc(first) : faint('—'));
+    if (connHtml) parts.push(connHtml);
+    parts.push(second ? adv.esc(second) : faint('—'));
+    return parts.join(' ');
+  }
+
+  function _buildLoreSectionHtml() {
+    const adv = window.SCRATCHBONES_NAME_ADVISOR;
+    if (!adv || !_loreState || !_editAppearance) return '';
+    const sp = _loreState.sp;
+    const births = _loreState.births || {};
+    const ctx = _loreCtx();
+    const species = adv.getSpecies();
+    const slots = species[sp]?.slots || ['first', 'surname'];
+    const previewHtml = _buildLorePreviewHtml(sp, births, ctx);
+
+    let marriedRow = '';
+    if (sp === 'mao' && ctx.gender === 'female') {
+      marriedRow = `<div class="sb-lore-married-row">
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+          <input type="checkbox" id="sb-lore-married" ${_loreState.married ? 'checked' : ''} style="accent-color:#c89952;"/>
+          <span>Married</span>
+        </label>
+      </div>`;
+    }
+
+    const slotsHtml = slots.map(slot => {
+      const val = births[slot] || '';
+      const label = adv.slotLabel(sp, slot);
+
+      if (sp === 'slagothim' && slot === 'surname') {
+        const current = val.replace(/^tley\s*/i, '') || species.slagothim.locations[0];
+        const btns = species.slagothim.locations.map(loc =>
+          `<button class="sb-lore-place-btn${current === loc ? ' active' : ''}" data-lore-place="${adv.esc(loc)}">${adv.esc(loc)}-Doro</button>`
+        ).join('');
+        return `<div class="sb-lore-slot">
+          <div class="sb-cosmetic-label" style="text-align:left;min-width:0;margin-bottom:4px;">${adv.esc(label)}</div>
+          <div class="sb-lore-place-grid">${btns}</div>
+        </div>`;
+      }
+
+      const { html: valHtml, msgs } = adv.validateSlot(sp, slot, val, ctx);
+      const msgsHtml = msgs.length ? `<div class="sb-lore-msgs">${adv.esc(msgs[0])}</div>` : '';
+      const opts = val ? adv.makeIdeaOptions(sp, slot, val, ctx) : [];
+      const suggHtml = opts.length ? `<div class="sb-lore-suggs">${
+        opts.map((o, i) => `<button class="sb-lore-sugg" data-lore-slot="${adv.esc(slot)}" data-lore-idx="${i}">${adv.esc(o.label)}</button>`).join('')
+      }</div>` : '';
+
+      return `<div class="sb-lore-slot">
+        <div class="sb-cosmetic-label" style="text-align:left;min-width:0;margin-bottom:4px;">${adv.esc(label)}</div>
+        <input class="sb-lore-input" id="sb-lore-${adv.esc(slot)}" type="text" value="${adv.esc(val)}"
+               data-lore-slot="${adv.esc(slot)}" autocomplete="off" spellcheck="false" placeholder="${adv.esc(label)}" />
+        <div class="sb-lore-val">${valHtml || ''}</div>
+        ${msgsHtml}
+        ${suggHtml}
+      </div>`;
+    }).join('');
+
+    return `<div class="sb-lore-section">
+      <div class="sb-label" style="margin-bottom:6px;">Lore Name
+        <span style="font-size:0.72em;font-weight:400;opacity:0.5;text-transform:none;letter-spacing:0;margin-left:6px;">(${adv.esc(species[sp]?.label || sp)})</span>
+      </div>
+      <div class="sb-lore-preview" id="sb-lore-preview">${previewHtml || '<span class="nd-faint">—</span>'}</div>
+      ${marriedRow}
+      ${slotsHtml}
+      <div class="sb-lore-actions">
+        <button id="sb-lore-random-btn" style="font-size:0.75em;padding:3px 10px;border:1px solid rgba(200,153,82,0.35);border-radius:5px;background:rgba(242,208,143,0.06);color:rgba(242,208,143,0.7);cursor:pointer;font-family:inherit;letter-spacing:0.06em;">↺ Random</button>
+        <button id="sb-lore-copy-btn" style="font-size:0.75em;padding:3px 10px;border:1px solid rgba(200,153,82,0.35);border-radius:5px;background:rgba(242,208,143,0.06);color:rgba(242,208,143,0.7);cursor:pointer;font-family:inherit;letter-spacing:0.06em;">Copy Name</button>
+      </div>
+    </div>`;
   }
 
   // ── Portrait preview ───────────────────────────────────────
@@ -828,17 +907,12 @@
             <canvas id="sb-ap-canvas" width="200" height="200" class="sb-portrait-canvas"></canvas>
           </div>
           <div class="sb-ap-controls">
-            <div class="sb-label" style="display:flex;align-items:center;justify-content:space-between;">
-              <span>Name</span>
-              <button id="sb-name-roll-btn" style="font-size:0.75em;padding:2px 8px;border:1px solid rgba(200,153,82,0.35);border-radius:5px;background:rgba(242,208,143,0.06);color:rgba(242,208,143,0.7);cursor:pointer;font-family:inherit;letter-spacing:0.06em;">↺ Suggest</button>
-            </div>
+            <div class="sb-label">Nickname</div>
             <div class="sb-field">
               <input id="sb-edit-name" type="text" maxlength="48" value="${esc(_editName || '')}"
                      autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box;" />
             </div>
-            ${_nameSuggestions.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">${
-              _nameSuggestions.map(n => `<button class="sb-name-chip" data-name="${esc(n)}" style="font-size:0.78em;padding:3px 9px;border:1px solid rgba(200,153,82,0.32);border-radius:20px;background:rgba(242,208,143,0.05);color:rgba(242,208,143,0.8);cursor:pointer;font-family:inherit;letter-spacing:0.04em;">${esc(n)}</button>`).join('')
-            }</div>` : ''}
+            ${_buildLoreSectionHtml()}
             <div class="sb-label" style="margin-top:8px;">Species</div>
             <div class="sb-sel-group">${speciesBtns}</div>
             ${subSpeciesHtml}
@@ -1284,7 +1358,9 @@
     _editAIdx = closestColorIdx(opts, _editAppearance.bodyColors.A);
     _editBIdx = closestColorIdx(opts, _editAppearance.bodyColors.B);
     _screen = 'appearance';
-    refreshNameSuggestions();
+    const savedLore = saved?.loreName || null;
+    _initLoreState(speciesId, gender);
+    if (savedLore) _loreState.births = { ...savedLore };
     render();
   }
 
@@ -1422,7 +1498,7 @@
           _editAppearance.bodyColors.B = { h: opts[0].h, s: opts[0].s, v: opts[0].v };
           _editAppearance.bodyColors.C = deriveCFromA(opts[0]);
         }
-        refreshNameSuggestions();
+        _initLoreState(sid, _editAppearance.gender);
         render();
       });
     });
@@ -1460,7 +1536,6 @@
           _editAppearance.bodyColors.B = { h: opts[0].h, s: opts[0].s, v: opts[0].v };
           _editAppearance.bodyColors.C = deriveCFromA(opts[0]);
         }
-        refreshNameSuggestions();
         render();
       });
     });
@@ -1503,21 +1578,91 @@
       });
     });
 
-    document.getElementById('sb-name-roll-btn')?.addEventListener('click', () => {
-      refreshNameSuggestions();
-      render();
-    });
+    // ── Lore name creator handlers ─────────────────────────────
 
-    el.querySelectorAll('.sb-name-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const nameInput = document.getElementById('sb-edit-name');
-        if (nameInput) nameInput.value = chip.dataset.name;
+    if (_loreState) {
+      const adv = window.SCRATCHBONES_NAME_ADVISOR;
+
+      el.querySelectorAll('.sb-lore-input').forEach(input => {
+        input.addEventListener('input', () => {
+          if (!_loreState) return;
+          const slot = input.dataset.loreSlot;
+          _loreState.births[slot] = input.value.toLowerCase();
+          const ctx = _loreCtx();
+          const sp = _loreState.sp;
+          const val = input.value;
+          // live-update validation
+          const vd = input.parentElement?.querySelector('.sb-lore-val');
+          if (vd && adv) vd.innerHTML = adv.validateSlot(sp, slot, val, ctx).html || '';
+          const msgEl = input.parentElement?.querySelector('.sb-lore-msgs');
+          if (msgEl && adv) msgEl.textContent = adv.validateSlot(sp, slot, val, ctx).msgs[0] || '';
+          // live-update suggestions
+          const sg = input.parentElement?.querySelector('.sb-lore-suggs');
+          if (sg && adv) {
+            const opts = val ? adv.makeIdeaOptions(sp, slot, val, ctx) : [];
+            sg.innerHTML = opts.map((o, i) =>
+              `<button class="sb-lore-sugg" data-lore-slot="${adv.esc(slot)}" data-lore-idx="${i}">${adv.esc(o.label)}</button>`
+            ).join('');
+            sg.querySelectorAll('[data-lore-idx]').forEach(btn => {
+              btn.addEventListener('click', () => {
+                if (!_loreState || !adv) return;
+                const opt = opts[Number(btn.dataset.loreIdx)];
+                if (opt) {
+                  _loreState.births = adv.applyOption(sp, slot, opt, _loreState.births);
+                  render();
+                }
+              });
+            });
+          }
+          // live-update preview
+          const preview = document.getElementById('sb-lore-preview');
+          if (preview && adv) {
+            preview.innerHTML = _buildLorePreviewHtml(sp, _loreState.births, _loreCtx()) || '<span class="nd-faint">—</span>';
+          }
+        });
       });
-    });
+
+      el.querySelectorAll('[data-lore-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!_loreState || !adv) return;
+          const sp = _loreState.sp;
+          const slot = btn.dataset.loreSlot;
+          const births = _loreState.births;
+          const opts = adv.makeIdeaOptions(sp, slot, births[slot] || '', _loreCtx());
+          const opt = opts[Number(btn.dataset.loreIdx)];
+          if (opt) { _loreState.births = adv.applyOption(sp, slot, opt, births); render(); }
+        });
+      });
+
+      el.querySelectorAll('[data-lore-place]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!_loreState) return;
+          _loreState.births.surname = 'tley ' + btn.dataset.lorePlace;
+          render();
+        });
+      });
+
+      document.getElementById('sb-lore-married')?.addEventListener('change', e => {
+        if (_loreState) { _loreState.married = e.target.checked; render(); }
+      });
+
+      document.getElementById('sb-lore-random-btn')?.addEventListener('click', () => {
+        if (!_loreState || !adv) return;
+        _loreState.births = adv.randomizeName(_loreState.sp, _loreCtx());
+        render();
+      });
+
+      document.getElementById('sb-lore-copy-btn')?.addEventListener('click', () => {
+        if (!_loreState || !adv) return;
+        const name = adv.formatFullName(_loreState.sp, _loreState.births, _loreCtx());
+        navigator.clipboard?.writeText(name).catch(() => {});
+      });
+    }
 
     document.getElementById('sb-save-appearance-btn')?.addEventListener('click', () => {
       const nameVal = (document.getElementById('sb-edit-name')?.value || '').trim();
       if (nameVal) window.ScratchbonesAccount?.renameKhymeryyan?.(window.ScratchbonesAccount?.getActiveKhymeryyan?.()?.id, nameVal) || window.ScratchbonesAccount?.setUsername(nameVal);
+      if (_loreState) _editAppearance.loreName = { ..._loreState.births };
       window.ScratchbonesAccount?.setAppearance(_editAppearance);
       _screen = 'main';
       render();
