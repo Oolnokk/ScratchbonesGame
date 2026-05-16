@@ -28,9 +28,8 @@
     .idea-input{width:100%;border:1px solid var(--border);background:var(--panel3);color:var(--text);border-radius:14px;padding:12px 14px;font:inherit;font-weight:750;outline:none;min-height:44px}
     .idea-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(141,179,255,.14)}
     .idea-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}
-    .idea-card{border:1px solid var(--border);background:rgba(255,255,255,.045);color:var(--text);border-radius:16px;padding:10px;min-height:58px;text-align:left;box-shadow:none;cursor:pointer}
-    .idea-card strong{display:block;font-size:1rem;line-height:1.15;margin-bottom:4px;word-break:break-word}
-    .idea-card span{display:block;color:var(--muted);font-size:.78rem;line-height:1.2;font-weight:700}
+    .idea-card{border:1px solid var(--border);background:rgba(255,255,255,.045);color:var(--text);border-radius:16px;padding:10px;text-align:left;box-shadow:none;cursor:pointer}
+    .idea-card strong{display:block;font-size:1rem;line-height:1.15;word-break:break-word}
     .idea-empty{color:var(--faint);font-size:.85rem;text-align:center;padding:6px}
     .config-badge{font-size:.72rem;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--border);color:var(--muted)}
     .config-badge.live{color:var(--good);border-color:rgba(143,227,176,.3)}
@@ -191,7 +190,7 @@ let state = {
     kenkari:{first:[],father:[]},
     mao:{first:[],surname:[]},
     slagothim:{given:'',surname:'tley Ikinga'},
-    engh:{first:'',firstSearch:'',surname:[]}
+    engh:{first:'',firstSearch:'',surname:''}
   }
 };
 const els = {
@@ -225,7 +224,7 @@ function slotLabel(slot){
 function slotText(species=state.species,slot=state.activeSlot){
   const d=state.data[species];
   if(species==='slagothim') return slot==='surname'?d.surname:titleCase(d.given);
-  if(species==='engh') return slot==='first'?titleCase(d.first):titleCase((d.surname||[]).map(b=>b.text).join(''));
+  if(species==='engh') return slot==='first'?titleCase(d.first):titleCase(d.surname||'');
   const blocks=d[slot]||[];return titleCase(blocks.map(b=>b.text).join(''));
 }
 function slagPlaceFromSurname(){return String(state.data.slagothim.surname||'').replace(/^tley\s+/i,'')||'Ikinga';}
@@ -279,8 +278,8 @@ function renderBlockLine(){
       els.blockLine.innerHTML=first?`<span class="block-chip">${escapeHtml(titleCase(first))}</span>`:'<span class="block-chip muted">—</span>';
       return;
     }
-    const blocks=state.data.engh.surname||[];
-    els.blockLine.innerHTML=blocks.length?blocks.map(b=>`<span class="block-chip">${escapeHtml(b.text)}</span>`).join(''):'<span class="block-chip muted">—</span>';
+    const surname=state.data.engh.surname||'';
+    els.blockLine.innerHTML=surname?[...surname].map(ch=>`<span class="block-chip">${escapeHtml(ch)}</span>`).join(''):'<span class="block-chip muted">—</span>';
     return;
   }
   if(state.species==='slagothim'){
@@ -314,7 +313,7 @@ function renderIdeaPanel(){
 function renderIdeaOptionsHtml(){
   if(!getIdeaText().trim()) return '<div class="idea-empty">Type a word or fragment to see slot-only interpretations.</div>';
   if(!state.ideaOptions.length) return '<div class="idea-empty">No good interpretations for this slot yet.</div>';
-  return state.ideaOptions.map((opt,i)=>`<button class="idea-card" type="button" data-idea-index="${i}"><strong>${escapeHtml(opt.label)}</strong><span>${escapeHtml(opt.note||'')}</span></button>`).join('');
+  return state.ideaOptions.map((opt,i)=>`<button class="idea-card" type="button" data-idea-index="${i}"><strong>${escapeHtml(opt.label)}</strong></button>`).join('');
 }
 function wireIdeaCards(){[...els.ideaPanel.querySelectorAll('[data-idea-index]')].forEach(btn=>btn.onclick=()=>applyIdeaOption(Number(btn.dataset.ideaIndex)));}
 
@@ -465,7 +464,7 @@ function makeEnghIdeaOptions(text){
     return names.map((x,i)=>({label:titleCase(x.name),note:i===0?'closest curated list match':'curated first-name list',type:'enghFirst',value:x.name}));
   }
   const opts=[];
-  for(let i=0;i<8;i++){const blocks=enghSurnameBlocksFromIdea(text,i);opts.push({label:titleCase(blocks.map(b=>b.text).join('')),note:i%2?'cluster repair with plosive ending':'Engh-sho surname sound adaptation',type:'blocks',blocks});}
+  for(let i=0;i<8;i++){const s=enghSurnameStringFromIdea(text,i);opts.push({label:titleCase(s),type:'enghSurname',value:s});}
   return uniqueOptions(opts);
 }
 
@@ -538,7 +537,7 @@ function applyIdeaOption(index){
     else state.data.slagothim.given=String(opt.value||'').toLowerCase();
   } else if(state.species==='engh'){
     if(opt.type==='enghFirst')state.data.engh.first=String(opt.value||'').toLowerCase();
-    else state.data.engh.surname=(opt.blocks||[]).map(b=>makeBlock(b.text));
+    else state.data.engh.surname=String(opt.value||'').toLowerCase();
   } else {
     activeStore()[state.activeSlot]=(opt.blocks||[]).map(b=>makeBlock(b.text));
   }
@@ -617,21 +616,17 @@ function renderEnghFirstComposer(){
   input.oninput=applyEnghFirstFilter;
   applyEnghFirstFilter();
 }
-function setEnghSelectedOnset(onset){state.selectedOnset=onset;render();}
-function enghSurnameOptions(){
-  const s=SPECIES.engh.surname;const onset=state.selectedOnset??'n';
-  const mid=s.vowels.flatMap(v=>s.midCodas.map(c=>onset+v+c));
-  const finals=s.vowels.flatMap(v=>s.finalPlosives.map(c=>onset+v+c));
-  return [...new Set(mid.concat(finals))];
-}
-function addEnghSurnameBlock(text){state.data.engh.surname.push(makeBlock(text));render();}
+const ENGH_SURNAME_ALLOWED=(()=>{const s=SPECIES.engh.surname;return new Set([...s.vowels,...s.onsets.filter(Boolean),'b','d','g','r']);})();
+const ENGH_SURNAME_COMPOUNDS=['kk','pp','tt','nk','mp','nt','lk','rk'];
+function addEnghSurnameLetter(ch){state.data.engh.surname=(state.data.engh.surname+ch).toLowerCase();render();}
+function addEnghSurnameEnding(ending){state.data.engh.surname=(state.data.engh.surname+ending).toLowerCase();render();}
 function renderEnghSurnameComposer(){
-  const s=SPECIES.engh.surname;
-  if(state.selectedOnset===undefined||state.selectedOnset===null)state.selectedOnset='n';
-  els.composer.innerHTML=`<div class="two-box"><div class="onset-box">${s.onsets.map(o=>`<button class="chip-btn ${state.selectedOnset===o?'active':''}" data-engh-onset="${escapeHtml(o)}">${o||'∅'}</button>`).join('')}</div><div class="option-box">${enghSurnameOptions().map(opt=>`<button class="chip-btn" data-engh-surname="${escapeHtml(opt)}">${escapeHtml(opt)}</button>`).join('')}</div></div>`;
-  [...els.composer.querySelectorAll('[data-engh-onset]')].forEach(b=>b.onclick=()=>setEnghSelectedOnset(b.dataset.enghOnset));
-  [...els.composer.querySelectorAll('[data-engh-surname]')].forEach(b=>b.onclick=()=>addEnghSurnameBlock(b.dataset.enghSurname));
+  const current=state.data.engh.surname||'';
+  els.composer.innerHTML=`<div class="action-row" style="flex-wrap:wrap;gap:6px;margin-bottom:6px">${ENGH_SURNAME_COMPOUNDS.map(e=>`<button class="chip-btn" style="width:auto" data-engh-ending="${e}">${e}</button>`).join('')}</div><div class="letter-keyboard">${KEY_ROWS.map(row=>`<div class="key-row">${row.map(ch=>`<button class="key-btn ${ENGH_SURNAME_ALLOWED.has(ch)?'':'disabled'}" data-engh-letter="${ch}" ${ENGH_SURNAME_ALLOWED.has(ch)?'':'disabled'}>${ch}</button>`).join('')}</div>`).join('')}</div>`;
+  [...els.composer.querySelectorAll('[data-engh-ending]')].forEach(b=>b.onclick=()=>addEnghSurnameEnding(b.dataset.enghEnding));
+  [...els.composer.querySelectorAll('[data-engh-letter]')].forEach(b=>b.onclick=()=>addEnghSurnameLetter(b.dataset.enghLetter));
 }
+function enghSurnameStringFromIdea(text,variant=0){return enghSurnameBlocksFromIdea(text,variant).map(b=>b.text).join('');}
 function renderEnghComposer(){if(state.activeSlot==='first')renderEnghFirstComposer();else renderEnghSurnameComposer();}
 
 function addLetter(ch){
@@ -678,7 +673,7 @@ function renderSlagothimComposer(){
 
 function backspace(){
   if(state.species==='slagothim'){if(state.activeSlot==='given')state.data.slagothim.given=state.data.slagothim.given.slice(0,-1);}
-  else if(state.species==='engh'){if(state.activeSlot==='first')state.data.engh.first='';else state.data.engh.surname.pop();}
+  else if(state.species==='engh'){if(state.activeSlot==='first')state.data.engh.first='';else state.data.engh.surname=state.data.engh.surname.slice(0,-1);}
   else{const arr=activeStore()[state.activeSlot];arr.pop();}
   render();
 }
@@ -688,7 +683,7 @@ function clearSlot(){
     if(state.activeSlot==='surname')state.data.slagothim.surname='tley '+SPECIES.slagothim.locations[0];
   } else if(state.species==='engh'){
     if(state.activeSlot==='first')state.data.engh.first='';
-    if(state.activeSlot==='surname')state.data.engh.surname=[];
+    if(state.activeSlot==='surname')state.data.engh.surname='';
   } else activeStore()[state.activeSlot]=[];
   render();
 }
@@ -734,14 +729,14 @@ function randomSlagothim(){
 }
 
 function randomEnghSurname(){
-  const s=SPECIES.engh.surname;const count=Math.random()<.65?2:3;const out=[];
+  const s=SPECIES.engh.surname;const count=Math.random()<.65?2:3;let result='';
   for(let i=0;i<count;i++){
     const onset=Math.random()<.1?'':pick(s.onsets.filter(Boolean));
     const vowel=pick(s.vowels);
     const coda=i===count-1?pick(s.finalPlosives):(Math.random()<.5?pick(s.midCodas.filter(Boolean)):'');
-    out.push(makeBlock(onset+vowel+coda));
+    result+=onset+vowel+coda;
   }
-  return out;
+  return result;
 }
 function randomEngh(){
   const names=enghFirstNamesForGender();
@@ -775,7 +770,7 @@ function renderStatus(){
   } else if(state.species==='engh'){
     const first=slotText('engh','first');const surname=slotText('engh','surname').toLowerCase();
     if(!first)notes.push('Pick a first name from the searchable list.');
-    if(!surname)notes.push('Build a surname from the onset box and syllable options.');
+    if(!surname)notes.push('Type a surname using the letter keyboard; end with a plosive.');
     if(surname&&!/(k|p|t|b|d|g|kk|pp|tt|nk|mp|nt|lk|rk)$/i.test(surname))notes.push('Surname should end with a plosive ending.');
   } else {
     const g=state.data.slagothim.given.toLowerCase();
