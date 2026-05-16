@@ -5713,12 +5713,14 @@ import { createTutorial } from './tutorial.js';
               <div class="claimAvatarShell ${(challengeIntro && focusActor) ? 'alert-pulse' : ''}">
                 <canvas class="seatPortrait" data-seat-id="${claimFocus.actorId}" width="200" height="200"></canvas>
               </div>
+              <div class="claimAvatarCinName">${escapeHtml(seatFirstName(focusActor || claimFocus.actorId))}</div>
               <div class="claimAvatarLocalOverlay" aria-hidden="true"></div>
             </div>
             <div class="reactorAvatarFloat ${claimClusterShellClass}" data-proj-id="claim-avatar-reactor" style="${claimClusterElementStyle(claimClusterPolicy.elements.reactorAvatarFloat)}" title="${focusReactor ? seatLabel(focusReactor) : 'No reactor'}">
               <div class="claimAvatarShell">
                 ${focusReactor ? `<canvas class="seatPortrait" data-seat-id="${focusReactor.id}" width="200" height="200"></canvas>` : ''}
               </div>
+              ${focusReactor ? `<div class="claimAvatarCinName">${escapeHtml(seatFirstName(focusReactor))}</div>` : ''}
               ${(challengeIntro && focusReactor) ? `<div class="fx-burst-shell"><div class="cin-action-burst burst-liar">${escapeHtml(challengeIntro.burstText || 'LIAR!!!')}</div></div>` : ''}
               <div class="claimAvatarLocalOverlay" aria-hidden="true"></div>
             </div>
@@ -7124,11 +7126,9 @@ import { createTutorial } from './tutorial.js';
       const overlay = ensureAvatarOverlay(anchorEl);
       if (!overlay || !Number.isInteger(playerId)) return;
       const player = state.players[playerId];
-      const name = player ? seatFirstName(player) : seatFirstName(playerId);
       const tags = player?.personality ? personalityTags(player.personality) : '';
       overlay.innerHTML = `
         <div class="claimAvatarCinRole">${escapeHtml(roleLabel)}</div>
-        <div class="claimAvatarCinName">${escapeHtml(name || '')}</div>
         ${tags ? `<div class="claimAvatarCinTags">${escapeHtml(tags)}</div>` : ''}
       `;
     }
