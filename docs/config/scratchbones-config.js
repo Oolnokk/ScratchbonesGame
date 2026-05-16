@@ -839,17 +839,17 @@ window.SCRATCHBONES_CONFIG = {
       },
       "poolDisplay": {
         "maxIcons": 28,
-        "widthPx": 220,
-        "heightPx": 96,
-        "coinSizePx": 50,
-        "spreadXPx": 84,
-        "spreadYPx": 28,
+        "widthPx": 275,
+        "heightPx": 120,
+        "coinSizePx": 63,
+        "spreadXPx": 105,
+        "spreadYPx": 35,
         "offsetXPx": 100,
-        "offsetYPx": 2,
+        "offsetYPx": -48,
         "totalLabel": {
           "rightPx": 8,
           "bottomPx": 4,
-          "fontSizePx": 24,
+          "fontSizePx": 48,
           "lineHeight": 1,
           "color": "#ffffff"
         }
@@ -1660,7 +1660,7 @@ window.SCRATCHBONES_CONFIG = {
         },
         "elements": {
           "claimRankBox": {
-            "xPct": 0.489583,
+            "xPct": 0.5,
             "yPct": 0.115385,
             "wPct": 0.0625,
             "hPct": 0.230769
