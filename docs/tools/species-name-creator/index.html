@@ -59,17 +59,11 @@
     .v-ok{color:var(--text)}
     .v-bad{color:var(--bad);background:rgba(255,142,157,.12);border-radius:3px;padding:0 1px}
     .v-ins{color:var(--warn);font-style:italic;cursor:help;border-bottom:1px dashed var(--warn)}
-    .val-msgs{padding:2px 14px 4px}
-    .val-msg{font-size:.76rem;color:var(--warn);line-height:1.5}
 
-    /* Idea row */
-    .idea-row{margin-top:6px}
-    .idea-input{width:100%;border:1px solid var(--border);background:var(--panel3);color:var(--muted);border-radius:12px;padding:8px 14px;font:inherit;font-size:.9rem;outline:none}
-    .idea-input:focus{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(185,156,255,.14);color:var(--text)}
-    .idea-input::placeholder{color:var(--faint)}
-    .idea-cards{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;min-height:0}
-    .idea-card{border:1px solid var(--border);background:rgba(255,255,255,.045);color:var(--text);border-radius:12px;padding:6px 12px;font:inherit;font-weight:800;cursor:pointer;font-size:.92rem}
-    .idea-card:hover{background:rgba(141,179,255,.1);border-color:var(--accent)}
+    /* Suggestions */
+    .suggestions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;min-height:0}
+    .sugg-card{border:1px solid var(--border);background:rgba(255,255,255,.045);color:var(--text);border-radius:12px;padding:6px 12px;font:inherit;font-weight:800;cursor:pointer;font-size:.92rem}
+    .sugg-card:hover{background:rgba(141,179,255,.1);border-color:var(--accent)}
 
     /* Word picker */
     .word-picker{border:1px solid var(--border);background:rgba(0,0,0,.13);border-radius:12px;padding:6px;display:flex;flex-wrap:wrap;gap:5px;max-height:130px;overflow-y:auto;margin-top:6px}
@@ -229,7 +223,6 @@ let state = {
     slagothim:{ given:'', surname:'tley Ikinga' },
     engh:    { first:'', surname:'' }
   },
-  ideaTexts: {}
 };
 
 // ---------------------------------------------------------------------------
@@ -243,9 +236,6 @@ function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function getBirth(sp,slot){ return state.births[sp][slot]||''; }
 function setBirth(sp,slot,v){ state.births[sp][slot]=String(v||'').toLowerCase(); }
 
-function ideaKey(sp,slot){ return `${sp}:${slot}`; }
-function getIdea(sp,slot){ return state.ideaTexts[ideaKey(sp,slot)]||''; }
-function setIdea(sp,slot,v){ state.ideaTexts[ideaKey(sp,slot)]=String(v||''); }
 
 function slotLabel(sp,slot){
   if(sp==='slagothim'&&slot==='surname') return 'Place of Birth';
@@ -721,12 +711,9 @@ function renderBirthSection(){
       input.oninput=()=>{
         setBirth(sp,slot,input.value);
         updateValDisplay(sp,slot,input.value);
+        updateSuggestions(sp,slot,input.value);
         renderPreview();
       };
-    }
-    const ideaInput=document.getElementById(`ii-${sp}-${slot}`);
-    if(ideaInput){
-      ideaInput.oninput=()=>{setIdea(sp,slot,ideaInput.value);updateIdeaCards(sp,slot);};
     }
   }
 
@@ -743,14 +730,23 @@ function renderBirthSection(){
     wireWordPicker(sp,'first');
   }
 
-  // Idea cards
-  for(const slot of slots) wireIdeaCards(sp,slot);
+  // Wire suggestion cards (initial render)
+  for(const slot of slots){
+    if(sp==='engh'&&slot==='first') continue;
+    if(sp==='slagothim'&&slot==='surname') continue;
+    updateSuggestions(sp,slot,getBirth(sp,slot));
+  }
+}
+
+function buildSuggestionCardsHtml(sp,slot,text){
+  if(!text) return '';
+  const opts=makeIdeaOptions(sp,slot,text);
+  return opts.map((o,i)=>`<button class="sugg-card" data-idx="${i}">${esc(o.label)}</button>`).join('');
 }
 
 function buildSlotHtml(sp,slot){
   const val=getBirth(sp,slot);
   const label=slotLabel(sp,slot);
-  const ideaText=getIdea(sp,slot);
 
   // Slagothim place = button grid
   if(sp==='slagothim'&&slot==='surname'){
@@ -763,10 +759,10 @@ function buildSlotHtml(sp,slot){
     </div>`;
   }
 
-  // Engh first = searchable word list
+  // Engh first = searchable word list (word picker is the suggestions)
   if(sp==='engh'&&slot==='first'){
     const names=enghFirstNamesForGender();
-    const q=ideaText?normalizeIdea(ideaText).replace(/'/g,''):'';
+    const q=val?normalizeIdea(val).replace(/'/g,''):'';
     const filtered=q?names.filter(n=>n.includes(q)):names;
     return `<div class="slot-field">
       <div class="slot-label">${esc(label)}</div>
@@ -774,38 +770,36 @@ function buildSlotHtml(sp,slot){
       <div class="word-picker" id="wp-${sp}-${slot}">${filtered.map(n=>
         `<button class="word-btn ${val===n?'active':''}" data-word="${esc(n)}">${esc(tc(n))}</button>`
       ).join('')}</div>
-      ${buildIdeaHtml(sp,slot,ideaText)}
     </div>`;
   }
 
-  // Default: text input + validation
-  const {html:valHtml,msgs}=validateSlot(sp,slot,val);
+  // Default: text input + validation display + suggestions
+  const {html:valHtml}=validateSlot(sp,slot,val);
   return `<div class="slot-field">
     <div class="slot-label">${esc(label)}</div>
     <input id="bi-${sp}-${slot}" class="name-input" type="text" value="${esc(val)}" placeholder="${esc(label)}" autocomplete="off" />
     <div class="val-display" id="vd-${sp}-${slot}">${valHtml}</div>
-    <div class="val-msgs" id="vm-${sp}-${slot}">${msgs.map(m=>`<div class="val-msg">${esc(m)}</div>`).join('')}</div>
-    ${buildIdeaHtml(sp,slot,ideaText)}
+    <div class="suggestions" id="sg-${sp}-${slot}">${buildSuggestionCardsHtml(sp,slot,val)}</div>
   </div>`;
 }
 
-function buildIdeaHtml(sp,slot,ideaText){
-  const opts=ideaText?makeIdeaOptions(sp,slot,ideaText):[];
-  return `<div class="idea-row">
-    <input id="ii-${sp}-${slot}" class="idea-input" type="text" value="${esc(ideaText)}" placeholder="${esc(SPECIES[sp].label)}-ize this slot…" autocomplete="off" />
-    <div class="idea-cards" id="ic-${sp}-${slot}">${opts.map((o,i)=>
-      `<button class="idea-card" data-idx="${i}">${esc(o.label)}</button>`
-    ).join('')}</div>
-  </div>`;
-}
 
 function updateValDisplay(sp,slot,text){
   const vd=document.getElementById(`vd-${sp}-${slot}`);
-  const vm=document.getElementById(`vm-${sp}-${slot}`);
   if(!vd) return;
-  const {html,msgs}=validateSlot(sp,slot,text);
+  const {html}=validateSlot(sp,slot,text);
   vd.innerHTML=html;
-  if(vm) vm.innerHTML=msgs.map(m=>`<div class="val-msg">${esc(m)}</div>`).join('');
+}
+
+function updateSuggestions(sp,slot,text){
+  const el=document.getElementById(`sg-${sp}-${slot}`);
+  if(!el) return;
+  const opts=text?makeIdeaOptions(sp,slot,text):[];
+  el.innerHTML=opts.map((o,i)=>`<button class="sugg-card" data-idx="${i}">${esc(o.label)}</button>`).join('');
+  el.querySelectorAll('[data-idx]').forEach(btn=>btn.onclick=()=>{
+    const opt=opts[Number(btn.dataset.idx)];
+    if(opt) applyIdeaOption(sp,slot,opt);
+  });
 }
 
 function updateWordPicker(sp,slot,query){
@@ -834,25 +828,6 @@ function wireWordPicker(sp,slot){
   });
 }
 
-function updateIdeaCards(sp,slot){
-  const el=document.getElementById(`ic-${sp}-${slot}`);
-  if(!el)return;
-  const text=getIdea(sp,slot);
-  const opts=text?makeIdeaOptions(sp,slot,text):[];
-  el.innerHTML=opts.map((o,i)=>`<button class="idea-card" data-idx="${i}">${esc(o.label)}</button>`).join('');
-  wireIdeaCards(sp,slot);
-}
-
-function wireIdeaCards(sp,slot){
-  const el=document.getElementById(`ic-${sp}-${slot}`);
-  if(!el)return;
-  const text=getIdea(sp,slot);
-  const opts=text?makeIdeaOptions(sp,slot,text):[];
-  el.querySelectorAll('[data-idx]').forEach(btn=>btn.onclick=()=>{
-    const opt=opts[Number(btn.dataset.idx)];
-    if(opt)applyIdeaOption(sp,slot,opt);
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Event wiring
