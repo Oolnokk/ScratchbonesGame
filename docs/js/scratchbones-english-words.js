@@ -1,242 +1,118 @@
-// Scratchbones English word list — 3-8 character common English words
-// Filtered by length only; intended for use as Engh-sho nickname source pool.
-// Words are lowercase, sorted, no proper nouns, no duplicates.
+// Scratchbones English word list for Engh-sho first names.
+//
+// Names can be multi-word: any modifiers + a final noun.
+// The final word must be from HANDHELD (physical objects that fit in one hand).
+// If a word in TINY_TRIGGERS appears before the final word, SIZEABLE nouns
+// are also valid as the final word (e.g. "Tiny Anvil", "Pocket Cauldron").
+//
+// All words 3-8 characters, lowercase, sorted.
 (function(global){
   'use strict';
 
+  // Words that unlock size-expanded nouns as the final word
+  global.SCRATCHBONES_TINY_TRIGGERS = [
+    'tiny','small','little','wee','mini','petite','pocket','minute','micro'
+  ];
+
+  // Final-word pool: physical objects naturally graspable in one hand
   global.SCRATCHBONES_ENGLISH_WORDS = [
-    // 3
-    "ace","age","aid","aim","air","ale","arc","arm","art","ash","axe",
-    "bag","bay","bed","bit","bow","box","bud","bug","bun","cab","can",
-    "cap","cat","cob","cod","cog","cop","cot","cow","cub","cup","cut",
-    "dam","den","dew","dig","dim","dip","dog","dot","dub","dye","ear",
-    "eel","egg","elf","elm","eve","eye","fan","fin","fit","fix","fly",
-    "fog","fox","fur","gap","gem","gin","god","gum","gun","gut","ham",
-    "hat","hay","hen","hob","hog","hop","hub","hue","hum","hut","ice",
-    "imp","ink","ion","ivy","jab","jam","jar","jaw","jet","jig","joy",
-    "jug","keg","key","kid","kin","kit","lab","lag","lap","law","lay",
-    "lea","leg","lid","lip","log","lug","map","mat","maw","mob","mop",
-    "mud","mug","net","nip","nit","nod","nun","oak","oar","oil","orb",
-    "ore","owl","pad","pan","paw","pea","peg","pen","pet","pie","pig",
-    "pit","pod","pot","pun","pup","ram","rap","rat","ray","rib","rig",
-    "rip","rod","rot","rug","rum","rut","rye","sap","saw","sea","set",
-    "sin","sip","ski","sky","sob","sod","spa","sub","sun","tab","tan",
-    "tap","tar","tax","tea","tie","tin","tip","toe","top","tub","tug",
-    "van","vat","vow","wag","war","wax","web","wet","wig","wit","woe",
-    "wok","yam","yew","yen","zip",
-    // 4
-    "able","ache","acre","aide","aloe","arch","area","army","axle",
-    "bale","ball","balm","band","bane","bark","barn","base","bath",
-    "bead","beam","bear","beat","bell","belt","bile","bird","bite",
-    "boar","bolt","bond","bone","book","boom","boot","bore","brat",
-    "brew","brim","buck","bull","bump","burn","burr","bush","calm",
-    "cape","carp","cart","case","cave","cell","chip","claw","clay",
-    "clod","clog","clot","coal","coat","coil","cold","colt","cork",
-    "corn","crab","crew","crop","crow","curl","damp","dare","dark",
-    "dash","dawn","dead","deal","dean","dear","deed","deer","deft",
-    "dell","dial","dirt","disk","dome","dusk","dust","edge","ewer",
-    "face","fade","fawn","fern","fish","fist","fizz","flag","flap",
-    "flat","flaw","flea","flex","flip","flit","flow","foam","fold",
-    "fond","foot","ford","fork","form","fowl","frog","fuel","gale",
-    "gall","gate","gaze","gild","gill","girt","glad","glow","glue",
-    "gnat","goat","gold","gore","gust","hack","half","hall","halo",
-    "hand","hang","hard","hare","harm","harp","hart","hash","hawk",
-    "head","heal","heap","heat","heel","helm","hemp","herb","herd",
-    "hide","hill","hilt","hind","hive","hold","hole","hood","hook",
-    "hoop","horn","host","hull","hung","hurl","husk","jade","keel",
-    "keen","kelp","kern","kind","king","knob","knot","lace","lame",
-    "lamp","land","lane","lark","lash","last","lath","lava","lawn",
-    "lead","leaf","lean","leek","lick","lime","link","lion","list",
-    "loch","lock","loft","loin","lore","lure","mace","maid","mail",
-    "male","mane","mare","mark","mast","mead","meal","meat","mesa",
-    "mesh","mild","mill","mink","mint","mire","mist","moat","mole",
-    "moon","moor","mote","moth","mutt","myth","nail","navy","newt",
-    "nice","nick","node","nook","norm","nose","note","numb","oath",
-    "ogre","ooze","oval","oven","pack","pale","palm","pant","park",
-    "part","past","path","peak","pear","peel","pelt","pile","pine",
-    "pipe","plum","pond","pore","prey","prod","prop","prow","pure",
-    "push","rage","rail","rain","rake","ramp","rank","rash","read",
-    "reap","reel","reef","reek","rend","rent","rest","rice","rich",
-    "rift","rime","ring","riot","rise","risk","rite","road","roam",
-    "roar","robe","rock","roll","roof","rook","room","rose","ruin",
-    "rune","rush","rust","sage","sail","salt","sand","sash","sill",
-    "silk","silt","sing","site","size","skin","skip","slab","slap",
-    "sled","slim","slip","slot","slow","slur","snap","snow","soak",
-    "soar","soft","soil","soot","soul","span","spin","spit","spot",
-    "stem","step","stew","stir","stop","stub","suit","sulk","sung",
-    "sunk","tack","tail","tale","tame","task","taut","teal","tell",
-    "tent","test","till","tilt","toad","toll","tome","tone","tool",
-    "torn","toss","town","tray","trim","trio","trip","trod","trot",
-    "tuft","tusk","twin","vale","vane","vast","veil","vein","vent",
-    "vest","vine","void","volt","wail","wake","walk","wall","wand",
-    "ward","warm","wart","wasp","welt","wend","whet","whip","wick",
-    "wild","will","wilt","wine","wing","wink","wire","wisp","wolf",
-    "womb","wood","wool","worm","wren","yard","yore","zeal","zone",
-    // 5
-    "abbey","abyss","acorn","adder","adorn","aglow","aisle","aloft",
-    "altar","amber","amble","amend","angel","anger","angle","ankle",
-    "anvil","apron","ardor","armor","aroma","ashen","aspen","atoll",
-    "atone","azure","barge","basil","basin","batch","beach","beech",
-    "bevel","bilge","birch","bison","blade","bland","blaze","bleed",
-    "blend","bless","bliss","bloom","bluff","boast","brace","braid",
-    "brash","brave","brawn","bream","breed","briar","brine","brisk",
-    "broad","brook","broth","brunt","brute","budge","bulge","bully",
-    "burnt","camel","chafe","chain","chalk","chant","chase","chasm",
-    "cheer","chimp","chuck","churn","clamp","clank","cleat","cleft",
-    "cling","clink","cloak","clock","cloud","clove","clump","coach",
-    "copse","coral","couch","craft","crane","crash","creak","creek",
-    "crest","crimp","crone","crook","cross","crown","crude","cruel",
-    "crush","crust","crypt","daisy","dance","daunt","dense","depth",
-    "derby","devil","dowel","downy","draft","drain","dread","dream",
-    "dregs","drift","drill","droop","druid","duchy","dwarf","eagle",
-    "earth","ebony","elder","ember","envoy","epoch","erode","evoke",
-    "exile","fable","facet","fairy","faith","fancy","farce","feast",
-    "feint","fence","fetch","fiend","field","fiery","flare","flash",
-    "fleck","flick","fling","flint","flock","flood","floss","flour",
-    "flume","flush","foamy","forge","found","frail","frame","frank",
-    "froth","fungi","gavel","gauze","ghost","girth","glade","glare",
-    "glean","gleam","glide","glint","gloom","gloss","glove","gorge",
-    "gourd","grace","grade","graft","grasp","graze","greed","greet",
-    "grief","grime","grind","groan","grove","growl","guile","guise",
-    "gusto","gypsy","haste","hazel","heart","heath","heave","hedge",
-    "helix","holly","honor","horde","horse","hover","husky","inlay",
-    "inlet","ivory","jewel","joust","judge","juice","jumbo","karma",
-    "knave","kneel","knell","lance","larva","latch","layer","ledge",
-    "leech","lemur","level","light","linen","liver","lodge","lofty",
-    "lucid","lunar","lusty","magic","maple","march","marsh","match",
-    "mercy","merge","merit","metal","might","mimic","mince","moose",
-    "motif","mould","mound","mouse","mulch","murky","nymph","olive",
-    "onion","onset","otter","oxide","pansy","paste","patch","pearl",
-    "pedal","penny","perch","phase","phial","piano","pinch","pitch",
-    "pixie","plaid","plait","plane","plank","plant","pleat","pluck",
-    "plume","plush","porch","power","prank","press","prick","pride",
-    "prime","prism","probe","prone","prune","psalm","pulse","purge",
-    "quail","queen","quest","quiet","quill","quirk","quota","raven",
-    "reach","realm","rebel","reign","relay","resin","revel","ridge",
-    "rivet","robin","rough","rouse","rowdy","royal","ruddy","runic",
-    "rusty","salve","scald","scale","scamp","scion","scone","scoop",
-    "scorn","scout","scowl","scree","scrub","seize","sepal","serve",
-    "shaft","shale","shank","shark","shear","sheen","shelf","shell",
-    "shine","shoal","shore","shred","shrub","sight","sinew","siren",
-    "skill","skimp","skirt","skull","skunk","slack","slain","sleek",
-    "sleet","slick","slide","slope","sloth","slump","smear","smelt",
-    "smite","smoke","snare","sneak","snide","sniff","snore","snout",
-    "sober","solar","south","spade","spasm","spawn","speak","spear",
-    "speed","spell","spill","spine","spire","sport","spout","spray",
-    "sprig","spunk","squat","stain","stale","stalk","stall","stamp",
-    "stash","stave","steed","steel","steep","stein","stern","stomp",
-    "stone","stool","storm","stove","strap","straw","stray","strut",
-    "stump","stung","style","suede","surge","swamp","swath","swear",
-    "sweat","sweep","sweet","swift","swirl","swoop","sword","syrup",
-    "talon","taper","taunt","tawny","thorn","tiger","tinge","tithe",
-    "token","topaz","torch","totem","tower","toxic","trace","track",
-    "trade","trail","train","tramp","tread","trial","tribe","trove",
-    "tryst","tuber","tunic","twist","umbra","unfit","upper","usher",
-    "utter","valor","valve","vapor","vault","visor","vicar","vigil",
-    "viola","viper","vivid","vogue","weave","wedge","weird","whale",
-    "wheat","wheel","whirl","whisk","white","wight","witch","witty",
-    "woody","worry","wrath","wring","wrist","yearn","yield","youth",
-    // 6
-    "abrupt","absorb","afford","afraid","anchor","anoint","antler",
-    "aplomb","ardent","argent","artery","artful","astern","attire",
-    "august","aurora","autumn","barrel","battle","beacon","belfry",
-    "benign","bicker","bishop","bitter","blazon","blight","blonde",
-    "bonnet","border","bottle","bounty","bowman","bridle","broken",
-    "bronze","brutal","canopy","castle","cavern","chapel","charge",
-    "cherry","chisel","cinder","circle","cobalt","cobble","copper",
-    "corpse","couple","craggy","crater","crimson","cygnet","dagger",
-    "damask","danger","daring","darken","dapple","deadly","debris",
-    "defeat","defend","deluge","desert","devout","dragon","dreary",
-    "duress","dynamo","earthy","effort","embark","empire","endure",
-    "engulf","fallow","famine","fester","fierce","flinty","florid",
-    "flower","forest","fracas","fright","frozen","gambit","garnet",
-    "gentle","gilded","gloomy","golden","gravel","grotto","grudge",
-    "hunter","hustle","impact","island","jackal","jester","jungle",
-    "kernel","kitten","lackey","lament","larder","laurel","lavish",
-    "lintel","locket","lustre","mantle","marble","maroon","marvel",
-    "matron","mayhem","menace","midday","mingle","mirror","modest",
-    "monkey","mortal","mortar","muster","myrtle","narrow","nettle",
-    "nimble","obsess","oracle","ordeal","outlaw","oyster","pebble",
-    "pewter","pillar","pirate","plague","plover","ponder","portal",
-    "possum","powder","pollen","priest","primal","prompt","propel",
-    "purple","pursue","python","rafter","ragged","ranger","rapier",
-    "raptor","rascal","ravage","reflex","refuge","regent","relent",
-    "remote","render","rescue","resent","resist","retort","ribald",
-    "robust","rotate","rotund","rugged","rustle","salmon","sandal",
-    "sapper","savage","scarce","scotch","sentry","serene","settle",
-    "shield","simmer","sinker","slight","smooth","snatch","solace",
-    "solder","somber","soothe","sorrow","steady","stoic","strife",
-    "strike","strong","subdue","subtle","summit","sunken","sunset",
-    "supple","swathe","tangle","tartan","temple","tender","thatch",
-    "tinder","tinker","turban","tyrant","unfold","uproar","upward",
-    "urgent","velvet","vermin","violet","virtue","visage","vortex",
-    "warden","wealth","wicket","wizard","wither","wonder","wraith",
-    "wreath","yellow","yeoman","zealot",
-    // 7
-    "acolyte","adamant","ailment","alchemy","ancient","antique",
-    "archway","arduous","armored","ascetic","austere","avenger",
-    "balance","barrier","beloved","beneath","bestial","between",
-    "blazing","blessed","bolster","bondage","borough","bramble",
-    "bravado","burnish","captain","captive","carnage","cavalry",
-    "century","circuit","citizen","clamber","clarion","cluster",
-    "cobbled","collide","command","compass","consume","content",
-    "contest","contour","convert","courage","crevice","crimson",
-    "crumble","cunning","current","curtain","dappled","dastard",
-    "dawning","decorum","default","defunct","descent","devious",
-    "disable","discern","discord","disease","distill","durable",
-    "element","enforce","essence","eternal","exhaust","faction",
-    "feature","flutter","forbear","foreign","frantic","freedom",
-    "gambler","garland","gateway","gallant","galleon","gleaming",
-    "glimmer","glisten","gnarled","goblin","granite","grapple",
-    "grimace","handler","harvest","heights","heretic","history",
-    "horizon","hostile","hundred","igneous","immense","impulse",
-    "inferno","inquest","intense","invalid","justice","kinship",
-    "kestrel","lantern","lasting","leather","leopard","liberal",
-    "lineage","longbow","lunatic","lustrous","majestic","manager",
-    "mansion","massive","mixture","monster","morning","mounted",
-    "narrows","natural","network","nowhere","nourish","obscure",
-    "offense","options","outcast","outline","outpost","painter",
-    "paladin","pattern","phantom","pilgrim","plunder","prosper",
-    "prowess","pursuit","quicken","rampage","ransack","rapture",
-    "raucous","reclaim","resolve","restore","retinue","revenge",
-    "reverie","riveted","rooftop","roughly","ruinous","rushing",
-    "salvage","samurai","scatter","scholar","scrapes","servant",
-    "several","shatter","shelter","silence","sinuous","skeptic",
-    "slither","soldier","sorcery","spectre","spotted","stamina",
-    "stellar","stipend","storied","strands","strange","stubborn",
-    "sundown","supreme","survive","swallow","tableau","tactful",
-    "talisman","tempest","texture","thicket","thunder","timbers",
-    "torment","trespass","triumph","turbine","twisted","unbound",
-    "vantage","vagrant","valiant","veteran","vibrant","village",
-    "violate","viscous","warlike","warrior","watcher","wayward",
-    "winding","witless","worship","wrestle","wyvern","zealous",
-    // 8
-    "abrasive","absolute","abstract","adjacent","agitated","alliance",
-    "ambition","ancestor","archmage","armament","arrogant","artifact",
-    "assassin","assemble","balanced","behemoth","betrayal","blackened",
-    "blizzard","bludgeon","brambles","cavalier","champion","charcoal",
-    "charming","chimeric","clusters","collapse","combatant","colossal",
-    "consumed","corsair","creature","criminal","crippled","darkened",
-    "decisive","defiant","dominant","doubtful","draconic","dreadful",
-    "drifting","eldritch","emphatic","enchanted","enduring","entangle",
-    "eruption","eternity","eventual","ferocious","fearless","flashing",
-    "fountain","frenzied","garrison","gladiator","glistening","glorious",
-    "grimoire","gruesome","guardian","guidance","hallowed","haunting",
-    "headlong","hollowed","immortal","imposing","incessant","infernal",
-    "infamous","intrepid","isolated","kingship","labyrinth","legendary",
-    "lethargy","lonesome","luminous","lurching","manifest","marauder",
-    "maritime","massacre","measured","menacing","merciful","militant",
-    "minotaur","monstrous","moonstone","mountain","mutinous","nomadic",
-    "obsidian","offender","plentiful","predator","prowling","punished",
-    "ravenous","reckless","remnants","renowned","resolute","restless",
-    "ruthless","scorched","sentinel","shattered","shrouded","singular",
-    "skeletal","smuggler","specters","splendid","steadfast","storming",
-    "striking","sunstone","survivor","tenacious","terrible","tattered",
-    "timeless","torchlit","tortured","traveler","treasure","troubled",
-    "turbulent","ulterior","unbidden","uncanny","undying","unending",
-    "unleash","unstable","untamed","valorous","vengeful","vigilant",
-    "volcanic","warlord","watchful","wavering","withered","woodland",
-    "wretched","yearning"
-  ].sort();
+    // tools and implements
+    "awl","bit","hoe","key","saw","adze","bore","pick","rasp","shim",
+    "tang","vise","whet","anvil","auger","bevel","brace","brush","burin",
+    "clamp","drill","gauge","gouge","graver","lathe","level","mallet",
+    "maul","plane","plumb","probe","punch","razor","scoop","screw",
+    "shovel","sickle","sieve","socket","spatula","spike","stamp","stave",
+    "stylus","tongs","trowel","wrench","bodkin","chisel","gimlet","grater",
+    "inkpot","lancet","pliers","ratchet","syringe",
+    // weapons
+    "axe","bow","mace","barb","bolt","dart","dirk","flail","hilt",
+    "lance","saber","shaft","shiv","sword","arrow","dagger","rapier",
+    "quiver","sling","cutlass","stiletto",
+    // small containers
+    "cup","jar","jug","keg","pan","pot","tin","tub","urn","vat",
+    "bowl","case","crock","dish","ewer","pail","phial","vase","vial",
+    "canteen","flagon","flask","goblet","ladle","mortar","pitcher",
+    "pouch","purse","satchel","vessel","wallet","capsule",
+    // hardware and fasteners
+    "bar","cog","lid","peg","pin","rod","clip","hook","knob","lace",
+    "link","lock","loop","mesh","nail","plug","ring","snap","stud",
+    "tack","tube","wick","wire","brad","fuse","prong","rivet","buckle",
+    "clasp","cleat","collar","cotter","cramp","dowel","eyelet","ferrule",
+    "grommet","hasp","hinge","latch","shackle","spring","staple","toggle",
+    "washer",
+    // fiber and textile
+    "coil","knot","rope","sash","bead","skein","spool","strand","string",
+    "thread","twine","bobbin","sinew","thong",
+    // natural handheld objects
+    "nut","orb","pod","bud","pip","acorn","amber","bark","bone","burr",
+    "chip","clay","clod","coal","cone","coral","flax","flint","frond",
+    "grain","husk","jade","leaf","lump","opal","ore","peel","pebble",
+    "rind","rock","root","reed","seed","shard","shell","sliver","spore",
+    "stem","stone","thorn","twig","wood","feather","kernel","nugget",
+    "walnut","cobble","chestnut",
+    // gems and minerals
+    "gem","opal","ruby","agate","beryl","flint","garnet","pearl","quartz",
+    "topaz","crystal","diamond","emerald","granite","jasper","obsidian",
+    "sapphire","spinel","lignite","pyrite",
+    // coins, tokens, seals
+    "die","disc","coin","slug","flan","obol","rune","seal","tab","badge",
+    "medal","pawn","token","tally","sigil","wafer","pellet","counter",
+    "medallion",
+    // jewelry and adornments
+    "torc","cameo","charm","locket","amulet","anklet","bangle","brooch",
+    "earring","pendant","signet","trinket","talisman","circlet",
+    // small instruments
+    "bell","drum","fife","horn","lute","pipe","reed","flute","rattle",
+    "whistle","kazoo","ocarina",
+    // lights and fire tools
+    "lamp","wick","candle","lantern","tinder","striker",
+    // domestic small objects
+    "comb","cube","fork","gavel","mold","mug","spoon","thimble","tile",
+    "wand","bottle","button","sponge","dipper",
+    // materials as handled pieces
+    "blob","disk","drop","flake","foil","grit","hull","ingot","plank",
+    "plaque","slab","tablet","wedge","whorl",
+    // craft objects
+    "blank","block","mandrel","pestle","shuttle","spindle",
+    // small optics
+    "lens","prism","monocle","compass",
+    // writing
+    "quill","scroll",
+    // military small kit
+    "buckler","gorget","rondel",
+    // games and toys
+    "ball","marble","puppet","top",
+    // hunting and fishing
+    "lure","snare","sinker","bobber","decoy",
+    // weights
+    "weight"
+  ]
+  .filter((w,i,a) => w.length>=3 && w.length<=8 && a.indexOf(w)===i)
+  .sort();
+
+  // Final-word pool when a TINY_TRIGGER precedes the noun:
+  // larger physical objects that become handheld as "tiny" versions.
+  // Combined with SCRATCHBONES_ENGLISH_WORDS at runtime.
+  global.SCRATCHBONES_SIZEABLE_NOUNS = [
+    // vessels and furniture
+    "barrel","basket","bucket","canteen","cauldron","cask","chest",
+    "cistern","churn","kettle","trough","vat",
+    // structures (as miniatures)
+    "arch","boat","bridge","cart","crane","door","forge","gate","loom",
+    "oven","plow","press","sled","stool","table","tower","trough",
+    "wagon","wall","wheel","winch",
+    // large tools
+    "anvil","bellows","furnace",
+    // instruments (larger)
+    "harp","lute",
+    // armor pieces
+    "hauberk","helmet","shield","cuirass","greaves","gorget","pauldron",
+    "vambrace",
+    // other large objects
+    "banner","beacon","cannon","coffin","column","ladder","mirror",
+    "saddle","throne","trebuchet"
+  ]
+  .filter((w,i,a) => w.length>=3 && w.length<=8 && a.indexOf(w)===i)
+  .sort();
 
 })(typeof window !== 'undefined' ? window : this);

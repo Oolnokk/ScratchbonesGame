@@ -559,13 +559,31 @@ function enghWordPool(){
   const dict=window.SCRATCHBONES_ENGLISH_WORDS||[];
   return [...lore,...dict.filter(w=>!lore.has(w))];
 }
+function enghSizeablePool(){
+  const base=new Set(enghWordPool());
+  const extra=window.SCRATCHBONES_SIZEABLE_NOUNS||[];
+  return [...base,...extra.filter(w=>!base.has(w))];
+}
 function makeEnghIdeaOptions(text,slot){
   if(slot==='first'){
-    const q=normalizeIdea(text).replace(/'/g,'');
-    if(!q)return[];
-    return enghWordPool().map(n=>({name:n,score:scoreEnghName(n,q)}))
-      .filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,10)
-      .map(x=>({label:tc(x.name),type:'enghFirst',value:x.name}));
+    const raw=String(text||'').toLowerCase().replace(/[^a-z ']/g,'').trim();
+    if(!raw)return[];
+    const parts=raw.split(/\s+/);
+    const fragment=parts[parts.length-1];   // word being typed (last)
+    const prefix=parts.slice(0,-1);          // modifiers already typed
+    // check if any modifier is a size-diminutive trigger
+    const triggers=new Set(window.SCRATCHBONES_TINY_TRIGGERS||['tiny','small','little','wee','mini']);
+    const hasTiny=prefix.some(w=>triggers.has(w));
+    const pool=hasTiny?enghSizeablePool():enghWordPool();
+    const prefixStr=prefix.join(' ');
+    // if fragment is empty (trailing space), show top pool words
+    const matches=fragment
+      ?pool.map(n=>({n,s:scoreEnghName(n,fragment)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,10)
+      :pool.slice(0,10).map(n=>({n,s:0}));
+    return matches.map(x=>{
+      const full=prefixStr?`${prefixStr} ${x.n}`:x.n;
+      return{label:tc(full),type:'enghFirst',value:full};
+    });
   }
   const opts=[];
   for(let i=0;i<8;i++){const s=enghSurnameFromIdea(text,i);opts.push({label:tc(s),type:'enghSurname',value:s});}
@@ -620,11 +638,13 @@ function makeIdeaOptions(sp,slot,text){
 }
 
 function applyIdeaOption(sp,slot,opt){
-  if(opt.type==='blocks')      setBirth(sp,slot,opt.blocks.map(b=>b.text).join(''));
-  else if(opt.type==='enghFirst')  setBirth(sp,slot,opt.value);
-  else if(opt.type==='enghSurname')setBirth(sp,slot,opt.value);
+  if(opt.type==='blocks')        setBirth(sp,slot,opt.blocks.map(b=>b.text).join(''));
+  else if(opt.type==='enghFirst'||opt.type==='enghSurname') setBirth(sp,slot,opt.value);
   else if(opt.type==='slagPlace')  setBirth(sp,'surname','tley '+opt.place);
   else if(opt.type==='slagGiven')  setBirth(sp,slot,opt.value);
+  // sync input element value
+  const input=document.getElementById(`bi-${sp}-${slot}`);
+  if(input) input.value=getBirth(sp,slot);
   render();
 }
 
