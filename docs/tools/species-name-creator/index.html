@@ -65,12 +65,6 @@
     .sugg-card{border:1px solid var(--border);background:rgba(255,255,255,.045);color:var(--text);border-radius:12px;padding:6px 12px;font:inherit;font-weight:800;cursor:pointer;font-size:.92rem}
     .sugg-card:hover{background:rgba(141,179,255,.1);border-color:var(--accent)}
 
-    /* Word picker */
-    .word-picker{border:1px solid var(--border);background:rgba(0,0,0,.13);border-radius:12px;padding:6px;display:flex;flex-wrap:wrap;gap:5px;max-height:130px;overflow-y:auto;margin-top:6px}
-    .word-btn{border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);border-radius:10px;padding:5px 10px;font:inherit;font-weight:700;cursor:pointer;font-size:.86rem}
-    .word-btn:hover{background:rgba(141,179,255,.1)}
-    .word-btn.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
-
     /* Place grid */
     .place-grid{display:flex;flex-wrap:wrap;gap:6px}
     .place-btn{border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);border-radius:10px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer;font-size:.9rem}
@@ -109,6 +103,7 @@
 
 <script src="../../config/scratchbones-config.js"></script>
 <script src="../../js/scratchbones-name-generator.js"></script>
+<script src="../../js/scratchbones-english-words.js"></script>
 <script>
 // ---------------------------------------------------------------------------
 // Config derivation
@@ -392,11 +387,11 @@ function validateEnghSurname(text){
 
 function validateSlot(sp,slot,text){
   if(!text) return {html:'',msgs:[]};
-  if(sp==='kenkari') return validateKenkari(text);
-  if(sp==='mao')     return validateMao(text,slot);
+  if(sp==='kenkari')                   return validateKenkari(text);
+  if(sp==='mao')                       return validateMao(text,slot);
   if(sp==='slagothim'&&slot==='given') return validateSlagothim(text);
   if(sp==='engh'&&slot==='surname')    return validateEnghSurname(text);
-  return {html:'',msgs:[]};
+  return {html:'',msgs:[]};  // engh first: word-based, no phoneme validation
 }
 
 // ---------------------------------------------------------------------------
@@ -559,11 +554,17 @@ function scoreEnghName(name,q){
   let qi=0;for(const ch of name){if(ch===q[qi])qi++;if(qi>=q.length)break;}
   return qi*8-Math.abs(name.length-q.length);
 }
+function enghWordPool(){
+  const lore=new Set(enghFirstNamesForGender());
+  const dict=window.SCRATCHBONES_ENGLISH_WORDS||[];
+  return [...lore,...dict.filter(w=>!lore.has(w))];
+}
 function makeEnghIdeaOptions(text,slot){
   if(slot==='first'){
     const q=normalizeIdea(text).replace(/'/g,'');
-    return enghFirstNamesForGender().map(n=>({name:n,score:scoreEnghName(n,q)}))
-      .filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,8)
+    if(!q)return[];
+    return enghWordPool().map(n=>({name:n,score:scoreEnghName(n,q)}))
+      .filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,10)
       .map(x=>({label:tc(x.name),type:'enghFirst',value:x.name}));
   }
   const opts=[];
@@ -723,17 +724,13 @@ function renderBirthSection(){
   // Wire inputs
   for(const slot of slots){
     const input=document.getElementById(`bi-${sp}-${slot}`);
-    if(!input)continue;
-    if(sp==='engh'&&slot==='first'){
-      input.oninput=()=>{updateWordPicker(sp,slot,input.value);renderPreview();};
-    } else if(!(sp==='slagothim'&&slot==='surname')){
-      input.oninput=()=>{
-        setBirth(sp,slot,input.value);
-        updateValDisplay(sp,slot,input.value);
-        updateSuggestions(sp,slot,input.value);
-        renderPreview();
-      };
-    }
+    if(!input||sp==='slagothim'&&slot==='surname')continue;
+    input.oninput=()=>{
+      setBirth(sp,slot,input.value);
+      updateValDisplay(sp,slot,input.value);
+      updateSuggestions(sp,slot,input.value);
+      renderPreview();
+    };
   }
 
   // Slagothim place buttons
@@ -744,14 +741,8 @@ function renderBirthSection(){
     });
   }
 
-  // Engh word picker
-  if(sp==='engh'){
-    wireWordPicker(sp,'first');
-  }
-
   // Wire suggestion cards (initial render)
   for(const slot of slots){
-    if(sp==='engh'&&slot==='first') continue;
     if(sp==='slagothim'&&slot==='surname') continue;
     updateSuggestions(sp,slot,getBirth(sp,slot));
   }
@@ -774,20 +765,6 @@ function buildSlotHtml(sp,slot){
       <div class="slot-label">${esc(label)}</div>
       <div class="place-grid">${SPECIES.slagothim.locations.map(loc=>
         `<button class="place-btn ${current===loc?'active':''}" data-place="${esc(loc)}">${esc(loc)}-Doro</button>`
-      ).join('')}</div>
-    </div>`;
-  }
-
-  // Engh first = searchable word list (word picker is the suggestions)
-  if(sp==='engh'&&slot==='first'){
-    const names=enghFirstNamesForGender();
-    const q=val?normalizeIdea(val).replace(/'/g,''):'';
-    const filtered=q?names.filter(n=>n.includes(q)):names;
-    return `<div class="slot-field">
-      <div class="slot-label">${esc(label)}</div>
-      <input id="bi-${sp}-${slot}" class="name-input" type="text" placeholder="Search names…" value="${esc(tc(val))}" autocomplete="off" />
-      <div class="word-picker" id="wp-${sp}-${slot}">${filtered.map(n=>
-        `<button class="word-btn ${val===n?'active':''}" data-word="${esc(n)}">${esc(tc(n))}</button>`
       ).join('')}</div>
     </div>`;
   }
@@ -821,31 +798,6 @@ function updateSuggestions(sp,slot,text){
   });
 }
 
-function updateWordPicker(sp,slot,query){
-  const el=document.getElementById(`wp-${sp}-${slot}`);
-  if(!el)return;
-  setBirth(sp,slot,query.toLowerCase());
-  const names=enghFirstNamesForGender();
-  const q=normalizeIdea(query).replace(/'/g,'');
-  const filtered=q?names.filter(n=>n.includes(q)):names;
-  const cur=getBirth(sp,slot);
-  el.innerHTML=filtered.map(n=>
-    `<button class="word-btn ${cur===n?'active':''}" data-word="${esc(n)}">${esc(tc(n))}</button>`
-  ).join('');
-  wireWordPicker(sp,slot);
-  renderPreview();
-}
-
-function wireWordPicker(sp,slot){
-  const el=document.getElementById(`wp-${sp}-${slot}`);
-  if(!el)return;
-  el.querySelectorAll('[data-word]').forEach(btn=>btn.onclick=()=>{
-    setBirth(sp,slot,btn.dataset.word);
-    const input=document.getElementById(`bi-${sp}-${slot}`);
-    if(input)input.value=tc(btn.dataset.word);
-    updateWordPicker(sp,slot,btn.dataset.word);
-  });
-}
 
 
 // ---------------------------------------------------------------------------
