@@ -282,6 +282,7 @@
   let _editAIdx = 0;            // index into current species/gender colorOptions for A
   let _editBIdx = 0;            // index into current species/gender colorOptions for B
   let _editName = '';           // name field being edited in appearance editor
+  let _nameSuggestions = [];    // cached name suggestions for the advisor chips
 
   // Online state
   let _onlinePlayerCount = 2;
@@ -448,6 +449,26 @@
       if (!hasNoneOption && slotDef.options?.[0]?.id) cosmetics[slotDef.slot] = slotDef.options[0].id;
     }
     return cosmetics;
+  }
+
+  // ── Name advisor ──────────────────────────────────────────
+
+  function _genNameSuggestions(speciesId, gender, count) {
+    const gen = window.SCRATCHBONES_NAME_GENERATOR;
+    if (!gen) return [];
+    const cultureId = speciesId.replace(/-/g, '_');
+    const out = new Set();
+    for (let i = 0; i < count * 4 && out.size < count; i++) {
+      try { out.add(gen.generateIdentityFromSeed(Math.random().toString(36).slice(2), gender, cultureId)); }
+      catch {}
+    }
+    return [...out];
+  }
+
+  function refreshNameSuggestions() {
+    const ap = _editAppearance;
+    if (!ap) { _nameSuggestions = []; return; }
+    _nameSuggestions = _genNameSuggestions(ap.speciesId || 'mao-ao', ap.gender || 'male', 5);
   }
 
   // ── Portrait preview ───────────────────────────────────────
@@ -807,11 +828,17 @@
             <canvas id="sb-ap-canvas" width="200" height="200" class="sb-portrait-canvas"></canvas>
           </div>
           <div class="sb-ap-controls">
-            <div class="sb-label">Name</div>
+            <div class="sb-label" style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Name</span>
+              <button id="sb-name-roll-btn" style="font-size:0.75em;padding:2px 8px;border:1px solid rgba(200,153,82,0.35);border-radius:5px;background:rgba(242,208,143,0.06);color:rgba(242,208,143,0.7);cursor:pointer;font-family:inherit;letter-spacing:0.06em;">↺ Suggest</button>
+            </div>
             <div class="sb-field">
-              <input id="sb-edit-name" type="text" maxlength="24" value="${esc(_editName || '')}"
+              <input id="sb-edit-name" type="text" maxlength="48" value="${esc(_editName || '')}"
                      autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box;" />
             </div>
+            ${_nameSuggestions.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;">${
+              _nameSuggestions.map(n => `<button class="sb-name-chip" data-name="${esc(n)}" style="font-size:0.78em;padding:3px 9px;border:1px solid rgba(200,153,82,0.32);border-radius:20px;background:rgba(242,208,143,0.05);color:rgba(242,208,143,0.8);cursor:pointer;font-family:inherit;letter-spacing:0.04em;">${esc(n)}</button>`).join('')
+            }</div>` : ''}
             <div class="sb-label" style="margin-top:8px;">Species</div>
             <div class="sb-sel-group">${speciesBtns}</div>
             ${subSpeciesHtml}
@@ -1257,6 +1284,7 @@
     _editAIdx = closestColorIdx(opts, _editAppearance.bodyColors.A);
     _editBIdx = closestColorIdx(opts, _editAppearance.bodyColors.B);
     _screen = 'appearance';
+    refreshNameSuggestions();
     render();
   }
 
@@ -1394,6 +1422,7 @@
           _editAppearance.bodyColors.B = { h: opts[0].h, s: opts[0].s, v: opts[0].v };
           _editAppearance.bodyColors.C = deriveCFromA(opts[0]);
         }
+        refreshNameSuggestions();
         render();
       });
     });
@@ -1431,6 +1460,7 @@
           _editAppearance.bodyColors.B = { h: opts[0].h, s: opts[0].s, v: opts[0].v };
           _editAppearance.bodyColors.C = deriveCFromA(opts[0]);
         }
+        refreshNameSuggestions();
         render();
       });
     });
@@ -1470,6 +1500,18 @@
         _editAppearance.bodyColors.B = { h: o.h, s: o.s, v: o.v };
         el.querySelectorAll('[data-b-idx]').forEach((b, i) => b.classList.toggle('selected', i === idx));
         renderPreviewCanvas('sb-ap-canvas', _editAppearance);
+      });
+    });
+
+    document.getElementById('sb-name-roll-btn')?.addEventListener('click', () => {
+      refreshNameSuggestions();
+      render();
+    });
+
+    el.querySelectorAll('.sb-name-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const nameInput = document.getElementById('sb-edit-name');
+        if (nameInput) nameInput.value = chip.dataset.name;
       });
     });
 

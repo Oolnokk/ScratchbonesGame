@@ -226,6 +226,7 @@ let state = {
 
 function esc(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
 function tc(s){ s=String(s||''); return s ? s[0].toUpperCase()+s.slice(1) : ''; }
+function tcAll(s){ return String(s||'').split(' ').map(tc).join(' '); }
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
 function getBirth(sp,slot){ return state.births[sp][slot]||''; }
@@ -264,7 +265,7 @@ function birthNameParts(sp){
     return {first:tc(b.first),conn:pref,second:tc(b.father)};
   }
   if(sp==='mao') return {first:tc(b.first),conn:'',second:tc(b.surname)};
-  if(sp==='engh') return {first:tc(b.first),conn:'',second:tc(b.surname)};
+  if(sp==='engh') return {first:tcAll(b.first),conn:'',second:tc(b.surname)};
   const place=(b.surname||'').replace(/^tley\s*/i,'')||'Ikinga';
   return {first:tc(b.given),conn:'tley',second:place};
 }
@@ -581,7 +582,7 @@ function makeEnghIdeaOptions(text,slot){
       // suggestions from the active pool
       activePool.map(n=>({n,s:scoreEnghName(n,fragment)}))
         .filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,8)
-        .forEach(x=>{const full=prefixStr?`${prefixStr} ${x.n}`:x.n;opts.push({label:tc(full),type:'enghFirst',value:full});});
+        .forEach(x=>{const full=prefixStr?`${prefixStr} ${x.n}`:x.n;opts.push({label:tcAll(full),type:'enghFirst',value:full});});
       // if not already under a trigger, also suggest "tiny X" / "miniature X"
       // for big-pool words that match (object is too large / is a living thing)
       if(!hasTiny&&fragment.length>=2){
@@ -589,12 +590,12 @@ function makeEnghIdeaOptions(text,slot){
           .filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,3)
           .forEach(x=>{
             const base=prefixStr?`${prefixStr} `:'';
-            opts.push({label:tc(`${base}tiny ${x.n}`),    type:'enghFirst',value:`${base}tiny ${x.n}`});
-            opts.push({label:tc(`${base}miniature ${x.n}`),type:'enghFirst',value:`${base}miniature ${x.n}`});
+            opts.push({label:tcAll(`${base}tiny ${x.n}`),    type:'enghFirst',value:`${base}tiny ${x.n}`});
+            opts.push({label:tcAll(`${base}miniature ${x.n}`),type:'enghFirst',value:`${base}miniature ${x.n}`});
           });
       }
     } else {
-      activePool.slice(0,10).forEach(n=>{const full=prefixStr?`${prefixStr} ${n}`:n;opts.push({label:tc(full),type:'enghFirst',value:full});});
+      activePool.slice(0,10).forEach(n=>{const full=prefixStr?`${prefixStr} ${n}`:n;opts.push({label:tcAll(full),type:'enghFirst',value:full});});
     }
     return uniqueOptions(opts).slice(0,10);
   }
