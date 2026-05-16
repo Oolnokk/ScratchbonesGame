@@ -433,7 +433,8 @@
     const ideaVows = ideaVowels(text);
     const blocks = [];
     let pending = [];
-    let lastVowel = 'u'; // word-final default
+    // before any vowel: use input's first vowel; after a vowel: use last seen
+    let lastVowel = ideaVows.length > 0 ? nearestVowel(ideaVows[0], allowedVowels[0]) : 'i';
     const defaults = ['h','k','n','m'];
 
     function mapC(token) { return mapKenkariConsonant(token, v + blocks.length + pending.length); }
