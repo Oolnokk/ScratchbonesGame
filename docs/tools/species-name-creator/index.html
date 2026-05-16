@@ -90,7 +90,7 @@
 
   <section class="panel">
     <div class="sec-label">Nickname <span style="text-transform:none;font-weight:400;font-size:.9em;letter-spacing:0"> — any text, no rules</span></div>
-    <input class="name-input nick-input" id="nicknameInput" placeholder='e.g. Rektar2000' autocomplete="off" />
+    <input class="name-input nick-input" id="nicknameInput" placeholder="Nickname" autocomplete="off" />
   </section>
 
   <section class="panel" id="birthSection">
@@ -559,31 +559,44 @@ function enghWordPool(){
   const dict=window.SCRATCHBONES_ENGLISH_WORDS||[];
   return [...lore,...dict.filter(w=>!lore.has(w))];
 }
-function enghSizeablePool(){
-  const base=new Set(enghWordPool());
-  const extra=window.SCRATCHBONES_SIZEABLE_NOUNS||[];
-  return [...base,...extra.filter(w=>!base.has(w))];
-}
 function makeEnghIdeaOptions(text,slot){
   if(slot==='first'){
     const raw=String(text||'').toLowerCase().replace(/[^a-z ']/g,'').trim();
     if(!raw)return[];
     const parts=raw.split(/\s+/);
-    const fragment=parts[parts.length-1];   // word being typed (last)
-    const prefix=parts.slice(0,-1);          // modifiers already typed
-    // check if any modifier is a size-diminutive trigger
-    const triggers=new Set(window.SCRATCHBONES_TINY_TRIGGERS||['tiny','small','little','wee','mini']);
-    const hasTiny=prefix.some(w=>triggers.has(w));
-    const pool=hasTiny?enghSizeablePool():enghWordPool();
+    const fragment=parts[parts.length-1];
+    const prefix=parts.slice(0,-1);
     const prefixStr=prefix.join(' ');
-    // if fragment is empty (trailing space), show top pool words
-    const matches=fragment
-      ?pool.map(n=>({n,s:scoreEnghName(n,fragment)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,10)
-      :pool.slice(0,10).map(n=>({n,s:0}));
-    return matches.map(x=>{
-      const full=prefixStr?`${prefixStr} ${x.n}`:x.n;
-      return{label:tc(full),type:'enghFirst',value:full};
-    });
+    const triggers=new Set(window.SCRATCHBONES_TINY_TRIGGERS||['tiny','miniature']);
+    const hasTiny=prefix.some(w=>triggers.has(w));
+    const handheld=enghWordPool();
+    const handheldSet=new Set(handheld);
+    const sizeable=window.SCRATCHBONES_SIZEABLE_NOUNS||[];
+    const living=window.SCRATCHBONES_LIVING_NOUNS||[];
+    // bigPool = things only valid with a tiny/miniature trigger
+    const bigPool=[...sizeable,...living].filter(w=>!handheldSet.has(w));
+    const activePool=hasTiny?[...handheld,...bigPool]:handheld;
+    const opts=[];
+    if(fragment){
+      // suggestions from the active pool
+      activePool.map(n=>({n,s:scoreEnghName(n,fragment)}))
+        .filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,8)
+        .forEach(x=>{const full=prefixStr?`${prefixStr} ${x.n}`:x.n;opts.push({label:tc(full),type:'enghFirst',value:full});});
+      // if not already under a trigger, also suggest "tiny X" / "miniature X"
+      // for big-pool words that match (object is too large / is a living thing)
+      if(!hasTiny&&fragment.length>=2){
+        bigPool.map(n=>({n,s:scoreEnghName(n,fragment)}))
+          .filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,3)
+          .forEach(x=>{
+            const base=prefixStr?`${prefixStr} `:'';
+            opts.push({label:tc(`${base}tiny ${x.n}`),    type:'enghFirst',value:`${base}tiny ${x.n}`});
+            opts.push({label:tc(`${base}miniature ${x.n}`),type:'enghFirst',value:`${base}miniature ${x.n}`});
+          });
+      }
+    } else {
+      activePool.slice(0,10).forEach(n=>{const full=prefixStr?`${prefixStr} ${n}`:n;opts.push({label:tc(full),type:'enghFirst',value:full});});
+    }
+    return uniqueOptions(opts).slice(0,10);
   }
   const opts=[];
   for(let i=0;i<8;i++){const s=enghSurnameFromIdea(text,i);opts.push({label:tc(s),type:'enghSurname',value:s});}

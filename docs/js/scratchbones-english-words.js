@@ -1,18 +1,16 @@
 // Scratchbones English word list for Engh-sho first names.
 //
 // Names can be multi-word: any modifiers + a final noun.
-// The final word must be from HANDHELD (physical objects that fit in one hand).
-// If a word in TINY_TRIGGERS appears before the final word, SIZEABLE nouns
-// are also valid as the final word (e.g. "Tiny Anvil", "Pocket Cauldron").
+// TINY_TRIGGERS ('tiny', 'miniature') unlock SIZEABLE_NOUNS and LIVING_NOUNS
+// as valid final words — the name is assumed to refer to a statuette.
+// If the user types a large or living thing without a trigger, "Tiny X" and
+// "Miniature X" are suggested automatically.
 //
-// All words 3-8 characters, lowercase, sorted.
+// All entries 3-8 characters, lowercase, sorted, no duplicates.
 (function(global){
   'use strict';
 
-  // Words that unlock size-expanded nouns as the final word
-  global.SCRATCHBONES_TINY_TRIGGERS = [
-    'tiny','small','little','wee','mini','petite','pocket','minute','micro'
-  ];
+  global.SCRATCHBONES_TINY_TRIGGERS = ['tiny', 'miniature'];
 
   // Final-word pool: physical objects naturally graspable in one hand
   global.SCRATCHBONES_ENGLISH_WORDS = [
@@ -78,7 +76,7 @@
     "lens","prism","monocle","compass",
     // writing
     "quill","scroll",
-    // military small kit
+    // small military kit
     "buckler","gorget","rondel",
     // games and toys
     "ball","marble","puppet","top",
@@ -90,27 +88,51 @@
   .filter((w,i,a) => w.length>=3 && w.length<=8 && a.indexOf(w)===i)
   .sort();
 
-  // Final-word pool when a TINY_TRIGGER precedes the noun:
-  // larger physical objects that become handheld as "tiny" versions.
-  // Combined with SCRATCHBONES_ENGLISH_WORDS at runtime.
+  // Extra physical objects — normally too large to hold, valid as final word
+  // only when a TINY_TRIGGER precedes (e.g. "Tiny Barrel", "Miniature Forge")
   global.SCRATCHBONES_SIZEABLE_NOUNS = [
-    // vessels and furniture
-    "barrel","basket","bucket","canteen","cauldron","cask","chest",
-    "cistern","churn","kettle","trough","vat",
-    // structures (as miniatures)
-    "arch","boat","bridge","cart","crane","door","forge","gate","loom",
-    "oven","plow","press","sled","stool","table","tower","trough",
-    "wagon","wall","wheel","winch",
-    // large tools
-    "anvil","bellows","furnace",
-    // instruments (larger)
-    "harp","lute",
-    // armor pieces
-    "hauberk","helmet","shield","cuirass","greaves","gorget","pauldron",
-    "vambrace",
-    // other large objects
-    "banner","beacon","cannon","coffin","column","ladder","mirror",
-    "saddle","throne","trebuchet"
+    "arch","barrel","basket","bellows","bench","boat","bridge","cannon",
+    "cart","cask","cauldron","chair","chest","churn","cistern","crane",
+    "door","forge","furnace","gate","harp","kettle","loom","mirror",
+    "oven","plow","press","saddle","shield","sled","stool","table",
+    "throne","tower","trough","wagon","wall","wheel","winch"
+  ]
+  .filter((w,i,a) => w.length>=3 && w.length<=8 && a.indexOf(w)===i)
+  .sort();
+
+  // Living things — valid as final word only when a TINY_TRIGGER precedes,
+  // implying a statuette (e.g. "Tiny Dragon", "Miniature Knight")
+  global.SCRATCHBONES_LIVING_NOUNS = [
+    // animals
+    "ape","asp","bat","bee","cat","cod","cow","doe","dog","elk","emu",
+    "ewe","fly","fox","gnu","hen","hog","jay","koi","owl","pig","pup",
+    "ram","rat","bear","bird","boar","buck","bull","carp","clam","colt",
+    "crab","crow","deer","dove","duck","fawn","fish","flea","frog","gnat",
+    "goat","hare","hawk","ibis","kite","lamb","lion","lynx","mare","mink",
+    "mole","moth","mule","newt","pony","puma","slug","swan","toad","wasp",
+    "wolf","worm","crane","eagle","finch","gecko","heron","hippo","horse",
+    "hyena","koala","lemur","llama","moose","mouse","otter","panda","quail",
+    "raven","robin","shark","sheep","shrew","skunk","sloth","snake","squid",
+    "stork","swift","tapir","tiger","trout","viper","vole","whale","zebra",
+    "badger","beetle","condor","donkey","falcon","ferret","gopher","iguana",
+    "jaguar","lizard","magpie","monkey","osprey","parrot","pigeon","rabbit",
+    "salmon","spider","toucan","turkey","turtle","walrus","weasel","buffalo",
+    "caribou","cheetah","dolphin","gorilla","hamster","lobster","panther",
+    "peacock","penguin","pelican","sparrow","stallion",
+    // mythical creatures
+    "fay","imp","drake","fairy","gnome","golem","harpy","nixie","nymph",
+    "satyr","troll","wyrm","pixie","sprite","sylph","wyvern","banshee",
+    "centaur","cyclops","dragon","goblin","griffin","kraken","mermaid",
+    "minotaur","phoenix","siren","sphinx","unicorn","vampire",
+    // people types (as figurines)
+    "bard","dame","duke","earl","mage","monk","page","sage","serf","witch",
+    "dwarf","giant","guard","witch","archer","druid","giant","herald",
+    "jester","knight","priest","ranger","rogue","squire","wizard","paladin",
+    "pilgrim","soldier","warlock","shaman",
+    // plants (as decorative statuettes)
+    "ash","elm","fir","ivy","oak","yew","cane","fern","lily","pine",
+    "rose","vine","bush","herb","palm","birch","cedar","daisy","lotus",
+    "maple","poppy","tulip","violet"
   ]
   .filter((w,i,a) => w.length>=3 && w.length<=8 && a.indexOf(w)===i)
   .sort();
