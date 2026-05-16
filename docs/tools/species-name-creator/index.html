@@ -360,8 +360,11 @@ function mapKenkariConsonant(token,variant=0){
   return mapByTable(token,allowed,tables[variant%tables.length],{default:['h','k','n','m']})||['h','k','n','m'][variant%4];
 }
 
+function expandTokens(tokens,validOnsets){
+  return tokens.flatMap(t=>t.length>1&&!validOnsets.has(t)?[...t]:[t]);
+}
 function blocksFromSoundInventory(text,mapConsonant,allowedVowels,variant=0,opts={}){
-  const tokens=tokenizeIdeaSounds(text);
+  const tokens=expandTokens(tokenizeIdeaSounds(text),opts.validOnsets||new Set());
   const vowels=ideaVowels(text);
   const blocks=[];
   let pending=[];
@@ -396,7 +399,7 @@ function blocksFromSoundInventory(text,mapConsonant,allowedVowels,variant=0,opts
 
 function kenkariBlocksFromIdea(text,variant=0){
   const allowedVowels=['a','i','u','o','e'];
-  let blocks=blocksFromSoundInventory(text,(t,v)=>mapKenkariConsonant(t,v),allowedVowels,variant,{allowInitialVowel:variant%3===1,glottalVowel:true,defaultOnset:['h','k','n','m'][variant%4]});
+  let blocks=blocksFromSoundInventory(text,(t,v)=>mapKenkariConsonant(t,v),allowedVowels,variant,{allowInitialVowel:variant%3===1,glottalVowel:true,defaultOnset:['h','k','n','m'][variant%4],validOnsets:new Set(SPECIES.kenkari.onsets.filter(Boolean))});
   blocks=blocks.map((b,i)=>{if(i>0&&/^[aeiou]/.test(b.text))return makeBlock("'"+b.text);return b;});
   return blocks;
 }
@@ -415,7 +418,7 @@ function mapMaoOnset(token,variant=0){
   return mapByTable(token,allowed,tables[variant%tables.length],{default:['n','m','k','t','p','sh']})||['n','m','k','t','p','sh'][variant%6];
 }
 function maoBlocksFromIdea(text,slot,variant=0){
-  const tokens=tokenizeIdeaSounds(text);
+  const tokens=expandTokens(tokenizeIdeaSounds(text),new Set(SPECIES.mao.onsets.filter(Boolean)));
   const vowels=ideaVowels(text);
   const blocks=[];
   let pending=[];
@@ -477,7 +480,7 @@ function mapEnghOnset(token,variant=0){
   return mapByTable(token,allowed,tables[variant%tables.length],{default:['n','m','k','t','p','l','w','y']})||['n','m','k','t','p','l','w','y'][variant%8];
 }
 function enghSurnameBlocksFromIdea(text,variant=0){
-  const tokens=tokenizeIdeaSounds(text);
+  const tokens=expandTokens(tokenizeIdeaSounds(text),new Set(SPECIES.engh.surname.onsets.filter(Boolean)));
   const finalPlosives=SPECIES.engh.surname.finalPlosives;
   const midCodas=SPECIES.engh.surname.midCodas;
   const blocks=[];let pending=[];let vowelIndex=0;
