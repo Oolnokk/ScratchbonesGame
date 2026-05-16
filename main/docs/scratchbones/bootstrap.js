@@ -8464,6 +8464,16 @@ import { createTutorial } from './tutorial.js';
         }
         projectionUiState.editedVars.set(varName, nextValue);
         document.documentElement.style.setProperty(varName, nextValue);
+        const row = input.closest('.projVarRow');
+        if (row) {
+          const numericNext = parseNumericCssVar(nextValue);
+          row.querySelectorAll(`[data-proj-var]`).forEach((sibling) => {
+            if (sibling === input) return;
+            const sibKind = sibling.getAttribute('data-proj-kind');
+            if (sibKind === 'text') sibling.value = nextValue;
+            else if ((sibKind === 'number' || sibKind === 'range') && numericNext !== null) sibling.value = String(numericNext);
+          });
+        }
       });
       varsCopyBtn.addEventListener('click', () => {
         if (getScratchbonesLayoutMode() === 'authored') {
