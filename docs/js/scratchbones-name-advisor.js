@@ -252,21 +252,46 @@
     const inserts = [], msgs = [];
     const fp = getSpecies().engh.surname.finalPlosives;
     if (lower && !fp.some(p => lower.endsWith(p))) {
-      inserts.push({ at: 'end', msg: 'Surname must end with a plosive (k, p, t, b, d, g, kk, pp, nk…)' });
+      inserts.push({ at: 'end', msg: 'Clan name must end with a plosive (k, p, t, b, d, g, kk, pp, nk…)' });
       msgs.push('Add a plosive ending: k, p, t, b, d, g, kk, pp, tt, nk, mp, nt, lk, rk');
     }
     const allowed = enghSurnameAllowed();
     const invalid = new Set([...lower].filter(ch => ch !== ' ' && !allowed.has(ch)));
-    for (const ch of invalid) msgs.push(`'${ch}' is not in Engh-sho surname sounds`);
+    for (const ch of invalid) msgs.push(`'${ch}' is not in Engh-sho clan name sounds`);
     return { html: segsHtml(text, allowed, inserts, 'Engh-sho'), msgs };
+  }
+
+  function validateEnghFirst(text, ctx) {
+    const gender = (ctx && ctx.gender) || 'male';
+    const raw = String(text || '').toLowerCase().replace(/[^a-z ']/g, '').trim();
+    if (!raw) return { html: '', msgs: [] };
+    const parts = raw.split(/\s+/);
+    const lastWord = parts[parts.length - 1];
+    const triggers = new Set(global.SCRATCHBONES_TINY_TRIGGERS || ['tiny', 'miniature']);
+    const prefix = parts.slice(0, -1);
+    const hasTiny = prefix.some(w => triggers.has(w));
+    const handheld = new Set(enghWordPool(gender));
+    const sizeable = new Set(global.SCRATCHBONES_SIZEABLE_NOUNS || []);
+    const living = new Set(global.SCRATCHBONES_LIVING_NOUNS || []);
+    const msgs = [];
+    if (lastWord && lastWord.length >= 2) {
+      const inBig = sizeable.has(lastWord) || living.has(lastWord);
+      if (!handheld.has(lastWord)) {
+        if (inBig && !hasTiny) msgs.push(`"${lastWord}" needs "Tiny" or "Miniature" before it`);
+        else if (!inBig) msgs.push(`"${lastWord}" is not a known Engh-sho object name`);
+      }
+    }
+    const allAlpha = new Set('abcdefghijklmnopqrstuvwxyz \'');
+    return { html: segsHtml(text, allAlpha, [], 'Engh-sho'), msgs };
   }
 
   function validateSlot(sp, slot, text, ctx) {
     if (!text) return { html: '', msgs: [] };
-    if (sp === 'kenkari')                    return validateKenkari(text);
-    if (sp === 'mao')                        return validateMao(text, slot, ctx);
+    if (sp === 'kenkari')                       return validateKenkari(text);
+    if (sp === 'mao')                           return validateMao(text, slot, ctx);
     if (sp === 'slagothim' && slot === 'given') return validateSlagothim(text, ctx);
-    if (sp === 'engh' && slot === 'surname') return validateEnghSurname(text);
+    if (sp === 'engh' && slot === 'surname')    return validateEnghSurname(text);
+    if (sp === 'engh' && slot === 'first')      return validateEnghFirst(text, ctx);
     return { html: '', msgs: [] };
   }
 
@@ -660,7 +685,10 @@
 
   // ── Lobby species key mapping ─────────────────────────────────────────────
 
-  const LOBBY_SP_MAP = { 'mao-ao': 'mao', 'kenkari': 'kenkari', 'engh-sho': 'engh', 'slagothim': 'slagothim' };
+  const LOBBY_SP_MAP = {
+    'mao-ao': 'mao', 'kenkari': 'kenkari', 'engh-sho': 'engh',
+    'slagothim': 'slagothim', 'tletingan': 'slagothim',
+  };
   function lobbySpeciesToAdvisorKey(speciesId, speciesData) {
     const parentId = speciesData?.[speciesId]?.parentSpecies || speciesId;
     return LOBBY_SP_MAP[parentId] || LOBBY_SP_MAP[speciesId] || 'mao';

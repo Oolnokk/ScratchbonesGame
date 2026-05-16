@@ -484,6 +484,25 @@
     return parts.join(' ');
   }
 
+  // Engh-sho slot-specific placeholders
+  function _slotPlaceholder(sp, slot) {
+    if (sp === 'engh' && slot === 'first')   return 'small handheld object';
+    if (sp === 'engh' && slot === 'surname') return 'clan name';
+    return window.SCRATCHBONES_NAME_ADVISOR?.slotLabel(sp, slot) || slot;
+  }
+
+  function _buildTankanPillars(sp, births, ctx) {
+    const adv = window.SCRATCHBONES_NAME_ADVISOR;
+    if (!adv) return '';
+    const { first, conn, second } = adv.birthNameParts(sp, births, ctx);
+    const words = [first, conn, second].filter(Boolean);
+    if (!words.length) return '';
+    const pillars = words.map(w =>
+      `<span style="writing-mode:vertical-rl;text-orientation:mixed;font-family:'TankanScript','KhymeryyanRomanLetters+Numbers',sans-serif;font-size:0.55em;line-height:1;color:rgba(242,208,143,0.45);letter-spacing:0.05em;display:inline-block;">${adv.esc(w)}</span>`
+    ).join('');
+    return `<div style="display:flex;gap:4px;align-items:flex-start;justify-content:center;margin-top:4px;">${pillars}</div>`;
+  }
+
   function _buildLoreSectionHtml() {
     const adv = window.SCRATCHBONES_NAME_ADVISOR;
     if (!adv || !_loreState || !_editAppearance) return '';
@@ -493,6 +512,7 @@
     const species = adv.getSpecies();
     const slots = species[sp]?.slots || ['first', 'surname'];
     const previewHtml = _buildLorePreviewHtml(sp, births, ctx);
+    const tankanHtml = _buildTankanPillars(sp, births, ctx);
 
     let marriedRow = '';
     if (sp === 'mao' && ctx.gender === 'female') {
@@ -507,6 +527,7 @@
     const slotsHtml = slots.map(slot => {
       const val = births[slot] || '';
       const label = adv.slotLabel(sp, slot);
+      const placeholder = _slotPlaceholder(sp, slot);
 
       if (sp === 'slagothim' && slot === 'surname') {
         const current = val.replace(/^tley\s*/i, '') || species.slagothim.locations[0];
@@ -514,7 +535,7 @@
           `<button class="sb-lore-place-btn${current === loc ? ' active' : ''}" data-lore-place="${adv.esc(loc)}">${adv.esc(loc)}-Doro</button>`
         ).join('');
         return `<div class="sb-lore-slot">
-          <div class="sb-cosmetic-label" style="text-align:left;min-width:0;margin-bottom:4px;">${adv.esc(label)}</div>
+          <div class="sb-cosmetic-label" style="text-align:left;min-width:0;margin-bottom:4px;letter-spacing:0.07em;">${adv.esc(label)}</div>
           <div class="sb-lore-place-grid">${btns}</div>
         </div>`;
       }
@@ -522,14 +543,14 @@
       const { html: valHtml, msgs } = adv.validateSlot(sp, slot, val, ctx);
       const msgsHtml = msgs.length ? `<div class="sb-lore-msgs">${adv.esc(msgs[0])}</div>` : '';
       const opts = val ? adv.makeIdeaOptions(sp, slot, val, ctx) : [];
-      const suggHtml = opts.length ? `<div class="sb-lore-suggs">${
+      const suggHtml = `<div class="sb-lore-suggs">${
         opts.map((o, i) => `<button class="sb-lore-sugg" data-lore-slot="${adv.esc(slot)}" data-lore-idx="${i}">${adv.esc(o.label)}</button>`).join('')
-      }</div>` : '';
+      }</div>`;
 
       return `<div class="sb-lore-slot">
-        <div class="sb-cosmetic-label" style="text-align:left;min-width:0;margin-bottom:4px;">${adv.esc(label)}</div>
+        <div class="sb-cosmetic-label" style="text-align:left;min-width:0;margin-bottom:4px;letter-spacing:0.07em;">${adv.esc(label)}</div>
         <input class="sb-lore-input" id="sb-lore-${adv.esc(slot)}" type="text" value="${adv.esc(val)}"
-               data-lore-slot="${adv.esc(slot)}" autocomplete="off" spellcheck="false" placeholder="${adv.esc(label)}" />
+               data-lore-slot="${adv.esc(slot)}" autocomplete="off" spellcheck="false" placeholder="${adv.esc(placeholder)}" />
         <div class="sb-lore-val">${valHtml || ''}</div>
         ${msgsHtml}
         ${suggHtml}
@@ -541,11 +562,12 @@
         <span style="font-size:0.72em;font-weight:400;opacity:0.5;text-transform:none;letter-spacing:0;margin-left:6px;">(${adv.esc(species[sp]?.label || sp)})</span>
       </div>
       <div class="sb-lore-preview" id="sb-lore-preview">${previewHtml || '<span class="nd-faint">—</span>'}</div>
+      ${tankanHtml ? `<div id="sb-lore-tankan">${tankanHtml}</div>` : ''}
       ${marriedRow}
       ${slotsHtml}
       <div class="sb-lore-actions">
-        <button id="sb-lore-random-btn" style="font-size:0.75em;padding:3px 10px;border:1px solid rgba(200,153,82,0.35);border-radius:5px;background:rgba(242,208,143,0.06);color:rgba(242,208,143,0.7);cursor:pointer;font-family:inherit;letter-spacing:0.06em;">↺ Random</button>
-        <button id="sb-lore-copy-btn" style="font-size:0.75em;padding:3px 10px;border:1px solid rgba(200,153,82,0.35);border-radius:5px;background:rgba(242,208,143,0.06);color:rgba(242,208,143,0.7);cursor:pointer;font-family:inherit;letter-spacing:0.06em;">Copy Name</button>
+        <button id="sb-lore-random-btn" style="font-size:0.75em;padding:3px 10px;border:1px solid rgba(200,153,82,0.35);border-radius:5px;background:rgba(242,208,143,0.06);color:rgba(242,208,143,0.7);cursor:pointer;font-family:inherit;letter-spacing:0.08em;">↺ Random</button>
+        <button id="sb-lore-copy-btn" style="font-size:0.75em;padding:3px 10px;border:1px solid rgba(200,153,82,0.35);border-radius:5px;background:rgba(242,208,143,0.06);color:rgba(242,208,143,0.7);cursor:pointer;font-family:inherit;letter-spacing:0.08em;">Copy Name</button>
       </div>
     </div>`;
   }
@@ -1614,10 +1636,15 @@
               });
             });
           }
-          // live-update preview
+          // live-update preview + tankan pillars
           const preview = document.getElementById('sb-lore-preview');
           if (preview && adv) {
             preview.innerHTML = _buildLorePreviewHtml(sp, _loreState.births, _loreCtx()) || '<span class="nd-faint">—</span>';
+          }
+          const tankanEl = document.getElementById('sb-lore-tankan');
+          if (tankanEl) {
+            const t = _buildTankanPillars(sp, _loreState.births, _loreCtx());
+            tankanEl.innerHTML = t || '';
           }
         });
       });
