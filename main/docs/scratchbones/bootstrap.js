@@ -6531,16 +6531,72 @@ import { createTutorial } from './tutorial.js';
     function bindHandRailInteractions(app) {
       const rail = app?.querySelector?.('[data-hand-rail]');
       if (!rail) return;
+      const track = rail.querySelector('[data-hand-scroll]');
+
       rail.querySelectorAll('[data-hand-scroll-dir]').forEach((button) => {
         button.addEventListener('click', () => {
           const dir = Number(button.getAttribute('data-hand-scroll-dir')) || 0;
           if (!dir) return;
-          const track = rail.querySelector('[data-hand-scroll]');
           const totalCards = track ? track.querySelectorAll('.handCardSlot').length : 0;
           handViewOffset = clampNumber(handViewOffset + dir, 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
           updateHandRailLayout(app);
         });
       });
+
+      // Mouse wheel scrolling (PC)
+      if (track) {
+        rail.addEventListener('wheel', (e) => {
+          const totalCards = track.querySelectorAll('.handCardSlot').length;
+          if (totalCards <= HAND_MAX_VISIBLE_SLOTS) return;
+          e.preventDefault();
+          const delta = Math.abs(e.deltaX) >= Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+          handViewOffset = clampNumber(handViewOffset + (delta > 0 ? 1 : -1), 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
+          updateHandRailLayout(app);
+        }, { passive: false });
+      }
+
+      // Touch hold+drag scrolling (mobile) — horizontal drag scrolls without selecting
+      let touchStartX = 0;
+      let touchLastX = 0;
+      let touchDragActive = false;
+      let touchAccumPx = 0;
+      const DRAG_THRESHOLD_PX = 12;
+
+      rail.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        touchStartX = e.touches[0].clientX;
+        touchLastX = touchStartX;
+        touchDragActive = false;
+        touchAccumPx = 0;
+      }, { passive: true });
+
+      rail.addEventListener('touchmove', (e) => {
+        if (e.touches.length !== 1) return;
+        const x = e.touches[0].clientX;
+        if (!touchDragActive) {
+          const totalCards = track ? track.querySelectorAll('.handCardSlot').length : 0;
+          if (totalCards > HAND_MAX_VISIBLE_SLOTS && Math.abs(x - touchStartX) > DRAG_THRESHOLD_PX) {
+            touchDragActive = true;
+          }
+        }
+        if (!touchDragActive) return;
+        e.preventDefault();
+        touchAccumPx += x - touchLastX;
+        touchLastX = x;
+        const slotWidthPx = Math.max(
+          HAND_MIN_SLOT_WIDTH_PX,
+          Number.parseFloat(getComputedStyle(track).getPropertyValue('--hand-slot-width')) || HAND_MIN_SLOT_WIDTH_PX
+        );
+        const stepsPx = Math.trunc(-touchAccumPx / slotWidthPx);
+        if (stepsPx !== 0) {
+          const totalCards = track ? track.querySelectorAll('.handCardSlot').length : 0;
+          handViewOffset = clampNumber(handViewOffset + stepsPx, 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
+          touchAccumPx += stepsPx * slotWidthPx;
+          updateHandRailLayout(app);
+        }
+      }, { passive: false });
+
+      rail.addEventListener('touchend', () => { touchDragActive = false; }, { passive: true });
     }
     // Returns the horizontal scale component from CSS transform matrix/matrix3d values.
     function parseScaleXFromTransform(transformValue) {
