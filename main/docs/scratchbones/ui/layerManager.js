@@ -494,10 +494,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     if (shouldNormalizeFillSize) {
       promotedNode.style.width = '100%';
       promotedNode.style.height = '100%';
-    } else {
-      // Stamp resolved px dimensions so percentage values (e.g. width:50%)
-      // don't misresolve against the portal's width instead of the original container.
-      // This applies to both moved elements and clones leaving their ancestor CSS context.
+    } else if (assignment.keepOriginal) {
+      // The clone leaves its ancestor CSS context, so rules like
+      // `#aiSidebar .seatAvatarBox { width: ... !important }` no longer apply.
+      // Stamp the resolved computed dimensions from the original so the clone
+      // matches the original's layout size regardless of CSS variable inheritance.
       const resolvedW = computed.width;
       const resolvedH = computed.height;
       if (resolvedW && resolvedW !== 'auto') promotedNode.style.width = resolvedW;
