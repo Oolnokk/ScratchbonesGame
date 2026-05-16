@@ -543,16 +543,24 @@
           }
           while (pending.length > 1) { addBlock(mapMaoOnset(pending.shift(), v + blocks.length), lastVowel); vi++; }
           addBlock(mapMaoOnset(pending.shift(), v + blocks.length), vow);
-        } else {
-          addBlock(['n','m','k','t','p','w'][blocks.length % 6], vow);
+        } else if (blocks.length === 0) {
+          addBlock(['n','m','k','t','p','w'][0], vow);
         }
+        // isolated medial vowel (pending empty, not first): update lastVowel only, no spurious block
         lastVowel = vow;
         vi++;
       } else pending.push(token);
     }
+    const validCodas = new Set(getSpecies().mao.codas.filter(Boolean));
     while (pending.length) {
-      const coda = (pending.length === 1 && v % 4) ? ['','n','ng','r'][v % 4] : '';
-      addBlock(mapMaoOnset(pending.shift(), v + blocks.length), lastVowel, coda); vi++;
+      const c = pending.shift();
+      if (pending.length === 0 && v % 4 !== 0 && validCodas.has(c) && blocks.length > 0) {
+        // valid coda consonant: append to last syllable
+        blocks[blocks.length - 1].text += c;
+      } else {
+        // invalid final consonant: new syllable with 'u'
+        addBlock(mapMaoOnset(c, v + blocks.length), 'u'); vi++;
+      }
     }
     if (!blocks.length) addBlock(slot === 'first' && gender === 'female' && !married ? '' : 'n', ideaVows[0] || 'a');
     return blocks;
