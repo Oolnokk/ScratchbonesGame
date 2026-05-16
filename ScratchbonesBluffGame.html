@@ -2488,12 +2488,17 @@
     #projVarPanel.open { display: flex; flex-direction: column; }
     .projVarPanelHead {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
+      flex-direction: column;
+      gap: 6px;
       padding: 8px 10px;
       border-bottom: 1px solid rgba(200,150,80,0.15);
       background: rgba(30,20,18,0.92);
+    }
+    .projVarPanelHeadRow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
     #projVarPanelTitle {
       font-size: 0.75rem;
@@ -2501,6 +2506,20 @@
       color: #f2d08f;
     }
     .projVarPanelActions { display: flex; gap: 6px; }
+    .projVarSearchInput {
+      width: 100%;
+      min-width: 0;
+      background: rgba(20,14,12,0.95);
+      border: 1px solid rgba(200,150,80,0.35);
+      border-radius: 6px;
+      color: #f4e8d0;
+      padding: 4px 8px;
+      font-size: 0.68rem;
+      font-family: 'Courier New', monospace;
+      outline: none;
+    }
+    .projVarSearchInput:focus { border-color: rgba(200,150,80,0.7); }
+    .projVarSearchInput::placeholder { color: rgba(200,170,120,0.4); }
     .projVarActionBtn {
       font-size: 0.68rem;
       padding: 3px 8px;
@@ -2571,7 +2590,7 @@
     /* Freeze game interaction while mapping */
     body.proj-mapping button:not(#projMapBtn):not(#projVarBtn):not(#projExportBtn):not(#projSubBtn):not(#projLayerPreviewBtn):not(#projVarCopyBtn):not(#projVarCloseBtn):not(#cosmeticVarsBtn):not(#cosmeticVarsCloseBtn):not(#cosmeticVarsApplyBtn),
     body.proj-mapping select,
-    body.proj-mapping input:not(.projVarInput):not(.cvpFieldInput),
+    body.proj-mapping input:not(.projVarInput):not(.projVarSearchInput):not(.cvpFieldInput),
     body.proj-mapping .card {
       pointer-events: none !important;
     }
@@ -3213,11 +3232,14 @@
   <div id="editorStatus" aria-live="polite">Editor idle.</div>
   <div id="projVarPanel" aria-live="polite">
     <div class="projVarPanelHead">
-      <div id="projVarPanelTitle">Projection Vars</div>
-      <div class="projVarPanelActions">
-        <button id="projVarCopyBtn" class="projVarActionBtn">Copy</button>
-        <button id="projVarCloseBtn" class="projVarActionBtn">Close</button>
+      <div class="projVarPanelHeadRow">
+        <div id="projVarPanelTitle">Projection Vars</div>
+        <div class="projVarPanelActions">
+          <button id="projVarCopyBtn" class="projVarActionBtn">Copy</button>
+          <button id="projVarCloseBtn" class="projVarActionBtn">Close</button>
+        </div>
       </div>
+      <input id="projVarSearch" class="projVarSearchInput" type="search" placeholder="Search all vars…" autocomplete="off" spellcheck="false">
     </div>
     <div id="projVarPanelBody">
       <div class="projVarHint">Select an outlined element in map mode, then open Vars.</div>

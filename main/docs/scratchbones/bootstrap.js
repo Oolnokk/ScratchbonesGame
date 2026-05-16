@@ -7964,6 +7964,7 @@ import { createTutorial } from './tutorial.js';
       const varsPanel = document.getElementById('projVarPanel');
       const varsPanelTitle = document.getElementById('projVarPanelTitle');
       const varsPanelBody = document.getElementById('projVarPanelBody');
+      const varsPanelSearch = document.getElementById('projVarSearch');
       const varsCopyBtn = document.getElementById('projVarCopyBtn');
       const varsCloseBtn = document.getElementById('projVarCloseBtn');
       const subBtn = document.getElementById('projSubBtn');
@@ -8071,6 +8072,29 @@ import { createTutorial } from './tutorial.js';
       const resolveSliderBounds = (varName, currentValue) => isMultiplierVar(varName, currentValue)
         ? { min: MULTIPLIER_SLIDER_MIN, max: MULTIPLIER_SLIDER_MAX }
         : { min: DEFAULT_SLIDER_MIN, max: DEFAULT_SLIDER_MAX };
+      const getAllCssVarNames = () => {
+        const seen = new Set();
+        const docStyle = document.documentElement.style;
+        for (let i = 0; i < docStyle.length; i++) {
+          const prop = docStyle[i];
+          if (prop.startsWith('--')) seen.add(prop.trim());
+        }
+        try {
+          for (const sheet of document.styleSheets) {
+            try {
+              for (const rule of sheet.cssRules) {
+                if (rule.style && rule.selectorText === ':root') {
+                  for (let i = 0; i < rule.style.length; i++) {
+                    const prop = rule.style[i];
+                    if (prop.startsWith('--')) seen.add(prop.trim());
+                  }
+                }
+              }
+            } catch (_) {}
+          }
+        } catch (_) {}
+        return [...seen].sort();
+      };
       const resolveRelatedVars = (projId, sourceEl) => {
         if (!projId) return [];
         const result = new Set(sharedVars);
@@ -8091,6 +8115,21 @@ import { createTutorial } from './tutorial.js';
         return [...result];
       };
       const renderVarEditor = () => {
+        const searchQuery = varsPanelSearch ? varsPanelSearch.value.trim().toLowerCase() : '';
+        if (searchQuery) {
+          const allVars = getAllCssVarNames();
+          const filtered = allVars.filter((v) => v.toLowerCase().includes(searchQuery));
+          varsPanelTitle.textContent = basePanelTitle;
+          const computedRootStyles = getComputedStyle(document.documentElement);
+          const cssVarRows = filtered.map((varName) => {
+            const value = normalizeCssVarValue(projectionUiState.editedVars.get(varName) ?? computedRootStyles.getPropertyValue(varName));
+            const numericValue = parseNumericCssVar(value);
+            const bounds = resolveSliderBounds(varName, value);
+            return `<label class="projVarRow"><span class="projVarLabel">${escapeHtml(varName)}</span><input class="projVarInput" data-proj-kind="text" data-proj-var="${escapeHtml(varName)}" type="text" value="${escapeHtml(value)}"><input class="projVarInput" data-proj-kind="number" data-proj-var="${escapeHtml(varName)}" type="number" step="${varStep}" value="${numericValue ?? ''}"><input class="projVarInput" data-proj-kind="range" data-proj-var="${escapeHtml(varName)}" type="range" min="${bounds.min}" max="${bounds.max}" step="${varStep}" value="${numericValue ?? bounds.min}"></label>`;
+          }).join('');
+          varsPanelBody.innerHTML = `<div class="projVarHint">${filtered.length} var${filtered.length !== 1 ? 's' : ''} matching <em>${escapeHtml(searchQuery)}</em></div>${cssVarRows || '<div class="projVarHint">No matches.</div>'}`;
+          return;
+        }
         if (getScratchbonesLayoutMode() === 'authored' && (getSelectedAuthoredBox() || authoredEditorState.subLayerMode)) {
           renderAuthoredInspector();
           return;
@@ -8337,6 +8376,11 @@ import { createTutorial } from './tutorial.js';
         }
         if (projectionUiState.varsPanelOpen) renderVarEditor();
       }, true);
+      if (varsPanelSearch) {
+        varsPanelSearch.addEventListener('input', () => {
+          if (projectionUiState.varsPanelOpen) renderVarEditor();
+        });
+      }
       varsPanelBody.addEventListener('input', (event) => {
         const authoredSubImmuneToggle = event.target.getAttribute('data-authored-sub-immune');
         if (authoredSubImmuneToggle) {
