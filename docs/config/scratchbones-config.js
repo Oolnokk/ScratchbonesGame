@@ -242,7 +242,7 @@ window.SCRATCHBONES_CONFIG = {
           },
           "positionedSyllables": {
             "pools": {
-              "consonants": ["w", "r", "t", "y", "p", "s", "f", "g", "h", "b", "n", "m", "k"],
+              "consonants": ["w", "r", "t", "y", "p", "s", "f", "g", "h", "j", "b", "n", "m", "k"],
               "clusters": ["sh", "hy"],
               "vowels": ["a", "e", "i", "o", "u", "ai", "ao"],
               "diphthongs": ["ai", "ao"]
