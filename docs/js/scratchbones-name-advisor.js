@@ -474,8 +474,11 @@
 
   function makeKenkariIdeaOptions(text) {
     const opts = [];
-    // Targeted diphthong repair suggestions (prepended so they appear first)
-    if (/[aeiou][aeiou]/i.test(text)) {
+    // Diphthong repair: only when input is already all valid Kenkari chars
+    // (user editing a Kenkari name directly, not typing an English idea)
+    const validChars = kenkariValidChars();
+    const isKenkariText = text.length > 0 && [...text.toLowerCase()].every(c => c === ' ' || validChars.has(c));
+    if (isKenkariText && /[aeiou][aeiou]/i.test(text)) {
       const t = text.toLowerCase();
       const withApostrophe = t.replace(/([aeiou])([aeiou])/g, "$1'$2");
       const dropSecond     = t.replace(/([aeiou])([aeiou])/g, '$1');
