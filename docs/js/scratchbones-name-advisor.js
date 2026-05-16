@@ -474,6 +474,16 @@
 
   function makeKenkariIdeaOptions(text) {
     const opts = [];
+    // Targeted diphthong repair suggestions (prepended so they appear first)
+    if (/[aeiou][aeiou]/i.test(text)) {
+      const t = text.toLowerCase();
+      const withApostrophe = t.replace(/([aeiou])([aeiou])/g, "$1'$2");
+      const dropSecond     = t.replace(/([aeiou])([aeiou])/g, '$1');
+      const dropFirst      = t.replace(/([aeiou])([aeiou])/g, '$2');
+      if (withApostrophe !== t) opts.push({ label: tc(withApostrophe), type: 'text', value: withApostrophe });
+      if (dropSecond !== t)     opts.push({ label: tc(dropSecond),     type: 'text', value: dropSecond });
+      if (dropFirst !== t)      opts.push({ label: tc(dropFirst),      type: 'text', value: dropFirst });
+    }
     for (let i = 0; i < 8; i++) {
       const blocks = kenkariBlocksFromIdea(text, i);
       opts.push({ label: tc(blocks.map(b => b.text).join('').replace(/e(?=')/g, 'ey')), type: 'blocks', blocks });
@@ -733,6 +743,8 @@
     const births = Object.assign({}, currentBirths || {});
     if (opt.type === 'blocks')
       births[slot] = opt.blocks.map(b => b.text).join('');
+    else if (opt.type === 'text')
+      births[slot] = opt.value;
     else if (opt.type === 'enghFirst' || opt.type === 'enghSurname')
       births[slot] = opt.value;
     else if (opt.type === 'slagPlace')
