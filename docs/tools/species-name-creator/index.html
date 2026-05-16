@@ -483,36 +483,6 @@ function mapEnghOnset(token,variant=0){
   ];
   return mapByTable(token,allowed,tables[variant%tables.length],{default:['n','m','k','t','p','l','w','y']})||['n','m','k','t','p','l','w','y'][variant%8];
 }
-function enghSurnameBlocksFromIdea(text,variant=0){
-  const tokens=expandTokens(tokenizeIdeaSounds(text),new Set(SPECIES.engh.surname.onsets.filter(Boolean)));
-  const finalPlosives=SPECIES.engh.surname.finalPlosives;
-  const midCodas=SPECIES.engh.surname.midCodas;
-  const blocks=[];let pending=[];let vowelIndex=0;
-  function addBlock(onset,vowel,coda){blocks.push(makeBlock(onset+vowel+coda));}
-  for(const token of tokens){
-    if(/^[aeiouy]$/.test(token)){
-      const v=nearestVowel(token,['a','u','i'][vowelIndex%3]);
-      if(pending.length){
-        while(pending.length>1){addBlock(mapEnghOnset(pending.shift(),variant+blocks.length),epentheticVowel(vowelIndex++,variant,['a','u','i']),midCodas[(variant+blocks.length)%midCodas.length]);}
-        addBlock(mapEnghOnset(pending.shift(),variant+blocks.length),v,midCodas[(variant+blocks.length)%midCodas.length]);
-      } else {
-        addBlock(['n','m','k','t','p','l','w','y'][blocks.length%8],v,midCodas[(variant+blocks.length)%midCodas.length]);
-      }
-      vowelIndex++;
-    } else pending.push(token);
-  }
-  while(pending.length){
-    const isLast=pending.length===1;
-    const onset=mapEnghOnset(pending.shift(),variant+blocks.length);
-    const vowel=epentheticVowel(vowelIndex++,variant,['a','u','i']);
-    addBlock(onset,vowel,isLast?finalPlosives[(variant+blocks.length*3)%finalPlosives.length]:midCodas[(variant+blocks.length)%midCodas.length]);
-  }
-  if(!blocks.length)addBlock('n','a',finalPlosives[variant%finalPlosives.length]);
-  const last=blocks[blocks.length-1];
-  if(last&&!/(k|p|t|b|d|g|kk|pp|tt|nk|mp|nt|lk|rk)$/i.test(last.text)){last.text+=finalPlosives[(variant+blocks.length)%finalPlosives.length];}
-  return blocks;
-}
-
 function makeSlagothimIdeaOptions(text){
   if(state.activeSlot==='surname'){
     const q=normalizeIdea(text).replace(/'/g,'');
@@ -633,7 +603,21 @@ function renderEnghSurnameComposer(){
   [...els.composer.querySelectorAll('[data-engh-ending]')].forEach(b=>b.onclick=()=>addEnghSurnameEnding(b.dataset.enghEnding));
   [...els.composer.querySelectorAll('[data-engh-letter]')].forEach(b=>b.onclick=()=>addEnghSurnameLetter(b.dataset.enghLetter));
 }
-function enghSurnameStringFromIdea(text,variant=0){return enghSurnameBlocksFromIdea(text,variant).map(b=>b.text).join('');}
+function enghSurnameStringFromIdea(text,variant=0){
+  const fp=SPECIES.engh.surname.finalPlosives;
+  const singleMap={c:'k',q:'k',x:'k',f:'p',v:'w',h:'y',j:'y',s:'t',z:'t'};
+  const raw=expandedIdeaText(text).replace(/'/g,'');
+  const result=raw.split('').map(ch=>{
+    if(ENGH_SURNAME_ALLOWED.has(ch))return ch;
+    if(singleMap[ch])return singleMap[ch];
+    if(ch==='e')return['i','a','u'][variant%3];
+    if(ch==='o')return['u','a','i'][variant%3];
+    return'';
+  }).filter(Boolean).join('');
+  if(!result)return'';
+  if(fp.some(p=>result.endsWith(p)))return result;
+  return result+fp[(variant+result.length)%fp.length];
+}
 function renderEnghComposer(){if(state.activeSlot==='first')renderEnghFirstComposer();else renderEnghSurnameComposer();}
 
 function addLetter(ch){
