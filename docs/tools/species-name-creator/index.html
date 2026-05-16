@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Species Character Name Creator</title>
+  <style>
+    :root {
+      --bg:#090c16; --panel:#151a2d; --panel2:#1d2440; --panel3:#101528;
+      --text:#eef2ff; --muted:#9da8ca; --faint:#647092; --accent:#8db3ff; --accent2:#b99cff;
+      --good:#8fe3b0; --warn:#ffd37e; --bad:#ff8e9d; --border:#2e3862;
+      --shadow:0 14px 36px rgba(0,0,0,.32); --radius:18px;
+    }
+    *{box-sizing:border-box} html,body{margin:0;padding:0} body{min-height:100vh;background:linear-gradient(180deg,#080b14,#11172b);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+    .wrap{width:min(980px,100%);margin:0 auto;padding:12px;display:grid;gap:10px}
+    .topbar,.preview,.controls,.composer,.status-card{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .topbar{padding:10px;display:grid;grid-template-columns:1fr;gap:8px}
+    .tab-row,.mini-row,.action-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .species-tab,.chip-btn,.action-btn,.key-btn,.slot-btn,select,label.toggle{border:1px solid var(--border);background:rgba(255,255,255,.035);color:var(--text);border-radius:14px;padding:10px 12px;font:inherit;font-weight:750;cursor:pointer;min-height:42px}
+    .species-tab.active,.slot-btn.active,.chip-btn.active,.action-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
+    select{appearance:none;background-color:var(--panel2);min-width:130px}.toggle{display:inline-flex;gap:8px;align-items:center}.toggle input{accent-color:#8db3ff}
+    .preview{padding:14px;display:grid;gap:10px}.name-line{display:flex;align-items:center;justify-content:center;gap:.35em;flex-wrap:wrap;font-size:clamp(2rem,9vw,4.4rem);font-weight:900;line-height:1.05;letter-spacing:.015em;text-align:center}.name-word{border:0;background:transparent;color:var(--text);font:inherit;font-weight:inherit;padding:0 .05em;cursor:pointer;border-radius:12px;min-width:1.1em}.name-word.inactive{color:var(--faint);opacity:.62}.name-word.active{color:#fff;text-shadow:0 0 22px rgba(141,179,255,.28)}.connector{color:var(--muted);font-size:.7em}.slot-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.slot-btn{padding:8px 12px;min-height:36px;color:var(--muted)}.slot-btn.active{color:#fff}.block-line{min-height:44px;border:1px solid var(--border);border-radius:16px;background:rgba(0,0,0,.16);padding:8px;display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}.block-chip{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);border-radius:999px;padding:5px 9px;color:#dfe7ff;font-weight:800;font-size:.9rem}.block-chip.muted{opacity:.48}
+    .controls{padding:10px;display:grid;gap:8px}.action-btn{box-shadow:none}.action-btn:disabled,.key-btn:disabled,.chip-btn.disabled{opacity:.27;filter:grayscale(1);cursor:not-allowed}.composer{padding:10px;display:grid;gap:10px}.keyboard-grid{display:grid;gap:8px}.kenkari-grid{grid-template-columns:repeat(10,minmax(42px,1fr));align-items:start;overflow-x:auto;padding-bottom:4px}.phoneme-col{display:grid;gap:5px;min-width:42px}.col-head{color:var(--muted);font-size:.75rem;text-align:center;font-weight:900;min-height:1.1em}.chip-btn{width:100%;padding:8px 7px;min-height:36px;font-size:.92rem;white-space:nowrap}.two-box{display:grid;grid-template-columns:minmax(105px,.8fr) 2fr;gap:10px}.onset-box,.option-box{border:1px solid var(--border);background:rgba(0,0,0,.13);border-radius:16px;padding:8px;display:flex;gap:6px;align-content:flex-start;flex-wrap:wrap;min-height:156px}.onset-box .chip-btn{width:auto}.option-box .chip-btn{width:auto;min-width:55px}.letter-keyboard{display:grid;gap:7px}.place-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}.place-grid .chip-btn{min-height:46px}.key-row{display:flex;justify-content:center;gap:6px}.key-btn{min-width:34px;min-height:42px;padding:8px 10px;background:rgba(255,255,255,.045);box-shadow:none}.key-btn.wide{min-width:68px}.special-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.status-card{padding:10px;color:var(--muted);font-size:.9rem;line-height:1.35}.status-card.good{color:var(--good)}.status-card.warn{color:var(--warn)}.status-card.bad{color:var(--bad)}.hide{display:none!important}
+    .engh-first-picker{display:grid;gap:8px}.engh-name-list{border:1px solid var(--border);background:rgba(0,0,0,.13);border-radius:16px;padding:8px;display:flex;gap:6px;align-content:flex-start;flex-wrap:wrap;max-height:230px;overflow:auto}.engh-search{width:100%;border:1px solid var(--border);background:var(--panel3);color:var(--text);border-radius:14px;padding:12px 14px;font:inherit;font-weight:750;outline:none}.engh-search:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(141,179,255,.14)}
+    .idea-panel{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px;display:grid;gap:8px}
+    .idea-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:.86rem;font-weight:800}
+    .idea-input-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+    .idea-input{width:100%;border:1px solid var(--border);background:var(--panel3);color:var(--text);border-radius:14px;padding:12px 14px;font:inherit;font-weight:750;outline:none;min-height:44px}
+    .idea-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(141,179,255,.14)}
+    .idea-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}
+    .idea-card{border:1px solid var(--border);background:rgba(255,255,255,.045);color:var(--text);border-radius:16px;padding:10px;min-height:58px;text-align:left;box-shadow:none;cursor:pointer}
+    .idea-card strong{display:block;font-size:1rem;line-height:1.15;margin-bottom:4px;word-break:break-word}
+    .idea-card span{display:block;color:var(--muted);font-size:.78rem;line-height:1.2;font-weight:700}
+    .idea-empty{color:var(--faint);font-size:.85rem;text-align:center;padding:6px}
+    .config-badge{font-size:.72rem;font-weight:800;padding:4px 10px;border-radius:10px;border:1px solid var(--border);color:var(--muted)}
+    .config-badge.live{color:var(--good);border-color:rgba(143,227,176,.3)}
+    .config-badge.fallback{color:var(--warn);border-color:rgba(255,211,126,.3)}
+    @media(max-width:620px){.wrap{padding:8px}.idea-input-row{grid-template-columns:1fr}.kenkari-grid{grid-template-columns:repeat(10,44px)}.two-box{grid-template-columns:1fr}.onset-box,.option-box{min-height:96px}.special-row{grid-template-columns:1fr 1fr}.special-row button:last-child{grid-column:1/-1}.key-btn{min-width:30px;padding:7px 8px}.name-line{font-size:clamp(1.8rem,12vw,3.8rem)}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="topbar">
+      <div class="tab-row" id="speciesTabs">
+        <span class="config-badge" id="configBadge"></span>
+      </div>
+      <div class="mini-row">
+        <select id="genderSelect" aria-label="Gender"><option value="male">Male</option><option value="female">Female</option></select>
+        <label id="marriedToggleWrap" class="toggle hide"><input id="marriedToggle" type="checkbox" /> Married</label>
+        <select id="slagLocationSelect" class="hide" aria-label="Slagothim tley location"></select>
+      </div>
+    </section>
+
+    <section class="preview">
+      <div class="name-line" id="nameLine"></div>
+      <div class="slot-row" id="slotButtons"></div>
+      <div class="block-line" id="blockLine"></div>
+    </section>
+
+    <section class="controls">
+      <div class="action-row">
+        <button class="action-btn primary" id="randomizeBtn" type="button">Randomize</button>
+        <button class="action-btn" id="backspaceBtn" type="button">Backspace</button>
+        <button class="action-btn" id="clearSlotBtn" type="button">Clear Slot</button>
+        <button class="action-btn" id="copyBtn" type="button">Copy</button>
+      </div>
+    </section>
+
+    <section class="idea-panel" id="ideaPanel"></section>
+    <section class="composer" id="composer"></section>
+    <section class="status-card" id="statusText"></section>
+  </main>
+
+<script src="../../config/scratchbones-config.js"></script>
+<script src="../../js/scratchbones-name-generator.js"></script>
+<script>
+// ---------------------------------------------------------------------------
+// Config derivation — reads from live repo config, falls back to snapshot
+// ---------------------------------------------------------------------------
+
+const FALLBACK_SPECIES = {
+  kenkari: {
+    label:'Kenkari', slots:['first','father'],
+    vowels:['a','e','i','o','u','ai','ey','ao'],
+    onsets:['','b','g','h','k','m','n','p','r','t']
+  },
+  mao: {
+    label:'Mao-ao', slots:['first','surname'],
+    vowels:['a','e','i','o','u','ai','ao'],
+    onsets:['','w','r','t','y','p','s','f','g','h','k','b','n','m','sh','hy'],
+    codas:['','n','ng','r']
+  },
+  slagothim: {
+    label:'Slagothim', slots:['given','surname'],
+    letters:'abcdefghijklmnopqrstuvwxyz'.split(''),
+    vowels:new Set(['a','e','i','o','u']),
+    locations:['Ikinga','Bahangi','Hatonga','Rahingi',"B'bonga",'Niringi','Ununga','Gorungi'],
+    firstConsonants:['b','g','n','p','t','d','k','m','sl','shr','tr','gr','br','gl'],
+    secondConsonants:['b','g','p','t','d','k','r','n','ng'],
+    maleSuffix:'mir', femaleSuffix:'mira', startWithSlChance:0.58
+  },
+  engh: {
+    label:'Engh-sho', slots:['first','surname'],
+    firstNames:["acorn","ael","aestel","amber","amethyst","awl","bar","barb","bead","bean","bell","beryl","billet","bit","blade","bladelet","blank","block","bodkin","bone","borer","boss","brad","brooch","buckle","bud","burin","burr","button","cake","carnelian","catch","catchplate","chalcedony","chape","chisel","chip","clasp","coil","coin","comb","cone","core","counter","cramp","crucible","crystal","cube","cup","cupel","cylinder","die","disc","dowel","drop","dyse","earring","emerald","eyelet","farthing","ferrule","file","firestone","flan","flint","fork","garnet","gem","gim","gimstan","gouge","grain","graver","hasp","hinge","hobnail","hone","hook","hring","husk","hwirfel","ingot","jasper","jewel","kernel","key","knife","knob","knucklebone","lamp","leaf","link","lock","lodestone","loop","matrix","mirror","mount","naegl","nail","needle","nut","obol","onyx","opal","peg","pendant","pening","penny","pin","pinhead","pip","pit","plaque","plug","pod","point","preon","probe","punch","quartz","reed","rind","ring","rivet","rod","root","roundel","ruby","sapphire","sceat","sceatt","scraper","seed","shell","sherd","shuttle","sliver","socket","spatula","spindle","spinel","spool","spoon","sprig","stalk","stan","stem","sticca","stone","stud","styca","stylus","tablet","tack","tag","tally","terminal","tessera","thimble","thorn","tip","toggle","token","tooth","tube","twig","wedge","weight","whetstone","whorl","wire"],
+    maleReplacements:{amber:'gold-resin',amethyst:'purple-stone',barb:'sharp-point',beryl:'green-gem',crystal:'clear-stone',emerald:'green-jewel',jewel:'fine-gem',opal:'milk-gem',ruby:'red-gem',sapphire:'blue-gem'},
+    femaleReplacements:{brad:'small-nail',bud:'new-leaf',jasper:'spotted-stone',stan:'grey-stone'},
+    surname:{onsets:['','n','m','k','t','p','l','w','y'],vowels:['a','u','i'],midCodas:['','k','n','p'],finalPlosives:['k','p','t','b','d','g','kk','pp','tt','nk','mp','nt','lk','rk']}
+  }
+};
+
+function extractMaoCodas(positioned) {
+  const allPatterns = Object.values(positioned.firstName)
+    .flatMap(pos => ['male','female'].flatMap(g => (pos[g]?.patterns || [])));
+  const codas = new Set(['']);
+  for (const p of allPatterns) {
+    const base = p.replace(/\{[^}]+\}/, '');
+    if (base.startsWith('CV') && base.length > 2) codas.add(base.slice(2));
+    else if (base.startsWith('V') && base.length > 1) codas.add(base.slice(1));
+  }
+  return [...codas].sort((a, b) => a.length - b.length);
+}
+
+function deriveSPECIES(cfg) {
+  const c = cfg.game.nameGeneration.cultures;
+  const k  = c.kenkari.kenkariRules.phonology;
+  const m  = c.mao_ao.positionedSyllables;
+  const sl = c.slagothim.slagothimRules;
+  const en = c.engh_sho.enghShoRules;
+  return {
+    kenkari: {
+      label: c.kenkari.displayName,
+      slots: ['first','father'],
+      vowels: [...k.vowels, ...(k.finalOnlyVowels || [])],
+      onsets: ['', ...k.consonants]
+    },
+    mao: {
+      label: c.mao_ao.displayName,
+      slots: ['first','surname'],
+      vowels: m.pools.vowels,
+      onsets: ['', ...m.pools.consonants, ...m.pools.clusters],
+      codas: extractMaoCodas(m)
+    },
+    slagothim: {
+      label: c.slagothim.displayName,
+      slots: ['given','surname'],
+      letters: 'abcdefghijklmnopqrstuvwxyz'.split(''),
+      vowels: new Set(sl.vowels),
+      locations: sl.locations,
+      firstConsonants: sl.firstConsonants,
+      secondConsonants: sl.secondConsonants,
+      maleSuffix: sl.maleSuffix,
+      femaleSuffix: sl.femaleSuffix,
+      startWithSlChance: sl.startWithSlChance
+    },
+    engh: {
+      label: c.engh_sho.displayName,
+      slots: ['first','surname'],
+      firstNames: en.firstNameWordList,
+      maleReplacements: en.firstNameGenderRules.maleReplacements,
+      femaleReplacements: en.firstNameGenderRules.femaleReplacements,
+      surname: {
+        onsets: ['', ...en.surname.onsetConsonants],
+        vowels: en.surname.vowels,
+        midCodas: ['', ...en.surname.midCodas],
+        finalPlosives: en.surname.finalPlosives
+      }
+    }
+  };
+}
+
+let SPECIES, CONFIG_SOURCE;
+try {
+  const cultures = window.SCRATCHBONES_CONFIG?.game?.nameGeneration?.cultures;
+  if (!cultures) throw new Error('No cultures in SCRATCHBONES_CONFIG');
+  SPECIES = deriveSPECIES(window.SCRATCHBONES_CONFIG);
+  CONFIG_SOURCE = 'live';
+} catch (_) {
+  SPECIES = FALLBACK_SPECIES;
+  CONFIG_SOURCE = 'fallback';
+}
+
+// ---------------------------------------------------------------------------
+// Creator state and helpers
+// ---------------------------------------------------------------------------
+
+const KEY_ROWS = ['qwertyuiop'.split(''),'asdfghjkl'.split(''),'zxcvbnm'.split('')];
+let state = {
+  species:'kenkari', gender:'male', married:false, activeSlot:'first', selectedOnset:'', status:'',
+  ideaTexts:{}, ideaOptions:[],
+  data:{
+    kenkari:{first:[],father:[]},
+    mao:{first:[],surname:[]},
+    slagothim:{given:'',surname:'tley Ikinga'},
+    engh:{first:'',firstSearch:'',surname:[]}
+  }
+};
+const els = {
+  speciesTabs:document.getElementById('speciesTabs'),
+  configBadge:document.getElementById('configBadge'),
+  gender:document.getElementById('genderSelect'),
+  marriedWrap:document.getElementById('marriedToggleWrap'),
+  married:document.getElementById('marriedToggle'),
+  location:document.getElementById('slagLocationSelect'),
+  nameLine:document.getElementById('nameLine'),
+  slotButtons:document.getElementById('slotButtons'),
+  blockLine:document.getElementById('blockLine'),
+  composer:document.getElementById('composer'),
+  ideaPanel:document.getElementById('ideaPanel'),
+  status:document.getElementById('statusText'),
+  randomize:document.getElementById('randomizeBtn'),
+  backspace:document.getElementById('backspaceBtn'),
+  clearSlot:document.getElementById('clearSlotBtn'),
+  copy:document.getElementById('copyBtn')
+};
+
+function escapeHtml(s){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;')}
+function titleCase(s){s=String(s||'').toLowerCase();return s?s[0].toUpperCase()+s.slice(1):''}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function activeStore(){return state.data[state.species]}
+function getPrefix(){return state.gender==='female'?'u':'ao'}
+function slotLabel(slot){
+  if(state.species==='slagothim'&&slot==='surname') return 'Place of Birth';
+  return ({first:'First Name',father:"Father's Name",surname:'Surname',given:'Given Name'}[slot]||slot);
+}
+function slotText(species=state.species,slot=state.activeSlot){
+  const d=state.data[species];
+  if(species==='slagothim') return slot==='surname'?d.surname:titleCase(d.given);
+  if(species==='engh') return slot==='first'?titleCase(d.first):titleCase((d.surname||[]).map(b=>b.text).join(''));
+  const blocks=d[slot]||[];return titleCase(blocks.map(b=>b.text).join(''));
+}
+function slagPlaceFromSurname(){return String(state.data.slagothim.surname||'').replace(/^tley\s+/i,'')||'Ikinga';}
+function slagPlaceDoro(){const place=slagPlaceFromSurname();return place?`${place}-Doro`:'—';}
+function setSlagPlace(place){state.data.slagothim.surname='tley '+place;render();}
+function fullName(){
+  if(state.species==='kenkari') return [slotText('kenkari','first')||'—',getPrefix(),slotText('kenkari','father')||'—'].join(' ');
+  if(state.species==='mao') return [slotText('mao','first')||'—',slotText('mao','surname')||'—'].join(' ');
+  if(state.species==='engh') return [slotText('engh','first')||'—',slotText('engh','surname')||'—'].join(' ');
+  return [slotText('slagothim','given')||'—',state.data.slagothim.surname||'—'].join(' ');
+}
+function setSpecies(id){state.species=id;state.activeSlot=SPECIES[id].slots[0];state.selectedOnset='';render();}
+function setActiveSlot(slot){state.activeSlot=slot;state.selectedOnset='';render();}
+
+// ---------------------------------------------------------------------------
+// Render
+// ---------------------------------------------------------------------------
+
+function render(){renderTop();renderPreview();renderIdeaPanel();renderComposer();renderStatus();}
+
+function renderTop(){
+  const tabs=Object.entries(SPECIES).map(([id,s])=>`<button class="species-tab ${state.species===id?'active':''}" data-species="${id}">${s.label}</button>`).join('');
+  els.speciesTabs.innerHTML=tabs+`<span class="config-badge ${CONFIG_SOURCE}" id="configBadge">${CONFIG_SOURCE==='live'?'Live config':'Embedded fallback'}</span>`;
+  [...els.speciesTabs.querySelectorAll('button')].forEach(b=>b.onclick=()=>setSpecies(b.dataset.species));
+  els.gender.value=state.gender;
+  els.marriedWrap.classList.toggle('hide',!(state.species==='mao'&&state.gender==='female'));
+  els.location.classList.add('hide');
+}
+
+function renderPreview(){
+  const slots=SPECIES[state.species].slots;
+  if(state.species==='kenkari'){
+    els.nameLine.innerHTML=`<button class="name-word ${state.activeSlot==='first'?'active':'inactive'}" data-slot="first">${escapeHtml(slotText('kenkari','first')||'—')}</button><span class="connector">${getPrefix()}</span><button class="name-word ${state.activeSlot==='father'?'active':'inactive'}" data-slot="father">${escapeHtml(slotText('kenkari','father')||'—')}</button>`;
+  } else if(state.species==='mao'){
+    els.nameLine.innerHTML=`<button class="name-word ${state.activeSlot==='first'?'active':'inactive'}" data-slot="first">${escapeHtml(slotText('mao','first')||'—')}</button><button class="name-word ${state.activeSlot==='surname'?'active':'inactive'}" data-slot="surname">${escapeHtml(slotText('mao','surname')||'—')}</button>`;
+  } else if(state.species==='engh'){
+    els.nameLine.innerHTML=`<button class="name-word ${state.activeSlot==='first'?'active':'inactive'}" data-slot="first">${escapeHtml(slotText('engh','first')||'—')}</button><button class="name-word ${state.activeSlot==='surname'?'active':'inactive'}" data-slot="surname">${escapeHtml(slotText('engh','surname')||'—')}</button>`;
+  } else {
+    els.nameLine.innerHTML=`<button class="name-word ${state.activeSlot==='given'?'active':'inactive'}" data-slot="given">${escapeHtml(slotText('slagothim','given')||'—')}</button><span class="connector">tley</span><button class="name-word ${state.activeSlot==='surname'?'active':'inactive'}" data-slot="surname">${escapeHtml(slagPlaceFromSurname()||'—')}</button>`;
+  }
+  [...els.nameLine.querySelectorAll('[data-slot]')].forEach(b=>b.onclick=()=>setActiveSlot(b.dataset.slot));
+  els.slotButtons.innerHTML=slots.map(slot=>`<button class="slot-btn ${state.activeSlot===slot?'active':''}" data-slot="${slot}">${slotLabel(slot)}</button>`).join('');
+  [...els.slotButtons.querySelectorAll('button')].forEach(b=>b.onclick=()=>setActiveSlot(b.dataset.slot));
+  renderBlockLine();
+}
+
+function renderBlockLine(){
+  if(state.species==='engh'){
+    if(state.activeSlot==='first'){
+      const first=state.data.engh.first||'';
+      els.blockLine.innerHTML=first?`<span class="block-chip">${escapeHtml(titleCase(first))}</span>`:'<span class="block-chip muted">—</span>';
+      return;
+    }
+    const blocks=state.data.engh.surname||[];
+    els.blockLine.innerHTML=blocks.length?blocks.map(b=>`<span class="block-chip">${escapeHtml(b.text)}</span>`).join(''):'<span class="block-chip muted">—</span>';
+    return;
+  }
+  if(state.species==='slagothim'){
+    if(state.activeSlot==='surname'){els.blockLine.innerHTML=`<span class="block-chip">${escapeHtml(slagPlaceDoro())}</span>`;return;}
+    const text=state.data.slagothim.given||'';
+    els.blockLine.innerHTML=text?[...text].map(ch=>`<span class="block-chip">${escapeHtml(ch)}</span>`).join(''):'<span class="block-chip muted">—</span>';
+    return;
+  }
+  const blocks=activeStore()[state.activeSlot]||[];
+  els.blockLine.innerHTML=blocks.length?blocks.map(b=>`<span class="block-chip">${escapeHtml(b.text)}</span>`).join(''):'<span class="block-chip muted">—</span>';
+}
+
+// ---------------------------------------------------------------------------
+// Idea panel
+// ---------------------------------------------------------------------------
+
+function ideaKey(){return `${state.species}:${state.activeSlot}`;}
+function getIdeaText(){return state.ideaTexts[ideaKey()]||'';}
+function setIdeaText(value){state.ideaTexts[ideaKey()]=String(value||'');state.ideaOptions=makeIdeaOptions(getIdeaText());}
+function currentIzeLabel(){return `${SPECIES[state.species].label}-ize ${slotLabel(state.activeSlot)}`;}
+
+function renderIdeaPanel(){
+  const text=getIdeaText();
+  state.ideaOptions=makeIdeaOptions(text);
+  els.ideaPanel.innerHTML=`<div class="idea-head"><span>Idea for ${escapeHtml(slotLabel(state.activeSlot))}</span><span>${escapeHtml(SPECIES[state.species].label)}</span></div><div class="idea-input-row"><input id="slotIdeaInput" class="idea-input" type="text" value="${escapeHtml(text)}" placeholder="Type an idea for this slot" autocomplete="off" /><button class="action-btn primary" id="slotIzeBtn" type="button">${escapeHtml(currentIzeLabel())}</button></div><div class="idea-results" id="ideaResults">${renderIdeaOptionsHtml()}</div>`;
+  const input=document.getElementById('slotIdeaInput');
+  input.oninput=()=>{setIdeaText(input.value);document.getElementById('ideaResults').innerHTML=renderIdeaOptionsHtml();wireIdeaCards();renderStatus();};
+  document.getElementById('slotIzeBtn').onclick=()=>{setIdeaText(input.value);document.getElementById('ideaResults').innerHTML=renderIdeaOptionsHtml();wireIdeaCards();};
+  wireIdeaCards();
+}
+function renderIdeaOptionsHtml(){
+  if(!getIdeaText().trim()) return '<div class="idea-empty">Type a word or fragment to see slot-only interpretations.</div>';
+  if(!state.ideaOptions.length) return '<div class="idea-empty">No good interpretations for this slot yet.</div>';
+  return state.ideaOptions.map((opt,i)=>`<button class="idea-card" type="button" data-idea-index="${i}"><strong>${escapeHtml(opt.label)}</strong><span>${escapeHtml(opt.note||'')}</span></button>`).join('');
+}
+function wireIdeaCards(){[...els.ideaPanel.querySelectorAll('[data-idea-index]')].forEach(btn=>btn.onclick=()=>applyIdeaOption(Number(btn.dataset.ideaIndex)));}
+
+// ---------------------------------------------------------------------------
+// Sound mapping utilities
+// ---------------------------------------------------------------------------
+
+function normalizeIdea(text){return String(text||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z']/g,'');}
+function uniqueOptions(options){
+  const seen=new Set();
+  return options.filter(opt=>{const key=(opt.label||'').toLowerCase();if(!key||seen.has(key))return false;seen.add(key);return true;}).slice(0,10);
+}
+function nearestVowel(ch,fallback='a'){ch=String(ch||'').toLowerCase();if('aeiou'.includes(ch))return ch;if(ch==='y')return 'i';return fallback;}
+function expandedIdeaText(text){return normalizeIdea(text).replace(/qu/g,'kw').replace(/x/g,'ks').replace(/ck/g,'k').replace(/ph/g,'f');}
+function tokenizeIdeaSounds(text){
+  const raw=expandedIdeaText(text).replace(/'/g,'');
+  const tokens=[];
+  for(let i=0;i<raw.length;){
+    const two=raw.slice(i,i+2);
+    if(['sh','ch','th','ng','gh'].includes(two)){tokens.push(two);i+=2;continue;}
+    tokens.push(raw[i]);i++;
+  }
+  return tokens.filter(Boolean);
+}
+function ideaVowels(text){return tokenizeIdeaSounds(text).filter(t=>/^[aeiouy]+$/.test(t)).map((c,i)=>nearestVowel(c,['a','i','u','o','e'][i%5])).filter(Boolean);}
+function epentheticVowel(index,variant,allowed=['a','i','u','o','e']){return allowed[(index+variant)%allowed.length];}
+function mapByTable(token,allowed,table,variantFallback){
+  token=String(token||'').toLowerCase();
+  const allowedSet=new Set(allowed);
+  if(allowedSet.has(token))return token;
+  const choices=table[token]||[];
+  for(let i=0;i<choices.length;i++){const candidate=choices[i];if(allowedSet.has(candidate))return candidate;}
+  const fallback=variantFallback[token]||[];
+  return fallback.find(x=>allowedSet.has(x))||allowed[0]||'';
+}
+
+function mapKenkariConsonant(token,variant=0){
+  const allowed=SPECIES.kenkari.onsets.filter(Boolean);
+  const tables=[
+    {ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['h'],c:['k'],q:['k'],x:['k'],d:['t'],l:['r'],s:['h'],z:['t'],j:['h'],f:['p'],v:['p'],w:['h'],y:['h']},
+    {ch:['h'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['k'],q:['k'],x:['h'],d:['t'],l:['n'],s:['t'],z:['t'],j:['k'],f:['h'],v:['p'],w:['m'],y:['n']},
+    {ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['g','k'],q:['k'],x:['k'],d:['r','t'],l:['r'],s:['h'],z:['h'],j:['g','k'],f:['p'],v:['p'],w:['k'],y:['h']}
+  ];
+  return mapByTable(token,allowed,tables[variant%tables.length],{default:['h','k','n','m']})||['h','k','n','m'][variant%4];
+}
+
+function blocksFromSoundInventory(text,mapConsonant,allowedVowels,variant=0,opts={}){
+  const tokens=tokenizeIdeaSounds(text);
+  const vowels=ideaVowels(text);
+  const blocks=[];
+  let pending=[];
+  let vowelIndex=0;
+  function flushPendingWithEpenthesis(){
+    while(pending.length){
+      const c=mapConsonant(pending.shift(),variant+blocks.length);
+      const v=epentheticVowel(vowelIndex++,variant,allowedVowels);
+      blocks.push(makeBlock(c+v));
+    }
+  }
+  for(const token of tokens){
+    if(/^[aeiouy]$/.test(token)){
+      const v=nearestVowel(token,allowedVowels[vowelIndex%allowedVowels.length]||'a');
+      if(pending.length){
+        while(pending.length>1){const c=mapConsonant(pending.shift(),variant+blocks.length);const ev=epentheticVowel(vowelIndex++,variant,allowedVowels);blocks.push(makeBlock(c+ev));}
+        const c=mapConsonant(pending.shift(),variant+blocks.length);blocks.push(makeBlock(c+v));
+      } else if(opts.allowInitialVowel&&blocks.length===0){
+        blocks.push(makeBlock(v));
+      } else if(opts.glottalVowel&&blocks.length>0){
+        blocks.push(makeBlock("'"+v));
+      } else {
+        blocks.push(makeBlock((opts.defaultOnset||'')+v));
+      }
+      vowelIndex++;
+    } else pending.push(token);
+  }
+  flushPendingWithEpenthesis();
+  if(!blocks.length){const v=vowels[0]||allowedVowels[variant%allowedVowels.length]||'a';blocks.push(makeBlock((opts.defaultOnset||'')+v));}
+  return blocks;
+}
+
+function kenkariBlocksFromIdea(text,variant=0){
+  const allowedVowels=['a','i','u','o','e'];
+  let blocks=blocksFromSoundInventory(text,(t,v)=>mapKenkariConsonant(t,v),allowedVowels,variant,{allowInitialVowel:variant%3===1,glottalVowel:true,defaultOnset:['h','k','n','m'][variant%4]});
+  blocks=blocks.map((b,i)=>{if(i>0&&/^[aeiou]/.test(b.text))return makeBlock("'"+b.text);return b;});
+  return blocks;
+}
+function makeKenkariIdeaOptions(text){
+  const opts=[];
+  for(let i=0;i<8;i++){const blocks=kenkariBlocksFromIdea(text,i);const label=titleCase(blocks.map(b=>b.text).join('').replace(/e(?=')/g,'ey'));opts.push({label,note:i%2?'repair clusters with vowel breaks':'closest Kenkari sound inventory',type:'blocks',blocks});}
+  return uniqueOptions(opts);
+}
+
+function mapMaoOnset(token,variant=0){
+  const allowed=SPECIES.mao.onsets.filter(Boolean);
+  const tables=[
+    {ch:['sh','k'],sh:['sh'],th:['t'],ng:['n'],gh:['h','g'],c:['k'],q:['k'],x:['sh','k'],d:['t'],l:['r','y'],v:['f','w'],j:['y'],z:['s']},
+    {ch:['k'],sh:['sh'],th:['s','t'],ng:['n'],gh:['g'],c:['k'],q:['k'],x:['s','k'],d:['t'],l:['y','r'],v:['w','f'],j:['y'],z:['s']}
+  ];
+  return mapByTable(token,allowed,tables[variant%tables.length],{default:['n','m','k','t','p','sh']})||['n','m','k','t','p','sh'][variant%6];
+}
+function maoBlocksFromIdea(text,slot,variant=0){
+  const tokens=tokenizeIdeaSounds(text);
+  const vowels=ideaVowels(text);
+  const blocks=[];
+  let pending=[];
+  let vowelIndex=0;
+  function addBlock(onset,vowel,coda=''){
+    if(slot==='first'&&state.gender==='female'&&!state.married&&blocks.length===0)onset='';
+    if(slot==='surname'&&state.gender==='male'&&blocks.length===0)onset=maoFirstOnset()||onset;
+    blocks.push(makeBlock(onset+vowel+coda));
+  }
+  for(const token of tokens){
+    if(/^[aeiouy]$/.test(token)){
+      const v=nearestVowel(token,['a','e','i','o','u','ai','ao'][vowelIndex%7]);
+      if(pending.length){
+        while(pending.length>1){addBlock(mapMaoOnset(pending.shift(),variant+blocks.length),epentheticVowel(vowelIndex++,variant,['a','e','i','o','u']));}
+        addBlock(mapMaoOnset(pending.shift(),variant+blocks.length),v);
+      } else {
+        addBlock(['n','m','k','t','p','w'][blocks.length%6],v);
+      }
+      vowelIndex++;
+    } else pending.push(token);
+  }
+  while(pending.length){
+    const coda=(pending.length===1&&variant%4)?['','n','ng','r'][variant%4]:'';
+    addBlock(mapMaoOnset(pending.shift(),variant+blocks.length),epentheticVowel(vowelIndex++,variant,['a','e','i','o','u']),coda);
+  }
+  if(!blocks.length)addBlock(slot==='first'&&state.gender==='female'&&!state.married?'':'n',vowels[0]||'a');
+  return blocks;
+}
+function makeMaoIdeaOptions(text){
+  const opts=[];
+  for(let i=0;i<8;i++){const blocks=maoBlocksFromIdea(text,state.activeSlot,i);opts.push({label:titleCase(blocks.map(b=>b.text).join('')),note:i%2?'more Mao-ao-shaped repair':'preserves typed sound order',type:'blocks',blocks});}
+  return uniqueOptions(opts);
+}
+
+function scoreEnghName(name,query){
+  name=String(name||'').toLowerCase();query=String(query||'').toLowerCase();
+  if(!query)return 0;if(name===query)return 100;
+  if(name.includes(query))return 80-query.length+Math.max(0,20-name.length);
+  let qi=0;for(const ch of name){if(ch===query[qi])qi++;if(qi>=query.length)break;}
+  return qi*8-Math.abs(name.length-query.length);
+}
+function makeEnghIdeaOptions(text){
+  if(state.activeSlot==='first'){
+    const q=normalizeIdea(text).replace(/'/g,'');
+    const names=enghFirstNamesForGender().map(n=>({name:n,score:scoreEnghName(n,q)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,10);
+    return names.map((x,i)=>({label:titleCase(x.name),note:i===0?'closest curated list match':'curated first-name list',type:'enghFirst',value:x.name}));
+  }
+  const opts=[];
+  for(let i=0;i<8;i++){const blocks=enghSurnameBlocksFromIdea(text,i);opts.push({label:titleCase(blocks.map(b=>b.text).join('')),note:i%2?'cluster repair with plosive ending':'Engh-sho surname sound adaptation',type:'blocks',blocks});}
+  return uniqueOptions(opts);
+}
+
+function mapEnghOnset(token,variant=0){
+  const allowed=SPECIES.engh.surname.onsets.filter(Boolean);
+  const tables=[
+    {ch:['k','t'],sh:['t'],th:['t'],ng:['n'],gh:['k'],c:['k'],q:['k'],x:['k'],d:['t'],g:['k'],b:['p'],r:['l'],s:['t'],f:['p'],v:['w'],h:['y'],j:['y'],z:['t']},
+    {ch:['t','k'],sh:['y','t'],th:['t'],ng:['n'],gh:['k'],c:['k'],q:['k'],x:['t'],d:['t'],g:['k'],b:['p'],r:['l'],s:['t'],f:['p'],v:['w'],h:['y'],j:['y'],z:['t']}
+  ];
+  return mapByTable(token,allowed,tables[variant%tables.length],{default:['n','m','k','t','p','l','w','y']})||['n','m','k','t','p','l','w','y'][variant%8];
+}
+function enghSurnameBlocksFromIdea(text,variant=0){
+  const tokens=tokenizeIdeaSounds(text);
+  const finalPlosives=SPECIES.engh.surname.finalPlosives;
+  const midCodas=SPECIES.engh.surname.midCodas;
+  const blocks=[];let pending=[];let vowelIndex=0;
+  function addBlock(onset,vowel,coda){blocks.push(makeBlock(onset+vowel+coda));}
+  for(const token of tokens){
+    if(/^[aeiouy]$/.test(token)){
+      const v=nearestVowel(token,['a','u','i'][vowelIndex%3]);
+      if(pending.length){
+        while(pending.length>1){addBlock(mapEnghOnset(pending.shift(),variant+blocks.length),epentheticVowel(vowelIndex++,variant,['a','u','i']),midCodas[(variant+blocks.length)%midCodas.length]);}
+        addBlock(mapEnghOnset(pending.shift(),variant+blocks.length),v,midCodas[(variant+blocks.length)%midCodas.length]);
+      } else {
+        addBlock(['n','m','k','t','p','l','w','y'][blocks.length%8],v,midCodas[(variant+blocks.length)%midCodas.length]);
+      }
+      vowelIndex++;
+    } else pending.push(token);
+  }
+  while(pending.length){
+    const isLast=pending.length===1;
+    const onset=mapEnghOnset(pending.shift(),variant+blocks.length);
+    const vowel=epentheticVowel(vowelIndex++,variant,['a','u','i']);
+    addBlock(onset,vowel,isLast?finalPlosives[(variant+blocks.length*3)%finalPlosives.length]:midCodas[(variant+blocks.length)%midCodas.length]);
+  }
+  if(!blocks.length)addBlock('n','a',finalPlosives[variant%finalPlosives.length]);
+  const last=blocks[blocks.length-1];
+  if(last&&!/(k|p|t|b|d|g|kk|pp|tt|nk|mp|nt|lk|rk)$/i.test(last.text)){last.text+=finalPlosives[(variant+blocks.length)%finalPlosives.length];}
+  return blocks;
+}
+
+function makeSlagothimIdeaOptions(text){
+  if(state.activeSlot==='surname'){
+    const q=normalizeIdea(text).replace(/'/g,'');
+    const locs=SPECIES.slagothim.locations.map(loc=>({loc,score:scoreEnghName(loc.toLowerCase().replace(/[^a-z]/g,''),q)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+    const list=(locs.length?locs:SPECIES.slagothim.locations.map(loc=>({loc}))).slice(0,8);
+    return list.map(x=>({label:`${x.loc}-Doro`,note:'sets surname as tley '+x.loc,type:'slagPlace',place:x.loc}));
+  }
+  const suffix=state.gender==='female'?SPECIES.slagothim.femaleSuffix:SPECIES.slagothim.maleSuffix;
+  const clean=expandedIdeaText(text).replace(/'/g,'');
+  const repaired=clean.replace(/[bcdfghjklmnpqrstvwxyz]{4,}/g,(m)=>m.slice(0,2)+'a'+m.slice(2));
+  const base=repaired.replace(/^(sl)+/,'').replace(new RegExp(`${suffix}a?$`,''),'');
+  const starts=base.replace(/^[bcdfghjklmnpqrstvwxyz]+/,'');
+  const variants=[base,'sl'+starts,base+suffix,'sl'+starts+suffix,base.replace(/[bcdfghjklmnpqrstvwxyz]{3}/g,m=>m[0]+'a'+m.slice(1))+suffix];
+  return uniqueOptions(variants.map((v,i)=>({label:titleCase(v),note:i===0?'cluster-repaired spelling':i===1?'Sl- identity marker':i===2?'suffix identity marker':'combined marker form',type:'slagGiven',value:v.toLowerCase()})));
+}
+
+function makeIdeaOptions(text){
+  if(!String(text||'').trim())return [];
+  if(state.species==='kenkari')return makeKenkariIdeaOptions(text);
+  if(state.species==='mao')return makeMaoIdeaOptions(text);
+  if(state.species==='engh')return makeEnghIdeaOptions(text);
+  if(state.species==='slagothim')return makeSlagothimIdeaOptions(text);
+  return [];
+}
+function applyIdeaOption(index){
+  const opt=state.ideaOptions[index];if(!opt)return;
+  if(state.species==='slagothim'){
+    if(opt.type==='slagPlace')state.data.slagothim.surname='tley '+opt.place;
+    else state.data.slagothim.given=String(opt.value||'').toLowerCase();
+  } else if(state.species==='engh'){
+    if(opt.type==='enghFirst')state.data.engh.first=String(opt.value||'').toLowerCase();
+    else state.data.engh.surname=(opt.blocks||[]).map(b=>makeBlock(b.text));
+  } else {
+    activeStore()[state.activeSlot]=(opt.blocks||[]).map(b=>makeBlock(b.text));
+  }
+  state.status=`Loaded ${opt.label} into ${slotLabel(state.activeSlot)}.`;
+  render();
+}
+
+// ---------------------------------------------------------------------------
+// Composers
+// ---------------------------------------------------------------------------
+
+function renderComposer(){
+  if(state.species==='kenkari')renderKenkariComposer();
+  if(state.species==='mao')renderMaoComposer();
+  if(state.species==='slagothim')renderSlagothimComposer();
+  if(state.species==='engh')renderEnghComposer();
+}
+
+function makeBlock(text){return {text:String(text).toLowerCase()};}
+
+function addKenkariBlock(onset,vowel){
+  const blocks=activeStore()[state.activeSlot];
+  if(onset===''&&blocks.length>0){
+    const prev=blocks[blocks.length-1];
+    if(prev.text.endsWith('e'))prev.text=prev.text.slice(0,-1)+'ey';
+    blocks.push(makeBlock("'"+vowel));
+  } else blocks.push(makeBlock(onset+vowel));
+  render();
+}
+function renderKenkariComposer(){
+  const s=SPECIES.kenkari;
+  els.composer.innerHTML=`<div class="keyboard-grid kenkari-grid">${s.onsets.map(onset=>`<div class="phoneme-col"><div class="col-head">${onset||'∅'}</div>${s.vowels.map(v=>`<button class="chip-btn" data-onset="${onset}" data-vowel="${v}">${escapeHtml((onset||'')+v)}</button>`).join('')}</div>`).join('')}</div>`;
+  [...els.composer.querySelectorAll('button')].forEach(b=>b.onclick=()=>addKenkariBlock(b.dataset.onset,b.dataset.vowel));
+}
+
+function maoFirstOnset(){const first=(state.data.mao.first||[])[0]?.text||'';return first.match(/^(sh|hy|[wrtypsfghkbnm])/)?.[1]||'';}
+function maoStartRequiresVowelOnly(){return state.gender==='female'&&!state.married&&state.activeSlot==='first'&&state.data.mao.first.length===0;}
+function maoSurnameForcedOnset(){return state.gender==='male'&&state.activeSlot==='surname'&&state.data.mao.surname.length===0?maoFirstOnset():'';}
+function setMaoSelectedOnset(onset){state.selectedOnset=onset;render();}
+function maoOptions(){
+  const s=SPECIES.mao;const forced=maoSurnameForcedOnset();
+  if(maoStartRequiresVowelOnly())return s.vowels.map(v=>v).concat(s.vowels.map(v=>v+'n'),s.vowels.map(v=>v+'ng'));
+  const onset=forced||state.selectedOnset||'w';
+  return s.vowels.flatMap(v=>s.codas.map(c=>onset+v+c));
+}
+function addMaoBlock(text){activeStore()[state.activeSlot].push(makeBlock(text));render();}
+function renderMaoComposer(){
+  const s=SPECIES.mao;const forced=maoSurnameForcedOnset();const vowelOnly=maoStartRequiresVowelOnly();
+  if(forced&&state.selectedOnset!==forced)state.selectedOnset=forced;
+  if(!state.selectedOnset&&!vowelOnly)state.selectedOnset=s.onsets.find(o=>o)||'w';
+  els.composer.innerHTML=`<div class="two-box"><div class="onset-box">${s.onsets.filter(o=>o).map(o=>`<button class="chip-btn ${(state.selectedOnset===o||forced===o)?'active':''} ${(vowelOnly||(forced&&forced!==o))?'disabled':''}" data-onset="${o}" ${vowelOnly||(forced&&forced!==o)?'disabled':''}>${o}</button>`).join('')}</div><div class="option-box">${maoOptions().map(opt=>`<button class="chip-btn" data-block="${opt}">${opt}</button>`).join('')}</div></div>`;
+  [...els.composer.querySelectorAll('[data-onset]')].forEach(b=>b.onclick=()=>setMaoSelectedOnset(b.dataset.onset));
+  [...els.composer.querySelectorAll('[data-block]')].forEach(b=>b.onclick=()=>addMaoBlock(b.dataset.block));
+}
+
+function enghFirstNamesForGender(){
+  const s=SPECIES.engh;
+  const replacements=state.gender==='female'?s.femaleReplacements:s.maleReplacements;
+  const seen=new Set();const out=[];
+  for(const raw of s.firstNames){const name=(replacements[raw]||raw).toLowerCase();if(!seen.has(name)){seen.add(name);out.push(name);}}
+  return out;
+}
+function setEnghFirst(name){state.data.engh.first=String(name||'').toLowerCase();render();}
+function applyEnghFirstFilter(){
+  const query=(document.getElementById('enghFirstSearch')?.value||'').toLowerCase();
+  state.data.engh.firstSearch=query;
+  [...els.composer.querySelectorAll('[data-engh-first]')].forEach(btn=>{const val=btn.dataset.enghFirst||'';btn.classList.toggle('hide',query&&!val.includes(query));});
+  renderPreview();renderStatus();
+}
+function renderEnghFirstComposer(){
+  const query=state.data.engh.firstSearch||'';
+  const names=enghFirstNamesForGender();
+  els.composer.innerHTML=`<div class="engh-first-picker"><div class="engh-name-list">${names.map(name=>`<button class="chip-btn ${state.data.engh.first===name?'active':''}" data-engh-first="${escapeHtml(name)}">${escapeHtml(titleCase(name))}</button>`).join('')}</div><input id="enghFirstSearch" class="engh-search" type="text" placeholder="Search first names" value="${escapeHtml(query)}" autocomplete="off" /></div>`;
+  [...els.composer.querySelectorAll('[data-engh-first]')].forEach(b=>b.onclick=()=>setEnghFirst(b.dataset.enghFirst));
+  const input=document.getElementById('enghFirstSearch');
+  input.oninput=applyEnghFirstFilter;
+  applyEnghFirstFilter();
+}
+function setEnghSelectedOnset(onset){state.selectedOnset=onset;render();}
+function enghSurnameOptions(){
+  const s=SPECIES.engh.surname;const onset=state.selectedOnset??'n';
+  const mid=s.vowels.flatMap(v=>s.midCodas.map(c=>onset+v+c));
+  const finals=s.vowels.flatMap(v=>s.finalPlosives.map(c=>onset+v+c));
+  return [...new Set(mid.concat(finals))];
+}
+function addEnghSurnameBlock(text){state.data.engh.surname.push(makeBlock(text));render();}
+function renderEnghSurnameComposer(){
+  const s=SPECIES.engh.surname;
+  if(state.selectedOnset===undefined||state.selectedOnset===null)state.selectedOnset='n';
+  els.composer.innerHTML=`<div class="two-box"><div class="onset-box">${s.onsets.map(o=>`<button class="chip-btn ${state.selectedOnset===o?'active':''}" data-engh-onset="${escapeHtml(o)}">${o||'∅'}</button>`).join('')}</div><div class="option-box">${enghSurnameOptions().map(opt=>`<button class="chip-btn" data-engh-surname="${escapeHtml(opt)}">${escapeHtml(opt)}</button>`).join('')}</div></div>`;
+  [...els.composer.querySelectorAll('[data-engh-onset]')].forEach(b=>b.onclick=()=>setEnghSelectedOnset(b.dataset.enghOnset));
+  [...els.composer.querySelectorAll('[data-engh-surname]')].forEach(b=>b.onclick=()=>addEnghSurnameBlock(b.dataset.enghSurname));
+}
+function renderEnghComposer(){if(state.activeSlot==='first')renderEnghFirstComposer();else renderEnghSurnameComposer();}
+
+function addLetter(ch){
+  if(state.activeSlot!=='given')return;
+  if(!isAllowedSlagNext(state.data.slagothim.given,ch))return;
+  state.data.slagothim.given=(state.data.slagothim.given+ch).toLowerCase();render();
+}
+function consonantRun(s){const m=String(s).toLowerCase().match(/[^aeiou]+$/);return m?m[0].length:0;}
+function isConsonant(ch){return /^[a-z]$/.test(ch)&&!SPECIES.slagothim.vowels.has(ch)}
+function isAllowedSlagNext(current,ch){
+  if(!/^[a-z]$/i.test(ch))return false;
+  const next=String(current||'').toLowerCase()+ch.toLowerCase();
+  if(isConsonant(ch)&&consonantRun(next)>3)return false;
+  if(/[bcdfghjklmnpqrstvwxyz]{4,}/.test(next))return false;
+  return true;
+}
+function replaceSlPrefix(){let s=state.data.slagothim.given.toLowerCase();s='sl'+s.replace(/^[bcdfghjklmnpqrstvwxyz]+/,'');state.data.slagothim.given=s;render();}
+function applySlagSuffix(){
+  const suffix=state.gender==='female'?SPECIES.slagothim.femaleSuffix:SPECIES.slagothim.maleSuffix;
+  const pat=new RegExp(`(${SPECIES.slagothim.femaleSuffix}|${SPECIES.slagothim.maleSuffix})$`);
+  let s=state.data.slagothim.given.toLowerCase().replace(pat,'');
+  state.data.slagothim.given=s+suffix;render();
+}
+function applySlagBoth(){replaceSlPrefix();applySlagSuffix();}
+function renderSlagothimComposer(){
+  if(state.activeSlot==='surname'){
+    const current=slagPlaceFromSurname();
+    els.composer.innerHTML=`<div class="place-grid">${SPECIES.slagothim.locations.map(loc=>`<button class="chip-btn ${current===loc?'active':''}" data-place="${escapeHtml(loc)}">${escapeHtml(loc)}-Doro</button>`).join('')}</div>`;
+    [...els.composer.querySelectorAll('[data-place]')].forEach(b=>b.onclick=()=>setSlagPlace(b.dataset.place));
+    return;
+  }
+  const current=state.data.slagothim.given;
+  const suffix=state.gender==='female'?SPECIES.slagothim.femaleSuffix:SPECIES.slagothim.maleSuffix;
+  els.composer.innerHTML=`<div class="special-row"><button class="action-btn primary" id="slPrefixBtn">Sl-</button><button class="action-btn primary" id="mirSuffixBtn">-${suffix}</button><button class="action-btn primary" id="slMirBtn">Sl-*-${suffix}</button></div><div class="letter-keyboard">${KEY_ROWS.map(row=>`<div class="key-row">${row.map(ch=>`<button class="key-btn" data-letter="${ch}" ${isAllowedSlagNext(current,ch)?'':'disabled'}>${ch}</button>`).join('')}</div>`).join('')}</div>`;
+  document.getElementById('slPrefixBtn').onclick=replaceSlPrefix;
+  document.getElementById('mirSuffixBtn').onclick=applySlagSuffix;
+  document.getElementById('slMirBtn').onclick=applySlagBoth;
+  [...els.composer.querySelectorAll('[data-letter]')].forEach(b=>b.onclick=()=>addLetter(b.dataset.letter));
+}
+
+// ---------------------------------------------------------------------------
+// Edit operations
+// ---------------------------------------------------------------------------
+
+function backspace(){
+  if(state.species==='slagothim'){if(state.activeSlot==='given')state.data.slagothim.given=state.data.slagothim.given.slice(0,-1);}
+  else if(state.species==='engh'){if(state.activeSlot==='first')state.data.engh.first='';else state.data.engh.surname.pop();}
+  else{const arr=activeStore()[state.activeSlot];arr.pop();}
+  render();
+}
+function clearSlot(){
+  if(state.species==='slagothim'){
+    if(state.activeSlot==='given')state.data.slagothim.given='';
+    if(state.activeSlot==='surname')state.data.slagothim.surname='tley '+SPECIES.slagothim.locations[0];
+  } else if(state.species==='engh'){
+    if(state.activeSlot==='first')state.data.engh.first='';
+    if(state.activeSlot==='surname')state.data.engh.surname=[];
+  } else activeStore()[state.activeSlot]=[];
+  render();
+}
+
+// ---------------------------------------------------------------------------
+// Randomize — uses config-derived SPECIES data
+// ---------------------------------------------------------------------------
+
+function randomKenkariName(){
+  const s=SPECIES.kenkari;const n=2+Math.floor(Math.random()*3);const out=[];
+  for(let i=0;i<n;i++){
+    const onset=i===0&&Math.random()<.28?'':pick(s.onsets.filter(o=>o));
+    const vowel=pick(i===n-1?s.vowels.filter(v=>v!=='e'):s.vowels.filter(v=>!['ai','ao'].includes(v)));
+    out.push(makeBlock((onset===''&&i>0?"'":onset)+vowel));
+  }
+  return out;
+}
+function randomKenkari(){state.data.kenkari.first=randomKenkariName();state.data.kenkari.father=randomKenkariName();}
+
+function randomMaoName(slot){
+  const s=SPECIES.mao;const count=slot==='surname'?2:3;const out=[];
+  for(let i=0;i<count;i++){
+    let onset=pick(s.onsets.filter(o=>o));
+    if(slot==='first'&&i===0&&state.gender==='female'&&!state.married)onset='';
+    if(slot==='surname'&&i===0&&state.gender==='male')onset=maoFirstOnset()||onset;
+    const vowel=pick(s.vowels);const coda=pick(['','','n','ng','r']);
+    out.push(makeBlock(onset+vowel+coda));
+  }
+  return out;
+}
+function randomMao(){state.data.mao.first=randomMaoName('first');state.data.mao.surname=randomMaoName('surname');}
+
+function randomSlagothim(){
+  const s=SPECIES.slagothim;
+  const vowels=[...s.vowels];
+  const useSl=Math.random()<(s.startWithSlChance||0.5);
+  const suffix=state.gender==='female'?s.femaleSuffix:s.maleSuffix;
+  let name=(useSl?'sl':pick(s.firstConsonants))+pick(vowels)+pick(s.secondConsonants);
+  if(Math.random()<.35)name+=pick(vowels);
+  name+=Math.random()<.7?suffix:(state.gender==='female'?pick(['a','i']):pick(['o','u']));
+  state.data.slagothim.given=name;
+  state.data.slagothim.surname='tley '+pick(s.locations);
+}
+
+function randomEnghSurname(){
+  const s=SPECIES.engh.surname;const count=Math.random()<.65?2:3;const out=[];
+  for(let i=0;i<count;i++){
+    const onset=Math.random()<.1?'':pick(s.onsets.filter(Boolean));
+    const vowel=pick(s.vowels);
+    const coda=i===count-1?pick(s.finalPlosives):(Math.random()<.5?pick(s.midCodas.filter(Boolean)):'');
+    out.push(makeBlock(onset+vowel+coda));
+  }
+  return out;
+}
+function randomEngh(){
+  const names=enghFirstNamesForGender();
+  state.data.engh.first=pick(names);
+  state.data.engh.firstSearch='';
+  state.data.engh.surname=randomEnghSurname();
+}
+
+function randomize(){
+  if(state.species==='kenkari')randomKenkari();
+  if(state.species==='mao')randomMao();
+  if(state.species==='slagothim')randomSlagothim();
+  if(state.species==='engh')randomEngh();
+  render();
+}
+
+// ---------------------------------------------------------------------------
+// Status
+// ---------------------------------------------------------------------------
+
+function renderStatus(){
+  const notes=[];const name=fullName();
+  if(state.status){notes.push(state.status);state.status='';}
+  if(state.species==='kenkari'){
+    const f=slotText('kenkari','first').toLowerCase();const father=slotText('kenkari','father').toLowerCase();
+    if(!f||!father)notes.push('Choose a name slot and tap sound blocks.');
+    for(const [label,n] of [['First',f],['Father',father]]){if(n.endsWith('e'))notes.push(`${label} name ends in e.`);if(/ai(?!$)/.test(n))notes.push(`${label} name has ai before the end.`);}
+  } else if(state.species==='mao'){
+    if(!slotText('mao','first')||!slotText('mao','surname'))notes.push('Tap a slot, choose an onset, then choose a full syllable block.');
+    if(state.gender==='male'&&slotText('mao','first')&&slotText('mao','surname')){const a=slotText('mao','first')[0]?.toLowerCase();const b=slotText('mao','surname')[0]?.toLowerCase();if(a!==b)notes.push('Male surname should begin from the first name initial.');}
+  } else if(state.species==='engh'){
+    const first=slotText('engh','first');const surname=slotText('engh','surname').toLowerCase();
+    if(!first)notes.push('Pick a first name from the searchable list.');
+    if(!surname)notes.push('Build a surname from the onset box and syllable options.');
+    if(surname&&!/(k|p|t|b|d|g|kk|pp|tt|nk|mp|nt|lk|rk)$/i.test(surname))notes.push('Surname should end with a plosive ending.');
+  } else {
+    const g=state.data.slagothim.given.toLowerCase();
+    const suffix=state.gender==='female'?SPECIES.slagothim.femaleSuffix:SPECIES.slagothim.maleSuffix;
+    if(!g)notes.push('Use the letter keyboard or the Sl/mir buttons.');
+    if(state.activeSlot==='surname')notes.push('Choose a Place of Birth button; it will save as tley <place>.');
+    if(g&&!(g.startsWith('sl')||g.endsWith(suffix)))notes.push(`Name should usually start with Sl or end with ${suffix}.`);
+    if(/[bcdfghjklmnpqrstvwxyz]{4,}/.test(g))notes.push('Consonant pileup detected.');
+  }
+  els.status.className='status-card '+(notes.length?'warn':'good');
+  els.status.textContent=notes.length?notes.join(' '):`Ready: ${name}`;
+}
+
+// ---------------------------------------------------------------------------
+// Event wiring
+// ---------------------------------------------------------------------------
+
+els.gender.onchange=()=>{state.gender=els.gender.value;render();};
+els.married.onchange=()=>{state.married=els.married.checked;state.selectedOnset='';render();};
+els.location.onchange=()=>{};
+els.randomize.onclick=randomize;
+els.backspace.onclick=backspace;
+els.clearSlot.onclick=clearSlot;
+els.copy.onclick=async()=>{try{await navigator.clipboard.writeText(fullName());els.status.textContent='Copied.';}catch{els.status.textContent='Copy failed.';}};
+render();
+</script>
+</body>
+</html>
