@@ -519,11 +519,15 @@
     const gender = (ctx && ctx.gender) || 'male';
     const married = !!(ctx && ctx.married);
     const births = (ctx && ctx.births) || {};
-    const tokens = expandTokens(tokenizeIdeaSounds(text), new Set(getSpecies().mao.onsets.filter(Boolean)));
-    const vowels = ideaVowels(text);
+    const allowed = getSpecies().mao.onsets.filter(Boolean);
+    const expandSet = new Set([...allowed, 'ch', 'th', 'gh', 'ng', 'ph']);
+    const tokens = expandTokens(tokenizeIdeaSounds(text), expandSet);
+    const ideaVows = ideaVowels(text);
     const blocks = [];
     let pending = [];
     let vi = 0;
+    // first/last-vowel epenthesis: before any vowel seen use first input vowel
+    let lastVowel = ideaVows.length > 0 ? nearestVowel(ideaVows[0], 'a') : 'a';
     function addBlock(onset, vowel, coda) {
       if (slot === 'first' && gender === 'female' && !married && blocks.length === 0) onset = '';
       if (slot === 'surname' && gender === 'male' && blocks.length === 0) onset = maoFirstOnset(births) || onset;
@@ -537,19 +541,20 @@
             const mc = new Set(getSpecies().mao.codas.filter(Boolean));
             while (pending.length > 1 && mc.has(pending[0])) blocks[blocks.length - 1].text += pending.shift();
           }
-          while (pending.length > 1) { addBlock(mapMaoOnset(pending.shift(), v + blocks.length), epentheticVowel(vi++, v, ['a','e','i','o','u'])); }
+          while (pending.length > 1) { addBlock(mapMaoOnset(pending.shift(), v + blocks.length), lastVowel); vi++; }
           addBlock(mapMaoOnset(pending.shift(), v + blocks.length), vow);
         } else {
           addBlock(['n','m','k','t','p','w'][blocks.length % 6], vow);
         }
+        lastVowel = vow;
         vi++;
       } else pending.push(token);
     }
     while (pending.length) {
       const coda = (pending.length === 1 && v % 4) ? ['','n','ng','r'][v % 4] : '';
-      addBlock(mapMaoOnset(pending.shift(), v + blocks.length), epentheticVowel(vi++, v, ['a','e','i','o','u']), coda);
+      addBlock(mapMaoOnset(pending.shift(), v + blocks.length), lastVowel, coda); vi++;
     }
-    if (!blocks.length) addBlock(slot === 'first' && gender === 'female' && !married ? '' : 'n', vowels[0] || 'a');
+    if (!blocks.length) addBlock(slot === 'first' && gender === 'female' && !married ? '' : 'n', ideaVows[0] || 'a');
     return blocks;
   }
 
