@@ -2752,6 +2752,15 @@
     }
     .sb-lore-place-btn.active { background: rgba(200,153,82,0.22); border-color: rgba(200,153,82,0.65); color: #f2d08f; }
     .sb-lore-place-btn:hover { background: rgba(242,208,143,0.10); }
+    .sb-lore-input-row { display: flex; gap: 4px; align-items: stretch; }
+    .sb-lore-apply {
+      flex-shrink: 0; padding: 4px 10px; border: 1px solid rgba(200,153,82,0.35);
+      border-radius: 6px; background: rgba(242,208,143,0.06); color: rgba(242,208,143,0.7);
+      cursor: pointer; font-family: inherit; font-size: 0.88em; letter-spacing: 0.06em;
+      transition: background .1s, border-color .1s;
+    }
+    .sb-lore-apply:not([disabled]):hover { background: rgba(242,208,143,0.16); border-color: rgba(200,153,82,0.6); }
+    .sb-lore-apply[disabled] { opacity: 0.28; cursor: not-allowed; }
     .sb-lore-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
     .sb-lore-married-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 0.8em; color: rgba(242,208,143,0.6); letter-spacing: 0.07em; }
     .sb-species-picker, .sb-gender-picker { display: flex; gap: 6px; flex-wrap: wrap; }

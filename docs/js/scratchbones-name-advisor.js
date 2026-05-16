@@ -196,13 +196,32 @@
   function validateKenkari(text) {
     const lower = text.toLowerCase();
     const vc = kenkariVowelChars();
+    const cc = new Set(getSpecies().kenkari.onsets.filter(Boolean).flatMap(c => [...c]));
     const inserts = [], msgs = [];
+
+    // Consecutive vowels need apostrophe
     for (let i = 0; i < lower.length - 1; i++) {
-      if (vc.has(lower[i]) && vc.has(lower[i + 1]) && lower[i] !== "'") {
+      if (lower[i] === "'") continue;
+      if (vc.has(lower[i]) && vc.has(lower[i + 1])) {
         inserts.push({ at: i, msg: 'Apostrophe needed between consecutive vowels' });
         if (!msgs.includes("Add ' between consecutive vowels")) msgs.push("Add ' between consecutive vowels");
       }
     }
+    // Consonant clusters — two consonants in a row with no vowel between
+    for (let i = 0; i < lower.length - 1; i++) {
+      if (lower[i] === "'" || lower[i] === ' ') continue;
+      if (cc.has(lower[i]) && cc.has(lower[i + 1])) {
+        inserts.push({ at: i, msg: 'Consonant cluster — Kenkari syllables are (C)V only' });
+        if (!msgs.some(m => m.includes('cluster'))) msgs.push('No consonant clusters — each consonant must be followed by a vowel');
+      }
+    }
+    // Trailing consonant
+    const stripped = lower.replace(/[\s']+$/, '');
+    if (stripped && cc.has(stripped[stripped.length - 1])) {
+      inserts.push({ at: 'end', msg: 'Kenkari names must end on a vowel' });
+      msgs.push('Name must end on a vowel');
+    }
+
     const valid = kenkariValidChars();
     const invalid = new Set([...lower].filter(ch => ch !== ' ' && !valid.has(ch)));
     for (const ch of invalid) msgs.push(`'${ch}' is not a Kenkari sound`);
@@ -362,10 +381,11 @@
 
   function mapKenkariConsonant(token, v) {
     const allowed = getSpecies().kenkari.onsets.filter(Boolean);
+    // table 0 = closest phonological match (primary suggestion)
     const tables = [
-      { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['h'],c:['k'],q:['k'],x:['k'],d:['t'],l:['r'],s:['h'],z:['t'],j:['h'],f:['p'],v:['p'],w:['h'],y:['h'] },
-      { ch:['h'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['k'],q:['k'],x:['h'],d:['t'],l:['n'],s:['t'],z:['t'],j:['k'],f:['h'],v:['p'],w:['m'],y:['n'] },
-      { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['g','k'],q:['k'],x:['k'],d:['r','t'],l:['r'],s:['h'],z:['h'],j:['g','k'],f:['p'],v:['p'],w:['k'],y:['h'] },
+      { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['h'],c:['k'],q:['k'],x:['k'],b:['p'],d:['t'],g:['k'],l:['r'],s:['k'],z:['t'],j:['h'],f:['p'],v:['p'],w:['h'],y:['h'] },
+      { ch:['h'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['k'],q:['k'],x:['h'],b:['p'],d:['t'],g:['k'],l:['n'],s:['h'],z:['h'],j:['k'],f:['h'],v:['p'],w:['m'],y:['n'] },
+      { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['g','k'],q:['k'],x:['k'],b:['p'],d:['r','t'],g:['g','k'],l:['r'],s:['t'],z:['k'],j:['g','k'],f:['p'],v:['p'],w:['k'],y:['h'] },
     ];
     return mapByTable(token, allowed, tables[v % tables.length], { default: ['h','k','n','m'] }) || ['h','k','n','m'][v % 4];
   }
@@ -406,11 +426,47 @@
   }
 
   function kenkariBlocksFromIdea(text, v) {
-    let blocks = blocksFromSoundInventory(text, (t, vi) => mapKenkariConsonant(t, vi), ['a','i','u','o','e'], v || 0,
-      { allowInitialVowel: (v || 0) % 3 === 1, glottalVowel: true, defaultOnset: ['h','k','n','m'][(v || 0) % 4],
-        validOnsets: new Set(getSpecies().kenkari.onsets.filter(Boolean)) });
-    blocks = blocks.map((b, i) => { if (i > 0 && /^[aeiou]/.test(b.text)) return makeBlock("'" + b.text); return b; });
-    return blocks;
+    v = v || 0;
+    const allowed = getSpecies().kenkari.onsets.filter(Boolean);
+    const allowedVowels = ['a', 'i', 'u', 'o', 'e'];
+    const tokens = expandTokens(tokenizeIdeaSounds(text), new Set(allowed));
+    const ideaVows = ideaVowels(text);
+    const blocks = [];
+    let pending = [];
+    let lastVowel = 'u'; // word-final default
+    const defaults = ['h','k','n','m'];
+
+    function mapC(token) { return mapKenkariConsonant(token, v + blocks.length + pending.length); }
+    function nearV(raw) { return nearestVowel(raw, allowedVowels[0]); }
+
+    for (const token of tokens) {
+      if (/^[aeiouy]$/.test(token)) {
+        const mappedV = nearV(token);
+        if (pending.length) {
+          // mid-word cluster: insert last-seen vowel between stacked consonants
+          while (pending.length > 1) blocks.push(makeBlock(mapC(pending.shift()) + lastVowel));
+          blocks.push(makeBlock(mapC(pending.shift()) + mappedV));
+        } else if (blocks.length === 0 && v % 3 === 1) {
+          blocks.push(makeBlock(mappedV));
+        } else if (blocks.length > 0) {
+          blocks.push(makeBlock("'" + mappedV));
+        } else {
+          blocks.push(makeBlock(defaults[v % 4] + mappedV));
+        }
+        lastVowel = mappedV; // update AFTER resolving cluster so epenthesis uses prior vowel
+      } else {
+        pending.push(token);
+      }
+    }
+    // trailing consonants: mid-cluster ones get lastVowel, final one gets 'u'
+    while (pending.length > 1) blocks.push(makeBlock(mapC(pending.shift()) + lastVowel));
+    if (pending.length === 1) blocks.push(makeBlock(mapC(pending.shift()) + 'u'));
+
+    if (!blocks.length) {
+      blocks.push(makeBlock(defaults[v % 4] + (ideaVows[0] ? nearV(ideaVows[0]) : 'a')));
+    }
+    // apostrophe before any vowel-initial block after the first
+    return blocks.map((b, i) => (i > 0 && /^[aeiou]/.test(b.text)) ? makeBlock("'" + b.text) : b);
   }
 
   function makeKenkariIdeaOptions(text) {

@@ -541,7 +541,7 @@
       }
 
       const { html: valHtml, msgs } = adv.validateSlot(sp, slot, val, ctx);
-      const msgsHtml = msgs.length ? `<div class="sb-lore-msgs">${adv.esc(msgs[0])}</div>` : '';
+      const msgsHtml = `<div class="sb-lore-msgs">${adv.esc(msgs[0] || '')}</div>`;
       const opts = val ? adv.makeIdeaOptions(sp, slot, val, ctx) : [];
       const suggHtml = `<div class="sb-lore-suggs">${
         opts.map((o, i) => `<button class="sb-lore-sugg" data-lore-slot="${adv.esc(slot)}" data-lore-idx="${i}">${adv.esc(o.label)}</button>`).join('')
@@ -549,8 +549,11 @@
 
       return `<div class="sb-lore-slot">
         <div class="sb-cosmetic-label" style="text-align:left;min-width:0;margin-bottom:4px;letter-spacing:0.07em;">${adv.esc(label)}</div>
-        <input class="sb-lore-input" id="sb-lore-${adv.esc(slot)}" type="text" value="${adv.esc(val)}"
-               data-lore-slot="${adv.esc(slot)}" autocomplete="off" spellcheck="false" placeholder="${adv.esc(placeholder)}" />
+        <div class="sb-lore-input-row">
+          <input class="sb-lore-input" id="sb-lore-${adv.esc(slot)}" type="text" value="${adv.esc(val)}"
+                 data-lore-slot="${adv.esc(slot)}" autocomplete="off" spellcheck="false" placeholder="${adv.esc(placeholder)}" />
+          <button class="sb-lore-apply" data-lore-slot="${adv.esc(slot)}">✓</button>
+        </div>
         <div class="sb-lore-val">${valHtml || ''}</div>
         ${msgsHtml}
         ${suggHtml}
@@ -1609,17 +1612,21 @@
         input.addEventListener('input', () => {
           if (!_loreState) return;
           const slot = input.dataset.loreSlot;
-          _loreState.births[slot] = input.value.toLowerCase();
           const ctx = _loreCtx();
           const sp = _loreState.sp;
           const val = input.value;
-          // live-update validation
-          const vd = input.parentElement?.querySelector('.sb-lore-val');
-          if (vd && adv) vd.innerHTML = adv.validateSlot(sp, slot, val, ctx).html || '';
-          const msgEl = input.parentElement?.querySelector('.sb-lore-msgs');
-          if (msgEl && adv) msgEl.textContent = adv.validateSlot(sp, slot, val, ctx).msgs[0] || '';
-          // live-update suggestions
-          const sg = input.parentElement?.querySelector('.sb-lore-suggs');
+          const slotEl = input.closest('.sb-lore-slot');
+          // live validation
+          const { html: valHtml, msgs } = adv ? adv.validateSlot(sp, slot, val, ctx) : { html: '', msgs: [] };
+          const vd = slotEl?.querySelector('.sb-lore-val');
+          if (vd) vd.innerHTML = valHtml || '';
+          const msgEl = slotEl?.querySelector('.sb-lore-msgs');
+          if (msgEl) msgEl.textContent = msgs[0] || '';
+          // enable/disable apply button
+          const applyBtn = slotEl?.querySelector('.sb-lore-apply');
+          if (applyBtn) applyBtn.disabled = msgs.length > 0;
+          // live suggestions (dynamically attached so they update birth state when clicked)
+          const sg = slotEl?.querySelector('.sb-lore-suggs');
           if (sg && adv) {
             const opts = val ? adv.makeIdeaOptions(sp, slot, val, ctx) : [];
             sg.innerHTML = opts.map((o, i) =>
@@ -1636,16 +1643,25 @@
               });
             });
           }
-          // live-update preview + tankan pillars
+        });
+      });
+
+      el.querySelectorAll('.sb-lore-apply').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!_loreState || !adv) return;
+          const slot = btn.dataset.loreSlot;
+          const input = document.getElementById(`sb-lore-${slot}`);
+          if (!input) return;
+          const val = input.value;
+          const sp = _loreState.sp;
+          const ctx = _loreCtx();
+          const { msgs } = adv.validateSlot(sp, slot, val, ctx);
+          if (msgs.length > 0) return;
+          _loreState.births[slot] = val.toLowerCase();
           const preview = document.getElementById('sb-lore-preview');
-          if (preview && adv) {
-            preview.innerHTML = _buildLorePreviewHtml(sp, _loreState.births, _loreCtx()) || '<span class="nd-faint">—</span>';
-          }
+          if (preview) preview.innerHTML = _buildLorePreviewHtml(sp, _loreState.births, ctx) || '<span class="nd-faint">—</span>';
           const tankanEl = document.getElementById('sb-lore-tankan');
-          if (tankanEl) {
-            const t = _buildTankanPillars(sp, _loreState.births, _loreCtx());
-            tankanEl.innerHTML = t || '';
-          }
+          if (tankanEl) tankanEl.innerHTML = _buildTankanPillars(sp, _loreState.births, ctx) || '';
         });
       });
 
