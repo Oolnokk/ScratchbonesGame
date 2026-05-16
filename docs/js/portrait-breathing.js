@@ -357,6 +357,52 @@ class BreathingComposer {
   }
 
   /**
+   * Schedule a sequence of momentary 'yap' mouth flashes to simulate lip-sync for a chat message.
+   * The number of flashes equals the vowel/diphthong count; spacing is determined by spaces
+   * (spaceDelayMs each) and terminal punctuation (pauseDelayMs each).
+   */
+  scheduleYapSequence(seatId, text, opts = {}) {
+    if (!this.enabled) return;
+    const cfg = window.SCRATCHBONES_CONFIG?.game?.portrait?.yap || {};
+    const flashMs     = Math.max(50,  Number(opts.flashMs      ?? cfg.flashMs      ?? 120));
+    const spaceDelayMs = Math.max(0,  Number(opts.spaceDelayMs ?? cfg.spaceDelayMs ?? 60));
+    const pauseDelayMs = Math.max(0,  Number(opts.pauseDelayMs ?? cfg.pauseDelayMs ?? 250));
+
+    const DIPHTHONGS = new Set(['ai','ao','au','ei','eu','oi','ou','ea','ee','oo','ay','ey','ow','oy','ia','ie','io','iu']);
+    const VOWELS     = new Set('aeiou');
+    const lower      = String(text || '').toLowerCase();
+    const seatIdStr  = String(seatId ?? '');
+    let t = 0;
+    let i = 0;
+
+    while (i < lower.length) {
+      const ch = lower[i];
+      if (ch === ' ' || ch === '\t') {
+        t += spaceDelayMs;
+        i++;
+      } else if (ch === '.' || ch === '!' || ch === '?' || ch === '…') {
+        t += pauseDelayMs;
+        i++;
+      } else {
+        const two = lower.slice(i, i + 2);
+        if (DIPHTHONGS.has(two)) {
+          const schedT = t;
+          setTimeout(() => this.setExpression(seatIdStr, 'yap', flashMs), schedT);
+          t += flashMs;
+          i += 2;
+        } else if (VOWELS.has(ch)) {
+          const schedT = t;
+          setTimeout(() => this.setExpression(seatIdStr, 'yap', flashMs), schedT);
+          t += flashMs;
+          i++;
+        } else {
+          i++;
+        }
+      }
+    }
+  }
+
+  /**
    * Returns the emote overlay's deformed points for head/static layers (no breathing added).
    * Used by portrait-utils to apply emote deformation to head, hair, eyes, and hat layers.
    * Returns null when no overlay is active or it doesn't target this seatId.

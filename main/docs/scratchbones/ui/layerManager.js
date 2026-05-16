@@ -503,6 +503,18 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       const resolvedH = computed.height;
       if (resolvedW && resolvedW !== 'auto') promotedNode.style.width = resolvedW;
       if (resolvedH && resolvedH !== 'auto') promotedNode.style.height = resolvedH;
+    } else {
+      // Inline percentage widths/heights become relative to the portal's containing
+      // block instead of the original parent, causing a size mismatch. Resolve them
+      // to the computed pixel values captured before the element was detached.
+      if (promotedNode.style.width?.endsWith('%')) {
+        const resolvedW = computed.width;
+        if (resolvedW && resolvedW !== 'auto') promotedNode.style.width = resolvedW;
+      }
+      if (promotedNode.style.height?.endsWith('%')) {
+        const resolvedH = computed.height;
+        if (resolvedH && resolvedH !== 'auto') promotedNode.style.height = resolvedH;
+      }
     }
     const preservePromotionTransform = shouldPreservePromotionTransform(promotedNode, {
       preserveSelectors: preservePromotionTransformSelectors,

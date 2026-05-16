@@ -5883,7 +5883,7 @@ import { createTutorial } from './tutorial.js';
           const playOwnChatBubble = () => spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: false });
           const playOwnChatAnimation = () => {
             if (triggersLaugh) triggerLaughAnimation(state.humanSeat);
-            else triggerChatSpeechAnimation(state.humanSeat);
+            else triggerChatSpeechAnimation(state.humanSeat, text);
           };
           if (_isClient) {
             // Immediate network send; delay local bubble and portrait animation separately
@@ -7049,8 +7049,10 @@ import { createTutorial } from './tutorial.js';
       overlay.appendChild(fx);
       setTimeout(() => fx.remove(), durationMs);
     }
-    function triggerChatSpeechAnimation(seatId) {
-      window.portraitBreathingComposer?.triggerEmote('alarmed', String(seatId));
+    function triggerChatSpeechAnimation(seatId, text) {
+      const composer = window.portraitBreathingComposer;
+      composer?.triggerEmote('alarmed', String(seatId));
+      if (text) composer?.scheduleYapSequence(String(seatId), text);
     }
     // Spawns a chat-text speech bubble at the given seat's avatar, optionally
     // triggering the alarmed body deformation so the avatar visually "speaks" the message.
@@ -7058,7 +7060,7 @@ import { createTutorial } from './tutorial.js';
       const app = document.getElementById('app');
       if (!app || !text) return;
       const seatIdStr = String(seatId);
-      if (triggerSpeechEmote) triggerChatSpeechAnimation(seatIdStr);
+      if (triggerSpeechEmote) triggerChatSpeechAnimation(seatIdStr, text);
       const emojiOrigin = computeEmojiReactionFxOrigin(seatIdStr, app);
       if (emojiOrigin) {
         spawnChatBubbleFx(text, {

@@ -552,7 +552,7 @@
         <div class="sb-lore-input-row">
           <input class="sb-lore-input" id="sb-lore-${adv.esc(slot)}" type="text" value="${adv.esc(val)}"
                  data-lore-slot="${adv.esc(slot)}" autocomplete="off" spellcheck="false" placeholder="${adv.esc(placeholder)}" />
-          <button class="sb-lore-apply" data-lore-slot="${adv.esc(slot)}">✓</button>
+          <button class="sb-lore-apply" data-lore-slot="${adv.esc(slot)}"${msgs.length > 0 ? ' disabled' : ''}>✓</button>
         </div>
         <div class="sb-lore-val">${valHtml || ''}</div>
         ${msgsHtml}
