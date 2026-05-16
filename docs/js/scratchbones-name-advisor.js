@@ -478,14 +478,24 @@
     // (user editing a Kenkari name directly, not typing an English idea)
     const validChars = kenkariValidChars();
     const isKenkariText = text.length > 0 && [...text.toLowerCase()].every(c => c === ' ' || validChars.has(c));
-    if (isKenkariText && /[aeiou][aeiou]/i.test(text)) {
+    if (isKenkariText) {
       const t = text.toLowerCase();
-      const withApostrophe = t.replace(/([aeiou])([aeiou])/g, "$1'$2");
-      const dropSecond     = t.replace(/([aeiou])([aeiou])/g, '$1');
-      const dropFirst      = t.replace(/([aeiou])([aeiou])/g, '$2');
-      if (withApostrophe !== t) opts.push({ label: tc(withApostrophe), type: 'text', value: withApostrophe });
-      if (dropSecond !== t)     opts.push({ label: tc(dropSecond),     type: 'text', value: dropSecond });
-      if (dropFirst !== t)      opts.push({ label: tc(dropFirst),      type: 'text', value: dropFirst });
+      // Raw consecutive vowels: offer apostrophe + both drops
+      if (/[aeiou][aeiou]/i.test(t)) {
+        const withApostrophe = t.replace(/([aeiou])([aeiou])/g, "$1'$2");
+        const dropSecond     = t.replace(/([aeiou])([aeiou])/g, '$1');
+        const dropFirst      = t.replace(/([aeiou])([aeiou])/g, '$2');
+        if (withApostrophe !== t) opts.push({ label: tc(withApostrophe), type: 'text', value: withApostrophe });
+        if (dropSecond !== t)     opts.push({ label: tc(dropSecond),     type: 'text', value: dropSecond });
+        if (dropFirst !== t)      opts.push({ label: tc(dropFirst),      type: 'text', value: dropFirst });
+      }
+      // Already-apostrophed pair (V'V): offer both drops as alternatives
+      if (/[aeiou]'[aeiou]/i.test(t)) {
+        const dropSecond = t.replace(/([aeiou])'([aeiou])/g, '$1');
+        const dropFirst  = t.replace(/([aeiou])'([aeiou])/g, '$2');
+        if (dropSecond !== t) opts.push({ label: tc(dropSecond), type: 'text', value: dropSecond });
+        if (dropFirst !== t)  opts.push({ label: tc(dropFirst),  type: 'text', value: dropFirst });
+      }
     }
     for (let i = 0; i < 8; i++) {
       const blocks = kenkariBlocksFromIdea(text, i);
