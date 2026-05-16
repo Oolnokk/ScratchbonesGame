@@ -4432,6 +4432,7 @@ import { createTutorial } from './tutorial.js';
       const liarBurstDurationSec = clampNumber(Number(cinematicLayout.liarBurstDurationSec) || 3.2, 0.6, 8);
       const liarBurstEndYPct = clampNumber(Number(cinematicLayout.liarBurstEndYPct) || -180, -320, -110);
       const liarBurstOffsetXPx = Number.isFinite(Number(cinematicLayout.liarBurstOffsetXPx)) ? Number(cinematicLayout.liarBurstOffsetXPx) : -232;
+      const betActionBurstOffsetXPx = Number.isFinite(Number(cinematicLayout.betActionBurstOffsetXPx)) ? Number(cinematicLayout.betActionBurstOffsetXPx) : 180;
       const tankanColumnEdgeInsetPx = clampNumber(Number(tankanColumnsLayout.edgeInsetPx), 0, 120);
       const tankanColumnFontSize = String(tankanColumnsLayout.fontSize);
       const tankanColumnLetterSpacing = String(tankanColumnsLayout.letterSpacing);
@@ -4561,6 +4562,7 @@ import { createTutorial } from './tutorial.js';
       setCssVar('--layout-liar-burst-duration', `${liarBurstDurationSec.toFixed(3)}s`);
       setCssVar('--layout-liar-burst-end-y', `${liarBurstEndYPct.toFixed(2)}%`);
       setCssVar('--layout-liar-burst-offset-x', `${liarBurstOffsetXPx.toFixed(2)}px`);
+      setCssVar('--layout-burst-center-offset-x', `${betActionBurstOffsetXPx.toFixed(2)}px`);
       setCssVar('--layout-tankan-edge-inset', `${tankanColumnEdgeInsetPx.toFixed(2)}px`);
       setCssVar('--layout-cinematic-tankan-font-size', tankanColumnFontSize);
       setCssVar('--layout-cinematic-tankan-letter-spacing', tankanColumnLetterSpacing);
@@ -5713,12 +5715,14 @@ import { createTutorial } from './tutorial.js';
               <div class="claimAvatarShell ${(challengeIntro && focusActor) ? 'alert-pulse' : ''}">
                 <canvas class="seatPortrait" data-seat-id="${claimFocus.actorId}" width="200" height="200"></canvas>
               </div>
+              <div class="claimAvatarCinName">${escapeHtml(seatFirstName(focusActor || claimFocus.actorId))}</div>
               <div class="claimAvatarLocalOverlay" aria-hidden="true"></div>
             </div>
             <div class="reactorAvatarFloat ${claimClusterShellClass}" data-proj-id="claim-avatar-reactor" style="${claimClusterElementStyle(claimClusterPolicy.elements.reactorAvatarFloat)}" title="${focusReactor ? seatLabel(focusReactor) : 'No reactor'}">
               <div class="claimAvatarShell">
                 ${focusReactor ? `<canvas class="seatPortrait" data-seat-id="${focusReactor.id}" width="200" height="200"></canvas>` : ''}
               </div>
+              ${focusReactor ? `<div class="claimAvatarCinName">${escapeHtml(seatFirstName(focusReactor))}</div>` : ''}
               ${(challengeIntro && focusReactor) ? `<div class="fx-burst-shell"><div class="cin-action-burst burst-liar">${escapeHtml(challengeIntro.burstText || 'LIAR!!!')}</div></div>` : ''}
               <div class="claimAvatarLocalOverlay" aria-hidden="true"></div>
             </div>
@@ -6529,16 +6533,72 @@ import { createTutorial } from './tutorial.js';
     function bindHandRailInteractions(app) {
       const rail = app?.querySelector?.('[data-hand-rail]');
       if (!rail) return;
+      const track = rail.querySelector('[data-hand-scroll]');
+
       rail.querySelectorAll('[data-hand-scroll-dir]').forEach((button) => {
         button.addEventListener('click', () => {
           const dir = Number(button.getAttribute('data-hand-scroll-dir')) || 0;
           if (!dir) return;
-          const track = rail.querySelector('[data-hand-scroll]');
           const totalCards = track ? track.querySelectorAll('.handCardSlot').length : 0;
           handViewOffset = clampNumber(handViewOffset + dir, 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
           updateHandRailLayout(app);
         });
       });
+
+      // Mouse wheel scrolling (PC)
+      if (track) {
+        rail.addEventListener('wheel', (e) => {
+          const totalCards = track.querySelectorAll('.handCardSlot').length;
+          if (totalCards <= HAND_MAX_VISIBLE_SLOTS) return;
+          e.preventDefault();
+          const delta = Math.abs(e.deltaX) >= Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+          handViewOffset = clampNumber(handViewOffset + (delta > 0 ? 1 : -1), 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
+          updateHandRailLayout(app);
+        }, { passive: false });
+      }
+
+      // Touch hold+drag scrolling (mobile) — horizontal drag scrolls without selecting
+      let touchStartX = 0;
+      let touchLastX = 0;
+      let touchDragActive = false;
+      let touchAccumPx = 0;
+      const DRAG_THRESHOLD_PX = 12;
+
+      rail.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        touchStartX = e.touches[0].clientX;
+        touchLastX = touchStartX;
+        touchDragActive = false;
+        touchAccumPx = 0;
+      }, { passive: true });
+
+      rail.addEventListener('touchmove', (e) => {
+        if (e.touches.length !== 1) return;
+        const x = e.touches[0].clientX;
+        if (!touchDragActive) {
+          const totalCards = track ? track.querySelectorAll('.handCardSlot').length : 0;
+          if (totalCards > HAND_MAX_VISIBLE_SLOTS && Math.abs(x - touchStartX) > DRAG_THRESHOLD_PX) {
+            touchDragActive = true;
+          }
+        }
+        if (!touchDragActive) return;
+        e.preventDefault();
+        touchAccumPx += x - touchLastX;
+        touchLastX = x;
+        const slotWidthPx = Math.max(
+          HAND_MIN_SLOT_WIDTH_PX,
+          Number.parseFloat(getComputedStyle(track).getPropertyValue('--hand-slot-width')) || HAND_MIN_SLOT_WIDTH_PX
+        );
+        const stepsPx = Math.trunc(-touchAccumPx / slotWidthPx);
+        if (stepsPx !== 0) {
+          const totalCards = track ? track.querySelectorAll('.handCardSlot').length : 0;
+          handViewOffset = clampNumber(handViewOffset + stepsPx, 0, Math.max(0, totalCards - HAND_MAX_VISIBLE_SLOTS));
+          touchAccumPx += stepsPx * slotWidthPx;
+          updateHandRailLayout(app);
+        }
+      }, { passive: false });
+
+      rail.addEventListener('touchend', () => { touchDragActive = false; }, { passive: true });
     }
     // Returns the horizontal scale component from CSS transform matrix/matrix3d values.
     function parseScaleXFromTransform(transformValue) {
@@ -7124,11 +7184,9 @@ import { createTutorial } from './tutorial.js';
       const overlay = ensureAvatarOverlay(anchorEl);
       if (!overlay || !Number.isInteger(playerId)) return;
       const player = state.players[playerId];
-      const name = player ? seatFirstName(player) : seatFirstName(playerId);
       const tags = player?.personality ? personalityTags(player.personality) : '';
       overlay.innerHTML = `
         <div class="claimAvatarCinRole">${escapeHtml(roleLabel)}</div>
-        <div class="claimAvatarCinName">${escapeHtml(name || '')}</div>
         ${tags ? `<div class="claimAvatarCinTags">${escapeHtml(tags)}</div>` : ''}
       `;
     }
@@ -7315,8 +7373,6 @@ import { createTutorial } from './tutorial.js';
         : { label: 'Fold!', cssClass: 'burst-fold' };
       const { label, cssClass } = actionAnnouncement;
       const pillarSide = playerId === state.cinematicMode.actorId ? 'actor' : 'reactor';
-      const isNpc = playerId !== state.humanSeat;
-      const tankanDelayMs = isNpc ? 550 : 0;
       const spawnPillars = () => {
         const tankanConfig = SCRATCHBONES_GAME.layout?.tableView?.cinematic?.tankanColumns || {};
         if (tankanConfig.enabled === false) { clearChallengeTankanColumns(app); return; }
@@ -7335,17 +7391,19 @@ import { createTutorial } from './tutorial.js';
           }, 350);
         }
       };
-      if (tankanDelayMs > 0) {
-        setTimeout(spawnPillars, tankanDelayMs);
-      } else {
-        spawnPillars();
-      }
       const overlay = ensureAvatarOverlay(anchor);
       if (!overlay) return;
+      const offsetPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--layout-burst-center-offset-x')) || 180;
+      const signedOffset = pillarSide === 'actor' ? offsetPx : -offsetPx;
       const burstShell = document.createElement('div');
       burstShell.className = 'fx-burst-shell';
-      burstShell.innerHTML = `<div class="cin-action-burst ${cssClass}">${escapeHtml(label)}</div>`;
+      const burstInner = document.createElement('div');
+      burstInner.className = `cin-action-burst ${cssClass}`;
+      burstInner.style.setProperty('--cinburst-x', `${signedOffset.toFixed(1)}px`);
+      burstInner.textContent = label;
+      burstShell.appendChild(burstInner);
       overlay.appendChild(burstShell);
+      spawnPillars();
       if (shouldRenderLayerManagedUi()) SCRATCHBONES_LAYER_MANAGER.sync(app);
       const burstDurationCss = String(
         getComputedStyle(document.documentElement).getPropertyValue('--layout-cinematic-burst-duration') || '',
@@ -7906,6 +7964,7 @@ import { createTutorial } from './tutorial.js';
       const varsPanel = document.getElementById('projVarPanel');
       const varsPanelTitle = document.getElementById('projVarPanelTitle');
       const varsPanelBody = document.getElementById('projVarPanelBody');
+      const varsPanelSearch = document.getElementById('projVarSearch');
       const varsCopyBtn = document.getElementById('projVarCopyBtn');
       const varsCloseBtn = document.getElementById('projVarCloseBtn');
       const subBtn = document.getElementById('projSubBtn');
@@ -8013,6 +8072,29 @@ import { createTutorial } from './tutorial.js';
       const resolveSliderBounds = (varName, currentValue) => isMultiplierVar(varName, currentValue)
         ? { min: MULTIPLIER_SLIDER_MIN, max: MULTIPLIER_SLIDER_MAX }
         : { min: DEFAULT_SLIDER_MIN, max: DEFAULT_SLIDER_MAX };
+      const getAllCssVarNames = () => {
+        const seen = new Set();
+        const docStyle = document.documentElement.style;
+        for (let i = 0; i < docStyle.length; i++) {
+          const prop = docStyle[i];
+          if (prop.startsWith('--')) seen.add(prop.trim());
+        }
+        try {
+          for (const sheet of document.styleSheets) {
+            try {
+              for (const rule of sheet.cssRules) {
+                if (rule.style && rule.selectorText === ':root') {
+                  for (let i = 0; i < rule.style.length; i++) {
+                    const prop = rule.style[i];
+                    if (prop.startsWith('--')) seen.add(prop.trim());
+                  }
+                }
+              }
+            } catch (_) {}
+          }
+        } catch (_) {}
+        return [...seen].sort();
+      };
       const resolveRelatedVars = (projId, sourceEl) => {
         if (!projId) return [];
         const result = new Set(sharedVars);
@@ -8033,6 +8115,21 @@ import { createTutorial } from './tutorial.js';
         return [...result];
       };
       const renderVarEditor = () => {
+        const searchQuery = varsPanelSearch ? varsPanelSearch.value.trim().toLowerCase() : '';
+        if (searchQuery) {
+          const allVars = getAllCssVarNames();
+          const filtered = allVars.filter((v) => v.toLowerCase().includes(searchQuery));
+          varsPanelTitle.textContent = basePanelTitle;
+          const computedRootStyles = getComputedStyle(document.documentElement);
+          const cssVarRows = filtered.map((varName) => {
+            const value = normalizeCssVarValue(projectionUiState.editedVars.get(varName) ?? computedRootStyles.getPropertyValue(varName));
+            const numericValue = parseNumericCssVar(value);
+            const bounds = resolveSliderBounds(varName, value);
+            return `<label class="projVarRow"><span class="projVarLabel">${escapeHtml(varName)}</span><input class="projVarInput" data-proj-kind="text" data-proj-var="${escapeHtml(varName)}" type="text" value="${escapeHtml(value)}"><input class="projVarInput" data-proj-kind="number" data-proj-var="${escapeHtml(varName)}" type="number" step="${varStep}" value="${numericValue ?? ''}"><input class="projVarInput" data-proj-kind="range" data-proj-var="${escapeHtml(varName)}" type="range" min="${bounds.min}" max="${bounds.max}" step="${varStep}" value="${numericValue ?? bounds.min}"></label>`;
+          }).join('');
+          varsPanelBody.innerHTML = `<div class="projVarHint">${filtered.length} var${filtered.length !== 1 ? 's' : ''} matching <em>${escapeHtml(searchQuery)}</em></div>${cssVarRows || '<div class="projVarHint">No matches.</div>'}`;
+          return;
+        }
         if (getScratchbonesLayoutMode() === 'authored' && (getSelectedAuthoredBox() || authoredEditorState.subLayerMode)) {
           renderAuthoredInspector();
           return;
@@ -8279,6 +8376,11 @@ import { createTutorial } from './tutorial.js';
         }
         if (projectionUiState.varsPanelOpen) renderVarEditor();
       }, true);
+      if (varsPanelSearch) {
+        varsPanelSearch.addEventListener('input', () => {
+          if (projectionUiState.varsPanelOpen) renderVarEditor();
+        });
+      }
       varsPanelBody.addEventListener('input', (event) => {
         const authoredSubImmuneToggle = event.target.getAttribute('data-authored-sub-immune');
         if (authoredSubImmuneToggle) {
@@ -8362,6 +8464,16 @@ import { createTutorial } from './tutorial.js';
         }
         projectionUiState.editedVars.set(varName, nextValue);
         document.documentElement.style.setProperty(varName, nextValue);
+        const row = input.closest('.projVarRow');
+        if (row) {
+          const numericNext = parseNumericCssVar(nextValue);
+          row.querySelectorAll(`[data-proj-var]`).forEach((sibling) => {
+            if (sibling === input) return;
+            const sibKind = sibling.getAttribute('data-proj-kind');
+            if (sibKind === 'text') sibling.value = nextValue;
+            else if ((sibKind === 'number' || sibKind === 'range') && numericNext !== null) sibling.value = String(numericNext);
+          });
+        }
       });
       varsCopyBtn.addEventListener('click', () => {
         if (getScratchbonesLayoutMode() === 'authored') {
