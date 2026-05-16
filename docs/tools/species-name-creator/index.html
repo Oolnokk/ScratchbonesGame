@@ -139,7 +139,7 @@ const FALLBACK_SPECIES = {
     firstNames:["acorn","ael","aestel","amber","amethyst","awl","bar","barb","bead","bean","bell","beryl","billet","bit","blade","bladelet","blank","block","bodkin","bone","borer","boss","brad","brooch","buckle","bud","burin","burr","button","cake","carnelian","catch","catchplate","chalcedony","chape","chisel","chip","clasp","coil","coin","comb","cone","core","counter","cramp","crucible","crystal","cube","cup","cupel","cylinder","die","disc","dowel","drop","dyse","earring","emerald","eyelet","farthing","ferrule","file","firestone","flan","flint","fork","garnet","gem","gim","gimstan","gouge","grain","graver","hasp","hinge","hobnail","hone","hook","hring","husk","hwirfel","ingot","jasper","jewel","kernel","key","knife","knob","knucklebone","lamp","leaf","link","lock","lodestone","loop","matrix","mirror","mount","naegl","nail","needle","nut","obol","onyx","opal","peg","pendant","pening","penny","pin","pinhead","pip","pit","plaque","plug","pod","point","preon","probe","punch","quartz","reed","rind","ring","rivet","rod","root","roundel","ruby","sapphire","sceat","sceatt","scraper","seed","shell","sherd","shuttle","sliver","socket","spatula","spindle","spinel","spool","spoon","sprig","stalk","stan","stem","sticca","stone","stud","styca","stylus","tablet","tack","tag","tally","terminal","tessera","thimble","thorn","tip","toggle","token","tooth","tube","twig","wedge","weight","whetstone","whorl","wire"],
     maleReplacements:{amber:'gold-resin',amethyst:'purple-stone',barb:'sharp-point',beryl:'green-gem',crystal:'clear-stone',emerald:'green-jewel',jewel:'fine-gem',opal:'milk-gem',ruby:'red-gem',sapphire:'blue-gem'},
     femaleReplacements:{brad:'small-nail',bud:'new-leaf',jasper:'spotted-stone',stan:'grey-stone'},
-    surname:{onsets:['','n','m','k','t','p','l','w','y'],vowels:['a','u','i'],midCodas:['','k','n','p'],finalPlosives:['k','p','t','b','d','g','kk','pp','tt','nk','mp','nt','lk','rk']}
+    surname:{onsets:['','n','m','k','t','p','l','w','y','h'],vowels:['a','u','i'],midCodas:['','k','n','p'],finalPlosives:['k','p','t','b','d','g','kk','pp','tt','nk','mp','nt','lk','rk']}
   }
 };
 
@@ -404,7 +404,21 @@ function validateSlot(sp,slot,text){
 // ---------------------------------------------------------------------------
 
 function normalizeIdea(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z']/g,''); }
-function expandedIdeaText(t){ return normalizeIdea(t).replace(/qu/g,'kw').replace(/x/g,'ks').replace(/ck/g,'k').replace(/ph/g,'f'); }
+function expandedIdeaText(t){
+  return normalizeIdea(t)
+    // standard substitutions
+    .replace(/qu/g,'kw').replace(/x/g,'ks').replace(/ck/g,'k').replace(/ph/g,'f')
+    .replace(/tch/g,'ch').replace(/wh/g,'w').replace(/kn/g,'n').replace(/wr/g,'r')
+    // vowel digraphs → nearest single vowel
+    .replace(/igh/g,'i').replace(/oo/g,'u').replace(/ee/g,'i').replace(/ea/g,'i')
+    .replace(/ou/g,'o').replace(/ow/g,'o').replace(/ay/g,'a')
+    // silent h after vowel before consonant or end (e.g. john→jon, ah→a)
+    .replace(/([aeiou])h(?=[bcdfgjklmnpqrstvwxyz]|$)/g,'$1')
+    // double consonants → single (nn→n, pp→p, etc.)
+    .replace(/([bcdfghjklmnpqrstvwxyz])\1/g,'$1')
+    // trailing silent e after consonant (hope→hop, make→mak)
+    .replace(/([bcdfghjklmnpqrstvwxyz])e$/g,'$1');
+}
 function tokenizeIdeaSounds(text){
   const raw=expandedIdeaText(text).replace(/'/g,'');
   const tokens=[];
@@ -492,8 +506,8 @@ function makeKenkariIdeaOptions(text){
 function mapMaoOnset(token,v=0){
   const allowed=SPECIES.mao.onsets.filter(Boolean);
   const tables=[
-    {ch:['sh','k'],sh:['sh'],th:['t'],ng:['n'],gh:['h','g'],c:['k'],q:['k'],x:['sh','k'],d:['t'],l:['r','y'],v:['f','w'],j:['y'],z:['s']},
-    {ch:['k'],sh:['sh'],th:['s','t'],ng:['n'],gh:['g'],c:['k'],q:['k'],x:['s','k'],d:['t'],l:['y','r'],v:['w','f'],j:['y'],z:['s']}
+    {ch:['sh','k'],sh:['sh'],th:['t'],ng:['n'],gh:['h','g'],c:['k'],q:['k'],x:['sh','k'],d:['t'],l:['r','y'],v:['f','w'],z:['s']},
+    {ch:['k'],sh:['sh'],th:['s','t'],ng:['n'],gh:['g'],c:['k'],q:['k'],x:['s','k'],d:['t'],l:['y','r'],v:['w','f'],z:['s']}
   ];
   return mapByTable(token,allowed,tables[v%tables.length],{default:['n','m','k','t','p','sh']})||['n','m','k','t','p','sh'][v%6];
 }
@@ -558,13 +572,18 @@ function makeEnghIdeaOptions(text,slot){
 }
 function enghSurnameFromIdea(text,variant=0){
   const fp=SPECIES.engh.surname.finalPlosives;
-  const smap={c:'k',q:'k',x:'k',f:'p',v:'w',h:'y',j:'y',s:'t',z:'t'};
+  const vowels=SPECIES.engh.surname.vowels; // ['a','u','i']
+  // h is now valid; j maps to y as closest Engh-sho sound
+  const smap={c:'k',q:'k',x:'k',f:'p',v:'w',j:'y',s:'t',z:'t'};
   const raw=expandedIdeaText(text).replace(/'/g,'');
   const result=raw.split('').map(ch=>{
-    if(ENGH_SURNAME_ALLOWED.has(ch))return ch;
-    if(smap[ch])return smap[ch];
-    if(ch==='e')return['i','a','u'][variant%3];
-    if(ch==='o')return['u','a','i'][variant%3];
+    // Valid vowel: rotate through Engh-sho vowels for variant diversity
+    if(vowels.includes(ch)) return vowels[(vowels.indexOf(ch)+variant)%vowels.length];
+    if(ENGH_SURNAME_ALLOWED.has(ch)) return ch;
+    if(smap[ch]) return smap[ch];
+    // remaining unmapped vowels
+    if(ch==='e') return vowels[variant%vowels.length];
+    if(ch==='o') return vowels[(variant+1)%vowels.length];
     return'';
   }).filter(Boolean).join('');
   if(!result)return'';

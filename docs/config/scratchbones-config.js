@@ -368,8 +368,8 @@ window.SCRATCHBONES_CONFIG = {
             },
             "surname": {
               "syllables": { "min": 2, "max": 3 },
-              "onsetConsonants": ["n", "m", "k", "t", "p", "l", "w", "y"],
-              "onsetWeights": { "n": 16, "m": 13, "k": 13, "t": 13, "p": 11, "l": 5, "w": 4, "y": 4 },
+              "onsetConsonants": ["n", "m", "k", "t", "p", "l", "w", "y", "h"],
+              "onsetWeights": { "n": 16, "m": 13, "k": 13, "t": 13, "p": 11, "l": 5, "w": 4, "y": 4, "h": 4 },
               "vowelOnsetChance": 0.1,
               "vowels": ["a", "u", "i"],
               "vowelWeights": { "a": 20, "u": 16, "i": 4 },
