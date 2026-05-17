@@ -554,12 +554,16 @@
     const validCodas = new Set(getSpecies().mao.codas.filter(Boolean));
     while (pending.length) {
       const c = pending.shift();
-      if (pending.length === 0 && v % 4 !== 0 && validCodas.has(c) && blocks.length > 0) {
-        // valid coda consonant: append to last syllable
+      const isLast = pending.length === 0;
+      if (isLast && v % 4 !== 0 && validCodas.has(c) && blocks.length > 0) {
+        // last consonant is a valid coda: append to last syllable
         blocks[blocks.length - 1].text += c;
-      } else {
-        // invalid final consonant: new syllable with 'u'
+      } else if (isLast) {
+        // last consonant, invalid as coda: new syllable with 'u'
         addBlock(mapMaoOnset(c, v + blocks.length), 'u'); vi++;
+      } else {
+        // internal cluster consonant: use last seen vowel, not 'u'
+        addBlock(mapMaoOnset(c, v + blocks.length), lastVowel); vi++;
       }
     }
     if (!blocks.length) addBlock(slot === 'first' && gender === 'female' && !married ? '' : 'n', ideaVows[0] || 'a');
