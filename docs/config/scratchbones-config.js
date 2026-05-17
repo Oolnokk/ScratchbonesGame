@@ -38,11 +38,11 @@ window.SCRATCHBONES_CONFIG = {
       "resetMobileZoomOnSubmit": true,
       "mobileZoomResetDelayMs": 60,
       "mobileZoomResetViewportContent": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
-      "messageBubbleSpawnAfterZoomResetMs": 1500,
-      "messageAnimationSpawnAfterZoomResetMs": 2500,
+      "messageBubbleSpawnAfterZoomResetMs": 0,
+      "messageAnimationSpawnAfterZoomResetMs": 0,
       "laughPhrases": ["lol", "ha", "haha", "hahaha"],
       "bubbleMaxLength": 36,
-      "bubbleDurationMs": 2000,
+      "bubbleDurationMs": 5000,
       "bubbleOverlayZIndex": 10030
     },
     "deck": {
@@ -2736,7 +2736,7 @@ window.SCRATCHBONES_CONFIG = {
       "--layout-turn-spotlight-offset-x": "10px",
       "--layout-turn-spotlight-offset-y": "10px",
       "--layout-cinematic-player-info-offset": "12px",
-      "--layout-cinematic-player-info-font": "1.05rem",
+      "--layout-cinematic-player-info-font": "2.1rem",
       "--layout-cinematic-burst-font": "2rem",
       "--layout-cinematic-burst-duration": "2.1s",
       "--layout-liar-burst-font": "3.2rem",

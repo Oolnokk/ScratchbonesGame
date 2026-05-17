@@ -7063,9 +7063,11 @@ import { createTutorial } from './tutorial.js';
       if (triggerSpeechEmote) triggerChatSpeechAnimation(seatIdStr, text);
       const emojiOrigin = computeEmojiReactionFxOrigin(seatIdStr, app);
       if (emojiOrigin) {
+        const eAnchorCenterY = emojiOrigin.anchorRect.top + emojiOrigin.anchorRect.height / 2;
+        const eCurrentY = emojiOrigin.layerRect.top + emojiOrigin.startY;
         spawnChatBubbleFx(text, {
           viewportX: emojiOrigin.layerRect.left + emojiOrigin.startX,
-          viewportY: emojiOrigin.layerRect.top + emojiOrigin.startY,
+          viewportY: eAnchorCenterY + (eCurrentY - eAnchorCenterY) * 1.5,
         });
         return;
       }
@@ -7088,9 +7090,10 @@ import { createTutorial } from './tutorial.js';
       if (!anchorEl) return;
       const anchorRect = anchorEl.getBoundingClientRect();
       // Position in viewport space directly — no scale correction needed for position:fixed.
+      // Spawn at 1.5× the upward offset from portrait centre (0.25h → 0.125h from top).
       spawnChatBubbleFx(text, {
         viewportX: anchorRect.left + anchorRect.width / 2,
-        viewportY: anchorRect.top + anchorRect.height * 0.25,
+        viewportY: anchorRect.top + anchorRect.height * 0.125,
       });
     }
     const clusterCinematicStageRuntime = {
