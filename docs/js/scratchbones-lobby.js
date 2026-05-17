@@ -472,6 +472,38 @@
 
   function refreshNameSuggestions() { /* no-op, kept for compat */ }
 
+  function _buildDisplayNamePreview() {
+    if (!_editAppearance || !_loreState) return '';
+    const adv = window.SCRATCHBONES_NAME_ADVISOR;
+    const nickname = _editName || 'Nickname';
+    const sp = _loreState.sp;
+    const births = _loreState.births || {};
+    const ctx = _loreCtx();
+    let preview = '';
+    let warning = '';
+    if (_editNameFormat === 'nickname') {
+      preview = nickname;
+    } else if (adv) {
+      const { first, conn, second } = adv.birthNameParts(sp, births, ctx);
+      if (_editNameFormat === 'loreName') {
+        preview = [first, conn, second].filter(Boolean).join(' ') || '';
+        if (!preview) warning = 'Set a lore name below first.';
+      } else if (_editNameFormat === 'combined') {
+        const parts = [first, `"${nickname}"`, conn, second].filter(Boolean);
+        preview = parts.join(' ');
+        if (!first && !second) warning = 'Set a lore name below first.';
+        else if (!second) warning = 'Surname/second slot is empty — only first name will show.';
+      }
+    }
+    const previewHtml = preview
+      ? `<span style="font-style:italic;opacity:0.85;">${esc(preview)}</span>`
+      : `<span style="opacity:0.4;">—</span>`;
+    const warnHtml = warning
+      ? `<div style="font-size:0.72em;color:rgba(242,180,80,0.75);margin-top:2px;">${esc(warning)}</div>`
+      : '';
+    return `<div style="margin-top:4px;margin-bottom:2px;font-size:0.82em;padding:4px 6px;background:rgba(242,208,143,0.06);border-radius:5px;border:1px solid rgba(200,153,82,0.2);">${previewHtml}${warnHtml}</div>`;
+  }
+
   function _buildLorePreviewHtml(sp, births, ctx) {
     const adv = window.SCRATCHBONES_NAME_ADVISOR;
     if (!adv) return '';
@@ -944,6 +976,7 @@
               <button class="sb-sel-btn${_editNameFormat === 'loreName' ? ' selected' : ''}" data-name-format="loreName">Lore Name</button>
               <button class="sb-sel-btn${_editNameFormat === 'combined' ? ' selected' : ''}" data-name-format="combined">First "Nick" Last</button>
             </div>
+            ${_buildDisplayNamePreview()}
             ${_buildLoreSectionHtml()}
             <div class="sb-label" style="margin-top:8px;">Species</div>
             <div class="sb-sel-group">${speciesBtns}</div>
