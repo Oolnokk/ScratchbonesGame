@@ -282,6 +282,7 @@
   let _editAIdx = 0;            // index into current species/gender colorOptions for A
   let _editBIdx = 0;            // index into current species/gender colorOptions for B
   let _editName = '';           // name field being edited in appearance editor
+  let _editNameFormat = 'nickname'; // which name format to display: 'nickname' | 'loreName' | 'combined'
   let _nameSuggestions = [];    // cached name suggestions for the advisor chips (legacy, unused)
   let _loreState = null;        // { sp, births, married } for embedded lore name creator
 
@@ -470,6 +471,38 @@
   }
 
   function refreshNameSuggestions() { /* no-op, kept for compat */ }
+
+  function _buildDisplayNamePreview() {
+    if (!_editAppearance || !_loreState) return '';
+    const adv = window.SCRATCHBONES_NAME_ADVISOR;
+    const nickname = _editName || 'Nickname';
+    const sp = _loreState.sp;
+    const births = _loreState.births || {};
+    const ctx = _loreCtx();
+    let preview = '';
+    let warning = '';
+    if (_editNameFormat === 'nickname') {
+      preview = nickname;
+    } else if (adv) {
+      const { first, conn, second } = adv.birthNameParts(sp, births, ctx);
+      if (_editNameFormat === 'loreName') {
+        preview = [first, conn, second].filter(Boolean).join(' ') || '';
+        if (!preview) warning = 'Set a lore name below first.';
+      } else if (_editNameFormat === 'combined') {
+        const parts = [first, `"${nickname}"`, conn, second].filter(Boolean);
+        preview = parts.join(' ');
+        if (!first && !second) warning = 'Set a lore name below first.';
+        else if (!second) warning = 'Surname/second slot is empty — only first name will show.';
+      }
+    }
+    const previewHtml = preview
+      ? `<span style="font-style:italic;opacity:0.85;">${esc(preview)}</span>`
+      : `<span style="opacity:0.4;">—</span>`;
+    const warnHtml = warning
+      ? `<div style="font-size:0.72em;color:rgba(242,180,80,0.75);margin-top:2px;">${esc(warning)}</div>`
+      : '';
+    return `<div style="margin-top:4px;margin-bottom:2px;font-size:0.82em;padding:4px 6px;background:rgba(242,208,143,0.06);border-radius:5px;border:1px solid rgba(200,153,82,0.2);">${previewHtml}${warnHtml}</div>`;
+  }
 
   function _buildLorePreviewHtml(sp, births, ctx) {
     const adv = window.SCRATCHBONES_NAME_ADVISOR;
@@ -748,7 +781,7 @@
     const acc = window.ScratchbonesAccount;
     const bronze = acc ? acc.getBronze() : 0;
     const activeKhymeryyan = acc?.getActiveKhymeryyan?.() || null;
-    const username = activeKhymeryyan?.name || (acc ? acc.getUsername() : 'Player');
+    const username = acc ? (acc.getDisplayName?.() || acc.getUsername()) : 'Player';
     const khymeryyans = acc?.getKhymeryyans?.() || [];
     const canDeleteKhymeryyan = khymeryyans.length > 1;
     const khymeryyanOptions = khymeryyans.map(kh =>
@@ -937,6 +970,13 @@
               <input id="sb-edit-name" type="text" maxlength="48" value="${esc(_editName || '')}"
                      autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box;" />
             </div>
+            <div class="sb-label" style="margin-top:6px;">Display Name</div>
+            <div class="sb-sel-group">
+              <button class="sb-sel-btn${_editNameFormat === 'nickname' ? ' selected' : ''}" data-name-format="nickname">Nickname</button>
+              <button class="sb-sel-btn${_editNameFormat === 'loreName' ? ' selected' : ''}" data-name-format="loreName">Lore Name</button>
+              <button class="sb-sel-btn${_editNameFormat === 'combined' ? ' selected' : ''}" data-name-format="combined">First "Nick" Last</button>
+            </div>
+            ${_buildDisplayNamePreview()}
             ${_buildLoreSectionHtml()}
             <div class="sb-label" style="margin-top:8px;">Species</div>
             <div class="sb-sel-group">${speciesBtns}</div>
@@ -1383,9 +1423,13 @@
     _editAIdx = closestColorIdx(opts, _editAppearance.bodyColors.A);
     _editBIdx = closestColorIdx(opts, _editAppearance.bodyColors.B);
     _screen = 'appearance';
-    const savedLore = saved?.loreName || null;
+    _editNameFormat = acc?.getNameFormat?.() || 'nickname';
+    const savedLore = acc?.getLoreName?.() || null;
     _initLoreState(speciesId, gender);
-    if (savedLore) _loreState.births = { ...savedLore };
+    if (savedLore) {
+      _loreState.births = { ...savedLore };
+      if ('married' in savedLore) _loreState.married = !!savedLore.married;
+    }
     render();
   }
 
@@ -1603,6 +1647,15 @@
       });
     });
 
+    // ── Name format selector ───────────────────────────────────
+
+    el.querySelectorAll('[data-name-format]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _editNameFormat = btn.dataset.nameFormat;
+        el.querySelectorAll('[data-name-format]').forEach(b => b.classList.toggle('selected', b.dataset.nameFormat === _editNameFormat));
+      });
+    });
+
     // ── Lore name creator handlers ─────────────────────────────
 
     if (_loreState) {
@@ -1703,10 +1756,12 @@
     }
 
     document.getElementById('sb-save-appearance-btn')?.addEventListener('click', () => {
+      const acc = window.ScratchbonesAccount;
       const nameVal = (document.getElementById('sb-edit-name')?.value || '').trim();
-      if (nameVal) window.ScratchbonesAccount?.renameKhymeryyan?.(window.ScratchbonesAccount?.getActiveKhymeryyan?.()?.id, nameVal) || window.ScratchbonesAccount?.setUsername(nameVal);
-      if (_loreState) _editAppearance.loreName = { ..._loreState.births };
-      window.ScratchbonesAccount?.setAppearance(_editAppearance);
+      if (nameVal) acc?.renameKhymeryyan?.(acc?.getActiveKhymeryyan?.()?.id, nameVal) || acc?.setUsername(nameVal);
+      if (_loreState) acc?.setLoreName?.({ ..._loreState.births, married: !!_loreState.married });
+      acc?.setNameFormat?.(_editNameFormat);
+      acc?.setAppearance(_editAppearance);
       _screen = 'main';
       render();
     });
@@ -1799,7 +1854,7 @@
         return;
       }
       const selectedKhymeryyan = getFullKhymeryyan();
-      const username = selectedKhymeryyan?.name || acc.getUsername() || 'Host';
+      const username = selectedKhymeryyan?.name || acc.getDisplayName?.() || acc.getUsername() || 'Host';
       const appearance = getFullAppearance();
       const playerLoadout = getLocalPlayerLoadout();
       _onlineOccupants = [{ seatId: 0, name: username }];
@@ -1855,7 +1910,7 @@
           return;
         }
         const selectedKhymeryyan = getFullKhymeryyan();
-        const username = selectedKhymeryyan?.name || acc.getUsername() || 'Player';
+        const username = selectedKhymeryyan?.name || acc.getDisplayName?.() || acc.getUsername() || 'Player';
         const appearance = getFullAppearance();
         const playerLoadout = getLocalPlayerLoadout();
         doJoinBtn.disabled = true;
@@ -1905,13 +1960,15 @@
     const trickBoneLoadout = [...(active.trickBoneLoadout || acc.getTrickBoneLoadout?.() || [])];
     return {
       id: active.id,
-      name: active.name || acc.getUsername?.() || 'Player',
+      name: acc.getDisplayName?.() || active.name || acc.getUsername?.() || 'Player',
       appearance: { ...active.appearance },
       equippedCosmetics: [...(active.equippedCosmetics || [])],
       appliedDyes: { ...(active.appliedDyes || {}) },
       trickBoneLoadout,
       playerLoadout: trickBoneLoadout,
       unlockedTrickBones: [...(acc.getUnlockedTrickBones?.() || [])],
+      loreName: active.loreName ? { ...active.loreName } : null,
+      nameFormat: active.nameFormat || 'nickname',
     };
   }
 

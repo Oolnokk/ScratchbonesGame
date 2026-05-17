@@ -228,6 +228,18 @@
     return String(name || '').trim().slice(0, 24) || fallback;
   }
 
+  const VALID_NAME_FORMATS = ['nickname', 'loreName', 'combined'];
+
+  function normalizeLoreName(loreName) {
+    if (!loreName || typeof loreName !== 'object') return null;
+    const out = {};
+    for (const [k, v] of Object.entries(loreName)) {
+      if (typeof v === 'string') out[k] = v;
+      else if (k === 'married') out[k] = !!v;
+    }
+    return Object.keys(out).length ? out : null;
+  }
+
   function normalizeKhymeryyan(raw = {}, fallbackName = 'Player', unlockedTrickBones = null) {
     const unlocked = normalizeUnlockedTrickBones(unlockedTrickBones);
     return {
@@ -237,6 +249,8 @@
       equippedCosmetics: migrateIdArray(raw.equippedCosmetics || []),
       appliedDyes: normalizeAppliedDyes(raw.appliedDyes || {}),
       trickBoneLoadout: normalizeTrickLoadout(raw.trickBoneLoadout, unlocked),
+      loreName: normalizeLoreName(raw.loreName),
+      nameFormat: VALID_NAME_FORMATS.includes(raw.nameFormat) ? raw.nameFormat : 'nickname',
     };
   }
 
@@ -248,6 +262,8 @@
       equippedCosmetics: [...(k.equippedCosmetics || [])],
       appliedDyes: { ...(k.appliedDyes || {}) },
       trickBoneLoadout: [...(k.trickBoneLoadout || [])],
+      loreName: k.loreName ? { ...k.loreName } : null,
+      nameFormat: k.nameFormat || 'nickname',
     } : null;
   }
 
@@ -467,6 +483,49 @@
     if (!active) return;
     const trimmed = sanitizeName(username, '');
     if (trimmed) { active.name = trimmed; save(); }
+  }
+
+  function getLoreName() { return getActiveKhymeryyanRef()?.loreName || null; }
+
+  function setLoreName(loreName) {
+    const active = getActiveKhymeryyanRef();
+    if (!active) return;
+    active.loreName = normalizeLoreName(loreName);
+    save();
+  }
+
+  function getNameFormat() { return getActiveKhymeryyanRef()?.nameFormat || 'nickname'; }
+
+  function setNameFormat(format) {
+    const active = getActiveKhymeryyanRef();
+    if (!active) return;
+    active.nameFormat = VALID_NAME_FORMATS.includes(format) ? format : 'nickname';
+    save();
+  }
+
+  function getDisplayName() {
+    const active = getActiveKhymeryyanRef();
+    if (!active) return 'Player';
+    const nickname = active.name || 'Player';
+    const format = active.nameFormat || 'nickname';
+    if (format === 'nickname') return nickname;
+    const adv = window.SCRATCHBONES_NAME_ADVISOR;
+    const loreName = active.loreName;
+    if (!adv || !loreName) return nickname;
+    const spMap = { 'mao-ao': 'mao', 'kenkari': 'kenkari', 'engh-sho': 'engh', 'slagothim': 'slagothim', 'tletingan': 'slagothim' };
+    const speciesId = String(active.appearance?.speciesId || 'mao-ao').toLowerCase();
+    const sp = spMap[speciesId] || 'mao';
+    const ctx = { gender: active.appearance?.gender || 'male', married: !!loreName.married };
+    if (format === 'loreName') {
+      const full = adv.formatFullName(sp, loreName, ctx);
+      return full || nickname;
+    }
+    if (format === 'combined') {
+      const { first, conn, second } = adv.birthNameParts(sp, loreName, ctx);
+      const parts = [first, `"${nickname}"`, conn, second].filter(Boolean);
+      return parts.join(' ') || nickname;
+    }
+    return nickname;
   }
   function getBronze()   { return getAccount().bronze; }
 
@@ -773,6 +832,11 @@
     setKhymeryyanTrickBoneLoadout,
     getUsername,
     setUsername,
+    getLoreName,
+    setLoreName,
+    getNameFormat,
+    setNameFormat,
+    getDisplayName,
     getBronze,
     addBronze,
     spendBronze,
