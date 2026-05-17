@@ -1905,6 +1905,7 @@ window.SCRATCHBONES_CONFIG = {
         "hostZIndex": 45,
         "defaultPreserveSpace": true,
         "normalizePromotedElementBox": true,
+        "useVisualPortalRectSelectors": [".claimClusterTextAnchor"],
         "preservePromotionTransformSelectors": [
           ".seatAvatarBox",
           ".turnSpotlightAvatar",

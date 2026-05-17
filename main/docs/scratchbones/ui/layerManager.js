@@ -146,6 +146,7 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   const promoteByRootSelectors = normalizeSelectorList(managerConfig.promoteByRootSelectors);
   const excludeDescendantSelectors = normalizeSelectorList(managerConfig.excludeDescendantSelectors);
   const configuredLayerOrder = normalizeStringList(managerConfig.layerOrder);
+  const useVisualPortalRectSelectors = normalizeSelectorList(managerConfig.useVisualPortalRectSelectors);
   const normalizeBoxGuard = managerConfig.normalizeBoxGuard && typeof managerConfig.normalizeBoxGuard === 'object'
     ? managerConfig.normalizeBoxGuard
     : {};
@@ -400,7 +401,19 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
   function capturePortalPlacementFrame(entry) {
     const anchorElement = getPortalAnchorElement(entry);
     if (!anchorElement) return null;
-    const viewportRect = anchorElement.getBoundingClientRect();
+    const anchorRect = anchorElement.getBoundingClientRect();
+    const viewportRect = (entry.visualPortalOffset && entry.visualPortalSize)
+      ? {
+          left: anchorRect.left + entry.visualPortalOffset.x,
+          top: anchorRect.top + entry.visualPortalOffset.y,
+          right: anchorRect.left + entry.visualPortalOffset.x + entry.visualPortalSize.w,
+          bottom: anchorRect.top + entry.visualPortalOffset.y + entry.visualPortalSize.h,
+          width: entry.visualPortalSize.w,
+          height: entry.visualPortalSize.h,
+          x: anchorRect.left + entry.visualPortalOffset.x,
+          y: anchorRect.top + entry.visualPortalOffset.y,
+        }
+      : anchorRect;
     const appRect = state.app?.getBoundingClientRect?.();
     if (!appRect) return null;
     const appLayoutWidth = state.app?.offsetWidth || state.app?.clientWidth || appRect.width || 0;
@@ -461,6 +474,21 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       element.parentNode?.insertBefore(placeholder, element);
     }
 
+    // For elements with a CSS positioning transform (e.g. translate(-50%,-50%) scale(N)),
+    // use the element's actual visual viewport rect for portal placement instead of the
+    // pre-transform placeholder rect. The element then fills the portal with no transform.
+    const useVisualPortalRect = useVisualPortalRectSelectors.length > 0
+      && selectorMatchesElement(element, useVisualPortalRectSelectors);
+    let visualPortalOffset = null;
+    let visualPortalSize = null;
+    if (useVisualPortalRect) {
+      const placeholderRect = placeholder?.getBoundingClientRect?.();
+      if (placeholderRect) {
+        visualPortalOffset = { x: rect.left - placeholderRect.left, y: rect.top - placeholderRect.top };
+        visualPortalSize = { w: rect.width, h: rect.height };
+      }
+    }
+
     const portal = document.createElement('div');
     portal.className = `ui-layer-portal ui-layer-portal-${assignment.layer}`;
     portal.style.cssText = 'position:fixed;pointer-events:auto;';
@@ -491,7 +519,11 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
     promotedNode.style.top = '0';
     promotedNode.style.right = 'auto';
     promotedNode.style.bottom = 'auto';
-    if (shouldNormalizeFillSize) {
+    if (useVisualPortalRect) {
+      // Portal is placed at the element's visual (post-transform) rect; element just fills it.
+      promotedNode.style.width = '100%';
+      promotedNode.style.height = '100%';
+    } else if (shouldNormalizeFillSize) {
       promotedNode.style.width = '100%';
       promotedNode.style.height = '100%';
     } else if (assignment.keepOriginal) {
@@ -524,10 +556,15 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       projectIdContainsRules: preservePromotionTransformProjectIdContainsRules,
     });
     const disablePreservePromotionTransform = selectorMatchesElement(promotedNode, disablePreservePromotionTransformSelectors);
-    const shouldRetainComputedTransform = !disablePreservePromotionTransform && (preservePromotionTransform || isTransformSensitive);
+    const shouldRetainComputedTransform = !useVisualPortalRect && !disablePreservePromotionTransform && (preservePromotionTransform || isTransformSensitive);
     if (shouldRetainComputedTransform && !hasInlineTransform(promotedNode) && computed.transform && computed.transform !== 'none') {
       promotedNode.style.transform = computed.transform;
       if (computed.transformOrigin) promotedNode.style.transformOrigin = computed.transformOrigin;
+    }
+    // For visual-portal-rect elements, clear any CSS-class-based positioning transform
+    if (useVisualPortalRect) {
+      promotedNode.style.transform = 'none';
+      promotedNode.style.transformOrigin = '';
     }
 
     const promotedEntry = {
@@ -537,6 +574,8 @@ export function createLayerManager({ gameConfig = null, debugLog = null } = {}) 
       placeholder,
       portal,
       originalElementStyle,
+      visualPortalOffset,
+      visualPortalSize,
     };
     state.promoted.push(promotedEntry);
     if (placeholder) state.resizeObserver?.observe(placeholder);
