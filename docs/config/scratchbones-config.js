@@ -1377,7 +1377,21 @@ window.SCRATCHBONES_CONFIG = {
         "1": "normal",
         "2": "normal",
         "3": "normal"
-      }
+      },
+      "bossEncounters": [
+        {
+          "boss": {
+            "name": "The Bone Collector",
+            "difficultyRank": "boss",
+            "appearance": null,
+            "trickBoneLoadout": []
+          },
+          "ads": [
+            { "name": null, "difficultyRank": "easy" },
+            { "name": null, "difficultyRank": "easy" }
+          ]
+        }
+      ]
     },
     "tutorial": {
       "ringPadPx": 9,

@@ -251,6 +251,8 @@
       trickBoneLoadout: normalizeTrickLoadout(raw.trickBoneLoadout, unlocked),
       loreName: normalizeLoreName(raw.loreName),
       nameFormat: VALID_NAME_FORMATS.includes(raw.nameFormat) ? raw.nameFormat : 'nickname',
+      renown: typeof raw.renown === 'number' ? Math.max(0, Math.floor(raw.renown)) : 0,
+      renownCapsCleared: typeof raw.renownCapsCleared === 'number' ? Math.max(0, Math.floor(raw.renownCapsCleared)) : 0,
     };
   }
 
@@ -264,6 +266,8 @@
       trickBoneLoadout: [...(k.trickBoneLoadout || [])],
       loreName: k.loreName ? { ...k.loreName } : null,
       nameFormat: k.nameFormat || 'nickname',
+      renown: k.renown || 0,
+      renownCapsCleared: k.renownCapsCleared || 0,
     } : null;
   }
 
@@ -526,6 +530,36 @@
       return parts.join(' ') || nickname;
     }
     return nickname;
+  }
+
+  function getRenown() { return getActiveKhymeryyanRef()?.renown || 0; }
+
+  function isAtRenownCap() {
+    const kh = getActiveKhymeryyanRef();
+    if (!kh) return false;
+    const capsMilestone = Math.floor((kh.renown || 0) / 5);
+    return capsMilestone > 0 && capsMilestone > (kh.renownCapsCleared || 0);
+  }
+
+  function getBossLevel() {
+    const kh = getActiveKhymeryyanRef();
+    if (!kh) return 0;
+    return Math.floor((kh.renown || 0) / 5);
+  }
+
+  function addRenown(amount = 1) {
+    const kh = getActiveKhymeryyanRef();
+    if (!kh || isAtRenownCap()) return kh?.renown || 0;
+    kh.renown = (kh.renown || 0) + Math.max(1, Math.floor(amount));
+    save();
+    return kh.renown;
+  }
+
+  function clearRenownCap() {
+    const kh = getActiveKhymeryyanRef();
+    if (!kh) return;
+    kh.renownCapsCleared = (kh.renownCapsCleared || 0) + 1;
+    save();
   }
   function getBronze()   { return getAccount().bronze; }
 
@@ -837,6 +871,11 @@
     getNameFormat,
     setNameFormat,
     getDisplayName,
+    getRenown,
+    isAtRenownCap,
+    getBossLevel,
+    addRenown,
+    clearRenownCap,
     getBronze,
     addBronze,
     spendBronze,
