@@ -5880,30 +5880,19 @@ import { createTutorial } from './tutorial.js';
           if (!text) return;
           const triggersLaugh = CHAT_LAUGH_PHRASES.has(text.toLowerCase());
           if (input) input.value = '';
-          const playOwnChatBubble = () => spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: false });
-          const playOwnChatAnimation = () => {
-            if (triggersLaugh) triggerLaughAnimation(state.humanSeat);
-            else triggerChatSpeechAnimation(state.humanSeat);
-          };
           if (_isClient) {
-            // Immediate network send; delay local bubble and portrait animation separately
-            // until after mobile zoom reset so geometry/animations start in the restored viewport.
             _pendingOwnChatText = text;
             _net.sendAction({ type: 'chat', text });
-            resetChatInputZoomAfterSubmit(input, {
-              afterReset: [
-                { delayMs: CHAT_MESSAGE_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatBubble },
-                { delayMs: CHAT_MESSAGE_ANIMATION_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatAnimation },
-              ],
-            });
+            spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: false });
+            if (triggersLaugh) triggerLaughAnimation(state.humanSeat);
+            else triggerChatSpeechAnimation(state.humanSeat, text);
+            resetChatInputZoomAfterSubmit(input);
           } else {
             addChatLog(text, hs, { silent: true });
-            resetChatInputZoomAfterSubmit(input, {
-              afterReset: [
-                { delayMs: CHAT_MESSAGE_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatBubble },
-                { delayMs: CHAT_MESSAGE_ANIMATION_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatAnimation },
-              ],
-            });
+            spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: false });
+            if (triggersLaugh) triggerLaughAnimation(state.humanSeat);
+            else triggerChatSpeechAnimation(state.humanSeat, text);
+            resetChatInputZoomAfterSubmit(input);
             render();
           }
         });
@@ -7049,8 +7038,10 @@ import { createTutorial } from './tutorial.js';
       overlay.appendChild(fx);
       setTimeout(() => fx.remove(), durationMs);
     }
-    function triggerChatSpeechAnimation(seatId) {
-      window.portraitBreathingComposer?.triggerEmote('alarmed', String(seatId));
+    function triggerChatSpeechAnimation(seatId, text) {
+      const composer = window.portraitBreathingComposer;
+      composer?.triggerEmote('alarmed', String(seatId));
+      if (text) composer?.scheduleYapSequence(String(seatId), text);
     }
     // Spawns a chat-text speech bubble at the given seat's avatar, optionally
     // triggering the alarmed body deformation so the avatar visually "speaks" the message.
@@ -7058,12 +7049,14 @@ import { createTutorial } from './tutorial.js';
       const app = document.getElementById('app');
       if (!app || !text) return;
       const seatIdStr = String(seatId);
-      if (triggerSpeechEmote) triggerChatSpeechAnimation(seatIdStr);
+      if (triggerSpeechEmote) triggerChatSpeechAnimation(seatIdStr, text);
       const emojiOrigin = computeEmojiReactionFxOrigin(seatIdStr, app);
       if (emojiOrigin) {
+        const eAnchorCenterY = emojiOrigin.anchorRect.top + emojiOrigin.anchorRect.height / 2;
+        const eCurrentY = emojiOrigin.layerRect.top + emojiOrigin.startY;
         spawnChatBubbleFx(text, {
           viewportX: emojiOrigin.layerRect.left + emojiOrigin.startX,
-          viewportY: emojiOrigin.layerRect.top + emojiOrigin.startY,
+          viewportY: eAnchorCenterY + (eCurrentY - eAnchorCenterY) * 1.5,
         });
         return;
       }
@@ -7086,9 +7079,10 @@ import { createTutorial } from './tutorial.js';
       if (!anchorEl) return;
       const anchorRect = anchorEl.getBoundingClientRect();
       // Position in viewport space directly — no scale correction needed for position:fixed.
+      // Spawn at 1.5× the upward offset from portrait centre (0.25h → 0.125h from top).
       spawnChatBubbleFx(text, {
         viewportX: anchorRect.left + anchorRect.width / 2,
-        viewportY: anchorRect.top + anchorRect.height * 0.25,
+        viewportY: anchorRect.top + anchorRect.height * 0.125,
       });
     }
     const clusterCinematicStageRuntime = {
