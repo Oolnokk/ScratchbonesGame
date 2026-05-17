@@ -384,8 +384,8 @@
     // table 0 = closest phonological match (primary suggestion)
     const tables = [
       { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['h'],c:['k'],q:['k'],x:['k'],b:['p'],d:['t'],g:['k'],l:['r'],s:['k'],z:['t'],j:['h'],f:['p'],v:['p'],w:['h'],y:['h'] },
-      { ch:['h'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['k'],q:['k'],x:['h'],b:['p'],d:['t'],g:['k'],l:['n'],s:['h'],z:['h'],j:['k'],f:['h'],v:['p'],w:['m'],y:['n'] },
-      { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['g','k'],q:['k'],x:['k'],b:['p'],d:['r','t'],g:['g','k'],l:['r'],s:['t'],z:['k'],j:['g','k'],f:['p'],v:['p'],w:['k'],y:['h'] },
+      { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['k'],q:['k'],x:['h'],b:['p'],d:['t'],g:['k'],l:['n'],s:['k'],z:['h'],j:['k'],f:['h'],v:['p'],w:['m'],y:['n'] },
+      { ch:['k'],sh:['h'],th:['t'],ng:['n'],gh:['g'],c:['g','k'],q:['k'],x:['k'],b:['p'],d:['r','t'],g:['g','k'],l:['r'],s:['k'],z:['k'],j:['g','k'],f:['p'],v:['p'],w:['k'],y:['h'] },
     ];
     return mapByTable(token, allowed, tables[v % tables.length], { default: ['h','k','n','m'] }) || ['h','k','n','m'][v % 4];
   }
@@ -429,11 +429,14 @@
     v = v || 0;
     const allowed = getSpecies().kenkari.onsets.filter(Boolean);
     const allowedVowels = ['a', 'i', 'u', 'o', 'e'];
-    const tokens = expandTokens(tokenizeIdeaSounds(text), new Set(allowed));
+    // keep source digraphs (ch, th, gh, ng, ph) intact so mapKenkariConsonant can map them as units
+    const expandSet = new Set([...allowed, 'ch', 'th', 'gh', 'ng', 'ph']);
+    const tokens = expandTokens(tokenizeIdeaSounds(text), expandSet);
     const ideaVows = ideaVowels(text);
     const blocks = [];
     let pending = [];
-    let lastVowel = 'u'; // word-final default
+    // before any vowel: use input's first vowel; after a vowel: use last seen
+    let lastVowel = ideaVows.length > 0 ? nearestVowel(ideaVows[0], allowedVowels[0]) : 'i';
     const defaults = ['h','k','n','m'];
 
     function mapC(token) { return mapKenkariConsonant(token, v + blocks.length + pending.length); }
@@ -471,6 +474,29 @@
 
   function makeKenkariIdeaOptions(text) {
     const opts = [];
+    // Diphthong repair: only when input is already all valid Kenkari chars
+    // (user editing a Kenkari name directly, not typing an English idea)
+    const validChars = kenkariValidChars();
+    const isKenkariText = text.length > 0 && [...text.toLowerCase()].every(c => c === ' ' || validChars.has(c));
+    if (isKenkariText) {
+      const t = text.toLowerCase();
+      // Raw consecutive vowels: offer apostrophe + both drops
+      if (/[aeiou][aeiou]/i.test(t)) {
+        const withApostrophe = t.replace(/([aeiou])([aeiou])/g, "$1'$2");
+        const dropSecond     = t.replace(/([aeiou])([aeiou])/g, '$1');
+        const dropFirst      = t.replace(/([aeiou])([aeiou])/g, '$2');
+        if (withApostrophe !== t) opts.push({ label: tc(withApostrophe), type: 'text', value: withApostrophe });
+        if (dropSecond !== t)     opts.push({ label: tc(dropSecond),     type: 'text', value: dropSecond });
+        if (dropFirst !== t)      opts.push({ label: tc(dropFirst),      type: 'text', value: dropFirst });
+      }
+      // Already-apostrophed pair (V'V): offer both drops as alternatives
+      if (/[aeiou]'[aeiou]/i.test(t)) {
+        const dropSecond = t.replace(/([aeiou])'([aeiou])/g, '$1');
+        const dropFirst  = t.replace(/([aeiou])'([aeiou])/g, '$2');
+        if (dropSecond !== t) opts.push({ label: tc(dropSecond), type: 'text', value: dropSecond });
+        if (dropFirst !== t)  opts.push({ label: tc(dropFirst),  type: 'text', value: dropFirst });
+      }
+    }
     for (let i = 0; i < 8; i++) {
       const blocks = kenkariBlocksFromIdea(text, i);
       opts.push({ label: tc(blocks.map(b => b.text).join('').replace(/e(?=')/g, 'ey')), type: 'blocks', blocks });
@@ -493,11 +519,15 @@
     const gender = (ctx && ctx.gender) || 'male';
     const married = !!(ctx && ctx.married);
     const births = (ctx && ctx.births) || {};
-    const tokens = expandTokens(tokenizeIdeaSounds(text), new Set(getSpecies().mao.onsets.filter(Boolean)));
-    const vowels = ideaVowels(text);
+    const allowed = getSpecies().mao.onsets.filter(Boolean);
+    const expandSet = new Set([...allowed, 'ch', 'th', 'gh', 'ng', 'ph']);
+    const tokens = expandTokens(tokenizeIdeaSounds(text), expandSet);
+    const ideaVows = ideaVowels(text);
     const blocks = [];
     let pending = [];
     let vi = 0;
+    // first/last-vowel epenthesis: before any vowel seen use first input vowel
+    let lastVowel = ideaVows.length > 0 ? nearestVowel(ideaVows[0], 'a') : 'a';
     function addBlock(onset, vowel, coda) {
       if (slot === 'first' && gender === 'female' && !married && blocks.length === 0) onset = '';
       if (slot === 'surname' && gender === 'male' && blocks.length === 0) onset = maoFirstOnset(births) || onset;
@@ -511,19 +541,32 @@
             const mc = new Set(getSpecies().mao.codas.filter(Boolean));
             while (pending.length > 1 && mc.has(pending[0])) blocks[blocks.length - 1].text += pending.shift();
           }
-          while (pending.length > 1) { addBlock(mapMaoOnset(pending.shift(), v + blocks.length), epentheticVowel(vi++, v, ['a','e','i','o','u'])); }
+          while (pending.length > 1) { addBlock(mapMaoOnset(pending.shift(), v + blocks.length), lastVowel); vi++; }
           addBlock(mapMaoOnset(pending.shift(), v + blocks.length), vow);
-        } else {
-          addBlock(['n','m','k','t','p','w'][blocks.length % 6], vow);
+        } else if (blocks.length === 0) {
+          addBlock(['n','m','k','t','p','w'][0], vow);
         }
+        // isolated medial vowel (pending empty, not first): update lastVowel only, no spurious block
+        lastVowel = vow;
         vi++;
       } else pending.push(token);
     }
+    const validCodas = new Set(getSpecies().mao.codas.filter(Boolean));
     while (pending.length) {
-      const coda = (pending.length === 1 && v % 4) ? ['','n','ng','r'][v % 4] : '';
-      addBlock(mapMaoOnset(pending.shift(), v + blocks.length), epentheticVowel(vi++, v, ['a','e','i','o','u']), coda);
+      const c = pending.shift();
+      const isLast = pending.length === 0;
+      if (isLast && v % 4 !== 0 && validCodas.has(c) && blocks.length > 0) {
+        // last consonant is a valid coda: append to last syllable
+        blocks[blocks.length - 1].text += c;
+      } else if (isLast) {
+        // last consonant, invalid as coda: new syllable with 'u'
+        addBlock(mapMaoOnset(c, v + blocks.length), 'u'); vi++;
+      } else {
+        // internal cluster consonant: use last seen vowel, not 'u'
+        addBlock(mapMaoOnset(c, v + blocks.length), lastVowel); vi++;
+      }
     }
-    if (!blocks.length) addBlock(slot === 'first' && gender === 'female' && !married ? '' : 'n', vowels[0] || 'a');
+    if (!blocks.length) addBlock(slot === 'first' && gender === 'female' && !married ? '' : 'n', ideaVows[0] || 'a');
     return blocks;
   }
 
@@ -730,6 +773,8 @@
     const births = Object.assign({}, currentBirths || {});
     if (opt.type === 'blocks')
       births[slot] = opt.blocks.map(b => b.text).join('');
+    else if (opt.type === 'text')
+      births[slot] = opt.value;
     else if (opt.type === 'enghFirst' || opt.type === 'enghSurname')
       births[slot] = opt.value;
     else if (opt.type === 'slagPlace')
