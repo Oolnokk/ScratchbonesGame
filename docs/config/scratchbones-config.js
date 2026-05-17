@@ -1517,7 +1517,7 @@ window.SCRATCHBONES_CONFIG = {
           "humanReferenceHeightPx": 187
         },
         "typography": {
-          "nameFontRem": 0.78,
+          "nameFontRem": 1.56,
           "metaFontRem": 0.68,
           "statusFontRem": 0.68,
           "titleFontRem": 0.95,

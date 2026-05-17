@@ -5880,30 +5880,19 @@ import { createTutorial } from './tutorial.js';
           if (!text) return;
           const triggersLaugh = CHAT_LAUGH_PHRASES.has(text.toLowerCase());
           if (input) input.value = '';
-          const playOwnChatBubble = () => spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: false });
-          const playOwnChatAnimation = () => {
-            if (triggersLaugh) triggerLaughAnimation(state.humanSeat);
-            else triggerChatSpeechAnimation(state.humanSeat, text);
-          };
           if (_isClient) {
-            // Immediate network send; delay local bubble and portrait animation separately
-            // until after mobile zoom reset so geometry/animations start in the restored viewport.
             _pendingOwnChatText = text;
             _net.sendAction({ type: 'chat', text });
-            resetChatInputZoomAfterSubmit(input, {
-              afterReset: [
-                { delayMs: CHAT_MESSAGE_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatBubble },
-                { delayMs: CHAT_MESSAGE_ANIMATION_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatAnimation },
-              ],
-            });
+            spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: false });
+            if (triggersLaugh) triggerLaughAnimation(state.humanSeat);
+            else triggerChatSpeechAnimation(state.humanSeat, text);
+            resetChatInputZoomAfterSubmit(input);
           } else {
             addChatLog(text, hs, { silent: true });
-            resetChatInputZoomAfterSubmit(input, {
-              afterReset: [
-                { delayMs: CHAT_MESSAGE_BUBBLE_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatBubble },
-                { delayMs: CHAT_MESSAGE_ANIMATION_SPAWN_AFTER_ZOOM_RESET_MS, fn: playOwnChatAnimation },
-              ],
-            });
+            spawnChatTextFx(text, state.humanSeat, { triggerSpeechEmote: false });
+            if (triggersLaugh) triggerLaughAnimation(state.humanSeat);
+            else triggerChatSpeechAnimation(state.humanSeat, text);
+            resetChatInputZoomAfterSubmit(input);
             render();
           }
         });
