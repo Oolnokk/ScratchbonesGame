@@ -242,8 +242,8 @@ window.SCRATCHBONES_CONFIG = {
           },
           "positionedSyllables": {
             "pools": {
-              "consonants": ["w", "r", "t", "y", "p", "s", "f", "g", "h", "j", "b", "n", "m", "k"],
-              "clusters": ["sh", "hy"],
+              "consonants": ["w", "r", "t", "y", "p", "s", "f", "g", "h", "j", "b", "n", "m", "k", "d"],
+              "clusters": ["sh", "hy", "br", "dr", "fr", "gr", "pr", "sr", "shr", "tr"],
               "vowels": ["a", "e", "i", "o", "u", "ai", "ao"],
               "diphthongs": ["ai", "ao"]
             },
@@ -1377,7 +1377,45 @@ window.SCRATCHBONES_CONFIG = {
         "1": "normal",
         "2": "normal",
         "3": "normal"
-      }
+      },
+      "bossEncounters": [
+        {
+          "boss": {
+            "name": "Rotfang",
+            "difficultyRank": "boss",
+            "appearance": {
+              "speciesId": "mao-ao",
+              "gender": "male",
+              "cosmetics": {
+                "hairFront": "appearance::Mao-ao_M::mao-ao_tuft",
+                "hairBack": "appearance::Mao-ao_M::mao-ao_long_ponytail",
+                "eyes": "appearance::Mao-ao_M::mao-ao_circled_eyes",
+                "facialHair": "appearance::Mao-ao_M::mao-ao_wildbeard"
+              },
+              "bodyColors": {
+                "A": { "h": 30, "s": -0.6, "v": -0.15 },
+                "B": { "h": -70, "s": -0.8, "v": -0.55 },
+                "C": { "h": 30, "s": -0.5499999999999999, "v": 0.03 }
+              }
+            },
+            "equippedCosmetics": [
+              "appearance::hat::basic_headband",
+              "tankan_bodywrap"
+            ],
+            "appliedDyes": {
+              "HOOD": "dye:CLOTH:deep_green",
+              "HOOD_B": "dye:CLOTH:deep_green_blue",
+              "CLOTH": "dye:CLOTH:shadow_red",
+              "HAT": "dye:CLOTH:deep_blue"
+            },
+            "trickBoneLoadout": ["trap", "trap", "trap", "smuggle", "smuggle", "smuggle"]
+          },
+          "ads": [
+            { "name": null, "difficultyRank": "easy" },
+            { "name": null, "difficultyRank": "easy" }
+          ]
+        }
+      ]
     },
     "tutorial": {
       "ringPadPx": 9,

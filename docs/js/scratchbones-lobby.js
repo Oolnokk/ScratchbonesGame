@@ -777,11 +777,20 @@
       </div>`;
   }
 
+  function _getBossEncounterConfig(bossLevel) {
+    const encounters = window.SCRATCHBONES_CONFIG?.game?.ai?.bossEncounters || [];
+    return encounters[bossLevel - 1] || encounters[encounters.length - 1] || null;
+  }
+
   function renderMain() {
     const acc = window.ScratchbonesAccount;
     const bronze = acc ? acc.getBronze() : 0;
     const activeKhymeryyan = acc?.getActiveKhymeryyan?.() || null;
     const username = acc ? (acc.getDisplayName?.() || acc.getUsername()) : 'Player';
+    const renown = acc?.getRenown?.() || 0;
+    const atCap = acc?.isAtRenownCap?.() || false;
+    const bossLevel = acc?.getBossLevel?.() || 0;
+    const bossCfg = atCap ? _getBossEncounterConfig(bossLevel) : null;
     const khymeryyans = acc?.getKhymeryyans?.() || [];
     const canDeleteKhymeryyan = khymeryyans.length > 1;
     const khymeryyanOptions = khymeryyans.map(kh =>
@@ -851,6 +860,11 @@
         </div>
         ${postMsg}
         <div class="sb-welcome">Welcome back, ${esc(username)}!</div>
+        <div style="display:flex;align-items:center;gap:10px;margin:4px 0 6px;font-size:0.82em;opacity:0.8;">
+          <span>Renown ${renown}</span>
+          ${atCap ? `<span style="color:rgba(242,180,80,0.9);font-weight:600;">— Cap reached</span>` : ''}
+        </div>
+        ${atCap ? `<button class="sb-btn-primary" id="sb-boss-btn" style="width:100%;margin-bottom:10px;">⚔ Boss Challenge${bossCfg ? ` — ${esc(bossCfg.boss.name)}` : ''}</button>` : ''}
         <div class="sb-label">Khymeryyan</div>
         <div class="sb-player-row">
           <select id="sb-khymeryyan-select" style="flex:1;min-width:0;">${khymeryyanOptions}</select>
@@ -993,6 +1007,7 @@
         </div>
         <div class="sb-actions" style="margin-top:12px;">
           <button class="sb-btn-primary" id="sb-save-appearance-btn">Save</button>
+          <button class="sb-btn-ghost" id="sb-export-khymeryyan-btn" title="Copy Khymeryyan JSON to clipboard">Export JSON</button>
         </div>
       </div>`;
   }
@@ -1456,6 +1471,7 @@
 
     // Main screen
     document.getElementById('sb-start-btn')?.addEventListener('click', startGame);
+    document.getElementById('sb-boss-btn')?.addEventListener('click', startBossGame);
     document.getElementById('sb-tutorial-btn')?.addEventListener('click', startTutorialGame);
     document.getElementById('sb-appearance-btn')?.addEventListener('click', openAppearanceEditor);
     document.getElementById('sb-collections-btn')?.addEventListener('click', () => { _screen = 'collections'; render(); });
@@ -1755,6 +1771,26 @@
       });
     }
 
+    document.getElementById('sb-export-khymeryyan-btn')?.addEventListener('click', () => {
+      const acc = window.ScratchbonesAccount;
+      const active = acc?.getActiveKhymeryyan?.();
+      if (!active) return;
+      const exported = {
+        name: active.name,
+        appearance: active.appearance ? { ...active.appearance } : null,
+        loreName: active.loreName ? { ...active.loreName } : null,
+        nameFormat: active.nameFormat || 'nickname',
+        equippedCosmetics: [...(active.equippedCosmetics || [])],
+        appliedDyes: { ...(active.appliedDyes || {}) },
+        trickBoneLoadout: [...(active.trickBoneLoadout || [])],
+      };
+      const json = JSON.stringify(exported, null, 2);
+      navigator.clipboard?.writeText(json).then(() => {
+        const btn = document.getElementById('sb-export-khymeryyan-btn');
+        if (btn) { const prev = btn.textContent; btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = prev; }, 1400); }
+      }).catch(() => { window.prompt?.('Copy this JSON:', json); });
+    });
+
     document.getElementById('sb-save-appearance-btn')?.addEventListener('click', () => {
       const acc = window.ScratchbonesAccount;
       const nameVal = (document.getElementById('sb-edit-name')?.value || '').trim();
@@ -2013,16 +2049,34 @@
     if (cvPanel) cvPanel.classList.remove('open');
   }
 
-  function onGameEnd(chipCount) {
+  function onGameEnd(chipCount, humanWon = false) {
     window.ScratchbonesNetwork?.disconnect();
-    if (window.ScratchbonesAccount) {
+    const acc = window.ScratchbonesAccount;
+    const msgs = [];
+    if (acc) {
       const earned = Math.max(0, Math.floor(chipCount));
-      if (earned > 0) {
-        window.ScratchbonesAccount.addBronze(earned);
-        _postGameMessage = `You earned ${earned} Bronze!`;
-      } else {
-        _postGameMessage = '';
+      if (earned > 0) { acc.addBronze(earned); msgs.push(`You earned ${earned} Bronze!`); }
+      if (humanWon && !acc.isAtRenownCap?.()) {
+        const newRenown = acc.addRenown?.(1);
+        if (newRenown != null) msgs.push(`Renown ${newRenown}!`);
+        if (acc.isAtRenownCap?.()) msgs.push('Boss challenge unlocked!');
       }
+    }
+    _postGameMessage = msgs.join(' ');
+    show('main');
+  }
+
+  function onBossGameEnd(passed, chipCount) {
+    window.ScratchbonesNetwork?.disconnect();
+    const acc = window.ScratchbonesAccount;
+    if (passed) {
+      acc?.clearRenownCap?.();
+      const newRenown = acc?.addRenown?.(1);
+      _postGameMessage = `Boss defeated! Renown ${newRenown ?? ''}!`;
+    } else {
+      const earned = Math.max(0, Math.floor(chipCount));
+      if (earned > 0) acc?.addBronze(earned);
+      _postGameMessage = 'Boss defeated you. Train up and try again.';
     }
     show('main');
   }
@@ -2071,6 +2125,57 @@
       playerDifficultyRanks,
       pveMode: _selectedPveMode,
     };
+  }
+
+  function buildBossSession() {
+    const acc = window.ScratchbonesAccount;
+    const bossLevel = acc?.getBossLevel?.() || 1;
+    const encounter = _getBossEncounterConfig(bossLevel) || {};
+    const boss = encounter.boss || {};
+    const ads = encounter.ads || [];
+    const khymeryyan = getFullKhymeryyan();
+    const username = khymeryyan?.name || 'Player';
+    const ap = getFullAppearance();
+    window.SCRATCHBONES_SESSION = {
+      mode: 'pve',
+      humanSeats: [0],
+      playerNames: {
+        0: username,
+        1: boss.name || 'The Bone Collector',
+        2: ads[0]?.name || null,
+        3: ads[1]?.name || null,
+      },
+      playerAppearances: {
+        0: ap,
+        1: boss.appearance ? {
+          ...boss.appearance,
+          equippedCosmetics: Array.isArray(boss.equippedCosmetics) ? [...boss.equippedCosmetics] : [],
+          appliedDyes: boss.appliedDyes && typeof boss.appliedDyes === 'object' ? { ...boss.appliedDyes } : {},
+        } : null,
+      },
+      playerLoadouts: {
+        0: getLocalPlayerLoadout(),
+        1: Array.isArray(boss.trickBoneLoadout) && boss.trickBoneLoadout.length ? boss.trickBoneLoadout : undefined,
+      },
+      playerDifficultyRanks: {
+        1: boss.difficultyRank || 'boss',
+        2: ads[0]?.difficultyRank || 'easy',
+        3: ads[1]?.difficultyRank || 'easy',
+      },
+      bossMode: true,
+      bossSeat: 1,
+      adSeats: [2, 3],
+    };
+  }
+
+  function startBossGame() {
+    if (!window.ScratchbonesAccount?.isCreated()) return;
+    buildBossSession();
+    _postGameMessage = '';
+    hide();
+    if (_scratchbonesReady && window.scratchbonesStartGame) {
+      void window.scratchbonesStartGame().catch(e => console.error('[lobby] startBossGame error', e));
+    }
   }
 
   function startOfflineGame() {
@@ -2272,7 +2377,7 @@
     setInterval(() => window.ScratchbonesAccount?.tickPassiveIncome(), 60_000);
   }
 
-  window.ScratchbonesLobby = { init, show, hide, onGameEnd };
+  window.ScratchbonesLobby = { init, show, hide, onGameEnd, onBossGameEnd };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

@@ -1228,9 +1228,15 @@ import { createTutorial } from './tutorial.js';
         const currentNpcOrder = isHuman ? null : npcOrder++;
         const aiIdentity = generateAiIdentity(index);
         const sessionName = playerNames[index];
-        const name = isHuman && sessionName ? sessionName : resolveSeatName(index, aiIdentity.name);
-        const appearance = isHuman ? (playerAppearances[index] ?? null) : null;
-        const playerLoadout = isHuman ? normalizeTrickBoneLoadout(playerLoadouts[index]) : generateNpcTrickLoadout();
+        const name = sessionName ? sessionName : resolveSeatName(index, aiIdentity.name);
+        const isBossSeat = !!session.bossMode && index === (session.bossSeat ?? 1);
+        const appearance = (isHuman || isBossSeat) ? (playerAppearances[index] ?? null) : null;
+        const sessionLoadout = playerLoadouts[index];
+        const playerLoadout = isHuman
+          ? normalizeTrickBoneLoadout(sessionLoadout)
+          : (isBossSeat && Array.isArray(sessionLoadout) && sessionLoadout.length
+              ? normalizeTrickBoneLoadout(sessionLoadout)
+              : generateNpcTrickLoadout());
         const sessionDifficultyRank = playerDifficultyRanks[index] ?? playerDifficultyRanks[String(index)];
         const difficultyRank = isHuman ? null : resolveAiDifficultyRank({ id: index, npcOrder: currentNpcOrder, difficultyRank: sessionDifficultyRank });
         return {
@@ -1749,6 +1755,11 @@ import { createTutorial } from './tutorial.js';
       state.poolVisualSeed = Math.floor(Math.random() * 1e9);
       rand = mulberry32(state.seed);
       state.players = makePlayers();
+      const _bossSession = window.SCRATCHBONES_SESSION || {};
+      state.bossMode = !!_bossSession.bossMode;
+      state.bossSeat = state.bossMode ? (_bossSession.bossSeat ?? 1) : null;
+      state.adSeats = state.bossMode ? new Set(Array.isArray(_bossSession.adSeats) ? _bossSession.adSeats : []) : new Set();
+      state.bossResult = null;
       state.selectedCardIds.clear();
       state.pile = [];
       state.challengeWindow = null;
@@ -2144,6 +2155,11 @@ import { createTutorial } from './tutorial.js';
       return suspicion;
     }
     function aiShouldChallenge(challengerIndex, play) {
+      if (state.bossMode) {
+        const isAd = state.adSeats.has(challengerIndex);
+        const targetIsAlly = state.adSeats.has(play.playerIndex) || play.playerIndex === state.bossSeat;
+        if (isAd && targetIsAlly) return false;
+      }
       const challenger = state.players[challengerIndex];
       return challengeSuspicionScore(challengerIndex, play, { includeRandom: true }) >= getAiDifficultyProfile(challenger).resolvedChallengeThreshold;
     }
@@ -2435,6 +2451,27 @@ import { createTutorial } from './tutorial.js';
         anchorEl: walletCoinRowAnchorForPlayer(playerIndex),
         colorClass: 'burst-out',
       });
+      if (state.bossMode) {
+        if (playerIndex === state.bossSeat) {
+          state.gameOver = true;
+          state.bossResult = 'win';
+          setBanner('Boss eliminated! You win!', 'good');
+          addLog(state.banner);
+          render();
+          showScreenBurst('BOSS DEFEATED!', { colorClass: 'burst-win', fontSizeRem: 3.8, durationMs: 3800 });
+          return true;
+        }
+        if (player.isHuman) {
+          state.gameOver = true;
+          state.bossResult = 'loss';
+          setBanner('Eliminated. Boss challenge failed.', 'bad');
+          addLog(state.banner);
+          render();
+          showScreenBurst('DEFEATED!', { colorClass: 'burst-out', fontSizeRem: 3.8, durationMs: 3800 });
+          return true;
+        }
+        return false;
+      }
       return checkGameOverBySurvivors();
     }
     function maybeAutoRevealAfterMatchedBet() {
@@ -3036,7 +3073,12 @@ import { createTutorial } from './tutorial.js';
     function goToLobby() {
       const chips = humanChipCountForAward();
       if (window.ScratchbonesLobby) {
-        window.ScratchbonesLobby.onGameEnd(chips);
+        if (state.bossMode) {
+          window.ScratchbonesLobby.onBossGameEnd?.(state.bossResult === 'win', chips);
+        } else {
+          const humanWon = state.winnerIndex != null && isHumanSeat(state.winnerIndex);
+          window.ScratchbonesLobby.onGameEnd(chips, humanWon);
+        }
       } else {
         void startGame();
       }
@@ -3622,7 +3664,14 @@ import { createTutorial } from './tutorial.js';
       return moved;
     }
     function humanPickSmuggleTarget(play, candidateIds) {
-      if (!isHumanSeat(play.playerIndex) || candidateIds.length <= 1) return candidateIds[0];
+      if (!isHumanSeat(play.playerIndex)) {
+        if (state.bossMode && state.adSeats.has(play.playerIndex)) {
+          const humanId = state.players.find(p => p.isHuman && !p.eliminated)?.id;
+          if (humanId != null && candidateIds.includes(humanId)) return humanId;
+        }
+        return candidateIds[0];
+      }
+      if (candidateIds.length <= 1) return candidateIds[0];
       const list = candidateIds.map((id) => `${id}: ${seatLabel(id)}`).join('\n');
       const picked = window.prompt(`Smuggle Bone: choose target seat id\n${list}`, String(candidateIds[0]));
       const pickedId = Number(picked);
