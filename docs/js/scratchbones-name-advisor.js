@@ -15,7 +15,7 @@
     mao: {
       label: 'Mao-ao', slots: ['first', 'surname'],
       vowels: ['a', 'e', 'i', 'o', 'u', 'ai', 'ao'],
-      onsets: ['', 'w', 'r', 't', 'y', 'p', 's', 'f', 'g', 'h', 'j', 'k', 'b', 'n', 'm', 'sh', 'hy'],
+      onsets: ['', 'w', 'r', 't', 'y', 'p', 's', 'f', 'g', 'h', 'j', 'k', 'b', 'n', 'm', 'd', 'sh', 'hy', 'br', 'dr', 'fr', 'gr', 'pr', 'sr', 'shr', 'tr'],
       codas: ['', 'n', 'ng', 'r'],
     },
     slagothim: {
