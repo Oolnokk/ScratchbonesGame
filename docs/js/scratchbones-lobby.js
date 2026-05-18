@@ -2147,7 +2147,11 @@
       },
       playerAppearances: {
         0: ap,
-        1: boss.appearance || null,
+        1: boss.appearance ? {
+          ...boss.appearance,
+          equippedCosmetics: Array.isArray(boss.equippedCosmetics) ? [...boss.equippedCosmetics] : [],
+          appliedDyes: boss.appliedDyes && typeof boss.appliedDyes === 'object' ? { ...boss.appliedDyes } : {},
+        } : null,
       },
       playerLoadouts: {
         0: getLocalPlayerLoadout(),

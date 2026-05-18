@@ -1381,10 +1381,34 @@ window.SCRATCHBONES_CONFIG = {
       "bossEncounters": [
         {
           "boss": {
-            "name": "The Bone Collector",
+            "name": "Rotfang",
             "difficultyRank": "boss",
-            "appearance": null,
-            "trickBoneLoadout": []
+            "appearance": {
+              "speciesId": "mao-ao",
+              "gender": "male",
+              "cosmetics": {
+                "hairFront": "appearance::Mao-ao_M::mao-ao_tuft",
+                "hairBack": "appearance::Mao-ao_M::mao-ao_long_ponytail",
+                "eyes": "appearance::Mao-ao_M::mao-ao_circled_eyes",
+                "facialHair": "appearance::Mao-ao_M::mao-ao_wildbeard"
+              },
+              "bodyColors": {
+                "A": { "h": 30, "s": -0.6, "v": -0.15 },
+                "B": { "h": -70, "s": -0.8, "v": -0.55 },
+                "C": { "h": 30, "s": -0.5499999999999999, "v": 0.03 }
+              }
+            },
+            "equippedCosmetics": [
+              "appearance::hat::basic_headband",
+              "tankan_bodywrap"
+            ],
+            "appliedDyes": {
+              "HOOD": "dye:CLOTH:deep_green",
+              "HOOD_B": "dye:CLOTH:deep_green_blue",
+              "CLOTH": "dye:CLOTH:shadow_red",
+              "HAT": "dye:CLOTH:deep_blue"
+            },
+            "trickBoneLoadout": ["trap", "trap", "trap", "smuggle", "smuggle", "smuggle"]
           },
           "ads": [
             { "name": null, "difficultyRank": "easy" },
